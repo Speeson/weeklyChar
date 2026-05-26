@@ -43,7 +43,7 @@ class TrayApp:
 
     def notify(self, message: str):
         try:
-            self._icon.notify("KeystoneClient", message)
+            self._icon.notify(message, "KeystoneClient")
         except Exception:
             pass
 
@@ -59,4 +59,6 @@ class TrayApp:
         icon.stop()
 
     def run(self):
-        self._icon.run()
+        def _on_ready(icon):
+            icon.notify("Corriendo en la bandeja. Haz clic derecho para ver opciones.", "KeystoneClient")
+        self._icon.run(setup=_on_ready)

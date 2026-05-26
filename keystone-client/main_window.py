@@ -16,7 +16,7 @@ class MainWindow:
         self.root.resizable(False, False)
         self.root.eval("tk::PlaceWindow . center")
         self.root.configure(bg="#111827")
-        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
+        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)  # overridden in main view
 
         self._setup_styles()
 
@@ -109,6 +109,7 @@ class MainWindow:
     def _show_main_view(self):
         self.root.geometry("400x300")
         self._clear()
+        self.root.protocol("WM_DELETE_WINDOW", self._go_to_tray)
 
         username = self.cfg.get("username", "usuario")
         tk.Label(self.frame, text=f"Conectado como {username}", bg="#111827", fg="#34d399",
