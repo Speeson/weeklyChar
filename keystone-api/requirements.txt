@@ -4,3 +4,4 @@ sqlalchemy
 python-dotenv
 bcrypt
 python-jose[cryptography]
+psycopg2-binary
