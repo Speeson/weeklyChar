@@ -22,7 +22,6 @@ interface Character {
 
 interface Me {
   username: string
-  syncToken: string
 }
 
 function formatDate(unix: number | null): string {
@@ -38,7 +37,6 @@ export default function Dashboard() {
   const [me, setMe] = useState<Me | null>(null)
   const [characters, setCharacters] = useState<Character[]>([])
   const [loading, setLoading] = useState(true)
-  const [showToken, setShowToken] = useState(false)
 
   useEffect(() => {
     if (!getToken()) { router.push('/login'); return }
@@ -70,25 +68,6 @@ export default function Dashboard() {
             <Link href="/teams" className="text-sm text-gray-400 hover:text-white transition">Teams</Link>
             <span className="text-sm text-gray-500">{me?.username}</span>
             <button onClick={logout} className="text-sm text-gray-500 hover:text-red-400 transition">Salir</button>
-          </div>
-        </div>
-
-        {/* Sync token */}
-        <div className="mb-8 p-4 bg-gray-900 border border-gray-800 rounded">
-          <p className="text-sm text-gray-400 mb-2">Tu sync token — ponlo en el <code className="text-yellow-400">.env</code> del sincronizador:</p>
-          <div className="flex items-center gap-3">
-            <code className="flex-1 text-sm text-green-400 break-all">
-              {showToken ? me?.syncToken : '••••••••••••••••••••••••••••••••'}
-            </code>
-            <button onClick={() => setShowToken(v => !v)} className="text-xs text-gray-500 hover:text-white transition shrink-0">
-              {showToken ? 'Ocultar' : 'Mostrar'}
-            </button>
-            <button
-              onClick={() => navigator.clipboard.writeText(me?.syncToken ?? '')}
-              className="text-xs text-gray-500 hover:text-white transition shrink-0"
-            >
-              Copiar
-            </button>
           </div>
         </div>
 
