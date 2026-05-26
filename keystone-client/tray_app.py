@@ -1,3 +1,4 @@
+import threading
 import pystray
 from PIL import Image, ImageDraw
 
@@ -32,6 +33,7 @@ class TrayApp:
             pystray.MenuItem(lambda _: self._status, None, enabled=False),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Sincronizar ahora", self._on_sync_now),
+            pystray.MenuItem("Instalar Addon", self._on_install_addon),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Salir", self._on_quit),
         )
@@ -47,6 +49,10 @@ class TrayApp:
 
     def _on_sync_now(self, icon, item):
         self.worker.force_sync()
+
+    def _on_install_addon(self, icon, item):
+        from installer_window import show_installer_window
+        threading.Thread(target=show_installer_window, daemon=True).start()
 
     def _on_quit(self, icon, item):
         self.worker.stop()
