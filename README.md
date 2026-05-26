@@ -2,6 +2,10 @@
 
 Sistema completo para registrar y sincronizar la **piedra angular mítica+ actual** de personajes de **World of Warcraft Retail**, con soporte multi-usuario, equipos y sincronización automática.
 
+**Web:** https://weekly-char.vercel.app  
+**API:** https://weeklychar-production.up.railway.app  
+**Swagger:** https://weeklychar-production.up.railway.app/docs
+
 ---
 
 ## Descripción general
@@ -245,21 +249,29 @@ Si hay actualización disponible → botón "Actualizar"
 
 ## Despliegue en producción
 
-**Plan recomendado:**
+| Componente | Plataforma | URL |
+|------------|-----------|-----|
+| keystone-web | Vercel | https://weekly-char.vercel.app |
+| keystone-api | Railway | https://weeklychar-production.up.railway.app |
+| Base de datos | Railway (PostgreSQL) | Mismo proyecto que la API |
 
-| Componente | Plataforma | Coste |
-|------------|-----------|-------|
-| keystone-web | Vercel | Gratuito |
-| keystone-api | Railway | Tier gratuito disponible |
-| Base de datos | Railway (PostgreSQL) | Incluido con la API |
+**Variables de entorno necesarias en Railway (servicio API):**
 
-**Pasos generales:**
+```env
+DATABASE_URL     →  ${{Postgres.DATABASE_URL}}
+SECRET_KEY       →  clave secreta larga
+ALLOWED_ORIGINS  →  https://weekly-char.vercel.app,http://localhost:3000
+```
 
-1. Subir `keystone-api` a Railway con la variable `DATABASE_URL` apuntando a PostgreSQL.
-2. Subir `keystone-web` a Vercel con `NEXT_PUBLIC_API_URL` apuntando a la URL de Railway.
-3. Actualizar `allow_origins` en la API con el dominio de producción de Vercel.
+**Configuración Railway:**
+- Root Directory: `keystone-api`
+- Target port (Networking): `8080`
 
-La API y la web funcionan correctamente con estas plataformas sin cambios de código adicionales (solo cambiar de SQLite a PostgreSQL en la variable de entorno).
+**Variables de entorno en Vercel:**
+
+```env
+NEXT_PUBLIC_API_URL  →  https://weeklychar-production.up.railway.app
+```
 
 ---
 
@@ -271,8 +283,8 @@ La API y la web funcionan correctamente con estas plataformas sin cambios de có
 | Sincronizador Python | Completado | Modo watch por polling, auth con sync token |
 | Backend FastAPI | Completado | Multi-usuario, JWT, sync tokens, teams |
 | Panel web Next.js | Completado | Dashboard, equipos, tabla de personajes |
-| KeystoneClient (.exe) | En diseño | App de escritorio para usuarios no técnicos |
-| Despliegue producción | Pendiente | Vercel + Railway |
+| Despliegue producción | Completado | API en Railway, web en Vercel |
+| KeystoneClient (.exe) | En desarrollo | App de escritorio para usuarios no técnicos |
 
 ---
 
