@@ -92,7 +92,7 @@ export default function Dashboard() {
       <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
         <div className="max-w-4xl mx-auto">
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_190px] gap-4 mb-8 items-stretch">
+          <div className="flex justify-center items-stretch gap-4 mb-8 flex-wrap">
             <WeeklyAffixes />
             <WeeklyReset />
           </div>
@@ -164,20 +164,68 @@ export default function Dashboard() {
   )
 }
 
+type SortKey = 'name' | 'realm' | 'dungeon' | 'level' | 'updatedAt'
+type SortDir = 'asc' | 'desc'
+
 export function CharacterTable({ characters }: { characters: Character[] }) {
-  const sorted = [...characters].sort((a, b) =>
-    (b.currentKeystone?.level ?? -1) - (a.currentKeystone?.level ?? -1)
-  )
+  const [sortKey, setSortKey] = useState<SortKey>('level')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'level' || key === 'updatedAt' ? 'desc' : 'asc')
+    }
+  }
+
+  const sorted = [...characters].sort((a, b) => {
+    let cmp = 0
+    switch (sortKey) {
+      case 'name':     cmp = a.name.localeCompare(b.name, 'es'); break
+      case 'realm':    cmp = a.realm.localeCompare(b.realm, 'es'); break
+      case 'dungeon': {
+        const da = a.currentKeystone?.dungeon ?? ''
+        const db = b.currentKeystone?.dungeon ?? ''
+        cmp = da.localeCompare(db, 'es')
+        break
+      }
+      case 'level':
+        cmp = (a.currentKeystone?.level ?? -1) - (b.currentKeystone?.level ?? -1)
+        break
+      case 'updatedAt':
+        cmp = (a.currentKeystone?.updatedAt ?? 0) - (b.currentKeystone?.updatedAt ?? 0)
+        break
+    }
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  function Th({ col, children, last }: { col: SortKey; children: React.ReactNode; last?: boolean }) {
+    const active = col === sortKey
+    return (
+      <th
+        className={`pb-3 ${last ? '' : 'pr-6'} cursor-pointer select-none whitespace-nowrap`}
+        onClick={() => handleSort(col)}
+      >
+        <span className={`inline-flex items-center gap-1 transition hover:text-white ${active ? 'text-yellow-400' : 'text-gray-400'}`}>
+          {children}
+          <span className="text-xs">{active ? (sortDir === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}</span>
+        </span>
+      </th>
+    )
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-gray-400 border-b border-gray-800">
-            <th className="pb-3 pr-6">Personaje</th>
-            <th className="pb-3 pr-6">Reino</th>
-            <th className="pb-3 pr-6">Mazmorra</th>
-            <th className="pb-3 pr-6">Nivel ↓</th>
-            <th className="pb-3">Última actualización</th>
+          <tr className="text-left border-b border-gray-800">
+            <Th col="name">Personaje</Th>
+            <Th col="realm">Reino</Th>
+            <Th col="dungeon">Mazmorra</Th>
+            <Th col="level">Nivel</Th>
+            <Th col="updatedAt" last>Última actualización</Th>
           </tr>
         </thead>
         <tbody>

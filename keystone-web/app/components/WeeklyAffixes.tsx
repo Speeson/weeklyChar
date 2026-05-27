@@ -36,7 +36,7 @@ export default function WeeklyAffixes() {
   if (!affixes.length) return null
 
   return (
-    <section className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl flex flex-col">
+    <section className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl flex flex-col w-fit">
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
         Afijos Míticos+ · Semana actual
       </h2>

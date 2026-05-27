@@ -32,7 +32,7 @@ export default function WeeklyReset() {
   }, [])
 
   return (
-    <section className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl flex flex-col">
+    <section className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl flex flex-col min-w-[160px]">
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
         Reset semanal
       </h2>

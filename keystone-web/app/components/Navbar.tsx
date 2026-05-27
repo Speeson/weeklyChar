@@ -3,17 +3,30 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { clearToken, getUsername } from '@/lib/auth'
+import { apiFetch, clearToken, getToken, getUsername, setUsername as saveUsername } from '@/lib/auth'
 
 export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
-  const [username, setUsername] = useState<string | null>(null)
+  const [username, setUsernameState] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setUsername(getUsername())
+    const stored = getUsername()
+    if (stored) {
+      setUsernameState(stored)
+    } else if (getToken()) {
+      apiFetch('/api/me')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.username) {
+            saveUsername(data.username)
+            setUsernameState(data.username)
+          }
+        })
+        .catch(() => {})
+    }
   }, [])
 
   useEffect(() => {
@@ -78,7 +91,7 @@ export default function Navbar() {
             <div className="absolute right-0 mt-2 w-52 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-800">
                 <p className="text-[11px] text-gray-500 mb-0.5">Conectado como</p>
-                <p className="text-sm font-semibold text-white truncate">@{username}</p>
+                <p className="text-sm font-semibold text-white truncate">{username}</p>
               </div>
               <div className="py-1">
                 <Link
