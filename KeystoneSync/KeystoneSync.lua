@@ -67,6 +67,9 @@ end
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_LOGIN" then
         SaveCurrentKeystone("PLAYER_LOGIN")
+        C_Timer.After(5, function()
+            SaveCurrentKeystone("PLAYER_LOGIN_5S")
+        end)
 
     elseif event == "CHALLENGE_MODE_COMPLETED" then
         C_Timer.After(5, function()
