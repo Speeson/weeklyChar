@@ -1,11 +1,44 @@
 import time
 import tkinter as tk
 from tkinter import ttk, filedialog
-
+import webbrowser
+import winreg
 import requests
+
 import config as cfg_module
 import addon_installer
 import wow_path
+
+REGISTER_URL = "https://weekly-char.vercel.app/login"
+WEB_URL      = "https://weekly-char.vercel.app"
+AUTOSTART_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+AUTOSTART_NAME = "KeystoneClient"
+
+
+def _set_autostart(enabled: bool):
+    import sys
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, AUTOSTART_KEY, 0, winreg.KEY_SET_VALUE)
+        if enabled:
+            winreg.SetValueEx(key, AUTOSTART_NAME, 0, winreg.REG_SZ, f'"{sys.executable}"')
+        else:
+            try:
+                winreg.DeleteValue(key, AUTOSTART_NAME)
+            except FileNotFoundError:
+                pass
+        winreg.CloseKey(key)
+    except Exception:
+        pass
+
+
+def _get_autostart() -> bool:
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, AUTOSTART_KEY, 0, winreg.KEY_READ)
+        winreg.QueryValueEx(key, AUTOSTART_NAME)
+        winreg.CloseKey(key)
+        return True
+    except FileNotFoundError:
+        return False
 
 
 class MainWindow:
@@ -13,71 +46,96 @@ class MainWindow:
         self.cfg = cfg_module.load()
         self._worker = None
         self._tray = None
+        self._addon_panel_visible = False
+        self._sync_status = "Sin sincronizar"
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
         self.root.resizable(False, False)
-        self.root.eval("tk::PlaceWindow . center")
         self.root.configure(bg="#111827")
-        self.root.protocol("WM_DELETE_WINDOW", self._minimize_to_tray)
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close_btn)
 
         self._setup_styles()
-
-        tk.Label(self.root, text="KeystoneClient", bg="#111827", fg="#f59e0b",
-                 font=("Segoe UI", 18, "bold")).pack(pady=(20, 4))
-
-        self.frame = tk.Frame(self.root, bg="#111827", padx=30, pady=10)
-        self.frame.pack(fill="both", expand=True)
 
         if cfg_module.is_session_valid(self.cfg):
             self._show_main_view()
         else:
             self._show_login_view()
 
+        self.root.eval("tk::PlaceWindow . center")
+
+    # ------------------------------------------------------------------ styles
+
     def _setup_styles(self):
         s = ttk.Style(self.root)
         s.theme_use("clam")
-        s.configure("TLabel", background="#111827", foreground="#d1d5db", font=("Segoe UI", 10))
-        s.configure("TEntry", fieldbackground="#1f2937", foreground="white", font=("Segoe UI", 10))
+        s.configure("TLabel",       background="#111827", foreground="#d1d5db", font=("Segoe UI", 10))
+        s.configure("TEntry",       fieldbackground="#1f2937", foreground="white", font=("Segoe UI", 10))
+        s.configure("TCheckbutton", background="#111827", foreground="#9ca3af", font=("Segoe UI", 9))
+        s.map("TCheckbutton",       background=[("active", "#111827")])
+
         s.configure("Gold.TButton", background="#f59e0b", foreground="#111827",
                     font=("Segoe UI", 10, "bold"), padding=8)
-        s.map("Gold.TButton", background=[("active", "#fbbf24")])
+        s.map("Gold.TButton",       background=[("active", "#fbbf24")])
+
         s.configure("Gray.TButton", background="#374151", foreground="white",
                     font=("Segoe UI", 10), padding=8)
-        s.map("Gray.TButton", background=[("active", "#4b5563")])
+        s.map("Gray.TButton",       background=[("active", "#4b5563")])
+
+        s.configure("Red.TButton",  background="#991b1b", foreground="white",
+                    font=("Segoe UI", 9, "bold"), padding=4)
+        s.map("Red.TButton",        background=[("active", "#dc2626")])
+
+        s.configure("Link.TButton", background="#111827", foreground="#6b7280",
+                    font=("Segoe UI", 9), relief="flat", padding=2)
+        s.map("Link.TButton",       foreground=[("active", "#f59e0b")],
+                                    background=[("active", "#111827")])
+
+        s.configure("Gray.Horizontal.TProgressbar",  troughcolor="#1f2937", background="#374151")
+        s.configure("Green.Horizontal.TProgressbar", troughcolor="#1f2937", background="#10b981")
+
+    # ------------------------------------------------------------------ helpers
 
     def _clear(self):
-        for w in self.frame.winfo_children():
+        for w in self.root.winfo_children():
             w.destroy()
 
-    # --- Login view ---
+    # ================================================================ LOGIN VIEW
 
     def _show_login_view(self):
-        self.root.geometry("360x260")
         self._clear()
+        self.root.geometry("480x300")
 
-        ttk.Label(self.frame, text="Usuario").grid(row=0, column=0, sticky="w", pady=5)
+        outer = tk.Frame(self.root, bg="#111827")
+        outer.pack(fill="both", expand=True, padx=40, pady=20)
+
+        tk.Label(outer, text="KeystoneClient", bg="#111827", fg="#f59e0b",
+                 font=("Segoe UI", 20, "bold")).grid(row=0, column=0, columnspan=2,
+                                                       pady=(0, 20), sticky="w")
+
+        ttk.Label(outer, text="Usuario").grid(row=1, column=0, sticky="w", pady=5)
         self.username_var = tk.StringVar()
-        entry = ttk.Entry(self.frame, textvariable=self.username_var, width=24)
-        entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+        entry = ttk.Entry(outer, textvariable=self.username_var, width=28)
+        entry.grid(row=1, column=1, pady=5, padx=(12, 0), sticky="ew")
         entry.focus()
 
-        ttk.Label(self.frame, text="Contraseña").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(outer, text="Contraseña").grid(row=2, column=0, sticky="w", pady=5)
         self.password_var = tk.StringVar()
-        ttk.Entry(self.frame, textvariable=self.password_var, show="*", width=24).grid(
-            row=1, column=1, pady=5, padx=(10, 0))
+        ttk.Entry(outer, textvariable=self.password_var, show="*", width=28).grid(
+            row=2, column=1, pady=5, padx=(12, 0), sticky="ew")
 
         self.login_error = tk.StringVar()
-        tk.Label(self.frame, textvariable=self.login_error, bg="#111827", fg="#f87171",
-                 font=("Segoe UI", 9)).grid(row=2, column=0, columnspan=2, pady=3)
+        tk.Label(outer, textvariable=self.login_error, bg="#111827", fg="#f87171",
+                 font=("Segoe UI", 9)).grid(row=3, column=0, columnspan=2, pady=3)
 
-        ttk.Button(self.frame, text="Entrar", style="Gold.TButton",
-                   command=self._login).grid(row=3, column=0, columnspan=2, sticky="ew", pady=5)
+        btn_frame = tk.Frame(outer, bg="#111827")
+        btn_frame.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        ttk.Button(btn_frame, text="Entrar", style="Gold.TButton",
+                   command=self._login).pack(side="left", fill="x", expand=True, padx=(0, 6))
+        ttk.Button(btn_frame, text="Registrarse", style="Gray.TButton",
+                   command=lambda: webbrowser.open(REGISTER_URL)).pack(side="left", fill="x", expand=True)
 
-        tk.Label(self.frame, text="¿Sin cuenta? Regístrate en weekly-char.vercel.app",
-                 bg="#111827", fg="#6b7280", font=("Segoe UI", 8)).grid(
-            row=4, column=0, columnspan=2, pady=(4, 0))
-
+        outer.columnconfigure(1, weight=1)
         self.root.bind("<Return>", lambda _: self._login())
 
     def _login(self):
@@ -108,67 +166,161 @@ class MainWindow:
         except Exception as e:
             self.login_error.set(f"Error: {e}")
 
-    # --- Main view ---
+    # ================================================================ MAIN VIEW
 
     def _show_main_view(self):
-        self.root.geometry("400x280")
         self._clear()
+        self.root.geometry("500x400")
+        self._addon_panel_visible = False
 
-        username = self.cfg.get("username", "usuario")
-        tk.Label(self.frame, text=f"Conectado como {username}", bg="#111827", fg="#34d399",
-                 font=("Segoe UI", 10)).grid(row=0, column=0, columnspan=3, pady=(0, 14))
+        root_frame = tk.Frame(self.root, bg="#111827")
+        root_frame.pack(fill="both", expand=True, padx=30, pady=20)
 
-        tk.Label(self.frame, text="Carpeta AddOns de WoW:", bg="#111827", fg="#9ca3af",
-                 font=("Segoe UI", 9)).grid(row=1, column=0, columnspan=3, sticky="w")
+        # --- Header row ---
+        header = tk.Frame(root_frame, bg="#111827")
+        header.pack(fill="x", pady=(0, 16))
 
+        tk.Label(header, text="KeystoneClient", bg="#111827", fg="#f59e0b",
+                 font=("Segoe UI", 18, "bold")).pack(side="left")
+
+        ttk.Button(header, text="Cerrar sesión", style="Red.TButton",
+                   command=self._logout).pack(side="right", padx=(8, 0))
+        tk.Label(header, text=f"@{self.cfg.get('username', '')}",
+                 bg="#111827", fg="#9ca3af", font=("Segoe UI", 9)).pack(side="right")
+
+        # --- WoW status row ---
+        wow_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
+        wow_color = "#10b981" if wow_found else "#f87171"
+        wow_text  = "WoW detectado" if wow_found else "WoW no encontrado"
+        status_row = tk.Frame(root_frame, bg="#111827")
+        status_row.pack(fill="x", pady=(0, 4))
+        tk.Label(status_row, text="●", bg="#111827", fg=wow_color,
+                 font=("Segoe UI", 9)).pack(side="left")
+        tk.Label(status_row, text=f" {wow_text}", bg="#111827", fg="#6b7280",
+                 font=("Segoe UI", 9)).pack(side="left")
+
+        # --- Sync status ---
+        self.sync_status_var = tk.StringVar(value=self._sync_status)
+        tk.Label(root_frame, textvariable=self.sync_status_var,
+                 bg="#111827", fg="#6b7280", font=("Segoe UI", 9),
+                 anchor="w").pack(fill="x", pady=(0, 16))
+
+        # --- Addon section toggle button ---
+        self.addon_toggle_btn = ttk.Button(root_frame, text="▶  Instalar / Actualizar Addon",
+                                           style="Gray.TButton", command=self._toggle_addon_panel)
+        self.addon_toggle_btn.pack(fill="x", pady=(0, 2))
+
+        # --- Collapsible addon panel ---
+        self.addon_panel = tk.Frame(root_frame, bg="#1f2937", padx=16, pady=12)
+
+        tk.Label(self.addon_panel, text="Carpeta AddOns de WoW:", bg="#1f2937", fg="#9ca3af",
+                 font=("Segoe UI", 9)).pack(anchor="w")
+
+        path_row = tk.Frame(self.addon_panel, bg="#1f2937")
+        path_row.pack(fill="x", pady=(4, 10))
         self.addons_var = tk.StringVar(value=addon_installer.find_addons_folder() or "")
-        ttk.Entry(self.frame, textvariable=self.addons_var, width=32).grid(
-            row=2, column=0, columnspan=2, sticky="ew", pady=(4, 0))
-        ttk.Button(self.frame, text="...", style="Gray.TButton",
-                   command=self._browse).grid(row=2, column=2, pady=(4, 0), padx=(6, 0))
+        ttk.Entry(path_row, textvariable=self.addons_var).pack(side="left", fill="x", expand=True)
+        ttk.Button(path_row, text="...", style="Gray.TButton",
+                   command=self._browse_addons, width=3).pack(side="left", padx=(6, 0))
 
-        self.addon_status = tk.StringVar()
-        self.addon_status_label = tk.Label(self.frame, textvariable=self.addon_status,
-                                           bg="#111827", fg="#6b7280",
-                                           font=("Segoe UI", 9), wraplength=340)
-        self.addon_status_label.grid(row=3, column=0, columnspan=3, pady=5)
+        self.progress_var = tk.IntVar(value=0)
+        self.progress_bar = ttk.Progressbar(self.addon_panel, variable=self.progress_var,
+                                             maximum=100, style="Gray.Horizontal.TProgressbar")
+        self.progress_bar.pack(fill="x", pady=(0, 6))
 
-        ttk.Button(self.frame, text="Instalar / Actualizar Addon", style="Gray.TButton",
-                   command=self._install_addon).grid(
-            row=4, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        self.install_status_var = tk.StringVar()
+        tk.Label(self.addon_panel, textvariable=self.install_status_var,
+                 bg="#1f2937", fg="#6b7280", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
 
-        ttk.Button(self.frame, text="Minimizar a la bandeja y sincronizar",
-                   style="Gold.TButton", command=self._minimize_to_tray).grid(
-            row=5, column=0, columnspan=3, sticky="ew")
+        ttk.Button(self.addon_panel, text="Instalar / Actualizar",
+                   style="Gold.TButton", command=self._do_install).pack(fill="x")
 
-        self.frame.columnconfigure(0, weight=1)
+        # Collapse panel when clicking outside it
+        root_frame.bind("<Button-1>", self._on_outer_click)
+        for widget in [header, status_row]:
+            widget.bind("<Button-1>", self._on_outer_click)
 
-    def _browse(self):
+        # --- Bottom area ---
+        bottom = tk.Frame(root_frame, bg="#111827")
+        bottom.pack(fill="x", side="bottom", pady=(16, 0))
+
+        ttk.Button(bottom, text="🌐  Abrir web", style="Gray.TButton",
+                   command=lambda: webbrowser.open(WEB_URL)).pack(side="left")
+
+        self.autostart_var = tk.BooleanVar(value=_get_autostart())
+        ttk.Checkbutton(bottom, text="Arrancar con Windows",
+                        variable=self.autostart_var,
+                        command=self._toggle_autostart).pack(side="left", padx=(12, 0))
+
+        ttk.Button(bottom, text="Minimizar a la bandeja",
+                   style="Gold.TButton", command=self._minimize_to_tray).pack(side="right")
+
+    def _on_outer_click(self, event):
+        if self._addon_panel_visible:
+            self._hide_addon_panel()
+
+    def _toggle_addon_panel(self):
+        if self._addon_panel_visible:
+            self._hide_addon_panel()
+        else:
+            self._show_addon_panel()
+
+    def _show_addon_panel(self):
+        self.addon_panel.pack(fill="x", pady=(0, 2))
+        self.addon_toggle_btn.configure(text="▼  Instalar / Actualizar Addon")
+        self._addon_panel_visible = True
+        self.root.geometry("500x480")
+
+    def _hide_addon_panel(self):
+        self.addon_panel.pack_forget()
+        self.addon_toggle_btn.configure(text="▶  Instalar / Actualizar Addon")
+        self._addon_panel_visible = False
+        self.root.geometry("500x400")
+
+    def _browse_addons(self):
         folder = filedialog.askdirectory(title="Selecciona la carpeta AddOns")
         if folder:
             self.addons_var.set(folder)
 
-    def _install_addon(self):
+    def _do_install(self):
         path = self.addons_var.get().strip()
         if not path:
-            self.addon_status.set("Selecciona la carpeta AddOns primero.")
-            self.addon_status_label.config(fg="#f87171")
+            self.install_status_var.set("Selecciona la carpeta AddOns primero.")
             return
+        self.progress_var.set(0)
+        self.progress_bar.configure(style="Gray.Horizontal.TProgressbar")
+        self.install_status_var.set("Instalando...")
+        self.root.update()
         try:
+            self.progress_var.set(40)
+            self.root.update()
             addon_installer.install(path)
-            self.addon_status.set("✓ Instalado correctamente")
-            self.addon_status_label.config(fg="#34d399")
+            self.progress_var.set(100)
+            self.progress_bar.configure(style="Green.Horizontal.TProgressbar")
+            self.install_status_var.set("✓ Instalado correctamente")
         except Exception as e:
-            self.addon_status.set(f"Error: {e}")
-            self.addon_status_label.config(fg="#f87171")
+            self.progress_var.set(0)
+            self.install_status_var.set(f"Error: {e}")
 
-    # --- Tray ---
+    def _toggle_autostart(self):
+        _set_autostart(self.autostart_var.get())
+
+    def _logout(self):
+        if self._worker:
+            self._worker.stop()
+            self._worker = None
+        if self._tray:
+            self._tray.stop()
+            self._tray = None
+        self.cfg["sync_token"] = None
+        self.cfg["login_at"] = None
+        self.cfg["username"] = None
+        cfg_module.save(self.cfg)
+        self._show_login_view()
+
+    # ================================================================ TRAY
 
     def _minimize_to_tray(self):
-        if not cfg_module.is_session_valid(self.cfg):
-            self.root.destroy()
-            return
-
         if not self.cfg.get("wow_path"):
             path = wow_path.find_savedvars()
             if path:
@@ -191,9 +343,16 @@ class MainWindow:
             on_open=self._show_from_tray,
             on_quit=self._quit,
         )
-        self._worker.on_sync = lambda chars: (
-            self._tray.set_status(f"Sync: {', '.join(chars)}"),
-        )
+
+        def _on_sync(chars):
+            names = ", ".join(chars)
+            ts = time.strftime("%H:%M")
+            self._sync_status = f"Última sync: {ts} — {names}"
+            self._tray.set_status(f"Sync: {names}")
+            if hasattr(self, "sync_status_var"):
+                self.root.after(0, lambda: self.sync_status_var.set(self._sync_status))
+
+        self._worker.on_sync = _on_sync
         self._worker.on_error = lambda msg: self._tray.set_status(f"Error: {msg[:50]}")
         self._worker.start()
         self._tray.run_detached()
@@ -207,6 +366,37 @@ class MainWindow:
         if self._worker:
             self._worker.stop()
         self.root.after(0, self.root.destroy)
+
+    # ================================================================ CLOSE BUTTON
+
+    def _on_close_btn(self):
+        if not cfg_module.is_session_valid(self.cfg):
+            self.root.destroy()
+            return
+        self._show_minimized_dialog()
+
+    def _show_minimized_dialog(self):
+        dlg = tk.Toplevel(self.root)
+        dlg.title("KeystoneClient")
+        dlg.configure(bg="#111827")
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.grab_set()
+
+        f = tk.Frame(dlg, bg="#111827", padx=28, pady=22)
+        f.pack()
+
+        tk.Label(f, text="Minimizado a la bandeja", bg="#111827", fg="#f59e0b",
+                 font=("Segoe UI", 12, "bold")).pack(pady=(0, 8))
+        tk.Label(f, text="KeystoneClient sigue corriendo en la bandeja\ndel sistema. Haz clic en el icono para volver.",
+                 bg="#111827", fg="#9ca3af", font=("Segoe UI", 10), justify="center").pack(pady=(0, 18))
+
+        ttk.Button(f, text="Entendido", style="Gold.TButton",
+                   command=lambda: (dlg.destroy(), self._minimize_to_tray())).pack(fill="x")
+
+        dlg.eval("tk::PlaceWindow . center")
+
+    # ================================================================ RUN
 
     def run(self):
         self.root.mainloop()
