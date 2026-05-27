@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 import requests
+import time
 import config as cfg_module
 import addon_installer
 import wow_path
@@ -26,7 +27,7 @@ class MainWindow:
         self.frame = tk.Frame(self.root, bg="#111827", padx=30, pady=10)
         self.frame.pack(fill="both", expand=True)
 
-        if self.cfg.get("sync_token"):
+        if cfg_module.is_session_valid(self.cfg):
             self._show_main_view()
         else:
             self._show_login_view()
@@ -96,6 +97,7 @@ class MainWindow:
                               headers={"Authorization": f"Bearer {token}"}, timeout=10).json()
             self.cfg["sync_token"] = me["syncToken"]
             self.cfg["username"] = me["username"]
+            self.cfg["login_at"] = time.time()
             cfg_module.save(self.cfg)
             self.root.unbind("<Return>")
             self._show_main_view()
