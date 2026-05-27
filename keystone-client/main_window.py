@@ -1,7 +1,8 @@
+import time
 import tkinter as tk
 from tkinter import ttk, filedialog
+
 import requests
-import time
 import config as cfg_module
 import addon_installer
 import wow_path
@@ -10,14 +11,15 @@ import wow_path
 class MainWindow:
     def __init__(self):
         self.cfg = cfg_module.load()
-        self._result = None
+        self._worker = None
+        self._tray = None
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
         self.root.resizable(False, False)
         self.root.eval("tk::PlaceWindow . center")
         self.root.configure(bg="#111827")
-        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)  # overridden in main view
+        self.root.protocol("WM_DELETE_WINDOW", self._minimize_to_tray)
 
         self._setup_styles()
 
@@ -109,9 +111,8 @@ class MainWindow:
     # --- Main view ---
 
     def _show_main_view(self):
-        self.root.geometry("400x300")
+        self.root.geometry("400x280")
         self._clear()
-        self.root.protocol("WM_DELETE_WINDOW", self._go_to_tray)
 
         username = self.cfg.get("username", "usuario")
         tk.Label(self.frame, text=f"Conectado como {username}", bg="#111827", fg="#34d399",
@@ -137,7 +138,7 @@ class MainWindow:
             row=4, column=0, columnspan=3, sticky="ew", pady=(0, 8))
 
         ttk.Button(self.frame, text="Minimizar a la bandeja y sincronizar",
-                   style="Gold.TButton", command=self._go_to_tray).grid(
+                   style="Gold.TButton", command=self._minimize_to_tray).grid(
             row=5, column=0, columnspan=3, sticky="ew")
 
         self.frame.columnconfigure(0, weight=1)
@@ -154,22 +155,58 @@ class MainWindow:
             self.addon_status_label.config(fg="#f87171")
             return
         try:
-            dest = addon_installer.install(path)
-            self.addon_status.set(f"✓ Instalado correctamente")
+            addon_installer.install(path)
+            self.addon_status.set("✓ Instalado correctamente")
             self.addon_status_label.config(fg="#34d399")
         except Exception as e:
             self.addon_status.set(f"Error: {e}")
             self.addon_status_label.config(fg="#f87171")
 
-    def _go_to_tray(self):
+    # --- Tray ---
+
+    def _minimize_to_tray(self):
+        if not cfg_module.is_session_valid(self.cfg):
+            self.root.destroy()
+            return
+
         if not self.cfg.get("wow_path"):
             path = wow_path.find_savedvars()
             if path:
                 self.cfg["wow_path"] = path
                 cfg_module.save(self.cfg)
-        self._result = "tray"
-        self.root.destroy()
 
-    def run(self) -> str | None:
+        if self._tray is None:
+            self._start_background_services()
+
+        self.root.withdraw()
+
+    def _start_background_services(self):
+        from sync_worker import SyncWorker
+        from tray_app import TrayApp
+
+        self._worker = SyncWorker(self.cfg)
+        self._tray = TrayApp(
+            self.cfg,
+            self._worker,
+            on_open=self._show_from_tray,
+            on_quit=self._quit,
+        )
+        self._worker.on_sync = lambda chars: (
+            self._tray.set_status(f"Sync: {', '.join(chars)}"),
+        )
+        self._worker.on_error = lambda msg: self._tray.set_status(f"Error: {msg[:50]}")
+        self._worker.start()
+        self._tray.run_detached()
+
+    def _show_from_tray(self):
+        self.root.after(0, self.root.deiconify)
+        self.root.after(0, self.root.lift)
+        self.root.after(0, self.root.focus_force)
+
+    def _quit(self):
+        if self._worker:
+            self._worker.stop()
+        self.root.after(0, self.root.destroy)
+
+    def run(self):
         self.root.mainloop()
-        return self._result
