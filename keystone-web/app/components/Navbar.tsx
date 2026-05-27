@@ -44,8 +44,6 @@ export default function Navbar() {
     </Link>
   )
 
-  const initial = username?.[0]?.toUpperCase() ?? '?'
-
   return (
     <nav className="sticky top-0 z-10 border-b border-gray-800 bg-gray-950/95 backdrop-blur px-8 py-4">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -62,10 +60,12 @@ export default function Navbar() {
             onClick={() => setOpen(o => !o)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800 transition"
           >
-            <div className="w-7 h-7 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-yellow-400">{initial}</span>
+            <div className="w-7 h-7 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="currentColor">
+                <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+              </svg>
             </div>
-            <span className="text-sm text-gray-300 max-w-[120px] truncate">@{username}</span>
+            <span className="text-sm text-gray-300 max-w-[120px] truncate">{username}</span>
             <svg
               className={`w-3 h-3 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
               fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
