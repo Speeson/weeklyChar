@@ -3,6 +3,7 @@ local PREFIX = "[KeystoneSync]"
 
 -- Region hardcodeada. Cambiar a "us" si el servidor no es EU.
 local REGION = "eu"
+local MAX_LEVEL = 90
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
@@ -17,6 +18,8 @@ local function GetCharacterKey()
 end
 
 local function SaveCurrentKeystone(reason)
+    if UnitLevel("player") < MAX_LEVEL then return end
+
     KeystoneSyncDB = KeystoneSyncDB or {}
 
     local character = UnitName("player")

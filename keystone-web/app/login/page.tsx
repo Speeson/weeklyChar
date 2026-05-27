@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { API_URL, setToken } from '@/lib/auth'
+import { API_URL, setToken, setUsername } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -43,7 +43,7 @@ export default function LoginPage() {
       } else {
         setToken(data.accessToken)
       }
-
+      setUsername(username)
       router.push('/')
     } catch {
       setError('No se puede conectar con la API.')

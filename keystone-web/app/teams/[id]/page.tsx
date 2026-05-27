@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import Link from 'next/link'
 import { apiFetch, getToken } from '@/lib/auth'
 import { CharacterTable } from '@/app/page'
+import Navbar from '@/app/components/Navbar'
 
 interface Keystone {
   level: number | null
@@ -49,49 +49,55 @@ export default function TeamDetailPage() {
       .finally(() => setLoading(false))
   }, [params.id, router])
 
-  if (loading) return <main className="min-h-screen bg-gray-950 flex items-center justify-center"><p className="text-gray-400">Cargando...</p></main>
+  if (loading) return (
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-gray-400">Cargando...</p>
+      </main>
+    </>
+  )
   if (!team) return null
 
   const allCharacters = team.members.flatMap(m => m.characters)
 
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
+        <div className="max-w-4xl mx-auto">
 
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold text-yellow-400">{team.name}</h1>
-          <Link href="/teams" className="text-sm text-gray-400 hover:text-white transition">← Teams</Link>
+          <h1 className="text-xl font-bold text-gray-100 mb-2">{team.name}</h1>
+
+          {team.isOwner && (
+            <p className="text-sm text-gray-500 mb-6">
+              Código de invitación:{' '}
+              <code className="text-yellow-400">{team.inviteCode}</code>
+              <button
+                onClick={() => navigator.clipboard.writeText(team.inviteCode)}
+                className="ml-2 text-xs text-gray-600 hover:text-white transition"
+              >
+                Copiar
+              </button>
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 mb-8">
+            {team.members.map(m => (
+              <span key={m.userId} className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">
+                {m.username}
+                <span className="ml-1 text-gray-500">({m.characters.length})</span>
+              </span>
+            ))}
+          </div>
+
+          {allCharacters.length === 0 ? (
+            <p className="text-gray-500 text-sm">Ningún miembro tiene personajes registrados todavía.</p>
+          ) : (
+            <CharacterTable characters={allCharacters} />
+          )}
         </div>
-
-        {team.isOwner && (
-          <p className="text-sm text-gray-500 mb-8">
-            Código de invitación: <code className="text-yellow-400">{team.inviteCode}</code>
-            <button
-              onClick={() => navigator.clipboard.writeText(team.inviteCode)}
-              className="ml-2 text-xs text-gray-600 hover:text-white transition"
-            >
-              Copiar
-            </button>
-          </p>
-        )}
-
-        {/* Miembros */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {team.members.map(m => (
-            <span key={m.userId} className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-300">
-              {m.username}
-              <span className="ml-1 text-gray-500">({m.characters.length})</span>
-            </span>
-          ))}
-        </div>
-
-        {/* Tabla con todos los personajes del team */}
-        {allCharacters.length === 0 ? (
-          <p className="text-gray-500 text-sm">Ningún miembro tiene personajes registrados todavía.</p>
-        ) : (
-          <CharacterTable characters={allCharacters} />
-        )}
-      </div>
-    </main>
+      </main>
+    </>
   )
 }

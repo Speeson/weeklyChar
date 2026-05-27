@@ -9,8 +9,18 @@ export function setToken(token: string) {
   localStorage.setItem('access_token', token)
 }
 
+export function getUsername(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('username')
+}
+
+export function setUsername(name: string) {
+  localStorage.setItem('username', name)
+}
+
 export function clearToken() {
   localStorage.removeItem('access_token')
+  localStorage.removeItem('username')
 }
 
 export function authHeaders(): Record<string, string> {
