@@ -92,7 +92,7 @@ export default function Dashboard() {
       <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
         <div className="max-w-4xl mx-auto">
 
-          <div className="mb-8 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_190px] gap-4 mb-8 items-stretch">
             <WeeklyAffixes />
             <WeeklyReset />
           </div>
