@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
 import WeeklyReset from '@/app/components/WeeklyReset'
+import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 
 interface Keystone {
   level: number | null
@@ -91,7 +92,8 @@ export default function Dashboard() {
       <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
         <div className="max-w-4xl mx-auto">
 
-          <div className="mb-8">
+          <div className="mb-8 space-y-4">
+            <WeeklyAffixes />
             <WeeklyReset />
           </div>
 

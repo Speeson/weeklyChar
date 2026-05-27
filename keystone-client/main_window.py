@@ -55,6 +55,12 @@ class MainWindow:
         self.root.configure(bg="#111827")
         self.root.protocol("WM_DELETE_WINDOW", self._on_close_btn)
 
+        import sys as _sys, os as _os
+        _base = getattr(_sys, '_MEIPASS', _os.path.dirname(_os.path.abspath(__file__)))
+        _icon = _os.path.join(_base, 'icon.ico')
+        if _os.path.exists(_icon):
+            self.root.iconbitmap(_icon)
+
         self._setup_styles()
 
         if cfg_module.is_session_valid(self.cfg):
@@ -100,42 +106,58 @@ class MainWindow:
         for w in self.root.winfo_children():
             w.destroy()
 
+    def _make_entry(self, parent, textvariable, show=None):
+        """Bordered, padded entry field."""
+        border = tk.Frame(parent, bg="#374151", padx=2, pady=2)
+        inner = tk.Frame(border, bg="#1f2937")
+        inner.pack(fill="both", expand=True)
+        e = tk.Entry(inner, textvariable=textvariable, show=show,
+                     bg="#1f2937", fg="white", insertbackground="#f59e0b",
+                     font=("Segoe UI", 12), relief="flat", bd=0)
+        e.pack(fill="both", expand=True, padx=10, pady=9)
+        return border, e
+
     # ================================================================ LOGIN VIEW
 
     def _show_login_view(self):
         self._clear()
-        self.root.geometry("480x300")
+        self.root.geometry("520x420")
 
         outer = tk.Frame(self.root, bg="#111827")
-        outer.pack(fill="both", expand=True, padx=40, pady=20)
+        outer.pack(fill="both", expand=True, padx=50, pady=36)
 
+        # Title + subtitle
         tk.Label(outer, text="KeystoneClient", bg="#111827", fg="#f59e0b",
-                 font=("Segoe UI", 20, "bold")).grid(row=0, column=0, columnspan=2,
-                                                       pady=(0, 20), sticky="w")
+                 font=("Segoe UI", 24, "bold")).pack(anchor="w")
+        tk.Label(outer, text="Inicia sesión para continuar", bg="#111827", fg="#6b7280",
+                 font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 24))
 
-        ttk.Label(outer, text="Usuario").grid(row=1, column=0, sticky="w", pady=5)
+        # Username
+        tk.Label(outer, text="Usuario", bg="#111827", fg="#d1d5db",
+                 font=("Segoe UI", 11)).pack(anchor="w")
         self.username_var = tk.StringVar()
-        entry = ttk.Entry(outer, textvariable=self.username_var, width=28)
-        entry.grid(row=1, column=1, pady=5, padx=(12, 0), sticky="ew")
-        entry.focus()
+        u_border, u_entry = self._make_entry(outer, self.username_var)
+        u_border.pack(fill="x", pady=(4, 14))
+        u_entry.focus()
 
-        ttk.Label(outer, text="Contraseña").grid(row=2, column=0, sticky="w", pady=5)
+        # Password
+        tk.Label(outer, text="Contraseña", bg="#111827", fg="#d1d5db",
+                 font=("Segoe UI", 11)).pack(anchor="w")
         self.password_var = tk.StringVar()
-        ttk.Entry(outer, textvariable=self.password_var, show="*", width=28).grid(
-            row=2, column=1, pady=5, padx=(12, 0), sticky="ew")
+        p_border, _ = self._make_entry(outer, self.password_var, show="*")
+        p_border.pack(fill="x", pady=(4, 6))
 
         self.login_error = tk.StringVar()
         tk.Label(outer, textvariable=self.login_error, bg="#111827", fg="#f87171",
-                 font=("Segoe UI", 9)).grid(row=3, column=0, columnspan=2, pady=3)
+                 font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
 
         btn_frame = tk.Frame(outer, bg="#111827")
-        btn_frame.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        btn_frame.pack(fill="x")
         ttk.Button(btn_frame, text="Entrar", style="Gold.TButton",
-                   command=self._login).pack(side="left", fill="x", expand=True, padx=(0, 6))
+                   command=self._login).pack(side="left", fill="x", expand=True, padx=(0, 8))
         ttk.Button(btn_frame, text="Registrarse", style="Gray.TButton",
                    command=lambda: webbrowser.open(REGISTER_URL)).pack(side="left", fill="x", expand=True)
 
-        outer.columnconfigure(1, weight=1)
         self.root.bind("<Return>", lambda _: self._login())
 
     def _login(self):
@@ -170,7 +192,7 @@ class MainWindow:
 
     def _show_main_view(self):
         self._clear()
-        self.root.geometry("500x400")
+        self.root.geometry("560x460")
         self._addon_panel_visible = False
 
         root_frame = tk.Frame(self.root, bg="#111827")
@@ -181,12 +203,12 @@ class MainWindow:
         header.pack(fill="x", pady=(0, 16))
 
         tk.Label(header, text="KeystoneClient", bg="#111827", fg="#f59e0b",
-                 font=("Segoe UI", 18, "bold")).pack(side="left")
+                 font=("Segoe UI", 20, "bold")).pack(side="left")
 
         ttk.Button(header, text="Cerrar sesión", style="Red.TButton",
                    command=self._logout).pack(side="right", padx=(8, 0))
         tk.Label(header, text=f"@{self.cfg.get('username', '')}",
-                 bg="#111827", fg="#9ca3af", font=("Segoe UI", 9)).pack(side="right")
+                 bg="#111827", fg="#9ca3af", font=("Segoe UI", 10)).pack(side="right")
 
         # --- WoW status row ---
         wow_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
@@ -195,14 +217,14 @@ class MainWindow:
         status_row = tk.Frame(root_frame, bg="#111827")
         status_row.pack(fill="x", pady=(0, 4))
         tk.Label(status_row, text="●", bg="#111827", fg=wow_color,
-                 font=("Segoe UI", 9)).pack(side="left")
+                 font=("Segoe UI", 11)).pack(side="left")
         tk.Label(status_row, text=f" {wow_text}", bg="#111827", fg="#6b7280",
-                 font=("Segoe UI", 9)).pack(side="left")
+                 font=("Segoe UI", 10)).pack(side="left")
 
         # --- Sync status ---
         self.sync_status_var = tk.StringVar(value=self._sync_status)
         tk.Label(root_frame, textvariable=self.sync_status_var,
-                 bg="#111827", fg="#6b7280", font=("Segoe UI", 9),
+                 bg="#111827", fg="#6b7280", font=("Segoe UI", 10),
                  anchor="w").pack(fill="x", pady=(0, 16))
 
         # --- Addon section toggle button ---
@@ -269,13 +291,13 @@ class MainWindow:
         self.addon_panel.pack(fill="x", pady=(0, 2))
         self.addon_toggle_btn.configure(text="▼  Instalar / Actualizar Addon")
         self._addon_panel_visible = True
-        self.root.geometry("500x480")
+        self.root.geometry("560x560")
 
     def _hide_addon_panel(self):
         self.addon_panel.pack_forget()
         self.addon_toggle_btn.configure(text="▶  Instalar / Actualizar Addon")
         self._addon_panel_visible = False
-        self.root.geometry("500x400")
+        self.root.geometry("560x460")
 
     def _browse_addons(self):
         folder = filedialog.askdirectory(title="Selecciona la carpeta AddOns")
@@ -383,18 +405,26 @@ class MainWindow:
         dlg.transient(self.root)
         dlg.grab_set()
 
-        f = tk.Frame(dlg, bg="#111827", padx=28, pady=22)
+        f = tk.Frame(dlg, bg="#111827", padx=32, pady=28)
         f.pack()
 
         tk.Label(f, text="Minimizado a la bandeja", bg="#111827", fg="#f59e0b",
-                 font=("Segoe UI", 12, "bold")).pack(pady=(0, 8))
+                 font=("Segoe UI", 13, "bold")).pack(pady=(0, 10))
         tk.Label(f, text="KeystoneClient sigue corriendo en la bandeja\ndel sistema. Haz clic en el icono para volver.",
-                 bg="#111827", fg="#9ca3af", font=("Segoe UI", 10), justify="center").pack(pady=(0, 18))
+                 bg="#111827", fg="#9ca3af", font=("Segoe UI", 11), justify="center").pack(pady=(0, 20))
 
         ttk.Button(f, text="Entendido", style="Gold.TButton",
                    command=lambda: (dlg.destroy(), self._minimize_to_tray())).pack(fill="x")
 
-        dlg.eval("tk::PlaceWindow . center")
+        # Center over parent window
+        dlg.update_idletasks()
+        px = self.root.winfo_x()
+        py = self.root.winfo_y()
+        pw = self.root.winfo_width()
+        ph = self.root.winfo_height()
+        dw = dlg.winfo_width()
+        dh = dlg.winfo_height()
+        dlg.geometry(f"+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
 
     # ================================================================ RUN
 
