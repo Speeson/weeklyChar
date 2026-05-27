@@ -6,6 +6,7 @@ local REGION = "eu"
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("PLAYER_LOGOUT")
 frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
 frame:RegisterEvent("BAG_UPDATE_DELAYED")
 
@@ -66,7 +67,10 @@ local function PrintCurrentKeystone()
 end
 
 frame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_LOGIN" then
+    if event == "PLAYER_LOGOUT" then
+        SaveCurrentKeystone("PLAYER_LOGOUT")
+
+    elseif event == "PLAYER_LOGIN" then
         SaveCurrentKeystone("PLAYER_LOGIN")
         C_Timer.After(5, function()
             SaveCurrentKeystone("PLAYER_LOGIN_5S")
