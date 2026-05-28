@@ -134,6 +134,14 @@ class KeystoneUpdateRequest(BaseModel):
 class AvatarUpdateRequest(BaseModel):
     avatarUrl: str
 
+class CharacterEnrichRequest(BaseModel):
+    name: str
+    realm: str
+    region: str = "eu"
+    avatarUrl: Optional[str] = None
+    rioScore: Optional[float] = None
+    wowClass: Optional[str] = None
+
 class CreateTeamRequest(BaseModel):
     name: str
 
@@ -175,6 +183,29 @@ def get_me(current_user: User = Depends(get_current_user)):
         "syncToken": current_user.sync_token,
         "avatarUrl": current_user.avatar_url,
     }
+
+@app.post("/api/me/characters/enrich")
+def enrich_character(
+    payload: CharacterEnrichRequest,
+    current_user: User = Depends(get_current_user_flexible),
+    db: Session = Depends(get_db),
+):
+    character = db.query(Character).filter_by(
+        user_id=current_user.id,
+        name=payload.name,
+        realm=payload.realm,
+        region=payload.region,
+    ).first()
+    if not character:
+        raise HTTPException(404, "Personaje no encontrado")
+    if payload.avatarUrl is not None:
+        character.avatar_url = payload.avatarUrl
+    if payload.rioScore is not None:
+        character.rio_score = payload.rioScore
+    if payload.wowClass is not None:
+        character.wow_class = payload.wowClass
+    db.commit()
+    return {"status": "ok"}
 
 @app.patch("/api/me/avatar")
 def update_avatar(

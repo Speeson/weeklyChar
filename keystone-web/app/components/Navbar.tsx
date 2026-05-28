@@ -164,36 +164,38 @@ export default function Navbar() {
                 </div>
               </div>
 
-              {/* Avatar picker */}
-              {(loadingChars || charsWithAvatars.length > 0) && (
-                <div className="px-3 py-2.5 border-b border-gray-800">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Foto de perfil</p>
-                  {loadingChars ? (
-                    <p className="text-[11px] text-gray-600">Cargando personajes...</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {charsWithAvatars.map(char => (
-                        <button
-                          key={char.id}
-                          title={`${char.name} — ${char.rioScore ? Math.round(char.rioScore) : 'Sin score'}`}
-                          onClick={() => selectAvatar(char)}
-                          className={`rounded-full overflow-hidden border-2 transition-all ${
-                            avatarUrl === char.avatarUrl
-                              ? 'border-yellow-400 scale-110'
-                              : 'border-gray-700 hover:border-gray-500'
-                          }`}
-                        >
-                          <img
-                            src={char.avatarUrl!}
-                            alt={char.name}
-                            className="w-9 h-9 object-cover"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Avatar picker — always visible */}
+              <div className="px-3 py-2.5 border-b border-gray-800">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Foto de perfil</p>
+                {loadingChars ? (
+                  <p className="text-[11px] text-gray-500 italic">Cargando...</p>
+                ) : charsWithAvatars.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {charsWithAvatars.map(char => (
+                      <button
+                        key={char.id}
+                        title={`${char.name} — ${char.rioScore ? Math.round(char.rioScore) : 'Sin score'}`}
+                        onClick={() => selectAvatar(char)}
+                        className={`rounded-full overflow-hidden border-2 transition-all ${
+                          avatarUrl === char.avatarUrl
+                            ? 'border-yellow-400 scale-110'
+                            : 'border-gray-700 hover:border-gray-500'
+                        }`}
+                      >
+                        <img
+                          src={char.avatarUrl!}
+                          alt={char.name}
+                          className="w-9 h-9 object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-600 leading-tight">
+                    Sincroniza tus personajes desde el cliente para elegir avatar.
+                  </p>
+                )}
+              </div>
 
               <div className="py-1">
                 <Link
