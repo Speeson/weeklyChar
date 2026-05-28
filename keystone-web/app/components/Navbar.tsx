@@ -75,17 +75,17 @@ export default function Navbar() {
 
   async function selectAvatar(char: Character) {
     if (!char.avatarUrl) return
+    // Update UI immediately (optimistic)
+    setAvatarUrl(char.avatarUrl)
+    setAvatarUrlState(char.avatarUrl)
+    setOpen(false)
+    // Persist to server in background
     try {
-      const res = await apiFetch('/api/me/avatar', {
+      await apiFetch('/api/me/avatar', {
         method: 'PATCH',
         body: JSON.stringify({ avatarUrl: char.avatarUrl }),
       })
-      if (res.ok) {
-        setAvatarUrl(char.avatarUrl)
-        setAvatarUrlState(char.avatarUrl)
-      }
     } catch {}
-    setOpen(false)
   }
 
   function logout() {
