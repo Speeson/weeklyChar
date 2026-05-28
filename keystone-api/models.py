@@ -58,6 +58,7 @@ class Character(Base):
     avatar_url = Column(String(512), nullable=True)
     rio_score = Column(Float, nullable=True)
     wow_class = Column(String(50), nullable=True)
+    ilvl = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

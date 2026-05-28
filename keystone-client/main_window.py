@@ -3,6 +3,7 @@ import sys
 import time
 import tkinter as tk
 from tkinter import ttk, filedialog
+import urllib.parse
 import webbrowser
 import winreg
 import threading
@@ -32,7 +33,7 @@ FOOTER_BG    = "#0f1923"
 BH     = 58    # banner height (solid, no image)
 FH     = 58    # footer height (solid, no image)
 TH     = 32    # card title bar height
-CARD_H = 300   # card height
+CARD_H = 260   # card height
 P      = 14    # outer padding
 
 WOW_CLASS_COLORS = {
@@ -50,6 +51,17 @@ WOW_CLASS_COLORS = {
     "Warlock":      "#8788EE",
     "Warrior":      "#C69B3A",
 }
+
+
+def _rio_color(score):
+    if not score:      return MUTED
+    if score < 500:    return "#9d9d9d"
+    if score < 1000:   return "#1eff00"
+    if score < 1500:   return "#0070dd"
+    if score < 2000:   return "#a335ee"
+    if score < 2500:   return "#ff8000"
+    return "#e6cc80"
+
 
 _TR = {
     "es": {
@@ -193,6 +205,7 @@ class MainWindow:
         self._bg_pil_content = None
 
         self._cv      = None
+        self._list_cv = None
         self._user_dd = None
         self._user_dropdown_visible = False
 
@@ -273,6 +286,7 @@ class MainWindow:
         self._banner_icon    = None
         self._bg_pil_content = None
         self._cv             = None
+        self._list_cv        = None
         self._user_dd        = None
         self._user_dropdown_visible = False
         self._sync_icon_id   = None
@@ -471,26 +485,7 @@ class MainWindow:
         cv.create_text(50, BH // 2, text="KeystoneClient",
                        fill=ACCENT, font=("Segoe UI", 15, "bold"), anchor="w")
 
-        # Build banner avatar placeholder (gray circle), shown left of username
-        BAV_R = 13
-        BAV_X = W - 14 - 140   # left of username button
-        BAV_Y = BH // 2
-        self._banner_av_fill_id = cv.create_oval(
-            BAV_X - BAV_R, BAV_Y - BAV_R,
-            BAV_X + BAV_R, BAV_Y + BAV_R,
-            fill="#374151", outline=CARD_BDR)
-        self._banner_av_ring_id = cv.create_oval(  # border ring (tracks for deletion)
-            BAV_X - BAV_R, BAV_Y - BAV_R,
-            BAV_X + BAV_R, BAV_Y + BAV_R,
-            fill="", outline=CARD_BDR)
-        # Make avatar zone clickable (opens the same dropdown)
-        for _oid in (self._banner_av_fill_id, self._banner_av_ring_id):
-            cv.tag_bind(_oid, "<Button-1>", lambda _e: self._toggle_user_dropdown())
-            cv.tag_bind(_oid, "<Enter>",    lambda _e: cv.configure(cursor="hand2"))
-            cv.tag_bind(_oid, "<Leave>",    lambda _e: cv.configure(cursor=""))
-        self._banner_av_img_id = None
-        self._banner_av_x = BAV_X
-
+        # Username button — placed first so we can measure its width
         username = self.cfg.get("username", "—")
         self._user_btn = tk.Button(cv, text=f"  {username}  ▾",
                                    bg=BANNER_BG, fg=TEXT, font=("Segoe UI", 10),
@@ -498,6 +493,27 @@ class MainWindow:
                                    activebackground=CARD_BDR, activeforeground=TEXT,
                                    cursor="hand2", command=self._toggle_user_dropdown)
         self._cw(cv, self._user_btn, W - 14, BH // 2, anchor="e")
+        self.root.update_idletasks()
+
+        # Banner avatar — snug to the left of the username button
+        BAV_R  = 13
+        _btn_w = self._user_btn.winfo_reqwidth()
+        BAV_X  = W - 14 - _btn_w - 6 - BAV_R
+        BAV_Y  = BH // 2
+        self._banner_av_fill_id = cv.create_oval(
+            BAV_X - BAV_R, BAV_Y - BAV_R,
+            BAV_X + BAV_R, BAV_Y + BAV_R,
+            fill="#374151", outline=CARD_BDR)
+        self._banner_av_ring_id = cv.create_oval(
+            BAV_X - BAV_R, BAV_Y - BAV_R,
+            BAV_X + BAV_R, BAV_Y + BAV_R,
+            fill="", outline=CARD_BDR)
+        for _oid in (self._banner_av_fill_id, self._banner_av_ring_id):
+            cv.tag_bind(_oid, "<Button-1>", lambda _e: self._toggle_user_dropdown())
+            cv.tag_bind(_oid, "<Enter>",    lambda _e: cv.configure(cursor="hand2"))
+            cv.tag_bind(_oid, "<Leave>",    lambda _e: cv.configure(cursor=""))
+        self._banner_av_img_id = None
+        self._banner_av_x = BAV_X
 
         # ── Sync card ─────────────────────────────────────────────────────────
         LIST_W  = int(CARD_W * 0.54)     # left section width (character cards)
@@ -521,33 +537,47 @@ class MainWindow:
         cv.create_line(P + LIST_W, SC_CT + 6, P + LIST_W, CARD_Y + CARD_H - 50,
                        fill=CARD_BDR, dash=(3, 4))
 
-        # ── Sync status (right panel) ─────────────────────────────────────────
-        _lbl = self._t("last_sync_lbl") if self._sync_ok else \
-               (self._sync_primary or self._t("never"))
+        # ── Sync status (right panel) — vertically centred ───────────────────
+        _lbl       = self._t("last_sync_lbl") if self._sync_ok else \
+                     (self._sync_primary or self._t("never"))
+        _s_avail   = CARD_H - TH - 50          # px available in right panel
+        _s_mid     = SC_CT + _s_avail // 2     # vertical centre of panel
 
         self._sync_icon_id = cv.create_text(
-            STAT_CX, SC_CT + 38,
+            STAT_CX, _s_mid - 42,
             text="✓" if self._sync_ok else "✗",
             fill=GREEN if self._sync_ok else RED_COL,
             font=("Segoe UI", 32, "bold"), anchor="center")
 
         self._sync_label_id = cv.create_text(
-            STAT_CX, SC_CT + 72,
+            STAT_CX, _s_mid + 4,
             text=_lbl, fill=MUTED, font=("Segoe UI", 8), anchor="center")
 
         self._sync_time_id = cv.create_text(
-            STAT_CX, SC_CT + 92,
+            STAT_CX, _s_mid + 22,
             text=self._sync_primary if self._sync_ok else "",
             fill=TEXT, font=("Segoe UI", 18, "bold"), anchor="center")
 
         self._sync_date_id = cv.create_text(
-            STAT_CX, SC_CT + 116,
+            STAT_CX, _s_mid + 44,
             text=self._sync_secondary if self._sync_ok else "",
             fill=MUTED, font=("Segoe UI", 9), anchor="center")
 
-        # ── Character cards (left panel) — rendered separately ────────────────
-        self._char_canvas_items = []
-        self._render_char_list(cv, P, CARD_Y, CARD_W, LIST_W, SC_CT)
+        # ── Character list (left panel) — scrollable inner canvas ────────────
+        _CHAR_CH   = 40
+        _CHAR_GAP  = 4
+        _VISIBLE   = 4
+        _list_vis_h = _VISIBLE * _CHAR_CH + (_VISIBLE - 1) * _CHAR_GAP + 8  # 180px
+        _list_inner_w = LIST_W - 8
+        self._list_cv = tk.Canvas(cv, bg=CARD_BG, bd=0, highlightthickness=0,
+                                   width=_list_inner_w, height=_list_vis_h)
+        cv.create_window(P + 4, SC_CT + 6, anchor="nw", window=self._list_cv,
+                          width=_list_inner_w, height=_list_vis_h)
+        self._list_cv.bind("<Enter>", lambda e: self._list_cv.focus_set())
+        self._list_cv.bind("<MouseWheel>",
+                            lambda e: self._list_cv.yview_scroll(
+                                int(-1 * (e.delta / 120)), "units"))
+        self._render_char_list(self._list_cv, _list_inner_w)
 
         # Sync button (full width, bottom of card)
         self._cw(cv, ttk.Button(cv, text=self._t("sync_btn"), style="Gold.TButton",
@@ -794,96 +824,110 @@ class MainWindow:
 
     # ── character cards ────────────────────────────────────────────────────────
 
-    def _render_char_list(self, cv, card_x, card_y, card_w, list_w, sc_ct):
-        """Draw character cards in the left panel. Appends item IDs to self._char_canvas_items."""
-        CHAR_CW  = list_w - 12   # card width
-        CHAR_CH  = 32            # card height
-        CHAR_GAP = 4             # gap between cards
-        MAX_SHOW = 6
+    def _render_char_list(self, list_cv, list_w):
+        """Draw character cards on the inner scroll canvas."""
+        CHAR_CW  = list_w - 4
+        CHAR_CH  = 40
+        CHAR_GAP = 4
+        AV       = 30
+        RIO_W    = 46   # width reserved on right for score
 
-        chars = self._characters[:MAX_SHOW]
+        chars = self._characters
         n     = len(chars)
-        avail = CARD_H - TH - 50  # vertical space for cards
 
         if n == 0:
-            mid_y = sc_ct + avail // 2
-            item  = cv.create_text(
-                card_x + list_w // 2, mid_y,
+            list_cv.create_text(
+                list_w // 2, 30,
                 text="Sin personajes\nsincronizados",
                 fill=MUTED, font=("Segoe UI", 9),
                 justify="center", anchor="center")
-            self._char_canvas_items.append(item)
+            list_cv.configure(scrollregion=(0, 0, list_w, 60))
             return
 
-        total_h = n * CHAR_CH + (n - 1) * CHAR_GAP
-        start_y = sc_ct + max(6, (avail - total_h) // 2)
+        total_h = n * CHAR_CH + (n - 1) * CHAR_GAP + 4
+        list_cv.configure(scrollregion=(0, 0, list_w, total_h))
 
         for i, char in enumerate(chars):
-            cy  = start_y + i * (CHAR_CH + CHAR_GAP)
-            cx  = card_x + 6
+            cy    = 2 + i * (CHAR_CH + CHAR_GAP)
+            cx    = 2
             end_x = cx + CHAR_CW
+            tag   = f"char_{i}"
+
+            name        = char.get("name") or "?"
+            wow_class   = char.get("wowClass") or ""
+            class_color = WOW_CLASS_COLORS.get(wow_class, TEXT)
+            rio_score   = char.get("rioScore")
+            ilvl        = char.get("ilvl")
+            region      = (char.get("region") or "eu").lower()
+            realm       = (char.get("realm") or "").lower()
+            rio_url     = (f"https://raider.io/characters/{region}/"
+                           f"{urllib.parse.quote(realm)}/"
+                           f"{urllib.parse.quote(name.lower())}")
 
             # Card background + border
-            bg_id = cv.create_rectangle(cx, cy, end_x, cy + CHAR_CH,
-                                         fill=CHAR_CARD_BG, outline=CARD_BDR)
-            self._char_canvas_items.append(bg_id)
+            list_cv.create_rectangle(cx, cy, end_x, cy + CHAR_CH,
+                                      fill=CHAR_CARD_BG, outline=CARD_BDR, tags=tag)
 
-            # Avatar (30×30 circular image or colored placeholder)
-            AV = 30
-            av_cx = cx + 6 + AV // 2
+            # Avatar circle
+            av_cx = cx + 5 + AV // 2
             av_cy = cy + CHAR_CH // 2
-            name  = char.get("name") or "?"
-            ph    = self._char_photos.get(name)
+            ph = self._char_photos.get(name)
             if ph:
-                img_id = cv.create_image(av_cx, av_cy, anchor="center", image=ph)
-                self._char_canvas_items.append(img_id)
+                list_cv.create_image(av_cx, av_cy, anchor="center", image=ph, tags=tag)
             else:
-                color = WOW_CLASS_COLORS.get(char.get("wowClass") or "", "#4b5563")
-                oid   = cv.create_oval(cx + 6, cy + (CHAR_CH - AV) // 2,
-                                        cx + 6 + AV, cy + (CHAR_CH - AV) // 2 + AV,
-                                        fill=color, outline="")
-                lid   = cv.create_text(av_cx, av_cy,
-                                        text=name[0].upper(),
-                                        fill=BG_DARK, font=("Segoe UI", 11, "bold"),
-                                        anchor="center")
-                self._char_canvas_items.extend([oid, lid])
+                color = WOW_CLASS_COLORS.get(wow_class, "#4b5563")
+                list_cv.create_oval(cx + 5, cy + (CHAR_CH - AV) // 2,
+                                     cx + 5 + AV, cy + (CHAR_CH - AV) // 2 + AV,
+                                     fill=color, outline="", tags=tag)
+                list_cv.create_text(av_cx, av_cy, text=name[0].upper(),
+                                     fill=BG_DARK, font=("Segoe UI", 11, "bold"),
+                                     anchor="center", tags=tag)
 
-            # Name (class color, top half of right area)
-            class_color = WOW_CLASS_COLORS.get(char.get("wowClass") or "", TEXT)
-            txt_x   = cx + 6 + AV + 8
-            name_id = cv.create_text(
-                txt_x, cy + 12,
-                text=name[:16], fill=class_color,
-                font=("Segoe UI", 9, "bold"), anchor="w")
-            self._char_canvas_items.append(name_id)
+            # Text area (between avatar and RIO column)
+            txt_x = cx + 5 + AV + 8
 
-            # Score (muted, bottom half of right area)
-            score = char.get("rioScore")
-            score_txt = f"{int(score)}" if score else "—"
-            score_id  = cv.create_text(
-                txt_x, cy + CHAR_CH - 12,
-                text=score_txt, fill=MUTED,
-                font=("Segoe UI", 8), anchor="w")
-            self._char_canvas_items.append(score_id)
+            # Name — top half, class colour
+            list_cv.create_text(txt_x, cy + 12,
+                                  text=name[:15], fill=class_color,
+                                  font=("Segoe UI", 9, "bold"), anchor="w", tags=tag)
+
+            # ilvl — bottom half, muted
+            ilvl_txt = f"ilvl {ilvl}" if ilvl else "—"
+            list_cv.create_text(txt_x, cy + CHAR_CH - 12,
+                                  text=ilvl_txt, fill=MUTED,
+                                  font=("Segoe UI", 8), anchor="w", tags=tag)
+
+            # RIO score — right column, big, colour-coded
+            rio_cx = end_x - RIO_W // 2 - 2
+            if rio_score:
+                list_cv.create_text(rio_cx, cy + CHAR_CH // 2,
+                                     text=f"{int(rio_score)}",
+                                     fill=_rio_color(rio_score),
+                                     font=("Segoe UI", 12, "bold"),
+                                     anchor="center", tags=tag)
+            else:
+                list_cv.create_text(rio_cx, cy + CHAR_CH // 2,
+                                     text="—", fill=MUTED,
+                                     font=("Segoe UI", 11), anchor="center", tags=tag)
+
+            # Click → Raider.IO profile
+            list_cv.tag_bind(tag, "<Button-1>",
+                              lambda _e, url=rio_url: webbrowser.open(url))
+            list_cv.tag_bind(tag, "<Enter>",
+                              lambda _e, lc=list_cv: lc.configure(cursor="hand2"))
+            list_cv.tag_bind(tag, "<Leave>",
+                              lambda _e, lc=list_cv: lc.configure(cursor=""))
 
     def _refresh_char_list(self):
-        """Delete and re-draw character cards. Must be called from main thread."""
-        cv = self._cv
-        if not (cv and cv.winfo_exists()):
+        """Clear and re-draw character cards in the inner scroll canvas."""
+        lc = getattr(self, "_list_cv", None)
+        if not (lc and lc.winfo_exists()):
             return
-        for item_id in self._char_canvas_items:
-            try:
-                cv.delete(item_id)
-            except Exception:
-                pass
-        W = self._W
-        CARD_W  = (W - P * 3) // 2
-        LIST_W  = int(CARD_W * 0.54)
-        content_H = self._H - BH - FH
-        CARD_Y  = BH + max(P, (content_H - CARD_H) // 2)
-        SC_CT   = CARD_Y + TH
-        self._char_canvas_items = []
-        self._render_char_list(cv, P, CARD_Y, CARD_W, LIST_W, SC_CT)
+        lc.delete("all")
+        W            = self._W
+        CARD_W       = (W - P * 3) // 2
+        LIST_INNER_W = int(CARD_W * 0.54) - 8
+        self._render_char_list(lc, LIST_INNER_W)
 
     def _download_avatar(self, url: str, size: int = 30):
         """Download URL, return circular PIL PhotoImage or None."""
@@ -922,9 +966,9 @@ class MainWindow:
             _sw = SyncWorker(self.cfg)
             enriched_any = False
             for c in chars:
-                if c.get("avatarUrl") and c.get("rioScore") and c.get("wowClass"):
+                if c.get("avatarUrl") and c.get("rioScore") and c.get("wowClass") and c.get("ilvl"):
                     continue
-                av, score, klass = _sw._fetch_raiderio(
+                av, score, klass, ilvl = _sw._fetch_raiderio(
                     c.get("name", ""), c.get("realm", ""), c.get("region", "eu"))
                 if av:
                     c["avatarUrl"] = av
@@ -932,21 +976,24 @@ class MainWindow:
                     c["rioScore"] = score
                 if klass:
                     c["wowClass"] = klass
+                if ilvl is not None:
+                    c["ilvl"] = ilvl
                 # Persist enrichment to server (no keystone side-effect)
-                if av or score or klass:
+                if av or score or klass or ilvl:
                     try:
                         requests.post(
                             f"{api_url}/api/me/characters/enrich",
                             json={"name": c.get("name"), "realm": c.get("realm"),
                                   "region": c.get("region", "eu"),
-                                  "avatarUrl": av, "rioScore": score, "wowClass": klass},
+                                  "avatarUrl": av, "rioScore": score, "wowClass": klass,
+                                  "ilvl": ilvl},
                             headers=sync_hdrs, timeout=8)
                         enriched_any = True
                     except Exception:
                         pass
 
             chars = sorted(chars, key=lambda c: (c.get("rioScore") or 0), reverse=True)
-            self._characters = chars[:6]
+            self._characters = chars
 
             # Download avatar images
             for c in self._characters:

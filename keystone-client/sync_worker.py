@@ -44,26 +44,27 @@ class SyncWorker(threading.Thread):
         time.sleep(0.5)
         self._sync(path)
 
-    def _fetch_raiderio(self, name: str, realm: str, region: str) -> Tuple[Optional[str], Optional[float], Optional[str]]:
-        """Return (avatar_url, rio_score, wow_class) from Raider.IO, or (None, None, None) on failure."""
+    def _fetch_raiderio(self, name: str, realm: str, region: str) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[int]]:
+        """Return (avatar_url, rio_score, wow_class, ilvl) from Raider.IO, or (None, None, None, None) on failure."""
         try:
             params = {
                 "region": region,
                 "realm": realm,
                 "name": name,
-                "fields": "thumbnail_url,class,mythic_plus_scores_by_season:current",
+                "fields": "thumbnail_url,class,mythic_plus_scores_by_season:current,gear",
             }
             r = requests.get(_RIO_BASE, params=params, timeout=8)
             if not r.ok:
-                return None, None, None
+                return None, None, None, None
             data = r.json()
             avatar = data.get("thumbnail_url")
             wow_class = data.get("class")
             seasons = data.get("mythic_plus_scores_by_season") or []
             score = seasons[0]["scores"]["all"] if seasons else None
-            return avatar, score, wow_class
+            ilvl = (data.get("gear") or {}).get("item_level_equipped")
+            return avatar, score, wow_class, ilvl
         except Exception:
-            return None, None, None
+            return None, None, None, None
 
     def _sync(self, path: str):
         with open(path, encoding="utf-8") as f:
@@ -84,7 +85,7 @@ class SyncWorker(threading.Thread):
             realm  = entry.get("realm")
             region = entry.get("region", "eu")
 
-            avatar_url, rio_score, wow_class = self._fetch_raiderio(name, realm, region)
+            avatar_url, rio_score, wow_class, ilvl = self._fetch_raiderio(name, realm, region)
 
             payload = {
                 "character": name,
@@ -100,6 +101,7 @@ class SyncWorker(threading.Thread):
                 "avatarUrl": avatar_url,
                 "rioScore": rio_score,
                 "wowClass": wow_class,
+                "ilvl": ilvl,
             }
             try:
                 r = requests.post(

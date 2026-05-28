@@ -30,6 +30,7 @@ with engine.connect() as _conn:
         "ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
         "ALTER TABLE characters ADD COLUMN IF NOT EXISTS rio_score FLOAT",
         "ALTER TABLE characters ADD COLUMN IF NOT EXISTS wow_class VARCHAR(50)",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS ilvl INTEGER",
     ]:
         _conn.execute(text(_sql))
     _conn.commit()
@@ -130,6 +131,7 @@ class KeystoneUpdateRequest(BaseModel):
     avatarUrl: Optional[str] = None
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
+    ilvl: Optional[int] = None
 
 class AvatarUpdateRequest(BaseModel):
     avatarUrl: str
@@ -141,6 +143,7 @@ class CharacterEnrichRequest(BaseModel):
     avatarUrl: Optional[str] = None
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
+    ilvl: Optional[int] = None
 
 class CreateTeamRequest(BaseModel):
     name: str
@@ -204,6 +207,8 @@ def enrich_character(
         character.rio_score = payload.rioScore
     if payload.wowClass is not None:
         character.wow_class = payload.wowClass
+    if payload.ilvl is not None:
+        character.ilvl = payload.ilvl
     db.commit()
     return {"status": "ok"}
 
@@ -258,6 +263,8 @@ def update_keystone(
         character.rio_score = payload.rioScore
     if payload.wowClass is not None:
         character.wow_class = payload.wowClass
+    if payload.ilvl is not None:
+        character.ilvl = payload.ilvl
 
     keystone = Keystone(
         character_id=character.id,
@@ -346,6 +353,7 @@ def _character_response(c: Character):
         "avatarUrl": c.avatar_url,
         "rioScore": c.rio_score,
         "wowClass": c.wow_class,
+        "ilvl": c.ilvl,
         "currentKeystone": _keystone_dict(latest) if latest else None,
     }
 
