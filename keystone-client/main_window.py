@@ -180,6 +180,9 @@ class MainWindow:
         self._char_photos      = {}   # name -> ImageTk.PhotoImage
         self._char_canvas_items = []  # canvas item IDs to refresh
 
+        # Avatar picker page state
+        self._avatar_picker_offset = 0
+
         # Profile avatar
         self._profile_photo      = None   # ImageTk.PhotoImage for banner
         self._banner_av_ph       = None   # placeholder PhotoImage
@@ -685,23 +688,54 @@ class MainWindow:
         chars_with_avatar = [c for c in self._characters if c.get("avatarUrl")
                               and self._char_photos.get(c.get("name", ""))]
         if chars_with_avatar:
+            PER_PAGE = 3
+            total    = len(chars_with_avatar)
+            offset   = max(0, min(self._avatar_picker_offset, total - 1))
+            self._avatar_picker_offset = offset
+            page     = chars_with_avatar[offset:offset + PER_PAGE]
+            paginate = total > PER_PAGE
+
             tk.Label(self._user_dd, text="Avatar de perfil",
                      bg=CARD_BG, fg=MUTED, font=("Segoe UI", 8)).pack(
                          anchor="w", padx=10, pady=(8, 4))
+
             av_row = tk.Frame(self._user_dd, bg=CARD_BG)
             av_row.pack(anchor="w", padx=10, pady=(0, 8))
-            for char in chars_with_avatar:
-                url = char["avatarUrl"]
-                ph  = self._char_photos[char["name"]]
+
+            if paginate:
+                can_prev = offset > 0
+                tk.Button(av_row, text="◀",
+                          bg=CARD_BG, fg=TEXT if can_prev else "#4b5563",
+                          font=("Segoe UI", 10), relief="flat", bd=0,
+                          padx=3, pady=0,
+                          cursor="hand2" if can_prev else "",
+                          activebackground=CARD_BG,
+                          command=self._avatar_prev if can_prev else lambda: None,
+                          ).pack(side="left", padx=(0, 4))
+
+            for char in page:
+                url    = char["avatarUrl"]
+                ph     = self._char_photos[char["name"]]
                 is_sel = (self._selected_avatar_url == url)
-                btn = tk.Button(
-                    av_row, image=ph,
-                    relief="solid", bd=2, bg=CARD_BG, cursor="hand2",
-                    highlightthickness=2,
-                    highlightbackground=ACCENT if is_sel else CARD_BDR,
-                    activebackground=CARD_BG,
-                    command=lambda u=url: self._select_avatar(u))
-                btn.pack(side="left", padx=(0, 4))
+                tk.Button(av_row, image=ph,
+                          relief="solid", bd=2, bg=CARD_BG, cursor="hand2",
+                          highlightthickness=2,
+                          highlightbackground=ACCENT if is_sel else CARD_BDR,
+                          activebackground=CARD_BG,
+                          command=lambda u=url: self._select_avatar(u),
+                          ).pack(side="left", padx=(0, 4))
+
+            if paginate:
+                can_next = offset + PER_PAGE < total
+                tk.Button(av_row, text="▶",
+                          bg=CARD_BG, fg=TEXT if can_next else "#4b5563",
+                          font=("Segoe UI", 10), relief="flat", bd=0,
+                          padx=3, pady=0,
+                          cursor="hand2" if can_next else "",
+                          activebackground=CARD_BG,
+                          command=self._avatar_next if can_next else lambda: None,
+                          ).pack(side="left")
+
             tk.Frame(self._user_dd, bg=CARD_BDR, height=1).pack(fill="x")
 
         # ── Language ───────────────────────────────────────────────────────────
@@ -728,6 +762,19 @@ class MainWindow:
                   activebackground="#1f2937", activeforeground=RED_COL,
                   command=self._logout).pack(fill="x")
         self._user_dropdown_visible = True
+
+    def _avatar_prev(self):
+        self._avatar_picker_offset = max(0, self._avatar_picker_offset - 3)
+        self._hide_user_dropdown()
+        self._show_user_dropdown()
+
+    def _avatar_next(self):
+        chars_with_avatar = [c for c in self._characters if c.get("avatarUrl")
+                              and self._char_photos.get(c.get("name", ""))]
+        self._avatar_picker_offset = min(
+            len(chars_with_avatar) - 1, self._avatar_picker_offset + 3)
+        self._hide_user_dropdown()
+        self._show_user_dropdown()
 
     def _hide_user_dropdown(self):
         if self._user_dd:
@@ -1124,10 +1171,11 @@ class MainWindow:
         self.cfg.update({"sync_token": None, "access_token": None,
                          "login_at": None, "username": None, "avatar_url": None})
         cfg_module.save(self.cfg)
-        self._characters        = []
-        self._char_photos       = {}
-        self._profile_photo     = None
+        self._characters          = []
+        self._char_photos         = {}
+        self._profile_photo       = None
         self._selected_avatar_url = None
+        self._avatar_picker_offset = 0
         self._show_login_view()
 
     # ── tray ───────────────────────────────────────────────────────────────────
