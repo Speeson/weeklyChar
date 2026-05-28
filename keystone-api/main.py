@@ -11,6 +11,7 @@ import bcrypt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from sqlalchemy import text
 from database import Base, engine, get_db
 from models import Character, Keystone, Team, TeamMember, User
 
@@ -21,6 +22,17 @@ ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
 Base.metadata.create_all(bind=engine)
+
+# Migration: add new columns if they don't exist (PostgreSQL IF NOT EXISTS)
+with engine.connect() as _conn:
+    for _sql in [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS rio_score FLOAT",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS wow_class VARCHAR(50)",
+    ]:
+        _conn.execute(text(_sql))
+    _conn.commit()
 
 app = FastAPI(title="KeystoneSync API")
 
@@ -64,6 +76,26 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user
 
+def get_current_user_flexible(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> User:
+    """Accepts either a JWT access token or a sync token."""
+    token = credentials.credentials
+    # Try JWT first
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user = db.query(User).filter_by(id=int(payload["sub"])).first()
+        if user:
+            return user
+    except (JWTError, KeyError, ValueError):
+        pass
+    # Fall back to sync token
+    user = db.query(User).filter_by(sync_token=token).first()
+    if user:
+        return user
+    raise HTTPException(status_code=401, detail="Token inválido")
+
 def get_user_by_sync_token(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
     db: Session = Depends(get_db),
@@ -95,6 +127,12 @@ class KeystoneUpdateRequest(BaseModel):
     keystoneDungeon: Optional[str] = None
     updatedAt: Optional[int] = None
     updatedReason: Optional[str] = None
+    avatarUrl: Optional[str] = None
+    rioScore: Optional[float] = None
+    wowClass: Optional[str] = None
+
+class AvatarUpdateRequest(BaseModel):
+    avatarUrl: str
 
 class CreateTeamRequest(BaseModel):
     name: str
@@ -135,11 +173,22 @@ def get_me(current_user: User = Depends(get_current_user)):
         "id": current_user.id,
         "username": current_user.username,
         "syncToken": current_user.sync_token,
+        "avatarUrl": current_user.avatar_url,
     }
+
+@app.patch("/api/me/avatar")
+def update_avatar(
+    payload: AvatarUpdateRequest,
+    current_user: User = Depends(get_current_user_flexible),
+    db: Session = Depends(get_db),
+):
+    current_user.avatar_url = payload.avatarUrl
+    db.commit()
+    return {"status": "ok", "avatarUrl": payload.avatarUrl}
 
 @app.get("/api/me/characters")
 def get_my_characters(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_flexible),
     db: Session = Depends(get_db),
 ):
     characters = db.query(Character).filter_by(user_id=current_user.id).order_by(Character.name).all()
@@ -172,6 +221,12 @@ def update_keystone(
         db.flush()
 
     character.updated_at = datetime.now(timezone.utc)
+    if payload.avatarUrl is not None:
+        character.avatar_url = payload.avatarUrl
+    if payload.rioScore is not None:
+        character.rio_score = payload.rioScore
+    if payload.wowClass is not None:
+        character.wow_class = payload.wowClass
 
     keystone = Keystone(
         character_id=character.id,
@@ -257,6 +312,9 @@ def _character_response(c: Character):
         "name": c.name,
         "realm": c.realm,
         "region": c.region,
+        "avatarUrl": c.avatar_url,
+        "rioScore": c.rio_score,
+        "wowClass": c.wow_class,
         "currentKeystone": _keystone_dict(latest) if latest else None,
     }
 

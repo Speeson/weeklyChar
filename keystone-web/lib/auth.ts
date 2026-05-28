@@ -18,9 +18,19 @@ export function setUsername(name: string) {
   localStorage.setItem('username', name)
 }
 
+export function getAvatarUrl(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('avatar_url')
+}
+
+export function setAvatarUrl(url: string) {
+  localStorage.setItem('avatar_url', url)
+}
+
 export function clearToken() {
   localStorage.removeItem('access_token')
   localStorage.removeItem('username')
+  localStorage.removeItem('avatar_url')
 }
 
 export function authHeaders(): Record<string, string> {

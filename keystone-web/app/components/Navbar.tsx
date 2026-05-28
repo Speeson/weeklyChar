@@ -3,13 +3,25 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { apiFetch, clearToken, getToken, getUsername, setUsername as saveUsername } from '@/lib/auth'
+import { apiFetch, clearToken, getToken, getUsername, setUsername as saveUsername, getAvatarUrl, setAvatarUrl } from '@/lib/auth'
+
+interface Character {
+  id: number
+  name: string
+  realm: string
+  avatarUrl: string | null
+  rioScore: number | null
+  wowClass: string | null
+}
 
 export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
   const [username, setUsernameState] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrlState] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [characters, setCharacters] = useState<Character[] | null>(null)
+  const [loadingChars, setLoadingChars] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -24,9 +36,16 @@ export default function Navbar() {
             saveUsername(data.username)
             setUsernameState(data.username)
           }
+          if (data?.avatarUrl) {
+            setAvatarUrl(data.avatarUrl)
+            setAvatarUrlState(data.avatarUrl)
+          }
         })
         .catch(() => {})
     }
+
+    const cached = getAvatarUrl()
+    if (cached) setAvatarUrlState(cached)
   }, [])
 
   useEffect(() => {
@@ -39,10 +58,42 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  function handleOpen(val: boolean) {
+    setOpen(val)
+    if (val && characters === null && !loadingChars) {
+      setLoadingChars(true)
+      apiFetch('/api/me/characters')
+        .then(r => r.ok ? r.json() : [])
+        .then((data: Character[]) => {
+          const sorted = [...data].sort((a, b) => (b.rioScore ?? 0) - (a.rioScore ?? 0))
+          setCharacters(sorted)
+        })
+        .catch(() => setCharacters([]))
+        .finally(() => setLoadingChars(false))
+    }
+  }
+
+  async function selectAvatar(char: Character) {
+    if (!char.avatarUrl) return
+    try {
+      const res = await apiFetch('/api/me/avatar', {
+        method: 'PATCH',
+        body: JSON.stringify({ avatarUrl: char.avatarUrl }),
+      })
+      if (res.ok) {
+        setAvatarUrl(char.avatarUrl)
+        setAvatarUrlState(char.avatarUrl)
+      }
+    } catch {}
+    setOpen(false)
+  }
+
   function logout() {
     clearToken()
     router.push('/login')
   }
+
+  const charsWithAvatars = (characters ?? []).filter(c => c.avatarUrl)
 
   const navLink = (href: string, label: string) => (
     <Link
@@ -70,14 +121,22 @@ export default function Navbar() {
         {/* Profile dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setOpen(o => !o)}
+            onClick={() => handleOpen(!open)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800 transition"
           >
-            <div className="w-7 h-7 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="currentColor">
-                <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
-              </svg>
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="w-7 h-7 rounded-full object-cover border border-gray-600 flex-shrink-0"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
             <span className="text-sm text-gray-300 max-w-[120px] truncate">{username}</span>
             <svg
               className={`w-3 h-3 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -88,11 +147,54 @@ export default function Navbar() {
           </button>
 
           {open && (
-            <div className="absolute right-0 mt-2 w-52 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-800">
-                <p className="text-[11px] text-gray-500 mb-0.5">Conectado como</p>
-                <p className="text-sm font-semibold text-white truncate">{username}</p>
+            <div className="absolute right-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-3">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover border border-gray-600 flex-shrink-0" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-500">Conectado como</p>
+                  <p className="text-sm font-semibold text-white truncate">{username}</p>
+                </div>
               </div>
+
+              {/* Avatar picker */}
+              {(loadingChars || charsWithAvatars.length > 0) && (
+                <div className="px-3 py-2.5 border-b border-gray-800">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Foto de perfil</p>
+                  {loadingChars ? (
+                    <p className="text-[11px] text-gray-600">Cargando personajes...</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {charsWithAvatars.map(char => (
+                        <button
+                          key={char.id}
+                          title={`${char.name} — ${char.rioScore ? Math.round(char.rioScore) : 'Sin score'}`}
+                          onClick={() => selectAvatar(char)}
+                          className={`rounded-full overflow-hidden border-2 transition-all ${
+                            avatarUrl === char.avatarUrl
+                              ? 'border-yellow-400 scale-110'
+                              : 'border-gray-700 hover:border-gray-500'
+                          }`}
+                        >
+                          <img
+                            src={char.avatarUrl!}
+                            alt={char.name}
+                            className="w-9 h-9 object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="py-1">
                 <Link
                   href="/profile"

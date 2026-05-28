@@ -1,6 +1,6 @@
 import secrets
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -12,6 +12,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(200), nullable=False)
     sync_token = Column(String(64), unique=True, nullable=False, default=lambda: secrets.token_hex(32))
+    avatar_url = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     characters = relationship("Character", back_populates="user")
@@ -54,6 +55,9 @@ class Character(Base):
     name = Column(String(100), nullable=False)
     realm = Column(String(100), nullable=False)
     region = Column(String(10), nullable=False, default="eu")
+    avatar_url = Column(String(512), nullable=True)
+    rio_score = Column(Float, nullable=True)
+    wow_class = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
