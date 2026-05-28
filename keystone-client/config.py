@@ -10,9 +10,12 @@ TOKEN_EXPIRE_DAYS = 30
 _DEFAULTS = {
     "api_url": "https://weeklychar-production.up.railway.app",
     "sync_token": None,
+    "access_token": None,
     "username": None,
+    "avatar_url": None,
     "wow_path": None,
     "login_at": None,
+    "lang": "es",
 }
 
 def load() -> dict:
