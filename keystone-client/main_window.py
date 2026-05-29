@@ -1,8 +1,10 @@
+import hashlib
 import os
 import sys
 import time
 import tkinter as tk
 from tkinter import ttk, filedialog
+from pathlib import Path
 import urllib.parse
 import webbrowser
 import winreg
@@ -211,6 +213,8 @@ class MainWindow:
         self._list_cv = None
         self._user_dd = None
         self._user_dropdown_visible = False
+        self._avatar_popup         = None
+        self._avatar_popup_visible = False
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
@@ -292,6 +296,8 @@ class MainWindow:
         self._list_cv        = None
         self._user_dd        = None
         self._user_dropdown_visible = False
+        self._avatar_popup         = None
+        self._avatar_popup_visible = False
         self._sync_icon_id   = None
         self._sync_label_id  = None
         self._sync_time_id   = None
@@ -512,7 +518,7 @@ class MainWindow:
             BAV_X + BAV_R, BAV_Y + BAV_R,
             fill="", outline=CARD_BDR)
         for _oid in (self._banner_av_fill_id, self._banner_av_ring_id):
-            cv.tag_bind(_oid, "<Button-1>", lambda _e: self._toggle_user_dropdown())
+            cv.tag_bind(_oid, "<Button-1>", lambda _e: self._toggle_avatar_popup())
             cv.tag_bind(_oid, "<Enter>",    lambda _e: cv.configure(cursor="hand2"))
             cv.tag_bind(_oid, "<Leave>",    lambda _e: cv.configure(cursor=""))
         self._banner_av_img_id = None
@@ -684,60 +690,6 @@ class MainWindow:
         self._user_dd.place(x=x, y=BH, width=DD_W)
         self._user_dd.lift()
 
-        # ── Avatar picker ──────────────────────────────────────────────────────
-        chars_with_avatar = [c for c in self._characters if c.get("avatarUrl")
-                              and self._char_photos.get(c.get("name", ""))]
-        if chars_with_avatar:
-            PER_PAGE = 3
-            total    = len(chars_with_avatar)
-            offset   = max(0, min(self._avatar_picker_offset, total - 1))
-            self._avatar_picker_offset = offset
-            page     = chars_with_avatar[offset:offset + PER_PAGE]
-            paginate = total > PER_PAGE
-
-            tk.Label(self._user_dd, text="Avatar de perfil",
-                     bg=CARD_BG, fg=MUTED, font=("Segoe UI", 8)).pack(
-                         anchor="w", padx=10, pady=(8, 4))
-
-            av_row = tk.Frame(self._user_dd, bg=CARD_BG)
-            av_row.pack(anchor="w", padx=10, pady=(0, 8))
-
-            if paginate:
-                can_prev = offset > 0
-                tk.Button(av_row, text="◀",
-                          bg=CARD_BG, fg=TEXT if can_prev else "#4b5563",
-                          font=("Segoe UI", 10), relief="flat", bd=0,
-                          padx=3, pady=0,
-                          cursor="hand2" if can_prev else "",
-                          activebackground=CARD_BG,
-                          command=self._avatar_prev if can_prev else lambda: None,
-                          ).pack(side="left", padx=(0, 4))
-
-            for char in page:
-                url    = char["avatarUrl"]
-                ph     = self._char_photos[char["name"]]
-                is_sel = (self._selected_avatar_url == url)
-                tk.Button(av_row, image=ph,
-                          relief="solid", bd=2, bg=CARD_BG, cursor="hand2",
-                          highlightthickness=2,
-                          highlightbackground=ACCENT if is_sel else CARD_BDR,
-                          activebackground=CARD_BG,
-                          command=lambda u=url: self._select_avatar(u),
-                          ).pack(side="left", padx=(0, 4))
-
-            if paginate:
-                can_next = offset + PER_PAGE < total
-                tk.Button(av_row, text="▶",
-                          bg=CARD_BG, fg=TEXT if can_next else "#4b5563",
-                          font=("Segoe UI", 10), relief="flat", bd=0,
-                          padx=3, pady=0,
-                          cursor="hand2" if can_next else "",
-                          activebackground=CARD_BG,
-                          command=self._avatar_next if can_next else lambda: None,
-                          ).pack(side="left")
-
-            tk.Frame(self._user_dd, bg=CARD_BDR, height=1).pack(fill="x")
-
         # ── Language ───────────────────────────────────────────────────────────
         tk.Label(self._user_dd, text=self._t("language"),
                  bg=CARD_BG, fg=MUTED, font=("Segoe UI", 8)).pack(
@@ -763,18 +715,102 @@ class MainWindow:
                   command=self._logout).pack(fill="x")
         self._user_dropdown_visible = True
 
+    def _toggle_avatar_popup(self):
+        if self._avatar_popup_visible:
+            self._hide_avatar_popup()
+        else:
+            self._hide_user_dropdown()
+            self._show_avatar_popup()
+
+    def _show_avatar_popup(self):
+        PER_PAGE = 3
+        chars_wa  = [c for c in self._characters if c.get("avatarUrl")
+                     and self._char_photos.get(c.get("name", ""))]
+        popup_w   = 196
+        av_x      = getattr(self, "_banner_av_x", self._W - 160)
+        x         = max(4, min(av_x - popup_w // 2, self._W - popup_w - 4))
+
+        self._avatar_popup = tk.Frame(self.root, bg=CARD_BG, bd=1, relief="solid",
+                                       highlightbackground=CARD_BDR, highlightthickness=1)
+        self._avatar_popup.place(x=x, y=BH, width=popup_w)
+        self._avatar_popup.lift()
+
+        tk.Label(self._avatar_popup, text="Foto de perfil",
+                 bg=CARD_BG, fg=MUTED, font=("Segoe UI", 8)).pack(
+                     anchor="w", padx=10, pady=(8, 4))
+
+        if not chars_wa:
+            tk.Label(self._avatar_popup,
+                     text="Sincroniza para\nver avatares",
+                     bg=CARD_BG, fg="#4b5563", font=("Segoe UI", 8),
+                     justify="center").pack(padx=10, pady=(0, 10))
+            self._avatar_popup_visible = True
+            return
+
+        total    = len(chars_wa)
+        offset   = max(0, min(self._avatar_picker_offset, total - 1))
+        self._avatar_picker_offset = offset
+        page     = chars_wa[offset:offset + PER_PAGE]
+        paginate = total > PER_PAGE
+
+        av_row = tk.Frame(self._avatar_popup, bg=CARD_BG)
+        av_row.pack(anchor="w", padx=10, pady=(0, 10))
+
+        if paginate:
+            can_prev = offset > 0
+            tk.Button(av_row, text="◀",
+                      bg=CARD_BG, fg=TEXT if can_prev else "#4b5563",
+                      font=("Segoe UI", 10), relief="flat", bd=0, padx=3, pady=0,
+                      cursor="hand2" if can_prev else "",
+                      activebackground=CARD_BG,
+                      command=self._avatar_prev if can_prev else lambda: None,
+                      ).pack(side="left", padx=(0, 4))
+
+        for char in page:
+            url    = char["avatarUrl"]
+            ph     = self._char_photos[char["name"]]
+            is_sel = (self._selected_avatar_url == url)
+            tk.Button(av_row, image=ph,
+                      relief="solid", bd=2, bg=CARD_BG, cursor="hand2",
+                      highlightthickness=2,
+                      highlightbackground=ACCENT if is_sel else CARD_BDR,
+                      activebackground=CARD_BG,
+                      command=lambda u=url: self._select_avatar(u),
+                      ).pack(side="left", padx=(0, 4))
+
+        if paginate:
+            can_next = offset + PER_PAGE < total
+            tk.Button(av_row, text="▶",
+                      bg=CARD_BG, fg=TEXT if can_next else "#4b5563",
+                      font=("Segoe UI", 10), relief="flat", bd=0, padx=3, pady=0,
+                      cursor="hand2" if can_next else "",
+                      activebackground=CARD_BG,
+                      command=self._avatar_next if can_next else lambda: None,
+                      ).pack(side="left")
+
+        self._avatar_popup_visible = True
+
+    def _hide_avatar_popup(self):
+        if self._avatar_popup:
+            try:
+                self._avatar_popup.destroy()
+            except Exception:
+                pass
+            self._avatar_popup = None
+        self._avatar_popup_visible = False
+
     def _avatar_prev(self):
         self._avatar_picker_offset = max(0, self._avatar_picker_offset - 3)
-        self._hide_user_dropdown()
-        self._show_user_dropdown()
+        self._hide_avatar_popup()
+        self._show_avatar_popup()
 
     def _avatar_next(self):
-        chars_with_avatar = [c for c in self._characters if c.get("avatarUrl")
-                              and self._char_photos.get(c.get("name", ""))]
+        chars_wa = [c for c in self._characters if c.get("avatarUrl")
+                    and self._char_photos.get(c.get("name", ""))]
         self._avatar_picker_offset = min(
-            len(chars_with_avatar) - 1, self._avatar_picker_offset + 3)
-        self._hide_user_dropdown()
-        self._show_user_dropdown()
+            len(chars_wa) - 1, self._avatar_picker_offset + 3)
+        self._hide_avatar_popup()
+        self._show_avatar_popup()
 
     def _hide_user_dropdown(self):
         if self._user_dd:
@@ -786,15 +822,22 @@ class MainWindow:
         self._user_dropdown_visible = False
 
     def _on_root_click(self, event):
-        if not self._user_dropdown_visible or not self._user_dd:
-            return
-        try:
-            dx, dy = self._user_dd.winfo_x(), self._user_dd.winfo_y()
-            dw, dh = self._user_dd.winfo_width(), self._user_dd.winfo_height()
-            if not (dx <= event.x <= dx + dw and dy <= event.y <= dy + dh):
-                self._hide_user_dropdown()
-        except Exception:
-            pass
+        if self._user_dropdown_visible and self._user_dd:
+            try:
+                dx, dy = self._user_dd.winfo_x(), self._user_dd.winfo_y()
+                dw, dh = self._user_dd.winfo_width(), self._user_dd.winfo_height()
+                if not (dx <= event.x <= dx + dw and dy <= event.y <= dy + dh):
+                    self._hide_user_dropdown()
+            except Exception:
+                pass
+        if self._avatar_popup_visible and self._avatar_popup:
+            try:
+                px, py = self._avatar_popup.winfo_x(), self._avatar_popup.winfo_y()
+                pw, ph = self._avatar_popup.winfo_width(), self._avatar_popup.winfo_height()
+                if not (px <= event.x <= px + pw and py <= event.y <= py + ph):
+                    self._hide_avatar_popup()
+            except Exception:
+                pass
 
     def _set_lang(self, lang):
         self._lang = lang
@@ -977,72 +1020,100 @@ class MainWindow:
         self._render_char_list(lc, LIST_INNER_W)
 
     def _download_avatar(self, url: str, size: int = 30):
-        """Download URL, return circular PIL PhotoImage or None."""
+        """Return circular PIL PhotoImage — served from disk cache when available."""
         try:
             import io
             from PIL import Image, ImageTk, ImageDraw
+            cache_dir  = Path(os.environ.get("APPDATA", Path.home())) / "KeystoneClient" / "avatars"
+            cache_file = cache_dir / f"{hashlib.md5(url.encode()).hexdigest()}_{size}.png"
+            if cache_file.exists():
+                return ImageTk.PhotoImage(Image.open(cache_file).convert("RGB"))
             resp = requests.get(url, timeout=8)
             resp.raise_for_status()
-            img  = Image.open(io.BytesIO(resp.content)).resize((size, size), Image.LANCZOS).convert("RGBA")
+            raw  = Image.open(io.BytesIO(resp.content)).resize((size, size), Image.LANCZOS).convert("RGBA")
             mask = Image.new("L", (size, size), 0)
             ImageDraw.Draw(mask).ellipse((0, 0, size, size), fill=255)
             base = Image.new("RGBA", (size, size), (17, 26, 38, 255))
-            base.paste(img, (0, 0), mask)
-            return ImageTk.PhotoImage(base.convert("RGB"))
+            base.paste(raw, (0, 0), mask)
+            img = base.convert("RGB")
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                img.save(cache_file, "PNG")
+            except Exception:
+                pass
+            return ImageTk.PhotoImage(img)
         except Exception:
             return None
 
     def _load_characters(self):
-        """Background: fetch characters from API, enrich missing RIO data, download avatars."""
+        """Two-phase load: local cache first (instant), then API refresh in background."""
+        # ── Phase 1: show cached data immediately ─────────────────────────
+        cached = self.cfg.get("cached_characters") or []
+        if cached and not self._characters:
+            self._characters = sorted(cached,
+                                      key=lambda c: (c.get("rioScore") or 0), reverse=True)
+            for c in self._characters:
+                url  = c.get("avatarUrl")
+                name = c.get("name", "")
+                if url and name not in self._char_photos:
+                    ph = self._download_avatar(url, size=30)
+                    if ph:
+                        self._char_photos[name] = ph
+            self.root.after(0, self._refresh_char_list)
+            profile_url = self.cfg.get("avatar_url") or self._selected_avatar_url
+            if profile_url and not self._profile_photo:
+                ph = self._download_avatar(profile_url, size=26)
+                if ph:
+                    self._profile_photo = ph
+                    self.root.after(0, self._update_banner_avatar_ui)
+
+        # ── Phase 2: refresh from API ──────────────────────────────────────
         try:
             token = self.cfg.get("access_token") or self.cfg.get("sync_token", "")
             if not token:
                 return
-            headers     = {"Authorization": f"Bearer {token}"}
-            sync_hdrs   = {"Authorization": f"Bearer {self.cfg.get('sync_token', '')}",
-                           "Content-Type": "application/json"}
-            api_url     = self.cfg["api_url"]
+            headers   = {"Authorization": f"Bearer {token}"}
+            sync_hdrs = {"Authorization": f"Bearer {self.cfg.get('sync_token', '')}",
+                         "Content-Type": "application/json"}
+            api_url   = self.cfg["api_url"]
 
             r = requests.get(f"{api_url}/api/me/characters", headers=headers, timeout=10)
             if not r.ok:
                 return
             chars = r.json()
 
-            # Enrich chars that lack RIO data by calling Raider.IO directly
+            # Enrich chars missing RIO / ilvl data
             from sync_worker import SyncWorker
             _sw = SyncWorker(self.cfg)
-            enriched_any = False
             for c in chars:
                 if c.get("avatarUrl") and c.get("rioScore") and c.get("wowClass") and c.get("ilvl"):
                     continue
                 av, score, klass, ilvl = _sw._fetch_raiderio(
                     c.get("name", ""), c.get("realm", ""), c.get("region", "eu"))
-                if av:
-                    c["avatarUrl"] = av
-                if score is not None:
-                    c["rioScore"] = score
-                if klass:
-                    c["wowClass"] = klass
-                if ilvl is not None:
-                    c["ilvl"] = ilvl
-                # Persist enrichment to server (no keystone side-effect)
+                if av:                c["avatarUrl"] = av
+                if score is not None: c["rioScore"]  = score
+                if klass:             c["wowClass"]  = klass
+                if ilvl is not None:  c["ilvl"]      = ilvl
                 if av or score or klass or ilvl:
                     try:
                         requests.post(
                             f"{api_url}/api/me/characters/enrich",
                             json={"name": c.get("name"), "realm": c.get("realm"),
                                   "region": c.get("region", "eu"),
-                                  "avatarUrl": av, "rioScore": score, "wowClass": klass,
-                                  "ilvl": ilvl},
+                                  "avatarUrl": av, "rioScore": score,
+                                  "wowClass": klass, "ilvl": ilvl},
                             headers=sync_hdrs, timeout=8)
-                        enriched_any = True
                     except Exception:
                         pass
 
             chars = sorted(chars, key=lambda c: (c.get("rioScore") or 0), reverse=True)
             self._characters = chars
 
-            # Download avatar images
+            # Persist updated list to local cache
+            self.cfg["cached_characters"] = chars
+            cfg_module.save(self.cfg)
+
+            # Download any new/updated avatar images
             for c in self._characters:
                 url  = c.get("avatarUrl")
                 name = c.get("name", "")
@@ -1086,11 +1157,11 @@ class MainWindow:
         self._banner_av_ring_id = cv.create_oval(
             x - R, BH // 2 - R, x + R, BH // 2 + R,
             fill="", outline=CARD_BDR)
-        # Re-bind click on ring
+        # Re-bind click on ring and image to dedicated avatar picker
         cv.tag_bind(self._banner_av_ring_id, "<Button-1>",
-                    lambda _e: self._toggle_user_dropdown())
+                    lambda _e: self._toggle_avatar_popup())
         cv.tag_bind(self._banner_av_img_id, "<Button-1>",
-                    lambda _e: self._toggle_user_dropdown())
+                    lambda _e: self._toggle_avatar_popup())
         cv.tag_bind(self._banner_av_img_id, "<Enter>",
                     lambda _e: cv.configure(cursor="hand2"))
         cv.tag_bind(self._banner_av_img_id, "<Leave>",
@@ -1099,6 +1170,7 @@ class MainWindow:
     def _select_avatar(self, url: str):
         """Set character avatar as profile picture. Updates UI immediately, persists to API."""
         self._hide_user_dropdown()
+        self._hide_avatar_popup()
         # Save locally at once so config persists even if API call fails
         self.cfg["avatar_url"]    = url
         self._selected_avatar_url = url
@@ -1169,7 +1241,8 @@ class MainWindow:
         if self._worker: self._worker.stop(); self._worker = None
         if self._tray:   self._tray.stop();   self._tray   = None
         self.cfg.update({"sync_token": None, "access_token": None,
-                         "login_at": None, "username": None, "avatar_url": None})
+                         "login_at": None, "username": None, "avatar_url": None,
+                         "cached_characters": []})
         cfg_module.save(self.cfg)
         self._characters          = []
         self._char_photos         = {}

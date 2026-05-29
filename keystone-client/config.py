@@ -16,6 +16,7 @@ _DEFAULTS = {
     "wow_path": None,
     "login_at": None,
     "lang": "es",
+    "cached_characters": [],
 }
 
 def load() -> dict:
