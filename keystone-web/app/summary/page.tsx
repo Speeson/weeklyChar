@@ -29,6 +29,11 @@ interface PreyBucket {
 
 interface CurrencyInfo {
   quantity?: number
+  itemQuantity?: number
+  dustQuantity?: number
+  dustMaxQuantity?: number
+  dustTotalEarned?: number
+  dustTrackedQuantity?: number
   trackedQuantity?: number
   totalEarned?: number
   maxQuantity?: number
@@ -117,12 +122,12 @@ const CURRENCIES = [
   { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343, iconName: 'inv_120_crest_champion' },
   { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345, iconName: 'inv_120_crest_hero' },
   { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347, iconName: 'inv_120_crest_myth' },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, fileDataId: 4622294 },
-  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, fileDataId: 5929578 },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875, fileDataId: 7551418 },
+  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, localIcon: 'dawnlight-manaflux.jpg' },
+  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, localIcon: 'radiant-spark-dust.jpg' },
+  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875, localIcon: 'spark-of-radiance.jpg' },
   { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
   { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, fileDataId: 7658128 },
+  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, localIcon: 'nebulous-voidcore.jpg' },
 ] as const
 
 function dash(value: unknown) {
@@ -188,7 +193,7 @@ function dungeonCell(char: Character, mapId: number) {
   if (!run || !run.level) return <span className="text-gray-600">—</span>
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <span className="min-w-5 font-bold text-yellow-300">{run.level}</span>
+      <span className="min-w-5 font-bold text-white">{run.level}</span>
       <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
       <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{Math.round(run.rating ?? 0)}</span>
     </span>
@@ -202,7 +207,7 @@ function dungeonCellWithRating(char: Character, mapId: number) {
 
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <span className="min-w-5 font-bold text-yellow-300">{run.level}</span>
+      <span className="min-w-5 font-bold text-white">{run.level}</span>
       <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
       <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{rating || '-'}</span>
     </span>
@@ -231,19 +236,21 @@ function WowheadLink({
   type,
   id,
   className = '',
+  noIcon = true,
 }: {
   children: React.ReactNode
   type: string
   id: number
   className?: string
+  noIcon?: boolean
 }) {
   return (
     <a
       href={wowheadHref(type, id)}
-      data-wowhead="domain=www&icon=false"
+      data-wowhead={noIcon ? 'domain=www&icon=false' : 'domain=www'}
       target="_blank"
       rel="noreferrer"
-      className={`inline-flex items-center justify-center gap-1.5 no-underline ${className}`}
+      className={`inline-flex items-center justify-center gap-2 no-underline ${className}`}
     >
       {children}
     </a>
@@ -252,24 +259,24 @@ function WowheadLink({
 
 function WowheadIcon({
   iconName,
-  fileDataId,
+  localIcon,
 }: {
   iconName?: string
-  fileDataId?: number
+  localIcon?: string
 }) {
   const [failed, setFailed] = useState(false)
-  if (failed || (!iconName && !fileDataId)) return null
+  if (failed || (!iconName && !localIcon)) return null
 
   const src = iconName
     ? `https://wow.zamimg.com/images/wow/icons/small/${iconName}.jpg`
-    : `https://wow.zamimg.com/images/wow/icons/small/${fileDataId}.jpg`
+    : `/icons/currencies/${localIcon}`
 
   return (
     <img
       src={src}
       alt=""
       onError={() => setFailed(true)}
-      className="inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-900 object-cover"
+      className="inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-950 object-cover shadow-sm"
     />
   )
 }
@@ -278,7 +285,9 @@ function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
   const key = currency.key
   const info = char.currencies?.[key]
   if (!info) return <span className="text-gray-600">—</span>
-  const value = info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
+  const value = key === 'sparksOfRadiance'
+    ? info.quantity ?? info.itemQuantity ?? 0
+    : info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
   const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
   return (
     <WowheadLink
@@ -286,7 +295,7 @@ function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
       id={currency.wowheadId}
       className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}
     >
-      <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} fileDataId={'fileDataId' in currency ? currency.fileDataId : undefined} />
+      <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} localIcon={'localIcon' in currency ? currency.localIcon : undefined} />
       {value}
     </WowheadLink>
   )
@@ -399,7 +408,7 @@ export default function SummaryPage() {
                     <InfoRow
                       key={dungeon.id}
                       label={
-                        <WowheadLink type="spell" id={dungeon.spellId} className="text-gray-100">
+                        <WowheadLink type="spell" id={dungeon.spellId} className="gap-3 text-gray-100" noIcon={false}>
                           {dungeon.name}
                         </WowheadLink>
                       }
@@ -424,7 +433,7 @@ export default function SummaryPage() {
                       key={currency.key}
                       label={
                         <WowheadLink type={currency.wowheadType} id={currency.wowheadId} className={currency.color}>
-                          <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} fileDataId={'fileDataId' in currency ? currency.fileDataId : undefined} />
+                          <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} localIcon={'localIcon' in currency ? currency.localIcon : undefined} />
                           {currency.label}
                         </WowheadLink>
                       }
