@@ -99,30 +99,30 @@ const CLASS_COLORS: Record<string, string> = {
 }
 
 const DUNGEONS = [
-  { id: 402, name: "Algeth'ar Academy", abbr: 'AA' },
-  { id: 558, name: "Magister's Terrace", abbr: 'MT' },
-  { id: 560, name: 'Maisara Caverns', abbr: 'MS' },
-  { id: 559, name: 'Nexus-Point Xenas', abbr: 'NPX' },
-  { id: 556, name: 'Pit of Saron', abbr: 'PoS' },
-  { id: 239, name: 'Seat of the Triumvirate', abbr: 'SEAT' },
-  { id: 161, name: 'Skyreach', abbr: 'SR' },
-  { id: 557, name: 'Windrunner Spire', abbr: 'WS' },
+  { id: 402, name: "Algeth'ar Academy", abbr: 'AA', spellId: 393273 },
+  { id: 558, name: "Magister's Terrace", abbr: 'MT', spellId: 1254572 },
+  { id: 560, name: 'Maisara Caverns', abbr: 'MS', spellId: 1254559 },
+  { id: 559, name: 'Nexus-Point Xenas', abbr: 'NPX', spellId: 1254563 },
+  { id: 556, name: 'Pit of Saron', abbr: 'PoS', spellId: 1254555 },
+  { id: 239, name: 'Seat of the Triumvirate', abbr: 'SEAT', spellId: 1254551 },
+  { id: 161, name: 'Skyreach', abbr: 'SR', spellId: 159898 },
+  { id: 557, name: 'Windrunner Spire', abbr: 'WS', spellId: 1254400 },
 ]
 
 const DUNGEON_ABBR = new Map(DUNGEONS.map(d => [d.id, d.abbr]))
 
 const CURRENCIES = [
-  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3383 },
-  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3341 },
-  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343 },
-  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345 },
-  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347 },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378 },
-  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212 },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875 },
-  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310 },
-  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028 },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418 },
+  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3383, iconName: 'inv_120_crest_adventurer' },
+  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3341, iconName: 'inv_120_crest_veteran' },
+  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343, iconName: 'inv_120_crest_champion' },
+  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345, iconName: 'inv_120_crest_hero' },
+  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347, iconName: 'inv_120_crest_myth' },
+  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, iconName: 'inv_10_professions2_enchanting_shard_color5' },
+  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, iconName: 'inv_enchant_dustarcane' },
+  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875, iconName: 'inv_10_enchanting2_spark_color4' },
+  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
+  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
+  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, iconName: 'inv_10_enchanting2_spark_color3' },
 ] as const
 
 function dash(value: unknown) {
@@ -153,6 +153,36 @@ function dungeonFor(char: Character, mapId: number) {
   return (char.mythicPlusSeason?.dungeons ?? []).find(d => d.challengeMapId === mapId)
 }
 
+function estimatedDungeonRating(run: SeasonDungeon) {
+  if (run.rating && run.rating > 0) return Math.round(run.rating)
+
+  const baseScores: Record<number, number> = {
+    2: 155,
+    3: 170,
+    4: 200,
+    5: 215,
+    6: 230,
+    7: 260,
+    8: 275,
+    9: 290,
+    10: 320,
+    11: 335,
+    12: 365,
+    13: 380,
+    14: 395,
+    15: 410,
+    16: 425,
+    17: 440,
+    18: 455,
+    19: 470,
+    20: 485,
+  }
+
+  const base = baseScores[run.level] ?? (run.level > 20 ? 485 + ((run.level - 20) * 15) : 0)
+  if (!base) return 0
+  return base + Math.max(0, Math.min(run.upgradeLevel ?? 0, 3)) * 2
+}
+
 function dungeonCell(char: Character, mapId: number) {
   const run = dungeonFor(char, mapId)
   if (!run || !run.level) return <span className="text-gray-600">—</span>
@@ -161,6 +191,20 @@ function dungeonCell(char: Character, mapId: number) {
       <span className="min-w-5 font-bold text-yellow-300">{run.level}</span>
       <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
       <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{Math.round(run.rating ?? 0)}</span>
+    </span>
+  )
+}
+
+function dungeonCellWithRating(char: Character, mapId: number) {
+  const run = dungeonFor(char, mapId)
+  if (!run || !run.level) return <span className="text-gray-600">-</span>
+  const rating = estimatedDungeonRating(run)
+
+  return (
+    <span className="inline-flex items-center justify-center gap-2">
+      <span className="min-w-5 font-bold text-yellow-300">{run.level}</span>
+      <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
+      <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{rating || '-'}</span>
     </span>
   )
 }
@@ -206,6 +250,16 @@ function WowheadLink({
   )
 }
 
+function WowheadIcon({ iconName }: { iconName: string }) {
+  return (
+    <img
+      src={`https://wow.zamimg.com/images/wow/icons/small/${iconName}.jpg`}
+      alt=""
+      className="inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-900 object-cover"
+    />
+  )
+}
+
 function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
   const key = currency.key
   const info = char.currencies?.[key]
@@ -218,6 +272,7 @@ function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
       id={currency.wowheadId}
       className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}
     >
+      <WowheadIcon iconName={currency.iconName} />
       {value}
     </WowheadLink>
   )
@@ -329,9 +384,13 @@ export default function SummaryPage() {
                   {DUNGEONS.map(dungeon => (
                     <InfoRow
                       key={dungeon.id}
-                      label={dungeon.name}
+                      label={
+                        <WowheadLink type="spell" id={dungeon.spellId} className="text-gray-100">
+                          {dungeon.name}
+                        </WowheadLink>
+                      }
                     >
-                      {characters.map(c => <Cell key={c.id}>{dungeonCell(c, dungeon.id)}</Cell>)}
+                      {characters.map(c => <Cell key={c.id}>{dungeonCellWithRating(c, dungeon.id)}</Cell>)}
                     </InfoRow>
                   ))}
 
@@ -351,6 +410,7 @@ export default function SummaryPage() {
                       key={currency.key}
                       label={
                         <WowheadLink type={currency.wowheadType} id={currency.wowheadId} className={currency.color}>
+                          <WowheadIcon iconName={currency.iconName} />
                           {currency.label}
                         </WowheadLink>
                       }
