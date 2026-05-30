@@ -202,14 +202,6 @@ function dungeonFor(char: Character, mapId: number) {
   return (char.mythicPlusSeason?.dungeons ?? []).find(d => d.challengeMapId === mapId)
 }
 
-function dungeonIconPath(characters: Character[], mapId: number) {
-  for (const char of characters) {
-    const path = dungeonFor(char, mapId)?.texturePath
-    if (path) return path
-  }
-  return null
-}
-
 function currencyIconPath(characters: Character[], key: string) {
   for (const char of characters) {
     const path = char.currencies?.[key]?.iconPath
@@ -362,7 +354,6 @@ export default function SummaryPage() {
                     <InfoRow
                       key={dungeon.id}
                       label={dungeon.name}
-                      icon={<GameIcon path={dungeonIconPath(characters, dungeon.id)} fallback={dungeon.abbr.slice(0, 1)} />}
                     >
                       {characters.map(c => <Cell key={c.id}>{dungeonCell(c, dungeon.id)}</Cell>)}
                     </InfoRow>
