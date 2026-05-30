@@ -1,4 +1,5 @@
 import hashlib
+import io
 import os
 import sys
 import time
@@ -32,11 +33,82 @@ TEXT         = "#e5e7eb"
 MUTED        = "#9ca3af"
 FOOTER_BG    = "#0f1923"
 
-BH     = 58    # banner height (solid, no image)
-FH     = 58    # footer height (solid, no image)
-TH     = 32    # card title bar height
-CARD_H = 260   # card height
-P      = 14    # outer padding
+BH = 58   # banner height (tabs live here)
+FH = 58   # footer height
+TH = 32   # card title strip height
+P  = 14   # outer padding
+
+# (full_name) → (display_name, abbreviation)
+_DUNGEON_ABBR = {
+    # The War Within S1
+    "Ara-Kara, City of Echoes":                  ("Ara-Kara",               "AK"),
+    "City of Threads":                           ("City of Threads",         "CoT"),
+    "The Stonevault":                            ("Stonevault",              "SV"),
+    "The Dawnbreaker":                           ("Dawnbreaker",             "DB"),
+    "Mists of Tirna Scithe":                     ("Mists of Tirna Scithe",   "MoTS"),
+    "The Necrotic Wake":                         ("Necrotic Wake",           "NW"),
+    "Siege of Boralus":                          ("Siege of Boralus",        "SoB"),
+    "Grim Batol":                                ("Grim Batol",              "GB"),
+    # The War Within S2
+    "Darkflame Cleft":                           ("Darkflame Cleft",         "DC"),
+    "Cinderbrew Meadery":                        ("Cinderbrew Meadery",      "CB"),
+    "The Rookery":                               ("The Rookery",             "RK"),
+    "Priory of the Sacred Flame":                ("Priory",                  "PSF"),
+    "Operation: Floodgate":                      ("Floodgate",               "OF"),
+    "The MOTHERLODE!!":                          ("MOTHERLODE!!",            "ML"),
+    "Mechagon Workshop":                         ("Mechagon Workshop",       "MW"),
+    # Dragonflight
+    "Algeth'ar Academy":                         ("Algeth'ar Academy",       "AA"),
+    "Brackenhide Hollow":                        ("Brackenhide Hollow",      "BH"),
+    "Halls of Infusion":                         ("Halls of Infusion",       "HoI"),
+    "Neltharus":                                 ("Neltharus",               "Nel"),
+    "Ruby Life Pools":                           ("Ruby Life Pools",         "RLP"),
+    "Uldaman: Legacy of Tyr":                    ("Uldaman",                 "ULD"),
+    "The Azure Vault":                           ("Azure Vault",             "AV"),
+    "The Nokhud Offensive":                      ("Nokhud Offensive",        "NO"),
+    # Dawn of the Infinite
+    "Dawn of the Infinite: Galakrond's Fall":    ("DotI: Galakrond's Fall",  "DOTG"),
+    "Dawn of the Infinite: Murozond's Rise":     ("DotI: Murozond's Rise",   "DOTM"),
+    # Shadowlands
+    "De Other Side":                             ("De Other Side",           "DOS"),
+    "Halls of Atonement":                        ("Halls of Atonement",      "HoA"),
+    "Plaguefall":                                ("Plaguefall",              "PF"),
+    "Sanguine Depths":                           ("Sanguine Depths",         "SD"),
+    "Spires of Ascension":                       ("Spires of Ascension",     "SoA"),
+    "Theater of Pain":                           ("Theater of Pain",         "ToP"),
+    "Tazavesh: So'leah's Gambit":                ("Tazavesh: Gambit",        "TazG"),
+    "Tazavesh: Streets of Wonder":               ("Tazavesh: Streets",       "TazS"),
+    # Battle for Azeroth
+    "Freehold":                                  ("Freehold",                "FH"),
+    "King's Rest":                               ("King's Rest",             "KR"),
+    "Shrine of the Storm":                       ("Shrine of the Storm",     "SotS"),
+    "Temple of Sethraliss":                      ("Temple of Sethraliss",    "ToS"),
+    "Tol Dagor":                                 ("Tol Dagor",               "TD"),
+    "The Underrot":                              ("The Underrot",            "UR"),
+    "Waycrest Manor":                            ("Waycrest Manor",          "WM"),
+    "Operation: Mechagon - Junkyard":            ("Mech. Junkyard",          "OMJ"),
+    "Operation: Mechagon - Workshop":            ("Mech. Workshop",          "OMW"),
+    # Legion
+    "Black Rook Hold":                           ("Black Rook Hold",         "BRH"),
+    "Darkheart Thicket":                         ("Darkheart Thicket",       "DHT"),
+    "Court of Stars":                            ("Court of Stars",          "CoS"),
+    "The Arcway":                                ("The Arcway",              "Arc"),
+    "Eye of Azshara":                            ("Eye of Azshara",          "EoA"),
+    "Vault of the Wardens":                      ("Vault of the Wardens",    "VotW"),
+    "Neltharion's Lair":                         ("Neltharion's Lair",       "NL"),
+    "Return to Karazhan: Lower":                 ("Karazhan: Lower",         "KarL"),
+    "Return to Karazhan: Upper":                 ("Karazhan: Upper",         "KarU"),
+    # Classic / Timewalking
+    "The Nexus":                                 ("The Nexus",               "NX"),
+    "Magisters' Terrace":                        ("Magisters' Terrace",      "MT"),
+    "Magister's Terrace":                        ("Magister's Terrace",      "MT"),
+    "Throne of the Tides":                       ("Throne of the Tides",     "TotT"),
+    "The Vortex Pinnacle":                       ("Vortex Pinnacle",         "VP"),
+    "Halls of Stone":                            ("Halls of Stone",          "HoS"),
+    "Halls of Lightning":                        ("Halls of Lightning",      "HoL"),
+    "The Oculus":                                ("The Oculus",              "Occ"),
+    "Utgarde Pinnacle":                          ("Utgarde Pinnacle",        "UP"),
+}
 
 WOW_CLASS_COLORS = {
     "Death Knight": "#C41E3A",
@@ -54,20 +126,107 @@ WOW_CLASS_COLORS = {
     "Warrior":      "#C69B3A",
 }
 
+_CLASS_ICON_SLUGS = {
+    "Death Knight": "classicon_deathknight",
+    "Demon Hunter": "classicon_demonhunter",
+    "Druid":        "classicon_druid",
+    "Evoker":       "classicon_evoker",
+    "Hunter":       "classicon_hunter",
+    "Mage":         "classicon_mage",
+    "Monk":         "classicon_monk",
+    "Paladin":      "classicon_paladin",
+    "Priest":       "classicon_priest",
+    "Rogue":        "classicon_rogue",
+    "Shaman":       "classicon_shaman",
+    "Warlock":      "classicon_warlock",
+    "Warrior":      "classicon_warrior",
+}
+_ICON_BASE = "https://wow.zamimg.com/images/wow/icons/medium"
+
+
+def _lerp_color(c0, c1, t):
+    r = int(c0[0] + t * (c1[0] - c0[0]))
+    g = int(c0[1] + t * (c1[1] - c0[1]))
+    b = int(c0[2] + t * (c1[2] - c0[2]))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _gradient_color(value, stops):
+    """Interpolate color from a list of (threshold, (r,g,b)) stops."""
+    if value <= stops[0][0]:
+        c = stops[0][1]
+        return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
+    if value >= stops[-1][0]:
+        c = stops[-1][1]
+        return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
+    for i in range(len(stops) - 1):
+        s0, c0 = stops[i]
+        s1, c1 = stops[i + 1]
+        if s0 <= value <= s1:
+            t = (value - s0) / (s1 - s0)
+            return _lerp_color(c0, c1, t)
+    c = stops[-1][1]
+    return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
+
+
+# RIO color stops: strictly Green → Blue → Purple → Pink → Orange (no backwards steps)
+_RIO_STOPS = [
+    (0,    (0,   200,   0)),   # green
+    (500,  (0,   200,  70)),   # green (hint of teal)
+    (1000, (0,   160, 190)),   # teal→blue
+    (1500, (0,   100, 230)),   # blue
+    (2000, (80,   50, 240)),   # blue-purple
+    (2400, (160,  50, 240)),   # purple
+    (2800, (200,  55, 210)),   # purple
+    (3200, (235,  65, 170)),   # purple-pink
+    (3500, (255,  85, 110)),   # pink
+    (3700, (255, 115,  55)),   # orange-pink
+    (4000, (255, 145,   0)),   # orange
+]
+
+# ilvl color stops: 0=green, 290=orange
+_ILVL_STOPS = [
+    (0,   (0,   200,   0)),
+    (100, (60,  220,  40)),
+    (180, (0,   140, 210)),
+    (220, (150,  50, 220)),
+    (260, (255, 120,   0)),
+    (290, (255,  80,   0)),
+]
+
 
 def _rio_color(score):
-    if not score:      return MUTED
-    if score < 500:    return "#9d9d9d"
-    if score < 1000:   return "#1eff00"
-    if score < 1500:   return "#0070dd"
-    if score < 2000:   return "#a335ee"
-    if score < 2500:   return "#ff8000"
-    return "#e6cc80"
+    if not score or score <= 0:
+        return "#9d9d9d"
+    return _gradient_color(min(score, 4000), _RIO_STOPS)
+
+
+def _ilvl_color(ilvl):
+    if not ilvl or ilvl <= 0:
+        return MUTED
+    return _gradient_color(min(ilvl, 290), _ILVL_STOPS)
+
+
+def _keystone_display(char):
+    k = char.get("currentKeystone") or {}
+    level = k.get("level")
+    if not level:
+        return "—"
+    dungeon = k.get("dungeon") or ""
+    if dungeon in _DUNGEON_ABBR:
+        display, abbr = _DUNGEON_ABBR[dungeon]
+        return f"+{level} {display} ({abbr})"
+    return f"+{level} {dungeon}" if dungeon else f"+{level}"
 
 
 _TR = {
     "es": {
-        "sync_title":    "Estado de Sincronización",
+        "tab_sync":      "Sincronización",
+        "tab_addon":     "Addon",
+        "col_name":      "Nombre",
+        "col_realm":     "Reino",
+        "col_key":       "Piedra Angular",
+        "sync_title":    "Sincronización",
         "addon_title":   "Addon",
         "last_sync_lbl": "Última sync",
         "never":         "Sin sincronizar",
@@ -95,9 +254,15 @@ _TR = {
         "err_fields":    "Introduce usuario y contraseña.",
         "connecting":    "Conectando...",
         "conn_err":      "No se puede conectar con la API.",
+        "addon_desc":    "Instala o actualiza el addon de KeystoneClient\nen tu carpeta de World of Warcraft.",
     },
     "en": {
-        "sync_title":    "Sync Status",
+        "tab_sync":      "Sync",
+        "tab_addon":     "Addon",
+        "col_name":      "Name",
+        "col_realm":     "Realm",
+        "col_key":       "Keystone",
+        "sync_title":    "Sync",
         "addon_title":   "Addon",
         "last_sync_lbl": "Last sync",
         "never":         "Never synced",
@@ -125,6 +290,7 @@ _TR = {
         "err_fields":    "Enter username and password.",
         "connecting":    "Connecting...",
         "conn_err":      "Cannot connect to API.",
+        "addon_desc":    "Install or update the KeystoneClient addon\nin your World of Warcraft folder.",
     },
 }
 
@@ -170,42 +336,61 @@ class MainWindow:
         self._sync_primary   = ""
         self._sync_secondary = ""
 
-        # Canvas item IDs for dynamic text
+        # Canvas item IDs (reset on tab switch)
         self._sync_icon_id  = None
         self._sync_label_id = None
         self._sync_time_id  = None
         self._sync_date_id  = None
         self._wow_status_id = None
 
-        # Character list (for sync card)
+        # Characters
         self._characters       = []
-        self._char_photos      = {}   # name -> ImageTk.PhotoImage
-        self._char_canvas_items = []  # canvas item IDs to refresh
+        self._char_photos      = {}
+        self._class_icon_photos = {}
+        self._char_canvas_items = []
 
-        # Avatar picker page state
+        # Tab / sort
+        self._active_tab = "sync"
+        self._sort_col   = "rio"
+        self._sort_asc   = False
+
+        # Table canvas refs
+        self._table_body_cv   = None
+        self._table_hdr_cv    = None
+        self._table_body_bg_id = None
+        self._col_widths      = {}
+        self._col_x           = {}
+        self._table_w         = 0
+        self._table_hdr_h     = 0
+        self._table_body_h    = 0
+
+        # Nav tab refs (banner-embedded)
+        self._nav_tab_ids = {}
+
+        # Avatar picker
         self._avatar_picker_offset = 0
 
         # Profile avatar
-        self._profile_photo      = None   # ImageTk.PhotoImage for banner
-        self._banner_av_ph       = None   # placeholder PhotoImage
-        self._banner_av_img_id   = None   # canvas item ID for avatar image
-        self._banner_av_fill_id  = None   # canvas item ID for placeholder circle
-        self._banner_av_ring_id  = None   # canvas item ID for border ring
+        self._profile_photo      = None
+        self._banner_av_ph       = None
+        self._banner_av_img_id   = None
+        self._banner_av_fill_id  = None
+        self._banner_av_ring_id  = None
+        self._banner_av_init_id  = None
         self._selected_avatar_url = None
 
-        # Install progress button refs
-        self._install_btn   = None
-        self._install_fill  = None
+        # Install button
+        self._install_btn      = None
+        self._install_fill     = None
         self._install_btn_text = None
-        self._install_btn_w = 0
-        self._install_msg_id = None
+        self._install_btn_w    = 0
+        self._install_msg_id   = None
 
-        # Addon entry var
         self.addons_var = None
 
-        # PIL image refs (prevent GC)
-        self._photos      = []
-        self._banner_icon = None
+        # PIL refs (prevent GC)
+        self._photos         = []
+        self._banner_icon    = None
         self._bg_pil_orig    = None
         self._bg_pil_content = None
 
@@ -254,17 +439,16 @@ class MainWindow:
         self.root.eval("tk::PlaceWindow . center")
 
     def _calc_window_size(self):
-        """Window size = image aspect ratio for content area + solid banner + solid footer."""
         if self._bg_pil_orig:
             iw, ih = self._bg_pil_orig.size
             aspect = iw / ih
-            content_W = 880
+            content_W = 940
             content_H = round(content_W / aspect)
-            content_H = max(300, min(700, content_H))
+            content_H = max(360, min(700, content_H))
             content_W = round(content_H * aspect)
-            content_W = max(680, min(1280, content_W))
+            content_W = max(740, min(1280, content_W))
             return content_W, content_H + BH + FH
-        return 880, 580
+        return 940, 640
 
     # ── styles ─────────────────────────────────────────────────────────────────
 
@@ -290,31 +474,39 @@ class MainWindow:
         for w in self.root.winfo_children():
             w.destroy()
         self._photos.clear()
-        self._banner_icon    = None
-        self._bg_pil_content = None
-        self._cv             = None
-        self._list_cv        = None
-        self._user_dd        = None
+        self._banner_icon     = None
+        self._bg_pil_content  = None
+        self._cv              = None
+        self._list_cv         = None
+        self._table_body_cv   = None
+        self._table_hdr_cv    = None
+        self._table_body_bg_id = None
+        self._nav_tab_ids     = {}
+        self._col_widths      = {}
+        self._col_x           = {}
+        self._user_dd         = None
         self._user_dropdown_visible = False
         self._avatar_popup         = None
         self._avatar_popup_visible = False
-        self._sync_icon_id   = None
-        self._sync_label_id  = None
-        self._sync_time_id   = None
-        self._sync_date_id   = None
-        self._wow_status_id  = None
+        self._sync_icon_id    = None
+        self._sync_label_id   = None
+        self._sync_time_id    = None
+        self._sync_date_id    = None
+        self._wow_status_id   = None
         self._char_canvas_items = []
         self._profile_photo     = None
         self._banner_av_ph      = None
         self._banner_av_img_id  = None
         self._banner_av_fill_id = None
         self._banner_av_ring_id = None
-        self._install_btn    = None
-        self._install_fill   = None
-        self._install_btn_text = None
-        self._install_btn_w  = 0
-        self._install_msg_id = None
-        self.addons_var      = None
+        self._banner_av_init_id = None
+        self._install_btn       = None
+        self._install_fill      = None
+        self._install_btn_text  = None
+        self._install_btn_w     = 0
+        self._install_msg_id    = None
+        self.addons_var         = None
+        self._class_icon_photos = {}
 
     def _make_entry(self, parent, textvariable, show=None):
         border = tk.Frame(parent, bg="#374151", padx=2, pady=2)
@@ -326,14 +518,15 @@ class MainWindow:
         e.pack(fill="both", expand=True, padx=10, pady=9)
         return border, e
 
-    def _overlay(self, cv, x, y, w, h, hex_color, alpha):
-        """Blend content-area bg region with hex_color. y is in window coords."""
+    def _overlay(self, cv, x, y, w, h, hex_color, alpha, tags=None):
+        """Blend bg image region with hex_color. y is in window coords (image starts at BH)."""
         if w <= 0 or h <= 0:
             return
+        kw = {"tags": tags} if tags else {}
         if self._bg_pil_content:
             try:
                 from PIL import Image, ImageTk
-                cy = y - BH  # convert to content-image coords
+                cy = y - BH
                 region = self._bg_pil_content.crop(
                     (x, cy, x + w, cy + h)).convert("RGB")
                 r = int(hex_color[1:3], 16)
@@ -342,16 +535,17 @@ class MainWindow:
                 ph = ImageTk.PhotoImage(
                     Image.blend(region, Image.new("RGB", (w, h), (r, g, b)), alpha))
                 self._photos.append(ph)
-                cv.create_image(x, y, anchor="nw", image=ph)
+                cv.create_image(x, y, anchor="nw", image=ph, **kw)
                 return
             except Exception:
                 pass
-        cv.create_rectangle(x, y, x + w, y + h, fill=hex_color, outline="")
+        cv.create_rectangle(x, y, x + w, y + h, fill=hex_color, outline="", **kw)
 
-    def _cw(self, cv, widget, x, y, anchor="nw", width=None, height=None):
+    def _cw(self, cv, widget, x, y, anchor="nw", width=None, height=None, tags=None):
         kw = {}
         if width  is not None: kw["width"]  = width
         if height is not None: kw["height"] = height
+        if tags   is not None: kw["tags"]   = tags
         cv.create_window(x, y, anchor=anchor, window=widget, **kw)
 
     # =========================================================================
@@ -360,9 +554,14 @@ class MainWindow:
 
     def _show_login_view(self):
         self._clear()
-        self.root.geometry("520x420")
-        outer = tk.Frame(self.root, bg=BG_DARK)
-        outer.pack(fill="both", expand=True, padx=50, pady=36)
+        W, H = self._W, self._H
+        self.root.geometry(f"{W}x{H}")
+        # Full-window dark background
+        bg_frame = tk.Frame(self.root, bg=BG_DARK)
+        bg_frame.place(x=0, y=0, width=W, height=H)
+        # Centered 420-px login card
+        outer = tk.Frame(bg_frame, bg=BG_DARK)
+        outer.place(relx=0.5, rely=0.5, anchor="center", width=420)
 
         tk.Label(outer, text="KeystoneClient", bg=BG_DARK, fg=ACCENT,
                  font=("Segoe UI", 24, "bold")).pack(anchor="w")
@@ -437,10 +636,7 @@ class MainWindow:
         self.root.geometry(f"{W}x{H}")
 
         content_H = H - BH - FH
-        CARD_W    = (W - P * 3) // 2
-        CARD_Y    = BH + max(P, (content_H - CARD_H) // 2)
 
-        # Prepare content-area PIL image (no modifications)
         if self._bg_pil_orig:
             try:
                 from PIL import Image
@@ -449,12 +645,11 @@ class MainWindow:
             except Exception:
                 self._bg_pil_content = None
 
-        # Canvas
         cv = tk.Canvas(self.root, bd=0, highlightthickness=0, bg=BG_DARK)
         cv.place(x=0, y=0, width=W, height=H)
         self._cv = cv
 
-        # ── Content-area background image (BH → H-FH) ────────────────────────
+        # Background image (below banner)
         if self._bg_pil_content:
             try:
                 from PIL import ImageTk
@@ -464,37 +659,67 @@ class MainWindow:
             except Exception:
                 pass
 
-        # ── Solid banner (no image) ───────────────────────────────────────────
+        # Solid banner
         cv.create_rectangle(0, 0, W, BH, fill=BANNER_BG, outline="")
         cv.create_line(0, BH, W, BH, fill=CARD_BDR)
 
-        # ── Solid footer (no image) ───────────────────────────────────────────
+        # Footer
         cv.create_rectangle(0, H - FH, W, H, fill=FOOTER_BG, outline="")
         cv.create_line(0, H - FH, W, H - FH, fill=CARD_BDR)
 
-        # ── Card overlays (blended over content image) ────────────────────────
-        for cx in (P, P * 2 + CARD_W):
-            self._overlay(cv, cx, CARD_Y, CARD_W, CARD_H, CARD_BG, 0.65)
-            self._overlay(cv, cx, CARD_Y, CARD_W, TH, BANNER_BG, 0.82)
-            cv.create_line(cx, CARD_Y + TH, cx + CARD_W, CARD_Y + TH, fill=CARD_BDR)
-            cv.create_rectangle(cx, CARD_Y, cx + CARD_W, CARD_Y + CARD_H,
-                                 outline=CARD_BDR, fill="")
-
-        # ── Banner: icon + title + avatar + user button ──────────────────────────
+        # ── Banner: icon + title ──────────────────────────────────────────────
         try:
             from PIL import Image, ImageTk
             _ico = os.path.join(self._base, "icon.ico")
-            _img = Image.open(_ico).resize((28, 28), Image.LANCZOS)
+            _img = Image.open(_ico).resize((26, 26), Image.LANCZOS)
             self._banner_icon = ImageTk.PhotoImage(_img)
             self._cw(cv, tk.Label(cv, image=self._banner_icon, bg=BANNER_BG, bd=0),
-                     14, BH // 2, anchor="w")
+                     12, BH // 2, anchor="w")
         except Exception:
             pass
+        cv.create_text(46, BH // 2, text="KeystoneClient",
+                       fill=ACCENT, font=("Segoe UI", 14, "bold"), anchor="w")
 
-        cv.create_text(50, BH // 2, text="KeystoneClient",
-                       fill=ACCENT, font=("Segoe UI", 15, "bold"), anchor="w")
+        # ── Tabs in banner (after title) ──────────────────────────────────────
+        TAB_W  = 130
+        TABS_X = 196
+        self._nav_tab_ids = {}
 
-        # Username button — placed first so we can measure its width
+        for i, (tab_id, label_key) in enumerate([("sync", "tab_sync"), ("addon", "tab_addon")]):
+            label  = self._t(label_key)
+            tx     = TABS_X + i * TAB_W + TAB_W // 2
+            active = (self._active_tab == tab_id)
+            tag    = f"navtab_{tab_id}"
+
+            # Bottom accent bar (shows active state)
+            ind_id = cv.create_rectangle(
+                TABS_X + i * TAB_W + 8, BH - 3,
+                TABS_X + (i + 1) * TAB_W - 8, BH,
+                fill=ACCENT if active else BANNER_BG, outline="", tags=tag)
+
+            # Tab text
+            txt_id = cv.create_text(
+                tx, BH // 2 - 1, text=label,
+                fill=ACCENT if active else MUTED,
+                font=("Segoe UI", 9, "bold") if active else ("Segoe UI", 9),
+                anchor="center", tags=tag)
+
+            # Invisible click rect over entire tab
+            bg_id = cv.create_rectangle(
+                TABS_X + i * TAB_W, 0,
+                TABS_X + (i + 1) * TAB_W, BH,
+                fill="", outline="", tags=tag)
+
+            self._nav_tab_ids[tab_id] = {"ind": ind_id, "txt": txt_id, "bg": bg_id}
+
+            cv.tag_bind(tag, "<Button-1>", lambda _e, t=tab_id: self._switch_tab(t))
+            cv.tag_bind(tag, "<Enter>",    lambda _e: cv.configure(cursor="hand2"))
+            cv.tag_bind(tag, "<Leave>",    lambda _e: cv.configure(cursor=""))
+
+        # Thin separator between title area and tabs
+        cv.create_line(TABS_X - 8, 14, TABS_X - 8, BH - 14, fill=CARD_BDR)
+
+        # ── Username button (right side) ─────────────────────────────────────
         username = self.cfg.get("username", "—")
         self._user_btn = tk.Button(cv, text=f"  {username}  ▾",
                                    bg=BANNER_BG, fg=TEXT, font=("Segoe UI", 10),
@@ -504,154 +729,36 @@ class MainWindow:
         self._cw(cv, self._user_btn, W - 14, BH // 2, anchor="e")
         self.root.update_idletasks()
 
-        # Banner avatar — snug to the left of the username button
+        # Banner avatar — snug left of username button
         BAV_R  = 13
         _btn_w = self._user_btn.winfo_reqwidth()
         BAV_X  = W - 14 - _btn_w - 6 - BAV_R
         BAV_Y  = BH // 2
         self._banner_av_fill_id = cv.create_oval(
-            BAV_X - BAV_R, BAV_Y - BAV_R,
-            BAV_X + BAV_R, BAV_Y + BAV_R,
+            BAV_X - BAV_R, BAV_Y - BAV_R, BAV_X + BAV_R, BAV_Y + BAV_R,
             fill="#374151", outline=CARD_BDR)
+        # Username initial shown until the real avatar loads
+        _init = (self.cfg.get("username") or "?")[0].upper()
+        self._banner_av_init_id = cv.create_text(
+            BAV_X, BAV_Y, text=_init, fill=ACCENT,
+            font=("Segoe UI", 9, "bold"), anchor="center")
         self._banner_av_ring_id = cv.create_oval(
-            BAV_X - BAV_R, BAV_Y - BAV_R,
-            BAV_X + BAV_R, BAV_Y + BAV_R,
+            BAV_X - BAV_R, BAV_Y - BAV_R, BAV_X + BAV_R, BAV_Y + BAV_R,
             fill="", outline=CARD_BDR)
-        for _oid in (self._banner_av_fill_id, self._banner_av_ring_id):
+        for _oid in (self._banner_av_fill_id, self._banner_av_ring_id,
+                     self._banner_av_init_id):
             cv.tag_bind(_oid, "<Button-1>", lambda _e: self._toggle_avatar_popup())
             cv.tag_bind(_oid, "<Enter>",    lambda _e: cv.configure(cursor="hand2"))
             cv.tag_bind(_oid, "<Leave>",    lambda _e: cv.configure(cursor=""))
         self._banner_av_img_id = None
         self._banner_av_x = BAV_X
 
-        # ── Sync card ─────────────────────────────────────────────────────────
-        LIST_W  = int(CARD_W * 0.54)     # left section width (character cards)
-        STAT_W  = CARD_W - LIST_W        # right section width (sync status)
-        STAT_CX = P + LIST_W + STAT_W // 2
-        SC_CT   = CARD_Y + TH
-
-        # Title: "Estado de Sincronización"
-        cv.create_text(P + 14, CARD_Y + TH // 2, text=self._t("sync_title"),
-                       fill=ACCENT, font=("Segoe UI", 10, "bold"), anchor="w")
-
-        # WoW status dot+text right-aligned in title bar
-        wow_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
-        self._wow_status_id = cv.create_text(
-            P + CARD_W - 12, CARD_Y + TH // 2,
-            text=f"● {self._t('wow_ok' if wow_found else 'wow_no')}",
-            fill=GREEN if wow_found else RED_COL,
-            font=("Segoe UI", 8), anchor="e")
-
-        # Dashed divider between list and status panels
-        cv.create_line(P + LIST_W, SC_CT + 6, P + LIST_W, CARD_Y + CARD_H - 50,
-                       fill=CARD_BDR, dash=(3, 4))
-
-        # ── Sync status (right panel) — vertically centred ───────────────────
-        _lbl       = self._t("last_sync_lbl") if self._sync_ok else \
-                     (self._sync_primary or self._t("never"))
-        _s_avail   = CARD_H - TH - 50          # px available in right panel
-        _s_mid     = SC_CT + _s_avail // 2     # vertical centre of panel
-
-        self._sync_icon_id = cv.create_text(
-            STAT_CX, _s_mid - 42,
-            text="✓" if self._sync_ok else "✗",
-            fill=GREEN if self._sync_ok else RED_COL,
-            font=("Segoe UI", 32, "bold"), anchor="center")
-
-        self._sync_label_id = cv.create_text(
-            STAT_CX, _s_mid + 4,
-            text=_lbl, fill=MUTED, font=("Segoe UI", 8), anchor="center")
-
-        self._sync_time_id = cv.create_text(
-            STAT_CX, _s_mid + 22,
-            text=self._sync_primary if self._sync_ok else "",
-            fill=TEXT, font=("Segoe UI", 18, "bold"), anchor="center")
-
-        self._sync_date_id = cv.create_text(
-            STAT_CX, _s_mid + 44,
-            text=self._sync_secondary if self._sync_ok else "",
-            fill=MUTED, font=("Segoe UI", 9), anchor="center")
-
-        # ── Character list (left panel) — scrollable inner canvas ────────────
-        _CHAR_CH   = 40
-        _CHAR_GAP  = 4
-        _VISIBLE   = 4
-        _list_vis_h = _VISIBLE * _CHAR_CH + (_VISIBLE - 1) * _CHAR_GAP + 8  # 180px
-        _list_inner_w = LIST_W - 8
-        self._list_cv = tk.Canvas(cv, bg=CARD_BG, bd=0, highlightthickness=0,
-                                   width=_list_inner_w, height=_list_vis_h)
-        cv.create_window(P + 4, SC_CT + 6, anchor="nw", window=self._list_cv,
-                          width=_list_inner_w, height=_list_vis_h)
-        self._list_cv.bind("<Enter>", lambda e: self._list_cv.focus_set())
-        self._list_cv.bind("<MouseWheel>",
-                            lambda e: self._list_cv.yview_scroll(
-                                int(-1 * (e.delta / 120)), "units"))
-        self._render_char_list(self._list_cv, _list_inner_w)
-
-        # Sync button (full width, bottom of card)
-        self._cw(cv, ttk.Button(cv, text=self._t("sync_btn"), style="Gold.TButton",
-                                command=self._manual_sync),
-                 P + 10, CARD_Y + CARD_H - 44, anchor="nw", width=CARD_W - 20)
-
-        # ── Addon card ────────────────────────────────────────────────────────
-        ACX   = P * 2 + CARD_W
-        AC_CT = CARD_Y + TH
-        AC_CX = ACX + CARD_W // 2   # card center x
-
-        cv.create_text(ACX + 14, CARD_Y + TH // 2, text=self._t("addon_title"),
-                       fill=ACCENT, font=("Segoe UI", 10, "bold"), anchor="w")
-
-        # Vertically center the top content (select btn + entry)
-        # in the space above the install button
-        install_area = 44 + 10   # install btn height + bottom pad
-        avail = CARD_H - TH - install_area          # px available for top content
-        block = 32 + 10 + 28                         # select_btn + gap + entry
-        top_off = (avail - block) // 2               # top margin within content
-
-        sel_y   = AC_CT + top_off
-        entry_y = sel_y + 32 + 10
-        msg_y   = entry_y + 28 + 8
-
-        # "Select folder" button (centered)
-        sel_btn_w = min(CARD_W - 40, 260)
-        self._cw(cv,
-                 ttk.Button(cv, text=self._t("sel_folder_btn"), style="Gray.TButton",
-                            command=self._browse_addons),
-                 AC_CX, sel_y, anchor="n", width=sel_btn_w, height=32)
-
-        # Entry (full width, no browse button)
-        self.addons_var = tk.StringVar(value=addon_installer.find_addons_folder() or "")
-        self._cw(cv,
-                 tk.Entry(cv, textvariable=self.addons_var,
-                          bg="#1f2937", fg="white", insertbackground=ACCENT,
-                          font=("Segoe UI", 9), relief="flat", bd=1),
-                 ACX + 10, entry_y, anchor="nw", width=CARD_W - 20, height=28)
-
-        # Error/status message (canvas text — no bg box)
-        self._install_msg_id = cv.create_text(
-            AC_CX, msg_y,
-            text="", fill=RED_COL, font=("Segoe UI", 9),
-            width=CARD_W - 28, justify=tk.CENTER, anchor="n")
-
-        # Custom install button with left-to-right green progress fill
-        ibw = CARD_W - 20
-        ibh = 36
-        ib  = tk.Canvas(cv, width=ibw, height=ibh,
-                         bg=ACCENT, highlightthickness=0, cursor="hand2")
-        self._install_fill     = ib.create_rectangle(0, 0, 0, ibh, fill=GREEN, outline="")
-        self._install_btn_text = ib.create_text(
-            ibw // 2, ibh // 2,
-            text=self._t("install_btn"), fill=BG_DARK,
-            font=("Segoe UI", 10, "bold"))
-        ib.tag_raise(self._install_btn_text)
-        ib.bind("<Button-1>", lambda e: self._do_install())
-        # Hover effect
-        ib.bind("<Enter>", lambda e: ib.configure(bg="#fbbf24"))
-        ib.bind("<Leave>", lambda e: ib.configure(bg=ACCENT))
-        self._install_btn   = ib
-        self._install_btn_w = ibw
-        self._cw(cv, ib, ACX + 10, CARD_Y + CARD_H - 44, anchor="nw",
-                 width=ibw, height=ibh)
+        # Start loading cached profile avatar immediately (before characters fetch)
+        _cached_av = self.cfg.get("avatar_url") or self._selected_avatar_url
+        if _cached_av and not self._profile_photo:
+            threading.Thread(
+                target=self._preload_banner_avatar,
+                args=(_cached_av,), daemon=True).start()
 
         # ── Footer ────────────────────────────────────────────────────────────
         footer = tk.Frame(cv, bg=FOOTER_BG)
@@ -660,21 +767,578 @@ class MainWindow:
         ttk.Button(footer, text=self._t("open_web"), style="Gray.TButton",
                    command=lambda: webbrowser.open(WEB_URL)).pack(
                        side="left", padx=(14, 0), pady=10)
-
         self.autostart_var = tk.BooleanVar(value=_get_autostart())
         ttk.Checkbutton(footer, text=self._t("autostart"),
                         variable=self.autostart_var,
                         command=self._toggle_autostart).pack(side="left", padx=(14, 0))
-
         ttk.Button(footer, text=self._t("minimize"), style="Gold.TButton",
                    command=self._minimize_to_tray).pack(side="right", padx=(0, 14), pady=10)
 
         cv.bind("<Button-1>", self._on_root_click, add="+")
 
-        # Start background character + avatar load
+        if self._active_tab == "sync":
+            self._render_sync_tab(cv)
+        else:
+            self._render_addon_tab(cv)
+
         threading.Thread(target=self._load_characters, daemon=True).start()
 
-    # ── user dropdown ──────────────────────────────────────────────────────────
+    # ── Tab switching ──────────────────────────────────────────────────────────
+
+    def _render_nav_highlight(self, cv):
+        for tab_id in ("sync", "addon"):
+            ids    = self._nav_tab_ids.get(tab_id, {})
+            active = (self._active_tab == tab_id)
+            if ids.get("txt"):
+                cv.itemconfigure(ids["txt"],
+                                 fill=ACCENT if active else MUTED,
+                                 font=("Segoe UI", 9, "bold") if active else ("Segoe UI", 9))
+            if ids.get("ind"):
+                cv.itemconfigure(ids["ind"], fill=ACCENT if active else BANNER_BG)
+
+    def _switch_tab(self, tab):
+        if tab == self._active_tab:
+            return
+        self._active_tab = tab
+        cv = self._cv
+        if not (cv and cv.winfo_exists()):
+            return
+
+        # Destroy embedded tab widgets
+        for attr in ("_table_body_cv", "_table_hdr_cv"):
+            w = getattr(self, attr, None)
+            if w:
+                try: w.destroy()
+                except Exception: pass
+                setattr(self, attr, None)
+        if self._install_btn:
+            try: self._install_btn.destroy()
+            except Exception: pass
+        self.addons_var      = None
+        self._install_btn    = None
+        self._install_fill   = None
+        self._install_btn_text = None
+        self._install_btn_w  = 0
+        self._install_msg_id = None
+
+        # Clear tab content and reset dynamic IDs
+        cv.delete("tab_content")
+        self._sync_icon_id  = None
+        self._sync_label_id = None
+        self._sync_time_id  = None
+        self._sync_date_id  = None
+        self._wow_status_id = None
+        self._table_body_bg_id = None
+
+        self._render_nav_highlight(cv)
+
+        if tab == "sync":
+            self._render_sync_tab(cv)
+        else:
+            self._render_addon_tab(cv)
+
+    # ── Sync tab ───────────────────────────────────────────────────────────────
+
+    def _render_sync_tab(self, cv):
+        W, H = self._W, self._H
+
+        INNER_W  = W - 2 * P
+        TABLE_W  = int(INNER_W * 0.72)
+        TABLE_X  = P
+        TABLE_Y  = BH + P
+        TABLE_H  = H - FH - TABLE_Y - P
+
+        SYNC_X   = TABLE_X + TABLE_W + P
+        SYNC_W   = W - SYNC_X - P
+
+        # Light translucent panel borders only (table body uses bg image)
+        cv.create_rectangle(TABLE_X, TABLE_Y, TABLE_X + TABLE_W, TABLE_Y + TABLE_H,
+                            outline=CARD_BDR, fill="", tags="tab_content")
+        cv.create_rectangle(SYNC_X,  TABLE_Y, SYNC_X + SYNC_W,  TABLE_Y + TABLE_H,
+                            outline=CARD_BDR, fill="", tags="tab_content")
+
+        # Slight overlay on sync block only
+        self._overlay(cv, SYNC_X, TABLE_Y, SYNC_W, TABLE_H, CARD_BG, 0.68, tags="tab_content")
+        cv.create_rectangle(SYNC_X, TABLE_Y, SYNC_X + SYNC_W, TABLE_Y + TABLE_H,
+                            outline=CARD_BDR, fill="", tags="tab_content")
+
+        self._draw_char_table(cv, TABLE_X, TABLE_Y, TABLE_W, TABLE_H)
+        self._draw_sync_block(cv, SYNC_X, TABLE_Y, SYNC_W, TABLE_H)
+
+    def _compute_col_widths(self):
+        """Compute column widths: RIO narrow+right, KEY takes all remaining space, NAME/REALM fitted to data."""
+        import tkinter.font as tkfont
+        w = self._table_w
+        if not w:
+            return
+
+        AV_W   = 34
+        CLS_W  = 22
+        ILVL_W = 46
+        KEY_MIN = 120
+
+        _nf   = tkfont.Font(family="Segoe UI", size=9,  weight="bold")
+        _rf   = tkfont.Font(family="Segoe UI", size=8)
+        _hf   = tkfont.Font(family="Segoe UI", size=8,  weight="bold")
+        _riof = tkfont.Font(family="Segoe UI", size=10, weight="bold")
+        PAD   = 12
+
+        # RIO: wide enough for header label + score, with generous padding
+        RIO_W = max(_hf.measure("Raider IO") + 24, _riof.measure("4000") + 24, 82)
+
+        # Name/Realm: measured from actual character data
+        name_need  = _hf.measure(self._t("col_name"))  + PAD
+        realm_need = _hf.measure(self._t("col_realm")) + PAD
+        if self._characters:
+            name_need  = max(name_need,  max(_nf.measure(c.get("name")  or "?") + PAD for c in self._characters))
+            realm_need = max(realm_need, max(_rf.measure(c.get("realm") or "—") + PAD for c in self._characters))
+
+        # Shrink name+realm proportionally if they'd leave less than KEY_MIN for keystone
+        flex = w - AV_W - CLS_W - ILVL_W - RIO_W - KEY_MIN
+        if name_need + realm_need > flex:
+            total = name_need + realm_need
+            name_need  = int(flex * name_need  / total)
+            realm_need = flex - name_need
+
+        # Keystone gets everything that's left
+        KEY_W = w - AV_W - CLS_W - ILVL_W - name_need - realm_need - RIO_W
+
+        self._col_widths = {
+            "av": AV_W, "cls": CLS_W, "name": name_need,
+            "realm": realm_need, "ilvl": ILVL_W, "key": KEY_W, "rio": RIO_W,
+        }
+        cx = 0
+        self._col_x = {}
+        for col in ("av", "cls", "name", "realm", "ilvl", "key", "rio"):
+            self._col_x[col] = cx
+            cx += self._col_widths[col]
+
+    def _draw_char_table(self, cv, x, y, w, h):
+        HDR_H  = 30
+        BODY_H = h - HDR_H
+
+        self._table_w      = w
+        self._table_hdr_h  = HDR_H
+        self._table_body_h = BODY_H
+        self._table_x      = x
+        self._table_y      = y
+
+        self._compute_col_widths()
+
+        # Header canvas — dark translucent look
+        self._table_hdr_cv = tk.Canvas(cv, bg="#07111d", bd=0,
+                                        highlightthickness=0, width=w, height=HDR_H)
+        cv.create_window(x, y, anchor="nw", window=self._table_hdr_cv,
+                         width=w, height=HDR_H, tags="tab_content")
+        self._setup_table_hdr_bg(x, y, w, HDR_H)
+
+        # Body canvas — translucent (bg image shows through)
+        self._table_body_cv = tk.Canvas(cv, bd=0, highlightthickness=0,
+                                         width=w, height=BODY_H)
+        cv.create_window(x, y + HDR_H, anchor="nw", window=self._table_body_cv,
+                         width=w, height=BODY_H, tags="tab_content")
+        self._setup_table_body_bg(x, y + HDR_H, w, BODY_H)
+
+        self._table_body_cv.bind("<Enter>", lambda e: self._table_body_cv.focus_set())
+        self._table_body_cv.bind("<MouseWheel>", self._on_table_scroll)
+
+        self._draw_table_header()
+        self._draw_table_rows()
+
+    def _setup_table_hdr_bg(self, x, y, w, h):
+        """Render bg image region blended dark as header background."""
+        if not self._bg_pil_content or not (self._table_hdr_cv and self._table_hdr_cv.winfo_exists()):
+            return
+        try:
+            from PIL import Image, ImageTk
+            iy = y - BH
+            region = self._bg_pil_content.crop((x, iy, x + w, iy + h)).convert("RGB")
+            dark = Image.new("RGB", (w, h), (7, 17, 29))
+            final = Image.blend(region, dark, 0.88)
+            ph = ImageTk.PhotoImage(final)
+            self._photos.append(ph)
+            self._table_hdr_cv.create_image(0, 0, anchor="nw", image=ph)
+        except Exception:
+            pass
+
+    def _setup_table_body_bg(self, x, y, w, h):
+        """Render blurred/dimmed bg image as frosted-glass background for table body."""
+        try:
+            from PIL import Image, ImageFilter, ImageTk
+            if self._bg_pil_content:
+                iy = y - BH
+                region = self._bg_pil_content.crop((x, iy, x + w, iy + h)).convert("RGB")
+                blurred = region.filter(ImageFilter.GaussianBlur(radius=2))
+                dark = Image.new("RGB", (w, h), (10, 18, 28))
+                final = Image.blend(blurred, dark, 0.65)
+            else:
+                final = Image.new("RGB", (w, h), (17, 26, 38))
+
+            self._table_body_bg_pil = final
+            self._table_body_bg_ph  = ImageTk.PhotoImage(final)
+
+            avg = final.getpixel((w // 2, h // 2))
+            self._table_body_cv.configure(bg=f"#{avg[0]:02x}{avg[1]:02x}{avg[2]:02x}")
+            self._table_body_bg_id = self._table_body_cv.create_image(
+                0, 0, anchor="nw", image=self._table_body_bg_ph)
+        except Exception:
+            self._table_body_cv.configure(bg=CHAR_CARD_BG)
+            self._table_body_bg_id = None
+
+    def _on_table_scroll(self, event):
+        bc = self._table_body_cv
+        if not (bc and bc.winfo_exists()):
+            return
+        bc.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        # Keep bg image visually fixed as rows scroll
+        bg_id = getattr(self, "_table_body_bg_id", None)
+        if bg_id:
+            try:
+                sy = int(bc.canvasy(0))
+                bc.coords(bg_id, 0, sy)
+                bc.lower(bg_id)
+            except Exception:
+                pass
+
+    def _draw_table_header(self):
+        hdr = self._table_hdr_cv
+        if not (hdr and hdr.winfo_exists()):
+            return
+        hdr.delete("all")
+        self._setup_table_hdr_bg(
+            self._table_x, self._table_y, self._table_w, self._table_hdr_h)
+
+        w     = self._table_w
+        HDR_H = self._table_hdr_h
+
+        sortable = [
+            ("name",  self._t("col_name")),
+            ("realm", self._t("col_realm")),
+            ("ilvl",  "ilvl"),
+            ("key",   self._t("col_key")),
+            ("rio",   "Raider IO"),
+        ]
+        for col_id, label in sortable:
+            cx     = self._col_x[col_id] + self._col_widths[col_id] // 2
+            active = (self._sort_col == col_id)
+            color  = ACCENT if active else MUTED
+            ind    = (" ▲" if self._sort_asc else " ▼") if active else ""
+            hdr.create_text(cx, HDR_H // 2, text=label + ind,
+                            fill=color, font=("Segoe UI", 8, "bold"), anchor="center")
+            # Column separator line
+            rx = self._col_x[col_id]
+            hdr.create_line(rx, 4, rx, HDR_H - 4, fill=CARD_BDR)
+            # Click rect
+            cid = hdr.create_rectangle(rx, 0, rx + self._col_widths[col_id], HDR_H,
+                                        fill="", outline="")
+            hdr.tag_bind(cid, "<Button-1>",
+                         lambda _e, c=col_id: self._sort_table(c))
+            hdr.tag_bind(cid, "<Enter>",   lambda _e: hdr.configure(cursor="hand2"))
+            hdr.tag_bind(cid, "<Leave>",   lambda _e: hdr.configure(cursor=""))
+
+        hdr.create_line(0, HDR_H - 1, w, HDR_H - 1, fill=CARD_BDR)
+
+    def _draw_table_rows(self):
+        bc = self._table_body_cv
+        if not (bc and bc.winfo_exists()):
+            return
+
+        try:
+            from PIL import Image, ImageTk
+            _pil_ok = True
+        except ImportError:
+            _pil_ok = False
+
+        # Recompute column widths now that characters may have loaded
+        old_widths = dict(self._col_widths)
+        self._compute_col_widths()
+        if self._col_widths != old_widths:
+            self._draw_table_header()
+
+        # Keep bg at current scroll position
+        bg_id = getattr(self, "_table_body_bg_id", None)
+        try:
+            sy = int(bc.canvasy(0))
+        except Exception:
+            sy = 0
+        if bg_id:
+            try:
+                bc.delete("all")
+                bc.create_image(0, sy, anchor="nw", image=self._table_body_bg_ph)
+                self._table_body_bg_id = bc.find_withtag("all")[0] if bc.find_withtag("all") else None
+            except Exception:
+                bc.delete("all")
+                self._table_body_bg_id = None
+        else:
+            bc.delete("all")
+
+        chars   = self._characters
+        w       = self._table_w
+        CHAR_CH = 38
+        GAP     = 1
+
+        if not chars:
+            bc.create_text(w // 2, 50, text="Sin personajes sincronizados",
+                           fill=MUTED, font=("Segoe UI", 9), anchor="center")
+            bc.configure(scrollregion=(0, 0, w, 100))
+            return
+
+        total_h = max(self._table_body_h, len(chars) * (CHAR_CH + GAP))
+        bc.configure(scrollregion=(0, 0, w, total_h))
+
+        AV = 26
+
+        for i, char in enumerate(chars):
+            ry  = i * (CHAR_CH + GAP)
+            tag = f"row_{i}"
+
+            # Translucent alternating row tint — blend bg image region with subtle color
+            if i % 2 == 1:
+                bg_pil = getattr(self, "_table_body_bg_pil", None)
+                if _pil_ok and bg_pil:
+                    try:
+                        pil_y = max(0, min(ry - sy, bg_pil.height - CHAR_CH - 1))
+                        row_bg = bg_pil.crop((0, pil_y, w, pil_y + CHAR_CH))
+                        blended = Image.blend(row_bg, Image.new("RGB", (w, CHAR_CH), (28, 52, 82)), 0.22)
+                        _rph = ImageTk.PhotoImage(blended)
+                        self._photos.append(_rph)
+                        bc.create_image(0, ry, anchor="nw", image=_rph, tags=tag)
+                    except Exception:
+                        bc.create_rectangle(0, ry, w, ry + CHAR_CH, fill="#0c1a28", outline="", tags=tag)
+                else:
+                    bc.create_rectangle(0, ry, w, ry + CHAR_CH, fill="#0c1a28", outline="", tags=tag)
+
+            name        = char.get("name") or "?"
+            realm       = char.get("realm") or "—"
+            wow_class   = char.get("wowClass") or ""
+            class_color = WOW_CLASS_COLORS.get(wow_class, TEXT)
+            rio_score   = char.get("rioScore")
+            ilvl        = char.get("ilvl")
+            region      = (char.get("region") or "eu").lower()
+            rio_url     = (f"https://raider.io/characters/{region}/"
+                           f"{urllib.parse.quote(realm.lower())}/"
+                           f"{urllib.parse.quote(name.lower())}")
+
+            cy = ry + CHAR_CH // 2
+
+            # Avatar
+            av_cx = self._col_x["av"] + self._col_widths["av"] // 2
+            ph = self._char_photos.get(name)
+            if ph:
+                bc.create_image(av_cx, cy, anchor="center", image=ph, tags=tag)
+            else:
+                r = AV // 2
+                bc.create_oval(av_cx - r, cy - r, av_cx + r, cy + r,
+                               fill=WOW_CLASS_COLORS.get(wow_class, "#374151"),
+                               outline="", tags=tag)
+                bc.create_text(av_cx, cy, text=name[0].upper(),
+                               fill=BG_DARK, font=("Segoe UI", 8, "bold"),
+                               anchor="center", tags=tag)
+
+            # Class icon (or colored dot fallback)
+            cls_cx = self._col_x["cls"] + self._col_widths["cls"] // 2
+            cls_ph = self._class_icon_photos.get(wow_class)
+            if cls_ph:
+                bc.create_image(cls_cx, cy, anchor="center", image=cls_ph, tags=tag)
+            else:
+                r = 6
+                bc.create_oval(cls_cx - r, cy - r, cls_cx + r, cy + r,
+                               fill=class_color if wow_class else "#374151",
+                               outline="", tags=tag)
+
+            # Name
+            name_x = self._col_x["name"] + 4
+            bc.create_text(name_x, cy, text=name,
+                           fill=class_color, font=("Segoe UI", 9, "bold"),
+                           anchor="w", tags=tag)
+
+            # Realm
+            realm_x = self._col_x["realm"] + 4
+            bc.create_text(realm_x, cy, text=realm,
+                           fill=MUTED, font=("Segoe UI", 8),
+                           anchor="w", tags=tag)
+
+            # ilvl
+            ilvl_cx  = self._col_x["ilvl"] + self._col_widths["ilvl"] // 2
+            ilvl_txt = str(int(round(ilvl))) if ilvl else "—"
+            bc.create_text(ilvl_cx, cy, text=ilvl_txt,
+                           fill=_ilvl_color(ilvl) if ilvl else MUTED,
+                           font=("Segoe UI", 9, "bold"), anchor="center", tags=tag)
+
+            # Keystone — centered in the (wide) key column
+            key_cx  = self._col_x["key"] + self._col_widths["key"] // 2
+            key_txt = _keystone_display(char)
+            key_col = ACCENT if key_txt != "—" else MUTED
+            bc.create_text(key_cx, cy, text=key_txt, fill=key_col,
+                           font=("Segoe UI", 9, "bold"), anchor="center", tags=tag)
+
+            # RIO
+            rio_cx = self._col_x["rio"] + self._col_widths["rio"] // 2
+            if rio_score:
+                bc.create_text(rio_cx, cy, text=f"{int(rio_score)}",
+                               fill=_rio_color(rio_score),
+                               font=("Segoe UI", 10, "bold"),
+                               anchor="center", tags=tag)
+            else:
+                bc.create_text(rio_cx, cy, text="—", fill=MUTED,
+                               font=("Segoe UI", 9), anchor="center", tags=tag)
+
+            # Row separator — very faint so background image shows through
+            bc.create_line(0, ry + CHAR_CH, w, ry + CHAR_CH,
+                           fill="#0f1e2d", tags=tag)
+
+            # Click → Raider.IO
+            bc.tag_bind(tag, "<Button-1>",
+                        lambda _e, url=rio_url: webbrowser.open(url))
+            bc.tag_bind(tag, "<Enter>",
+                        lambda _e, b=bc: b.configure(cursor="hand2"))
+            bc.tag_bind(tag, "<Leave>",
+                        lambda _e, b=bc: b.configure(cursor=""))
+
+        # Restore bg to bottom of z-stack after all rows
+        if bg_id:
+            try:
+                bc.lower(bg_id)
+            except Exception:
+                pass
+
+    def _sort_table(self, col):
+        if self._sort_col == col:
+            self._sort_asc = not self._sort_asc
+        else:
+            self._sort_col = col
+            self._sort_asc = col in ("name", "realm")
+
+        key_funcs = {
+            "name":  lambda c: (c.get("name") or "").lower(),
+            "realm": lambda c: (c.get("realm") or "").lower(),
+            "ilvl":  lambda c: c.get("ilvl") or 0,
+            "key":   lambda c: (c.get("currentKeystone") or {}).get("level") or 0,
+            "rio":   lambda c: c.get("rioScore") or 0,
+        }
+        self._characters = sorted(
+            self._characters,
+            key=key_funcs.get(col, lambda c: 0),
+            reverse=not self._sort_asc)
+        self._draw_table_header()
+        self._draw_table_rows()
+
+    def _draw_sync_block(self, cv, x, y, w, h):
+        BTN_H   = 38
+        BTN_PAD = 10
+
+        wow_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
+        self._wow_status_id = cv.create_text(
+            x + w // 2, y + 20,
+            text=f"● {self._t('wow_ok' if wow_found else 'wow_no')}",
+            fill=GREEN if wow_found else RED_COL,
+            font=("Segoe UI", 9), anchor="center", tags="tab_content")
+
+        avail  = h - 40 - BTN_H - BTN_PAD * 2
+        mid_y  = y + 40 + avail // 2
+
+        _lbl = self._t("last_sync_lbl") if self._sync_ok else \
+               (self._sync_primary or self._t("never"))
+
+        self._sync_icon_id = cv.create_text(
+            x + w // 2, mid_y - 36,
+            text="✓" if self._sync_ok else "✗",
+            fill=GREEN if self._sync_ok else RED_COL,
+            font=("Segoe UI", 26, "bold"), anchor="center", tags="tab_content")
+
+        self._sync_label_id = cv.create_text(
+            x + w // 2, mid_y + 4,
+            text=_lbl, fill=MUTED, font=("Segoe UI", 8),
+            anchor="center", tags="tab_content")
+
+        self._sync_time_id = cv.create_text(
+            x + w // 2, mid_y + 22,
+            text=self._sync_primary if self._sync_ok else "",
+            fill=TEXT, font=("Segoe UI", 16, "bold"),
+            anchor="center", tags="tab_content")
+
+        self._sync_date_id = cv.create_text(
+            x + w // 2, mid_y + 42,
+            text=self._sync_secondary if self._sync_ok else "",
+            fill=MUTED, font=("Segoe UI", 9),
+            anchor="center", tags="tab_content")
+
+        btn_y = y + h - BTN_H - BTN_PAD
+        self._cw(cv, ttk.Button(cv, text=self._t("sync_btn"), style="Gold.TButton",
+                                command=self._manual_sync),
+                 x + 8, btn_y, anchor="nw", width=w - 16, height=BTN_H,
+                 tags="tab_content")
+
+    # ── Addon tab ──────────────────────────────────────────────────────────────
+
+    def _render_addon_tab(self, cv):
+        W, H = self._W, self._H
+
+        AX  = P
+        AY  = BH + P
+        AW  = W - 2 * P
+        AH  = H - FH - AY - P
+        ACX = AX + AW // 2
+
+        self._overlay(cv, AX, AY, AW, AH, CARD_BG, 0.70, tags="tab_content")
+        cv.create_rectangle(AX, AY, AX + AW, AY + AH,
+                            outline=CARD_BDR, fill="", tags="tab_content")
+
+        cv.create_text(AX + 16, AY + TH // 2, text=self._t("addon_title"),
+                       fill=ACCENT, font=("Segoe UI", 11, "bold"), anchor="w",
+                       tags="tab_content")
+        cv.create_line(AX, AY + TH, AX + AW, AY + TH, fill=CARD_BDR, tags="tab_content")
+
+        cv.create_text(ACX, AY + TH + 18, text=self._t("addon_desc"),
+                       fill=MUTED, font=("Segoe UI", 9), justify="center",
+                       anchor="n", tags="tab_content")
+
+        content_start = AY + TH + 56
+        avail  = AH - TH - 56 - 56
+        block  = 32 + 10 + 28
+        top_off = max(10, (avail - block) // 2)
+
+        sel_y   = content_start + top_off
+        entry_y = sel_y + 32 + 10
+        msg_y   = entry_y + 28 + 10
+
+        sel_btn_w = min(AW - 40, 340)
+        self._cw(cv, ttk.Button(cv, text=self._t("sel_folder_btn"),
+                                style="Gray.TButton",
+                                command=self._browse_addons),
+                 ACX, sel_y, anchor="n", width=sel_btn_w, height=32,
+                 tags="tab_content")
+
+        self.addons_var = tk.StringVar(value=addon_installer.find_addons_folder() or "")
+        self._cw(cv, tk.Entry(cv, textvariable=self.addons_var,
+                              bg="#1f2937", fg="white", insertbackground=ACCENT,
+                              font=("Segoe UI", 9), relief="flat", bd=1),
+                 AX + 20, entry_y, anchor="nw", width=AW - 40, height=28,
+                 tags="tab_content")
+
+        self._install_msg_id = cv.create_text(
+            ACX, msg_y, text="", fill=RED_COL, font=("Segoe UI", 9),
+            width=AW - 40, justify=tk.CENTER, anchor="n", tags="tab_content")
+
+        ibw = AW - 40
+        ibh = 38
+        ib  = tk.Canvas(cv, width=ibw, height=ibh,
+                        bg=ACCENT, highlightthickness=0, cursor="hand2")
+        self._install_fill     = ib.create_rectangle(0, 0, 0, ibh, fill=GREEN, outline="")
+        self._install_btn_text = ib.create_text(ibw // 2, ibh // 2,
+                                                text=self._t("install_btn"),
+                                                fill=BG_DARK, font=("Segoe UI", 10, "bold"))
+        ib.tag_raise(self._install_btn_text)
+        ib.bind("<Button-1>", lambda e: self._do_install())
+        ib.bind("<Enter>", lambda e: ib.configure(bg="#fbbf24"))
+        ib.bind("<Leave>", lambda e: ib.configure(bg=ACCENT))
+        self._install_btn   = ib
+        self._install_btn_w = ibw
+        install_y = AY + AH - ibh - 14
+        self._cw(cv, ib, AX + 20, install_y, anchor="nw",
+                 width=ibw, height=ibh, tags="tab_content")
+
+    # ── User dropdown ──────────────────────────────────────────────────────────
 
     def _toggle_user_dropdown(self):
         if self._user_dropdown_visible:
@@ -690,7 +1354,6 @@ class MainWindow:
         self._user_dd.place(x=x, y=BH, width=DD_W)
         self._user_dd.lift()
 
-        # ── Language ───────────────────────────────────────────────────────────
         tk.Label(self._user_dd, text=self._t("language"),
                  bg=CARD_BG, fg=MUTED, font=("Segoe UI", 8)).pack(
                      anchor="w", padx=10, pady=(8, 2))
@@ -832,6 +1495,12 @@ class MainWindow:
                 pass
         if self._avatar_popup_visible and self._avatar_popup:
             try:
+                # If the click landed on the avatar circle itself, the tag_bind already
+                # handled it (toggle) — don't close here or it would cancel that open.
+                av_x = getattr(self, "_banner_av_x", -999)
+                R = 16
+                if abs(event.x - av_x) <= R and abs(event.y - BH // 2) <= R:
+                    return
                 px, py = self._avatar_popup.winfo_x(), self._avatar_popup.winfo_y()
                 pw, ph = self._avatar_popup.winfo_width(), self._avatar_popup.winfo_height()
                 if not (px <= event.x <= px + pw and py <= event.y <= py + ph):
@@ -845,7 +1514,7 @@ class MainWindow:
         cfg_module.save(self.cfg)
         self._show_main_view()
 
-    # ── sync ───────────────────────────────────────────────────────────────────
+    # ── Sync ───────────────────────────────────────────────────────────────────
 
     def _manual_sync(self):
         if self._worker:
@@ -880,10 +1549,6 @@ class MainWindow:
         threading.Thread(target=_run, daemon=True).start()
 
     def _update_sync_ui(self, ok, primary="", secondary=""):
-        """
-        ok=True:  primary = time "HH:MM", secondary = date "DD/MM/YYYY"
-        ok=False: primary = status/error message
-        """
         self._sync_ok        = ok
         self._sync_primary   = primary
         self._sync_secondary = secondary
@@ -912,117 +1577,14 @@ class MainWindow:
             if self._sync_date_id:
                 cv.itemconfigure(self._sync_date_id, text="", fill=MUTED)
 
-    # ── character cards ────────────────────────────────────────────────────────
-
-    def _render_char_list(self, list_cv, list_w):
-        """Draw character cards on the inner scroll canvas."""
-        CHAR_CW  = list_w - 4
-        CHAR_CH  = 40
-        CHAR_GAP = 4
-        AV       = 30
-        RIO_W    = 46   # width reserved on right for score
-
-        chars = self._characters
-        n     = len(chars)
-
-        if n == 0:
-            list_cv.create_text(
-                list_w // 2, 30,
-                text="Sin personajes\nsincronizados",
-                fill=MUTED, font=("Segoe UI", 9),
-                justify="center", anchor="center")
-            list_cv.configure(scrollregion=(0, 0, list_w, 60))
-            return
-
-        total_h = n * CHAR_CH + (n - 1) * CHAR_GAP + 4
-        list_cv.configure(scrollregion=(0, 0, list_w, total_h))
-
-        for i, char in enumerate(chars):
-            cy    = 2 + i * (CHAR_CH + CHAR_GAP)
-            cx    = 2
-            end_x = cx + CHAR_CW
-            tag   = f"char_{i}"
-
-            name        = char.get("name") or "?"
-            wow_class   = char.get("wowClass") or ""
-            class_color = WOW_CLASS_COLORS.get(wow_class, TEXT)
-            rio_score   = char.get("rioScore")
-            ilvl        = char.get("ilvl")
-            region      = (char.get("region") or "eu").lower()
-            realm       = (char.get("realm") or "").lower()
-            rio_url     = (f"https://raider.io/characters/{region}/"
-                           f"{urllib.parse.quote(realm)}/"
-                           f"{urllib.parse.quote(name.lower())}")
-
-            # Card background + border
-            list_cv.create_rectangle(cx, cy, end_x, cy + CHAR_CH,
-                                      fill=CHAR_CARD_BG, outline=CARD_BDR, tags=tag)
-
-            # Avatar circle
-            av_cx = cx + 5 + AV // 2
-            av_cy = cy + CHAR_CH // 2
-            ph = self._char_photos.get(name)
-            if ph:
-                list_cv.create_image(av_cx, av_cy, anchor="center", image=ph, tags=tag)
-            else:
-                color = WOW_CLASS_COLORS.get(wow_class, "#4b5563")
-                list_cv.create_oval(cx + 5, cy + (CHAR_CH - AV) // 2,
-                                     cx + 5 + AV, cy + (CHAR_CH - AV) // 2 + AV,
-                                     fill=color, outline="", tags=tag)
-                list_cv.create_text(av_cx, av_cy, text=name[0].upper(),
-                                     fill=BG_DARK, font=("Segoe UI", 11, "bold"),
-                                     anchor="center", tags=tag)
-
-            # Text area (between avatar and RIO column)
-            txt_x = cx + 5 + AV + 8
-
-            # Name — top half, class colour
-            list_cv.create_text(txt_x, cy + 12,
-                                  text=name[:15], fill=class_color,
-                                  font=("Segoe UI", 9, "bold"), anchor="w", tags=tag)
-
-            # ilvl — bottom half, muted
-            ilvl_txt = f"ilvl {ilvl}" if ilvl else "—"
-            list_cv.create_text(txt_x, cy + CHAR_CH - 12,
-                                  text=ilvl_txt, fill=MUTED,
-                                  font=("Segoe UI", 8), anchor="w", tags=tag)
-
-            # RIO score — right column, big, colour-coded
-            rio_cx = end_x - RIO_W // 2 - 2
-            if rio_score:
-                list_cv.create_text(rio_cx, cy + CHAR_CH // 2,
-                                     text=f"{int(rio_score)}",
-                                     fill=_rio_color(rio_score),
-                                     font=("Segoe UI", 12, "bold"),
-                                     anchor="center", tags=tag)
-            else:
-                list_cv.create_text(rio_cx, cy + CHAR_CH // 2,
-                                     text="—", fill=MUTED,
-                                     font=("Segoe UI", 11), anchor="center", tags=tag)
-
-            # Click → Raider.IO profile
-            list_cv.tag_bind(tag, "<Button-1>",
-                              lambda _e, url=rio_url: webbrowser.open(url))
-            list_cv.tag_bind(tag, "<Enter>",
-                              lambda _e, lc=list_cv: lc.configure(cursor="hand2"))
-            list_cv.tag_bind(tag, "<Leave>",
-                              lambda _e, lc=list_cv: lc.configure(cursor=""))
+    # ── Character data & avatars ───────────────────────────────────────────────
 
     def _refresh_char_list(self):
-        """Clear and re-draw character cards in the inner scroll canvas."""
-        lc = getattr(self, "_list_cv", None)
-        if not (lc and lc.winfo_exists()):
-            return
-        lc.delete("all")
-        W            = self._W
-        CARD_W       = (W - P * 3) // 2
-        LIST_INNER_W = int(CARD_W * 0.54) - 8
-        self._render_char_list(lc, LIST_INNER_W)
+        if getattr(self, "_table_body_cv", None) and self._table_body_cv.winfo_exists():
+            self._draw_table_rows()
 
-    def _download_avatar(self, url: str, size: int = 30):
-        """Return circular PIL PhotoImage — served from disk cache when available."""
+    def _download_avatar(self, url: str, size: int = 26):
         try:
-            import io
             from PIL import Image, ImageTk, ImageDraw
             cache_dir  = Path(os.environ.get("APPDATA", Path.home())) / "KeystoneClient" / "avatars"
             cache_file = cache_dir / f"{hashlib.md5(url.encode()).hexdigest()}_{size}.png"
@@ -1045,9 +1607,44 @@ class MainWindow:
         except Exception:
             return None
 
+    def _download_class_icon(self, class_name: str, size: int = 18):
+        slug = _CLASS_ICON_SLUGS.get(class_name)
+        if not slug:
+            return None
+        try:
+            from PIL import Image, ImageTk
+            cache_dir  = Path(os.environ.get("APPDATA", Path.home())) / "KeystoneClient" / "class_icons"
+            cache_file = cache_dir / f"{slug}_{size}.png"
+            if cache_file.exists():
+                return ImageTk.PhotoImage(
+                    Image.open(cache_file).resize((size, size), Image.LANCZOS).convert("RGBA"))
+            url  = f"{_ICON_BASE}/{slug}.jpg"
+            resp = requests.get(url, timeout=8)
+            resp.raise_for_status()
+            img  = Image.open(io.BytesIO(resp.content)).resize((size, size), Image.LANCZOS).convert("RGBA")
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                img.save(cache_file, "PNG")
+            except Exception:
+                pass
+            return ImageTk.PhotoImage(img)
+        except Exception:
+            return None
+
+    def _load_class_icons(self):
+        unique = {c.get("wowClass") for c in self._characters if c.get("wowClass")}
+        changed = False
+        for cls in unique:
+            if cls not in self._class_icon_photos:
+                ph = self._download_class_icon(cls, size=18)
+                if ph:
+                    self._class_icon_photos[cls] = ph
+                    changed = True
+        if changed:
+            self.root.after(0, self._refresh_char_list)
+
     def _load_characters(self):
-        """Two-phase load: local cache first (instant), then API refresh in background."""
-        # ── Phase 1: show cached data immediately ─────────────────────────
+        # Phase 1: cached data
         cached = self.cfg.get("cached_characters") or []
         if cached and not self._characters:
             self._characters = sorted(cached,
@@ -1056,10 +1653,12 @@ class MainWindow:
                 url  = c.get("avatarUrl")
                 name = c.get("name", "")
                 if url and name not in self._char_photos:
-                    ph = self._download_avatar(url, size=30)
+                    ph = self._download_avatar(url, size=26)
                     if ph:
                         self._char_photos[name] = ph
             self.root.after(0, self._refresh_char_list)
+            threading.Thread(target=self._load_class_icons, daemon=True).start()
+
             profile_url = self.cfg.get("avatar_url") or self._selected_avatar_url
             if profile_url and not self._profile_photo:
                 ph = self._download_avatar(profile_url, size=26)
@@ -1067,7 +1666,7 @@ class MainWindow:
                     self._profile_photo = ph
                     self.root.after(0, self._update_banner_avatar_ui)
 
-        # ── Phase 2: refresh from API ──────────────────────────────────────
+        # Phase 2: API refresh
         try:
             token = self.cfg.get("access_token") or self.cfg.get("sync_token", "")
             if not token:
@@ -1082,7 +1681,6 @@ class MainWindow:
                 return
             chars = r.json()
 
-            # Enrich chars missing RIO / ilvl data
             from sync_worker import SyncWorker
             _sw = SyncWorker(self.cfg)
             for c in chars:
@@ -1108,23 +1706,20 @@ class MainWindow:
 
             chars = sorted(chars, key=lambda c: (c.get("rioScore") or 0), reverse=True)
             self._characters = chars
-
-            # Persist updated list to local cache
             self.cfg["cached_characters"] = chars
             cfg_module.save(self.cfg)
 
-            # Download any new/updated avatar images
             for c in self._characters:
                 url  = c.get("avatarUrl")
                 name = c.get("name", "")
                 if url and name not in self._char_photos:
-                    ph = self._download_avatar(url, size=30)
+                    ph = self._download_avatar(url, size=26)
                     if ph:
                         self._char_photos[name] = ph
 
             self.root.after(0, self._refresh_char_list)
+            threading.Thread(target=self._load_class_icons, daemon=True).start()
 
-            # Banner avatar
             profile_url = self.cfg.get("avatar_url") or self._selected_avatar_url
             if profile_url and not self._profile_photo:
                 ph = self._download_avatar(profile_url, size=26)
@@ -1134,30 +1729,30 @@ class MainWindow:
         except Exception:
             pass
 
+    def _preload_banner_avatar(self, url: str):
+        ph = self._download_avatar(url, size=26)
+        if ph:
+            self._profile_photo = ph
+            self.root.after(0, self._update_banner_avatar_ui)
+
     def _update_banner_avatar_ui(self):
-        """Replace banner placeholder circle with the profile avatar image."""
         cv = self._cv
         if not (cv and cv.winfo_exists()) or not self._profile_photo:
             return
         x = getattr(self, "_banner_av_x", self._W - 14 - 140)
         R = 13
-        # Delete previous image and placeholder
-        for attr in ("_banner_av_img_id", "_banner_av_fill_id", "_banner_av_ring_id"):
+        for attr in ("_banner_av_img_id", "_banner_av_fill_id",
+                     "_banner_av_ring_id", "_banner_av_init_id"):
             _id = getattr(self, attr, None)
             if _id:
-                try:
-                    cv.delete(_id)
-                except Exception:
-                    pass
+                try: cv.delete(_id)
+                except Exception: pass
                 setattr(self, attr, None)
-        # Draw image and ring
         self._banner_av_img_id = cv.create_image(x, BH // 2,
                                                    anchor="center",
                                                    image=self._profile_photo)
         self._banner_av_ring_id = cv.create_oval(
-            x - R, BH // 2 - R, x + R, BH // 2 + R,
-            fill="", outline=CARD_BDR)
-        # Re-bind click on ring and image to dedicated avatar picker
+            x - R, BH // 2 - R, x + R, BH // 2 + R, fill="", outline=CARD_BDR)
         cv.tag_bind(self._banner_av_ring_id, "<Button-1>",
                     lambda _e: self._toggle_avatar_popup())
         cv.tag_bind(self._banner_av_img_id, "<Button-1>",
@@ -1168,21 +1763,17 @@ class MainWindow:
                     lambda _e: cv.configure(cursor=""))
 
     def _select_avatar(self, url: str):
-        """Set character avatar as profile picture. Updates UI immediately, persists to API."""
         self._hide_user_dropdown()
         self._hide_avatar_popup()
-        # Save locally at once so config persists even if API call fails
         self.cfg["avatar_url"]    = url
         self._selected_avatar_url = url
         cfg_module.save(self.cfg)
 
         def _do():
-            # Download image first, update banner
             ph = self._download_avatar(url, size=26)
             if ph:
                 self._profile_photo = ph
                 self.root.after(0, self._update_banner_avatar_ui)
-            # Then persist to server (fire-and-forget)
             try:
                 token = self.cfg.get("access_token") or self.cfg.get("sync_token", "")
                 if token:
@@ -1194,7 +1785,7 @@ class MainWindow:
                 pass
         threading.Thread(target=_do, daemon=True).start()
 
-    # ── addon ──────────────────────────────────────────────────────────────────
+    # ── Addon ──────────────────────────────────────────────────────────────────
 
     def _browse_addons(self):
         folder = filedialog.askdirectory(title="Selecciona la carpeta AddOns")
@@ -1206,7 +1797,7 @@ class MainWindow:
         if not (ib and ib.winfo_exists()):
             return
         fill_w = max(0, int(self._install_btn_w * val / 100))
-        ib.coords(self._install_fill, 0, 0, fill_w, 36)
+        ib.coords(self._install_fill, 0, 0, fill_w, 38)
 
     def _set_install_msg(self, text, color=RED_COL):
         cv = self._cv
@@ -1234,7 +1825,7 @@ class MainWindow:
     def _toggle_autostart(self):
         _set_autostart(self.autostart_var.get())
 
-    # ── logout ─────────────────────────────────────────────────────────────────
+    # ── Logout ─────────────────────────────────────────────────────────────────
 
     def _logout(self):
         self._hide_user_dropdown()
@@ -1246,12 +1837,13 @@ class MainWindow:
         cfg_module.save(self.cfg)
         self._characters          = []
         self._char_photos         = {}
+        self._class_icon_photos   = {}
         self._profile_photo       = None
         self._selected_avatar_url = None
         self._avatar_picker_offset = 0
         self._show_login_view()
 
-    # ── tray ───────────────────────────────────────────────────────────────────
+    # ── Tray ───────────────────────────────────────────────────────────────────
 
     def _minimize_to_tray(self):
         if not self.cfg.get("wow_path"):
@@ -1276,7 +1868,6 @@ class MainWindow:
             ds = time.strftime("%d/%m/%Y")
             self._tray.set_status(f"Sync: {ts}")
             self.root.after(0, lambda: self._update_sync_ui(True, ts, ds))
-            # Refresh character cards with updated scores/avatars
             threading.Thread(target=self._load_characters, daemon=True).start()
 
         self._worker.on_sync  = _on_sync
@@ -1293,7 +1884,7 @@ class MainWindow:
         if self._worker: self._worker.stop()
         self.root.after(0, self.root.destroy)
 
-    # ── close button ───────────────────────────────────────────────────────────
+    # ── Close button ───────────────────────────────────────────────────────────
 
     def _on_close_btn(self):
         if not cfg_module.is_session_valid(self.cfg):

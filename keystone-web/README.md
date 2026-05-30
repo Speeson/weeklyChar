@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# keystone-web
 
-## Getting Started
+Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angulares míticas+, afijos semanales y equipos.
 
-First, run the development server:
+**Producción:** https://weekly-char.vercel.app  
+**API:** https://weeklychar-production.up.railway.app
+
+---
+
+## Stack
+
+- Next.js (App Router, `'use client'`)
+- Tailwind CSS
+- Fetch nativo — JWT almacenado en `localStorage`
+
+---
+
+## Páginas
+
+| Ruta | Descripción |
+|------|-------------|
+| `/login` | Registro e inicio de sesión |
+| `/` | Dashboard: personajes, afijos, countdown de reset |
+| `/teams` | Crear equipos, unirse por código, listar equipos propios |
+| `/teams/[id]` | Detalle de equipo: todos los miembros y sus personajes |
+
+---
+
+## Funcionalidades
+
+### Dashboard (`/`)
+
+- **Tabla de personajes ordenable** — clic en cualquier cabecera ordena (asc/desc); columna activa resaltada en amarillo con indicador ↑/↓.
+- **Visibilidad de personajes** — botón "Gestionar" para mostrar/ocultar personajes individualmente; estado persistido en `localStorage` (`ks_hidden_chars`).
+- **Afijos semanales** — obtiene los afijos EU actuales de la API pública de Raider.IO (`/api/v1/mythic-plus/affixes?region=eu`); muestra íconos en fila horizontal con badges de nivel (`5+` / `7+` / `10+` / `12+`) y tooltip CSS al hover (nombre + descripción).
+- **Countdown de reset semanal** — cuenta atrás en tiempo real hasta el miércoles 09:00 CEST.
+
+### Navbar
+
+- Sticky, con logo, enlaces activos ("Mis personajes" / "Equipos") y avatar de perfil.
+- Dropdown del avatar: Perfil, Ajustes, Cerrar sesión.
+- Username leído de `localStorage`; avatar de la API (`/api/me`).
+
+### Equipos
+
+- Crear un equipo genera un código de invitación (hex 8 chars).
+- Otros usuarios se unen pegando el código en `/teams`.
+- La vista de equipo muestra todos los personajes de todos los miembros en una tabla ordenable.
+
+---
+
+## Puesta en marcha
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Despliegue (Vercel)
 
-To learn more about Next.js, take a look at the following resources:
+El proyecto se despliega automáticamente desde la rama `main` del monorepo.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Variable de entorno en Vercel:**
+```env
+NEXT_PUBLIC_API_URL=https://weeklychar-production.up.railway.app
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Estructura
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+keystone-web/
+└── app/
+    ├── layout.tsx
+    ├── page.tsx                # Dashboard principal
+    ├── favicon.ico
+    ├── globals.css
+    ├── login/
+    │   └── page.tsx
+    ├── teams/
+    │   ├── page.tsx
+    │   └── [id]/page.tsx
+    └── components/
+        ├── Navbar.tsx
+        ├── WeeklyAffixes.tsx   # Afijos Raider.IO
+        └── WeeklyReset.tsx     # Countdown hasta el reset
+```

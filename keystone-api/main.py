@@ -266,17 +266,28 @@ def update_keystone(
     if payload.ilvl is not None:
         character.ilvl = payload.ilvl
 
-    keystone = Keystone(
-        character_id=character.id,
-        has_keystone=payload.hasKeystone,
-        keystone_level=payload.keystoneLevel,
-        keystone_challenge_map_id=payload.keystoneChallengeMapId,
-        keystone_map_id=payload.keystoneMapId,
-        keystone_dungeon=payload.keystoneDungeon,
-        updated_reason=payload.updatedReason,
-        updated_at=payload.updatedAt,
+    latest = character.keystones[-1] if character.keystones else None
+    is_newer = (
+        latest is None
+        or latest.updated_at is None
+        or payload.updatedAt is None
+        or payload.updatedAt > latest.updated_at
     )
-    db.add(keystone)
+    has_real_keystone = payload.hasKeystone and payload.keystoneLevel is not None
+
+    if is_newer and has_real_keystone:
+        keystone = Keystone(
+            character_id=character.id,
+            has_keystone=payload.hasKeystone,
+            keystone_level=payload.keystoneLevel,
+            keystone_challenge_map_id=payload.keystoneChallengeMapId,
+            keystone_map_id=payload.keystoneMapId,
+            keystone_dungeon=payload.keystoneDungeon,
+            updated_reason=payload.updatedReason,
+            updated_at=payload.updatedAt,
+        )
+        db.add(keystone)
+
     db.commit()
 
     return {"status": "ok", "message": "Keystone updated", "character": payload.character, "realm": payload.realm}
