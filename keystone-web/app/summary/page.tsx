@@ -75,19 +75,33 @@ interface Character {
 }
 
 const CLASS_COLORS: Record<string, string> = {
-  'Death Knight': 'text-red-500',
-  'Demon Hunter': 'text-fuchsia-500',
-  Druid: 'text-orange-400',
-  Evoker: 'text-emerald-400',
-  Hunter: 'text-lime-400',
-  Mage: 'text-sky-300',
-  Monk: 'text-teal-300',
-  Paladin: 'text-pink-300',
-  Priest: 'text-white',
-  Rogue: 'text-yellow-300',
-  Shaman: 'text-blue-400',
-  Warlock: 'text-purple-400',
-  Warrior: 'text-amber-700',
+  'Death Knight': '#C41E3A',
+  'Demon Hunter': '#A330C9',
+  Druid: '#FF7C0A',
+  Evoker: '#33937F',
+  Hunter: '#AAD372',
+  Mage: '#3FC7EB',
+  Monk: '#00FF98',
+  Paladin: '#F48CBA',
+  Priest: '#FFFFFF',
+  Rogue: '#FFF468',
+  Shaman: '#0070DD',
+  Warlock: '#8788EE',
+  Warrior: '#C69B6D',
+}
+
+const CURRENCY_ICON_NAMES: Record<string, string> = {
+  adventurerDawncrest: 'inv_10_gearupgrade_currency_raid3',
+  veteranDawncrest: 'inv_10_gearupgrade_currency_raid3',
+  championDawncrest: 'inv_10_gearupgrade_currency_raid3',
+  heroDawncrest: 'inv_10_gearupgrade_currency_raid3',
+  mythDawncrest: 'inv_10_gearupgrade_currency_raid3',
+  dawnlightManaflux: 'inv_10_professions2_enchanting_shard_color5',
+  radiantSparkDust: 'inv_enchant_dustarcane',
+  sparksOfRadiance: 'inv_10_enchanting2_spark_color4',
+  cofferKeyShards: 'inv_misc_key_15',
+  restoredCofferKey: 'inv_misc_key_15',
+  nebulousVoidcore: 'inv_10_enchanting2_spark_color3',
 }
 
 const DUNGEONS = [
@@ -121,7 +135,8 @@ function dash(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
 }
 
-function wowheadIconUrl(path?: string | null) {
+function wowheadIconUrl(path?: string | null, iconName?: string | null) {
+  if (iconName) return `https://wow.zamimg.com/images/wow/icons/large/${iconName}.jpg`
   if (!path) return null
   const normalized = path.replaceAll('\\', '/').toLowerCase()
   const marker = 'interface/icons/'
@@ -131,9 +146,19 @@ function wowheadIconUrl(path?: string | null) {
   return file ? `https://wow.zamimg.com/images/wow/icons/large/${file}.jpg` : null
 }
 
-function GameIcon({ path, fallback, className = '' }: { path?: string | null; fallback: string; className?: string }) {
+function GameIcon({
+  path,
+  iconName,
+  fallback,
+  className = '',
+}: {
+  path?: string | null
+  iconName?: string | null
+  fallback: string
+  className?: string
+}) {
   const [failed, setFailed] = useState(false)
-  const src = failed ? null : wowheadIconUrl(path)
+  const src = failed ? null : wowheadIconUrl(path, iconName)
 
   if (!src) {
     return (
@@ -229,7 +254,7 @@ function currencyValue(char: Character, key: string, fallback: string) {
   const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <GameIcon path={info.iconPath} fallback={fallback} />
+      <GameIcon path={info.iconPath} iconName={CURRENCY_ICON_NAMES[key]} fallback={fallback} />
       <span className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}>{value}</span>
     </span>
   )
@@ -261,9 +286,17 @@ function InfoRow({
   )
 }
 
-function Cell({ children = null, className = '' }: { children?: React.ReactNode; className?: string }) {
+function Cell({
+  children = null,
+  className = '',
+  style,
+}: {
+  children?: React.ReactNode
+  className?: string
+  style?: React.CSSProperties
+}) {
   return (
-    <td className={`min-w-36 px-3 py-2 text-center text-sm border-l border-gray-950/60 ${className}`}>
+    <td className={`min-w-36 px-3 py-2 text-center text-sm border-l border-gray-950/60 ${className}`} style={style}>
       {children}
     </td>
   )
@@ -314,7 +347,7 @@ export default function SummaryPage() {
                 <tbody>
                   <InfoRow label="Character">
                     {characters.map(c => (
-                      <Cell key={c.id} className={`font-bold ${CLASS_COLORS[c.wowClass ?? ''] ?? 'text-cyan-300'}`}>
+                      <Cell key={c.id} className="font-bold" style={{ color: CLASS_COLORS[c.wowClass ?? ''] ?? '#67E8F9' }}>
                         {c.name}
                       </Cell>
                     ))}
@@ -351,7 +384,7 @@ export default function SummaryPage() {
                       key={currency.key}
                       label={currency.label}
                       labelClassName={currency.color}
-                      icon={<GameIcon path={currencyIconPath(characters, currency.key)} fallback={currency.fallback} />}
+                      icon={<GameIcon path={currencyIconPath(characters, currency.key)} iconName={CURRENCY_ICON_NAMES[currency.key]} fallback={currency.fallback} />}
                     >
                       {characters.map(c => (
                         <Cell key={c.id} className={currency.color}>
