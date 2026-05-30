@@ -19,7 +19,50 @@ interface Character {
   name: string
   realm: string
   region: string
+  avatarUrl?: string | null
+  wowClass?: string | null
   currentKeystone: Keystone | null
+}
+
+const CLASS_COLORS: Record<string, string> = {
+  'Death Knight': '#C41E3A',
+  'Demon Hunter': '#A330C9',
+  Druid: '#FF7C0A',
+  Evoker: '#33937F',
+  Hunter: '#AAD372',
+  Mage: '#3FC7EB',
+  Monk: '#00FF98',
+  Paladin: '#F48CBA',
+  Priest: '#FFFFFF',
+  Rogue: '#FFF468',
+  Shaman: '#0070DD',
+  Warlock: '#8788EE',
+  Warrior: '#C69B6D',
+}
+
+const CLASS_ICON_NAMES: Record<string, string> = {
+  'Death Knight': 'classicon_deathknight',
+  'Demon Hunter': 'classicon_demonhunter',
+  Druid: 'classicon_druid',
+  Evoker: 'classicon_evoker',
+  Hunter: 'classicon_hunter',
+  Mage: 'classicon_mage',
+  Monk: 'classicon_monk',
+  Paladin: 'classicon_paladin',
+  Priest: 'classicon_priest',
+  Rogue: 'classicon_rogue',
+  Shaman: 'classicon_shaman',
+  Warlock: 'classicon_warlock',
+  Warrior: 'classicon_warrior',
+}
+
+function classColor(wowClass: string | null | undefined) {
+  return CLASS_COLORS[wowClass ?? ''] ?? '#E5E7EB'
+}
+
+function classIconUrl(wowClass: string | null | undefined) {
+  const icon = CLASS_ICON_NAMES[wowClass ?? '']
+  return icon ? `https://wow.zamimg.com/images/wow/icons/small/${icon}.jpg` : null
 }
 
 function formatDate(unix: number | null): string {
@@ -134,7 +177,10 @@ export default function Dashboard() {
                       onChange={() => toggleHidden(c.id)}
                       className="accent-yellow-400 w-4 h-4 cursor-pointer"
                     />
-                    <span className={`text-sm ${hidden.has(c.id) ? 'text-gray-600' : 'text-gray-200'}`}>
+                    <span
+                      className={`text-sm ${hidden.has(c.id) ? 'opacity-40' : ''}`}
+                      style={{ color: hidden.has(c.id) ? undefined : classColor(c.wowClass) }}
+                    >
                       {c.name}
                     </span>
                     <span className="text-xs text-gray-600 truncate">{c.realm}</span>
@@ -231,7 +277,28 @@ export function CharacterTable({ characters }: { characters: Character[] }) {
         <tbody>
           {sorted.map(char => (
             <tr key={char.id} className="border-b border-gray-900 hover:bg-gray-900/50 transition">
-              <td className="py-3 pr-6 font-semibold text-white">{char.name}</td>
+              <td className="py-3 pr-6 font-semibold">
+                <span className="flex items-center gap-2">
+                  {char.avatarUrl ? (
+                    <img
+                      src={char.avatarUrl}
+                      alt=""
+                      className="h-8 w-8 rounded-full border border-gray-700 object-cover"
+                    />
+                  ) : (
+                    <span className="h-8 w-8 rounded-full border border-gray-700 bg-gray-900" />
+                  )}
+                  {classIconUrl(char.wowClass) && (
+                    <img
+                      src={classIconUrl(char.wowClass)!}
+                      alt={char.wowClass ?? ''}
+                      title={char.wowClass ?? ''}
+                      className="h-5 w-5 rounded border border-gray-700 object-cover"
+                    />
+                  )}
+                  <span style={{ color: classColor(char.wowClass) }}>{char.name}</span>
+                </span>
+              </td>
               <td className="py-3 pr-6 text-gray-300">{char.realm}</td>
               <td className="py-3 pr-6 text-gray-300">
                 {char.currentKeystone?.dungeon ?? (char.currentKeystone?.challengeMapId

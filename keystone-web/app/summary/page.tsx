@@ -117,14 +117,10 @@ const DUNGEONS = [
 const DUNGEON_ABBR = new Map(DUNGEONS.map(d => [d.id, d.abbr]))
 
 const CURRENCIES = [
-  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3383, iconName: 'inv_120_crest_adventurer' },
-  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3341, iconName: 'inv_120_crest_veteran' },
-  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343, iconName: 'inv_120_crest_champion' },
   { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345, iconName: 'inv_120_crest_hero' },
   { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347, iconName: 'inv_120_crest_myth' },
   { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, localIcon: 'dawnlight-manaflux.jpg' },
   { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, localIcon: 'radiant-spark-dust.jpg' },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875, localIcon: 'spark-of-radiance.jpg' },
   { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
   { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
   { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, localIcon: 'nebulous-voidcore.jpg' },
@@ -289,9 +285,7 @@ function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
   const key = currency.key
   const info = char.currencies?.[key]
   if (!info) return <span className="text-gray-600">—</span>
-  const value = key === 'sparksOfRadiance'
-    ? info.quantity ?? info.itemQuantity ?? 0
-    : info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
+  const value = info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
   const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
   return (
     <WowheadLink
@@ -382,11 +376,6 @@ export default function SummaryPage() {
       <Navbar />
       <main className="min-h-screen bg-gray-950 text-gray-100 px-4 py-8 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-5">
-            <h1 className="text-xl font-semibold text-gray-100">Resumen</h1>
-            <p className="mt-1 text-sm text-gray-500">Vista semanal de personajes, vault, preys, mazmorras y currencies.</p>
-          </div>
-
           {loading ? (
             <p className="text-gray-500">Cargando...</p>
           ) : characters.length === 0 ? (
