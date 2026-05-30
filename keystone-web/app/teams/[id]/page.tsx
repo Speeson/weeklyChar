@@ -130,35 +130,57 @@ function CompactCharacterRow({ char }: { char: Character }) {
   )
 }
 
-function MemberCard({ member, query }: { member: Member; query: string }) {
+function MemberCard({
+  member,
+  query,
+  collapsed,
+  onToggle,
+}: {
+  member: Member
+  query: string
+  collapsed: boolean
+  onToggle: () => void
+}) {
   const characters = member.characters
     .filter(char => matchesDungeon(char, query))
     .sort((a, b) => (b.currentKeystone?.level ?? -1) - (a.currentKeystone?.level ?? -1) || a.name.localeCompare(b.name, 'es'))
 
   return (
     <section className="rounded-xl border border-gray-800 bg-gray-900/45 shadow-xl overflow-hidden">
-      <header className="border-b border-gray-800 bg-gray-950/70 px-4 py-3 text-center">
-        <h2 className="font-semibold text-gray-100">{member.username}</h2>
-        <p className="mt-0.5 text-[11px] text-gray-500">{characters.length} / {member.characters.length} personajes</p>
-      </header>
-      {characters.length === 0 ? (
-        <p className="px-4 py-5 text-center text-xs text-gray-600">Sin personajes para este filtro.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-gray-500">
-                <th className="px-4 py-2 font-medium">Personaje</th>
-                <th className="py-2 pr-3 font-medium">Mazmorra</th>
-                <th className="py-2 pr-3 text-center font-medium">Nivel</th>
-                <th className="py-2 pr-4 text-right font-medium">Ultima act.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {characters.map(char => <CompactCharacterRow key={char.id} char={char} />)}
-            </tbody>
-          </table>
-        </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex w-full items-center justify-between gap-4 bg-gray-950/70 px-4 py-3 text-left transition hover:bg-gray-900 ${collapsed ? '' : 'border-b border-gray-800'}`}
+        title={collapsed ? 'Expandir cuenta' : 'Contraer cuenta'}
+      >
+        <span className="truncate font-semibold text-gray-100">{member.username}</span>
+        <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-gray-500">
+          <span>{characters.length} / {member.characters.length} personajes</span>
+          <svg className={`h-3.5 w-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </button>
+      {!collapsed && (
+        characters.length === 0 ? (
+          <p className="px-4 py-5 text-center text-xs text-gray-600">Sin personajes para este filtro.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-left">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-2 font-medium">Personaje</th>
+                  <th className="py-2 pr-3 font-medium">Mazmorra</th>
+                  <th className="py-2 pr-3 text-center font-medium">Nivel</th>
+                  <th className="py-2 pr-4 text-right font-medium">Ultima act.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {characters.map(char => <CompactCharacterRow key={char.id} char={char} />)}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </section>
   )
@@ -171,6 +193,7 @@ export default function TeamDetailPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [copied, setCopied] = useState(false)
+  const [collapsedMembers, setCollapsedMembers] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (!getToken()) {
@@ -202,6 +225,14 @@ export default function TeamDetailPage() {
     await navigator.clipboard.writeText(team.inviteCode)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1200)
+  }
+
+  function toggleMember(userId: number) {
+    setCollapsedMembers(prev => {
+      const next = new Set(prev)
+      next.has(userId) ? next.delete(userId) : next.add(userId)
+      return next
+    })
   }
 
   return (
@@ -251,7 +282,15 @@ export default function TeamDetailPage() {
             <p className="mt-8 text-sm text-gray-500">Ningun miembro tiene personajes registrados todavia.</p>
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
-              {team.members.map(member => <MemberCard key={member.userId} member={member} query={query} />)}
+              {team.members.map(member => (
+                <MemberCard
+                  key={member.userId}
+                  member={member}
+                  query={query}
+                  collapsed={collapsedMembers.has(member.userId)}
+                  onToggle={() => toggleMember(member.userId)}
+                />
+              ))}
             </div>
           )}
         </div>
