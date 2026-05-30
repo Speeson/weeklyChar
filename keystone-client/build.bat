@@ -1,5 +1,5 @@
 @echo off
-pyinstaller --onefile --windowed --name KeystoneClient --add-data "addon;addon" main.py
+pyinstaller --onefile --windowed --name KeystoneClient --icon icon.ico --add-data "addon;addon" --add-data "icon.ico;." --add-data "bg.jpg;." main.py
 echo.
 echo Build completado. El ejecutable esta en dist\KeystoneClient.exe
 pause

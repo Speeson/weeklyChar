@@ -110,6 +110,17 @@ _DUNGEON_ABBR = {
     "Utgarde Pinnacle":                          ("Utgarde Pinnacle",        "UP"),
 }
 
+_DUNGEON_ABBR_BY_ID = {
+    239: ("Seat of the Triumvirate", "SEAT"),
+    556: ("Pit of Saron", "PoS"),
+    161: ("Skyreach", "SR"),
+    557: ("Windrunner Spire", "WS"),
+    558: ("Magister's Terrace", "MT"),
+    559: ("Nexus-Point Xenas", "NPX"),
+    560: ("Maisara Caverns", "MS"),
+    402: ("Algeth'ar Academy", "AA"),
+}
+
 WOW_CLASS_COLORS = {
     "Death Knight": "#C41E3A",
     "Demon Hunter": "#A330C9",
@@ -212,6 +223,10 @@ def _keystone_display(char):
     level = k.get("level")
     if not level:
         return "—"
+    challenge_map_id = k.get("challengeMapId")
+    if challenge_map_id in _DUNGEON_ABBR_BY_ID:
+        display, abbr = _DUNGEON_ABBR_BY_ID[challenge_map_id]
+        return f"+{level} {display} ({abbr})"
     dungeon = k.get("dungeon") or ""
     if dungeon in _DUNGEON_ABBR:
         display, abbr = _DUNGEON_ABBR[dungeon]
@@ -1881,18 +1896,18 @@ class MainWindow:
         self.root.after(0, self.root.focus_force)
 
     def _quit(self):
-        if self._worker: self._worker.stop()
+        if self._worker:
+            self._worker.stop()
+            self._worker = None
+        if self._tray:
+            self._tray.stop()
+            self._tray = None
         self.root.after(0, self.root.destroy)
 
     # ── Close button ───────────────────────────────────────────────────────────
 
     def _on_close_btn(self):
-        if not cfg_module.is_session_valid(self.cfg):
-            self.root.destroy()
-            return
-        if self.root.state() == "iconic":
-            return
-        self._show_minimized_dialog()
+        self._quit()
 
     def _show_minimized_dialog(self):
         dlg = tk.Toplevel(self.root)

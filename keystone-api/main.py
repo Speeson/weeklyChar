@@ -266,7 +266,7 @@ def update_keystone(
     if payload.ilvl is not None:
         character.ilvl = payload.ilvl
 
-    latest = character.keystones[-1] if character.keystones else None
+    latest = _latest_real_keystone(character)
     is_newer = (
         latest is None
         or latest.updated_at is None
@@ -354,8 +354,17 @@ def _keystone_dict(k: Keystone):
         "updatedReason": k.updated_reason,
     }
 
+def _latest_real_keystone(c: Character):
+    real_keystones = [
+        k for k in c.keystones
+        if k.has_keystone and k.keystone_level is not None
+    ]
+    if not real_keystones:
+        return None
+    return max(real_keystones, key=lambda k: (k.updated_at or 0, k.id or 0))
+
 def _character_response(c: Character):
-    latest = c.keystones[-1] if c.keystones else None
+    latest = _latest_real_keystone(c)
     return {
         "id": c.id,
         "name": c.name,

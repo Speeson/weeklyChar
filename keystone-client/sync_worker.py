@@ -9,6 +9,15 @@ from slpp import slpp as lua
 _RIO_BASE = "https://raider.io/api/v1/characters/profile"
 
 
+def _normalize_ilvl(value):
+    if value is None:
+        return None
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return None
+
+
 class SyncWorker(threading.Thread):
     def __init__(self, config: dict, on_sync: Callable = None, on_error: Callable = None):
         super().__init__(daemon=True)
@@ -61,7 +70,7 @@ class SyncWorker(threading.Thread):
             wow_class = data.get("class")
             seasons = data.get("mythic_plus_scores_by_season") or []
             score = seasons[0]["scores"]["all"] if seasons else None
-            ilvl = (data.get("gear") or {}).get("item_level_equipped")
+            ilvl = _normalize_ilvl((data.get("gear") or {}).get("item_level_equipped"))
             return avatar, score, wow_class, ilvl
         except Exception:
             return None, None, None, None
@@ -112,6 +121,10 @@ class SyncWorker(threading.Thread):
                 )
                 if r.ok:
                     synced.append(name or "?")
+                else:
+                    if self.on_error:
+                        self.on_error(f"Error sincronizando {name or '?'}: HTTP {r.status_code} {r.text[:200]}")
+                    return
             except requests.exceptions.ConnectionError:
                 if self.on_error:
                     self.on_error("Sin conexión con la API.")
