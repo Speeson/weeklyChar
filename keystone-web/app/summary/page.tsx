@@ -231,6 +231,10 @@ function wowheadHref(type: string, id: number) {
   return `https://www.wowhead.com/${type}=${id}`
 }
 
+function wowheadSearchHref(type: string, id: number) {
+  return `https://www.wowhead.com/search?q=${encodeURIComponent(`${type}:${id}`)}`
+}
+
 function WowheadLink({
   children,
   type,
@@ -246,8 +250,8 @@ function WowheadLink({
 }) {
   return (
     <a
-      href={wowheadHref(type, id)}
-      data-wowhead={noIcon ? 'domain=www&icon=false' : 'domain=www'}
+      href={noIcon ? wowheadSearchHref(type, id) : wowheadHref(type, id)}
+      data-wowhead={noIcon ? `${type}=${id}&domain=www&icon=false` : 'domain=www'}
       target="_blank"
       rel="noreferrer"
       className={`inline-flex items-center justify-center gap-2 no-underline ${className}`}
