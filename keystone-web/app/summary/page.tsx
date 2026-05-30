@@ -117,12 +117,12 @@ const CURRENCIES = [
   { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343, iconName: 'inv_120_crest_champion' },
   { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345, iconName: 'inv_120_crest_hero' },
   { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347, iconName: 'inv_120_crest_myth' },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378 },
+  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, fileDataId: 4622294 },
   { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, fileDataId: 5929578 },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875 },
+  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875, fileDataId: 7551418 },
   { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
   { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418 },
+  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, fileDataId: 7658128 },
 ] as const
 
 function dash(value: unknown) {
@@ -240,7 +240,7 @@ function WowheadLink({
   return (
     <a
       href={wowheadHref(type, id)}
-      data-wowhead="domain=www"
+      data-wowhead="domain=www&icon=false"
       target="_blank"
       rel="noreferrer"
       className={`inline-flex items-center justify-center gap-1.5 no-underline ${className}`}
