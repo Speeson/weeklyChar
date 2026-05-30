@@ -74,6 +74,14 @@ interface Character {
   } | null
 }
 
+declare global {
+  interface Window {
+    $WowheadPower?: {
+      refreshLinks?: () => void
+    }
+  }
+}
+
 const CLASS_COLORS: Record<string, string> = {
   'Death Knight': '#C41E3A',
   'Demon Hunter': '#A330C9',
@@ -90,20 +98,6 @@ const CLASS_COLORS: Record<string, string> = {
   Warrior: '#C69B6D',
 }
 
-const CURRENCY_ICON_NAMES: Record<string, string> = {
-  adventurerDawncrest: 'inv_10_gearupgrade_currency_raid3',
-  veteranDawncrest: 'inv_10_gearupgrade_currency_raid3',
-  championDawncrest: 'inv_10_gearupgrade_currency_raid3',
-  heroDawncrest: 'inv_10_gearupgrade_currency_raid3',
-  mythDawncrest: 'inv_10_gearupgrade_currency_raid3',
-  dawnlightManaflux: 'inv_10_professions2_enchanting_shard_color5',
-  radiantSparkDust: 'inv_enchant_dustarcane',
-  sparksOfRadiance: 'inv_10_enchanting2_spark_color4',
-  cofferKeyShards: 'inv_misc_key_15',
-  restoredCofferKey: 'inv_misc_key_15',
-  nebulousVoidcore: 'inv_10_enchanting2_spark_color3',
-}
-
 const DUNGEONS = [
   { id: 402, name: "Algeth'ar Academy", abbr: 'AA' },
   { id: 558, name: "Magister's Terrace", abbr: 'MT' },
@@ -118,64 +112,21 @@ const DUNGEONS = [
 const DUNGEON_ABBR = new Map(DUNGEONS.map(d => [d.id, d.abbr]))
 
 const CURRENCIES = [
-  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400', fallback: 'A' },
-  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-purple-400', fallback: 'V' },
-  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', fallback: 'C' },
-  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', fallback: 'H' },
-  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', fallback: 'M' },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', fallback: 'D' },
-  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', fallback: 'R' },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', fallback: 'S' },
-  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', fallback: 'K' },
-  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', fallback: 'R' },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', fallback: 'N' },
-]
+  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3383 },
+  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3341 },
+  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343 },
+  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345 },
+  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347 },
+  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378 },
+  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212 },
+  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875 },
+  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310 },
+  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028 },
+  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418 },
+] as const
 
 function dash(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
-}
-
-function wowheadIconUrl(path?: string | null, iconName?: string | null) {
-  if (iconName) return `https://wow.zamimg.com/images/wow/icons/large/${iconName}.jpg`
-  if (!path) return null
-  const normalized = path.replaceAll('\\', '/').toLowerCase()
-  const marker = 'interface/icons/'
-  const index = normalized.indexOf(marker)
-  if (index < 0) return null
-  const file = normalized.slice(index + marker.length).replace(/\.(blp|png|jpg|jpeg)$/i, '')
-  return file ? `https://wow.zamimg.com/images/wow/icons/large/${file}.jpg` : null
-}
-
-function GameIcon({
-  path,
-  iconName,
-  fallback,
-  className = '',
-}: {
-  path?: string | null
-  iconName?: string | null
-  fallback: string
-  className?: string
-}) {
-  const [failed, setFailed] = useState(false)
-  const src = failed ? null : wowheadIconUrl(path, iconName)
-
-  if (!src) {
-    return (
-      <span className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border border-gray-700 bg-gray-900 text-[10px] font-black text-gray-400 ${className}`}>
-        {fallback}
-      </span>
-    )
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      onError={() => setFailed(true)}
-      className={`inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-900 object-cover ${className}`}
-    />
-  )
 }
 
 function keystoneLabel(char: Character) {
@@ -202,14 +153,6 @@ function dungeonFor(char: Character, mapId: number) {
   return (char.mythicPlusSeason?.dungeons ?? []).find(d => d.challengeMapId === mapId)
 }
 
-function currencyIconPath(characters: Character[], key: string) {
-  for (const char of characters) {
-    const path = char.currencies?.[key]?.iconPath
-    if (path) return path
-  }
-  return null
-}
-
 function dungeonCell(char: Character, mapId: number) {
   const run = dungeonFor(char, mapId)
   if (!run || !run.level) return <span className="text-gray-600">—</span>
@@ -225,30 +168,58 @@ function dungeonCell(char: Character, mapId: number) {
 function UpgradeMedal({ upgradeLevel }: { upgradeLevel: number }) {
   if (upgradeLevel <= 0) return <span className="h-3 w-3 rounded-full border border-gray-700 bg-gray-800" title="Sin tiempo" />
 
-  const style = upgradeLevel >= 3
-    ? 'border-yellow-200 bg-yellow-400 shadow-yellow-400/40'
-    : upgradeLevel === 2
-      ? 'border-slate-100 bg-slate-300 shadow-slate-300/40'
-      : 'border-orange-300 bg-orange-700 shadow-orange-700/40'
-
   return (
-    <span
+    <img
+      src={`/icons/medals/tier${Math.min(upgradeLevel, 3)}.avif`}
+      alt={`+${upgradeLevel}`}
       title={`+${upgradeLevel}`}
-      className={`inline-flex h-3.5 w-3.5 rounded-full border shadow-sm ${style}`}
+      className="inline-block h-4 w-4 object-contain mix-blend-screen"
     />
   )
 }
 
-function currencyValue(char: Character, key: string, fallback: string) {
+function wowheadHref(type: string, id: number) {
+  return `https://www.wowhead.com/${type}=${id}`
+}
+
+function WowheadLink({
+  children,
+  type,
+  id,
+  className = '',
+}: {
+  children: React.ReactNode
+  type: string
+  id: number
+  className?: string
+}) {
+  return (
+    <a
+      href={wowheadHref(type, id)}
+      data-wowhead="domain=www"
+      target="_blank"
+      rel="noreferrer"
+      className={`inline-flex items-center justify-center gap-1.5 no-underline ${className}`}
+    >
+      {children}
+    </a>
+  )
+}
+
+function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
+  const key = currency.key
   const info = char.currencies?.[key]
   if (!info) return <span className="text-gray-600">—</span>
   const value = info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
   const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
   return (
-    <span className="inline-flex items-center justify-center gap-2">
-      <GameIcon path={info.iconPath} iconName={CURRENCY_ICON_NAMES[key]} fallback={fallback} />
-      <span className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}>{value}</span>
-    </span>
+    <WowheadLink
+      type={currency.wowheadType}
+      id={currency.wowheadId}
+      className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}
+    >
+      {value}
+    </WowheadLink>
   )
 }
 
@@ -319,6 +290,11 @@ export default function SummaryPage() {
       .finally(() => setLoading(false))
   }, [router])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => window.$WowheadPower?.refreshLinks?.(), 100)
+    return () => window.clearTimeout(timer)
+  }, [characters])
+
   return (
     <>
       <Navbar />
@@ -373,13 +349,16 @@ export default function SummaryPage() {
                   {CURRENCIES.map(currency => (
                     <InfoRow
                       key={currency.key}
-                      label={currency.label}
+                      label={
+                        <WowheadLink type={currency.wowheadType} id={currency.wowheadId} className={currency.color}>
+                          {currency.label}
+                        </WowheadLink>
+                      }
                       labelClassName={currency.color}
-                      icon={<GameIcon path={currencyIconPath(characters, currency.key)} iconName={CURRENCY_ICON_NAMES[currency.key]} fallback={currency.fallback} />}
                     >
                       {characters.map(c => (
                         <Cell key={c.id} className={currency.color}>
-                          {currencyValue(c, currency.key, currency.fallback)}
+                          {currencyValue(c, currency)}
                         </Cell>
                       ))}
                     </InfoRow>
