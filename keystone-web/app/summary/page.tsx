@@ -117,12 +117,12 @@ const CURRENCIES = [
   { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3343, iconName: 'inv_120_crest_champion' },
   { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345, iconName: 'inv_120_crest_hero' },
   { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347, iconName: 'inv_120_crest_myth' },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, iconName: 'inv_10_professions2_enchanting_shard_color5' },
-  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, iconName: 'inv_enchant_dustarcane' },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875, iconName: 'inv_10_enchanting2_spark_color4' },
+  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378 },
+  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, fileDataId: 5929578 },
+  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', wowheadType: 'item', wowheadId: 232875 },
   { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
   { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, iconName: 'inv_10_enchanting2_spark_color3' },
+  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418 },
 ] as const
 
 function dash(value: unknown) {
@@ -250,11 +250,25 @@ function WowheadLink({
   )
 }
 
-function WowheadIcon({ iconName }: { iconName: string }) {
+function WowheadIcon({
+  iconName,
+  fileDataId,
+}: {
+  iconName?: string
+  fileDataId?: number
+}) {
+  const [failed, setFailed] = useState(false)
+  if (failed || (!iconName && !fileDataId)) return null
+
+  const src = iconName
+    ? `https://wow.zamimg.com/images/wow/icons/small/${iconName}.jpg`
+    : `https://wow.zamimg.com/images/wow/icons/small/${fileDataId}.jpg`
+
   return (
     <img
-      src={`https://wow.zamimg.com/images/wow/icons/small/${iconName}.jpg`}
+      src={src}
       alt=""
+      onError={() => setFailed(true)}
       className="inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-900 object-cover"
     />
   )
@@ -272,7 +286,7 @@ function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
       id={currency.wowheadId}
       className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}
     >
-      <WowheadIcon iconName={currency.iconName} />
+      <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} fileDataId={'fileDataId' in currency ? currency.fileDataId : undefined} />
       {value}
     </WowheadLink>
   )
@@ -410,7 +424,7 @@ export default function SummaryPage() {
                       key={currency.key}
                       label={
                         <WowheadLink type={currency.wowheadType} id={currency.wowheadId} className={currency.color}>
-                          <WowheadIcon iconName={currency.iconName} />
+                          <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} fileDataId={'fileDataId' in currency ? currency.fileDataId : undefined} />
                           {currency.label}
                         </WowheadLink>
                       }
