@@ -12,7 +12,7 @@ import bcrypt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from database import Base, engine, get_db
 from models import Character, Keystone, Team, TeamMember, User
 
@@ -24,20 +24,25 @@ TOKEN_EXPIRE_DAYS = 30
 
 Base.metadata.create_all(bind=engine)
 
-# Migration: add new columns if they don't exist (PostgreSQL IF NOT EXISTS)
+def _add_column_if_missing(conn, table_name: str, column_name: str, column_sql: str):
+    existing = {column["name"] for column in inspect(conn).get_columns(table_name)}
+    if column_name in existing:
+        return
+    conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}"))
+
 with engine.connect() as _conn:
-    for _sql in [
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS rio_score FLOAT",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS wow_class VARCHAR(50)",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS ilvl INTEGER",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS vault_json TEXT",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS prey_hunts_json TEXT",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS currencies_json TEXT",
-        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS mythic_plus_season_json TEXT",
+    for _table, _column, _definition in [
+        ("users", "avatar_url", "VARCHAR(512)"),
+        ("characters", "avatar_url", "VARCHAR(512)"),
+        ("characters", "rio_score", "FLOAT"),
+        ("characters", "wow_class", "VARCHAR(50)"),
+        ("characters", "ilvl", "INTEGER"),
+        ("characters", "vault_json", "TEXT"),
+        ("characters", "prey_hunts_json", "TEXT"),
+        ("characters", "currencies_json", "TEXT"),
+        ("characters", "mythic_plus_season_json", "TEXT"),
     ]:
-        _conn.execute(text(_sql))
+        _add_column_if_missing(_conn, _table, _column, _definition)
     _conn.commit()
 
 app = FastAPI(title="KeystoneSync API")

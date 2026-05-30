@@ -157,6 +157,17 @@ local function AppendRange(target, startId, endId, step)
     end
 end
 
+local function GetTexturePath(fileDataID)
+    if not fileDataID or not C_Texture or not C_Texture.GetFilenameFromFileDataID then return nil end
+
+    local ok, path = pcall(C_Texture.GetFilenameFromFileDataID, fileDataID)
+    if ok and path and path ~= "" then
+        return path
+    end
+
+    return nil
+end
+
 local function GetPreyHunts()
     local normal = BuildRange(91095, 91124)
     local hard = {}
@@ -202,6 +213,7 @@ local function GetCurrencyData()
                 discovered = info.discovered == true,
                 quality = info.quality,
                 iconFileID = info.iconFileID,
+                iconPath = GetTexturePath(info.iconFileID),
                 isWeeklyComplete = isComplete,
                 displayColor = isComplete and "red" or nil,
             }
@@ -320,6 +332,7 @@ local function GetMythicPlusSeason()
             challengeMapId = challengeMapId,
             name = name,
             texture = texture,
+            texturePath = GetTexturePath(texture),
             timeLimit = timeLimit,
             level = level or 0,
             timed = timed,

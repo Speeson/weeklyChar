@@ -32,6 +32,8 @@ interface CurrencyInfo {
   trackedQuantity?: number
   totalEarned?: number
   maxQuantity?: number
+  iconFileID?: number
+  iconPath?: string | null
   isWeeklyComplete?: boolean
   displayColor?: string | null
 }
@@ -43,6 +45,8 @@ interface SeasonDungeon {
   timed?: boolean
   upgradeLevel?: number
   rating?: number
+  texture?: number
+  texturePath?: string | null
 }
 
 interface Character {
@@ -100,21 +104,53 @@ const DUNGEONS = [
 const DUNGEON_ABBR = new Map(DUNGEONS.map(d => [d.id, d.abbr]))
 
 const CURRENCIES = [
-  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400' },
-  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-violet-400' },
-  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400' },
-  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-fuchsia-400' },
-  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-orange-400' },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300' },
-  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400' },
-  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300' },
-  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400' },
-  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400' },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300' },
+  { key: 'adventurerDawncrest', label: 'Adventurer Dawncrest', color: 'text-sky-400', fallback: 'A' },
+  { key: 'veteranDawncrest', label: 'Veteran Dawncrest', color: 'text-purple-400', fallback: 'V' },
+  { key: 'championDawncrest', label: 'Champion Dawncrest', color: 'text-purple-400', fallback: 'C' },
+  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', fallback: 'H' },
+  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', fallback: 'M' },
+  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', fallback: 'D' },
+  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', fallback: 'R' },
+  { key: 'sparksOfRadiance', label: 'Sparks of Radiance', color: 'text-amber-300', fallback: 'S' },
+  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', fallback: 'K' },
+  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', fallback: 'R' },
+  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', fallback: 'N' },
 ]
 
 function dash(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
+}
+
+function wowheadIconUrl(path?: string | null) {
+  if (!path) return null
+  const normalized = path.replaceAll('\\', '/').toLowerCase()
+  const marker = 'interface/icons/'
+  const index = normalized.indexOf(marker)
+  if (index < 0) return null
+  const file = normalized.slice(index + marker.length).replace(/\.(blp|png|jpg|jpeg)$/i, '')
+  return file ? `https://wow.zamimg.com/images/wow/icons/large/${file}.jpg` : null
+}
+
+function GameIcon({ path, fallback, className = '' }: { path?: string | null; fallback: string; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  const src = failed ? null : wowheadIconUrl(path)
+
+  if (!src) {
+    return (
+      <span className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border border-gray-700 bg-gray-900 text-[10px] font-black text-gray-400 ${className}`}>
+        {fallback}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      onError={() => setFailed(true)}
+      className={`inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-900 object-cover ${className}`}
+    />
+  )
 }
 
 function keystoneLabel(char: Character) {
@@ -141,33 +177,84 @@ function dungeonFor(char: Character, mapId: number) {
   return (char.mythicPlusSeason?.dungeons ?? []).find(d => d.challengeMapId === mapId)
 }
 
+function dungeonIconPath(characters: Character[], mapId: number) {
+  for (const char of characters) {
+    const path = dungeonFor(char, mapId)?.texturePath
+    if (path) return path
+  }
+  return null
+}
+
+function currencyIconPath(characters: Character[], key: string) {
+  for (const char of characters) {
+    const path = char.currencies?.[key]?.iconPath
+    if (path) return path
+  }
+  return null
+}
+
 function dungeonCell(char: Character, mapId: number) {
   const run = dungeonFor(char, mapId)
   if (!run || !run.level) return <span className="text-gray-600">—</span>
   return (
-    <span className="inline-flex items-baseline justify-center gap-2">
-      <span className="font-bold text-yellow-300">{run.level}</span>
-      {run.timed && (run.upgradeLevel ?? 0) > 0 && (
-        <span className="text-[10px] font-bold text-green-400">+{run.upgradeLevel}</span>
-      )}
-      <span className="text-xs font-semibold text-orange-400">{Math.round(run.rating ?? 0)}</span>
+    <span className="inline-flex items-center justify-center gap-2">
+      <span className="min-w-5 font-bold text-yellow-300">{run.level}</span>
+      <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
+      <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{Math.round(run.rating ?? 0)}</span>
     </span>
   )
 }
 
-function currencyValue(char: Character, key: string) {
+function UpgradeMedal({ upgradeLevel }: { upgradeLevel: number }) {
+  if (upgradeLevel <= 0) return <span className="h-3 w-3 rounded-full border border-gray-700 bg-gray-800" title="Sin tiempo" />
+
+  const style = upgradeLevel >= 3
+    ? 'border-yellow-200 bg-yellow-400 shadow-yellow-400/40'
+    : upgradeLevel === 2
+      ? 'border-slate-100 bg-slate-300 shadow-slate-300/40'
+      : 'border-orange-300 bg-orange-700 shadow-orange-700/40'
+
+  return (
+    <span
+      title={`+${upgradeLevel}`}
+      className={`inline-flex h-3.5 w-3.5 rounded-full border shadow-sm ${style}`}
+    />
+  )
+}
+
+function currencyValue(char: Character, key: string, fallback: string) {
   const info = char.currencies?.[key]
   if (!info) return <span className="text-gray-600">—</span>
   const value = info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
   const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
-  return <span className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}>{value}</span>
+  return (
+    <span className="inline-flex items-center justify-center gap-2">
+      <GameIcon path={info.iconPath} fallback={fallback} />
+      <span className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}>{value}</span>
+    </span>
+  )
 }
 
-function InfoRow({ label, children, section }: { label: string; children?: React.ReactNode; section?: boolean }) {
+function InfoRow({
+  label,
+  children,
+  section,
+  icon,
+  labelClassName = '',
+}: {
+  label: React.ReactNode
+  children?: React.ReactNode
+  section?: boolean
+  icon?: React.ReactNode
+  labelClassName?: string
+}) {
   return (
     <tr className={section ? 'bg-gray-950/80' : 'odd:bg-gray-900/70 even:bg-gray-900/45'}>
-      <th className={`sticky left-0 z-[1] min-w-44 max-w-44 px-3 py-2 text-left text-xs font-bold ${section ? 'bg-gray-950/95 text-yellow-400' : 'bg-gray-950 text-gray-100'}`}>
-        {label}
+      <th className={`sticky left-0 z-[1] min-w-56 max-w-56 px-3 py-2 text-left text-xs font-bold ${section ? 'bg-gray-950/95 text-yellow-400' : 'bg-gray-950 text-gray-100'} ${labelClassName}`}>
+        <span className="flex min-w-0 items-center gap-2">
+          {icon}
+          <span className="truncate">{label}</span>
+        </span>
       </th>
       {children}
     </tr>
@@ -237,6 +324,17 @@ export default function SummaryPage() {
                   <InfoRow label="Rating">{characters.map(c => <Cell key={c.id} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
                   <InfoRow label="Current Keystone">{characters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
 
+                  <InfoRow label="Dungeons" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
+                  {DUNGEONS.map(dungeon => (
+                    <InfoRow
+                      key={dungeon.id}
+                      label={dungeon.name}
+                      icon={<GameIcon path={dungeonIconPath(characters, dungeon.id)} fallback={dungeon.abbr.slice(0, 1)} />}
+                    >
+                      {characters.map(c => <Cell key={c.id}>{dungeonCell(c, dungeon.id)}</Cell>)}
+                    </InfoRow>
+                  ))}
+
                   <InfoRow label="Great Vault" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
                   <InfoRow label="Raids">{characters.map(c => <Cell key={c.id}>{vaultSlots(c.vault?.raid)}</Cell>)}</InfoRow>
                   <InfoRow label="Dungeons">{characters.map(c => <Cell key={c.id} className="text-green-400">{vaultSlots(c.vault?.dungeons)}</Cell>)}</InfoRow>
@@ -247,17 +345,19 @@ export default function SummaryPage() {
                   <InfoRow label="Hard">{characters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.hard)}</Cell>)}</InfoRow>
                   <InfoRow label="Nightmare">{characters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.nightmare)}</Cell>)}</InfoRow>
 
-                  <InfoRow label="Dungeons" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
-                  {DUNGEONS.map(dungeon => (
-                    <InfoRow key={dungeon.id} label={dungeon.name}>
-                      {characters.map(c => <Cell key={c.id}>{dungeonCell(c, dungeon.id)}</Cell>)}
-                    </InfoRow>
-                  ))}
-
                   <InfoRow label="Currencies" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
                   {CURRENCIES.map(currency => (
-                    <InfoRow key={currency.key} label={currency.label}>
-                      {characters.map(c => <Cell key={c.id} className={currency.color}>{currencyValue(c, currency.key)}</Cell>)}
+                    <InfoRow
+                      key={currency.key}
+                      label={currency.label}
+                      labelClassName={currency.color}
+                      icon={<GameIcon path={currencyIconPath(characters, currency.key)} fallback={currency.fallback} />}
+                    >
+                      {characters.map(c => (
+                        <Cell key={c.id} className={currency.color}>
+                          {currencyValue(c, currency.key, currency.fallback)}
+                        </Cell>
+                      ))}
                     </InfoRow>
                   ))}
                 </tbody>
