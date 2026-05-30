@@ -223,6 +223,8 @@ local function GetCurrencyData()
     result.sparksOfRadiance = {
         itemID = SPARK_OF_RADIANCE_ITEM_ID,
         quantity = C_Item.GetItemCount(SPARK_OF_RADIANCE_ITEM_ID, true) or 0,
+        iconFileID = C_Item.GetItemIconByID(SPARK_OF_RADIANCE_ITEM_ID),
+        iconPath = GetTexturePath(C_Item.GetItemIconByID(SPARK_OF_RADIANCE_ITEM_ID)),
     }
 
     return result
@@ -285,6 +287,48 @@ local function GetTimedUpgradeLevel(durationSec, timeLimit)
     return 0
 end
 
+local function CopyRunInfo(run)
+    if not run then return nil end
+
+    return {
+        level = run.level or run.keystoneLevel,
+        durationSec = run.durationSec or run.durationSeconds,
+        mapScore = run.mapScore,
+        completed = run.completed,
+        finishedSuccess = run.finishedSuccess,
+    }
+end
+
+local function CopyAffixScores(affixScores)
+    local result = {}
+    if not affixScores then return result end
+
+    for _, affixScore in ipairs(affixScores) do
+        table.insert(result, {
+            name = affixScore.name,
+            score = affixScore.score or 0,
+            level = affixScore.level or 0,
+            durationSec = affixScore.durationSec or 0,
+            overTime = affixScore.overTime == true,
+        })
+    end
+
+    return result
+end
+
+local function GetBestAffixScore(affixScores)
+    local best = nil
+    if not affixScores then return nil end
+
+    for _, affixScore in ipairs(affixScores) do
+        if not best or (affixScore.score or 0) > (best.score or 0) then
+            best = affixScore
+        end
+    end
+
+    return best
+end
+
 local function GetMythicPlusSeason()
     local result = {
         rating = 0,
@@ -302,6 +346,8 @@ local function GetMythicPlusSeason()
     for _, challengeMapId in ipairs(maps) do
         local name, _, timeLimit, texture = C_ChallengeMode.GetMapUIInfo(challengeMapId)
         local bestTimedRun, bestNotTimedRun = C_MythicPlus.GetSeasonBestForMap(challengeMapId)
+        local affixScores, bestOverAllScore = C_MythicPlus.GetSeasonBestAffixScoreInfoForMap(challengeMapId)
+        local bestAffixScore = GetBestAffixScore(affixScores)
         local summaryRun = nil
 
         if ratingSummary and ratingSummary.runs then
@@ -316,11 +362,18 @@ local function GetMythicPlusSeason()
         local level = 0
         local timed = false
         local durationSec = nil
+        local upgradeLevel = 0
 
-        if bestTimedRun then
+        if bestAffixScore and bestAffixScore.level and bestAffixScore.level > 0 then
+            level = bestAffixScore.level
+            durationSec = bestAffixScore.durationSec
+            timed = not bestAffixScore.overTime
+            upgradeLevel = timed and GetTimedUpgradeLevel(durationSec, timeLimit) or 0
+        elseif bestTimedRun then
             level = bestTimedRun.level or bestTimedRun.keystoneLevel or level
             durationSec = bestTimedRun.durationSec or bestTimedRun.durationSeconds
             timed = true
+            upgradeLevel = GetTimedUpgradeLevel(durationSec, timeLimit) or 0
         elseif summaryRun then
             level = summaryRun.bestRunLevel or level
             timed = summaryRun.finishedSuccess == true
@@ -336,8 +389,19 @@ local function GetMythicPlusSeason()
             timeLimit = timeLimit,
             level = level or 0,
             timed = timed,
-            upgradeLevel = timed and GetTimedUpgradeLevel(durationSec, timeLimit) or 0,
-            rating = summaryRun and summaryRun.mapScore or 0,
+            upgradeLevel = upgradeLevel,
+            rating = bestOverAllScore or (summaryRun and summaryRun.mapScore) or 0,
+            bestOverAllScore = bestOverAllScore or 0,
+            bestTimedRun = CopyRunInfo(bestTimedRun),
+            bestNotTimedRun = CopyRunInfo(bestNotTimedRun),
+            bestAffixScore = bestAffixScore and {
+                name = bestAffixScore.name,
+                score = bestAffixScore.score or 0,
+                level = bestAffixScore.level or 0,
+                durationSec = bestAffixScore.durationSec or 0,
+                overTime = bestAffixScore.overTime == true,
+            } or nil,
+            affixScores = CopyAffixScores(affixScores),
         })
     end
 
