@@ -1,6 +1,7 @@
 import os
+import json
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
@@ -31,6 +32,10 @@ with engine.connect() as _conn:
         "ALTER TABLE characters ADD COLUMN IF NOT EXISTS rio_score FLOAT",
         "ALTER TABLE characters ADD COLUMN IF NOT EXISTS wow_class VARCHAR(50)",
         "ALTER TABLE characters ADD COLUMN IF NOT EXISTS ilvl INTEGER",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS vault_json TEXT",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS prey_hunts_json TEXT",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS currencies_json TEXT",
+        "ALTER TABLE characters ADD COLUMN IF NOT EXISTS mythic_plus_season_json TEXT",
     ]:
         _conn.execute(text(_sql))
     _conn.commit()
@@ -132,6 +137,10 @@ class KeystoneUpdateRequest(BaseModel):
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
     ilvl: Optional[int] = None
+    vault: Optional[dict[str, Any]] = None
+    preyHunts: Optional[dict[str, Any]] = None
+    currencies: Optional[dict[str, Any]] = None
+    mythicPlusSeason: Optional[dict[str, Any]] = None
 
 class AvatarUpdateRequest(BaseModel):
     avatarUrl: str
@@ -144,6 +153,10 @@ class CharacterEnrichRequest(BaseModel):
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
     ilvl: Optional[int] = None
+    vault: Optional[dict[str, Any]] = None
+    preyHunts: Optional[dict[str, Any]] = None
+    currencies: Optional[dict[str, Any]] = None
+    mythicPlusSeason: Optional[dict[str, Any]] = None
 
 class CreateTeamRequest(BaseModel):
     name: str
@@ -209,6 +222,14 @@ def enrich_character(
         character.wow_class = payload.wowClass
     if payload.ilvl is not None:
         character.ilvl = payload.ilvl
+    if payload.vault is not None:
+        character.vault_json = _json_dump(payload.vault)
+    if payload.preyHunts is not None:
+        character.prey_hunts_json = _json_dump(payload.preyHunts)
+    if payload.currencies is not None:
+        character.currencies_json = _json_dump(payload.currencies)
+    if payload.mythicPlusSeason is not None:
+        character.mythic_plus_season_json = _json_dump(payload.mythicPlusSeason)
     db.commit()
     return {"status": "ok"}
 
@@ -265,6 +286,14 @@ def update_keystone(
         character.wow_class = payload.wowClass
     if payload.ilvl is not None:
         character.ilvl = payload.ilvl
+    if payload.vault is not None:
+        character.vault_json = _json_dump(payload.vault)
+    if payload.preyHunts is not None:
+        character.prey_hunts_json = _json_dump(payload.preyHunts)
+    if payload.currencies is not None:
+        character.currencies_json = _json_dump(payload.currencies)
+    if payload.mythicPlusSeason is not None:
+        character.mythic_plus_season_json = _json_dump(payload.mythicPlusSeason)
 
     latest = _latest_real_keystone(character)
     is_newer = (
@@ -363,6 +392,17 @@ def _latest_real_keystone(c: Character):
         return None
     return max(real_keystones, key=lambda k: (k.updated_at or 0, k.id or 0))
 
+def _json_dump(value):
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+def _json_load(value):
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return None
+
 def _character_response(c: Character):
     latest = _latest_real_keystone(c)
     return {
@@ -375,6 +415,10 @@ def _character_response(c: Character):
         "wowClass": c.wow_class,
         "ilvl": c.ilvl,
         "currentKeystone": _keystone_dict(latest) if latest else None,
+        "vault": _json_load(c.vault_json),
+        "preyHunts": _json_load(c.prey_hunts_json),
+        "currencies": _json_load(c.currencies_json),
+        "mythicPlusSeason": _json_load(c.mythic_plus_season_json),
     }
 
 def _team_response(team: Team, current_user: User):

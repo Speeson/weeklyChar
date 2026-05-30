@@ -115,6 +115,7 @@ export default function Navbar() {
         <div className="flex items-center gap-8">
           <span className="text-yellow-400 font-bold text-xl tracking-tight">⚔ KeystoneSync</span>
           {navLink('/', 'Mis personajes')}
+          {navLink('/summary', 'Resumen')}
           {navLink('/teams', 'Equipos')}
         </div>
 

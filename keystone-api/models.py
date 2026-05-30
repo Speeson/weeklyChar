@@ -1,6 +1,6 @@
 import secrets
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -59,6 +59,10 @@ class Character(Base):
     rio_score = Column(Float, nullable=True)
     wow_class = Column(String(50), nullable=True)
     ilvl = Column(Integer, nullable=True)
+    vault_json = Column(Text, nullable=True)
+    prey_hunts_json = Column(Text, nullable=True)
+    currencies_json = Column(Text, nullable=True)
+    mythic_plus_season_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

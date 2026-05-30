@@ -111,6 +111,10 @@ class SyncWorker(threading.Thread):
                 "rioScore": rio_score,
                 "wowClass": wow_class,
                 "ilvl": ilvl,
+                "vault": entry.get("vault"),
+                "preyHunts": entry.get("preyHunts"),
+                "currencies": entry.get("currencies"),
+                "mythicPlusSeason": entry.get("mythicPlusSeason"),
             }
             try:
                 r = requests.post(
