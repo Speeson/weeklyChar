@@ -1,4 +1,5 @@
 import hashlib
+import ctypes
 import io
 import os
 import sys
@@ -253,9 +254,23 @@ _TR = {
         "sel_folder_btn":"Seleccionar carpeta de AddOns",
         "open_web":      "Acceder a la Web",
         "autostart":     "Arrancar con Windows",
+        "start_minimized": "Arrancar minimizado",
+        "minimize_on_close": "Minimizar al cerrar",
         "minimize":      "Minimizar a la bandeja",
         "logout":        "Cerrar sesión",
         "language":      "Idioma",
+        "settings":      "Ajustes",
+        "settings_general": "General",
+        "settings_wow": "World of Warcraft",
+        "settings_app": "Aplicación",
+        "wow_install_path": "Ruta de WoW",
+        "savedvars_path": "SavedVariables",
+        "change_btn": "Cambiar",
+        "save_btn": "Guardar",
+        "redetect_btn": "Redetectar",
+        "addon_tab_btn": "Ir a Addon",
+        "not_found": "No detectado",
+        "close_btn": "Cerrar",
         "installing":    "Instalando...",
         "installed_ok":  "✓ Instalado correctamente",
         "sel_folder_err":"Selecciona la carpeta AddOns primero.",
@@ -310,9 +325,23 @@ _TR = {
         "sel_folder_btn":"Select AddOns folder",
         "open_web":      "Open Web",
         "autostart":     "Start with Windows",
+        "start_minimized": "Start minimized",
+        "minimize_on_close": "Minimize on close",
         "minimize":      "Minimize to tray",
         "logout":        "Logout",
         "language":      "Language",
+        "settings":      "Settings",
+        "settings_general": "General",
+        "settings_wow": "World of Warcraft",
+        "settings_app": "Application",
+        "wow_install_path": "WoW path",
+        "savedvars_path": "SavedVariables",
+        "change_btn": "Change",
+        "save_btn": "Save",
+        "redetect_btn": "Redetect",
+        "addon_tab_btn": "Go to Addon",
+        "not_found": "Not detected",
+        "close_btn": "Close",
         "installing":    "Installing...",
         "installed_ok":  "✓ Installed successfully",
         "sel_folder_err":"Select AddOns folder first.",
@@ -458,6 +487,12 @@ class MainWindow:
         self._user_dropdown_visible = False
         self._avatar_popup         = None
         self._avatar_popup_visible = False
+        self._settings_popup         = None
+        self._settings_popup_visible = False
+        self._startup_minimized_applied = False
+        self._drag_offset = None
+        self._map_bind_id = None
+        self._taskbar_refreshing = False
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
@@ -529,6 +564,11 @@ class MainWindow:
         return _tr(self._lang, key)
 
     def _clear(self):
+        if getattr(self, "_settings_popup", None):
+            try:
+                self._settings_popup.destroy()
+            except Exception:
+                pass
         for w in self.root.winfo_children():
             w.destroy()
         self._photos.clear()
@@ -546,6 +586,8 @@ class MainWindow:
         self._user_dropdown_visible = False
         self._avatar_popup         = None
         self._avatar_popup_visible = False
+        self._settings_popup         = None
+        self._settings_popup_visible = False
         self._sync_icon_id    = None
         self._sync_label_id   = None
         self._sync_time_id    = None
@@ -607,6 +649,43 @@ class MainWindow:
         if tags   is not None: kw["tags"]   = tags
         cv.create_window(x, y, anchor=anchor, window=widget, **kw)
 
+    def _ensure_taskbar_icon(self, refresh=False):
+        if os.name != "nt":
+            return
+        try:
+            user32 = ctypes.windll.user32
+            GWL_EXSTYLE = -20
+            WS_EX_APPWINDOW = 0x00040000
+            WS_EX_TOOLWINDOW = 0x00000080
+
+            hwnd = self.root.winfo_id()
+            parent = user32.GetParent(hwnd)
+            handles = [hwnd]
+            if parent:
+                handles.append(parent)
+
+            for handle in handles:
+                style = user32.GetWindowLongW(handle, GWL_EXSTYLE)
+                style = (style | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW
+                user32.SetWindowLongW(handle, GWL_EXSTYLE, style)
+
+            if refresh and not self._taskbar_refreshing:
+                self._taskbar_refreshing = True
+                self.root.withdraw()
+                self.root.after(40, self._finish_taskbar_refresh)
+        except Exception:
+            pass
+
+    def _finish_taskbar_refresh(self):
+        try:
+            self.root.deiconify()
+            self.root.overrideredirect(True)
+            self.root.lift()
+            self.root.focus_force()
+            self._ensure_taskbar_icon(False)
+        finally:
+            self._taskbar_refreshing = False
+
     def _savedvars_path(self):
         configured = self.cfg.get("wow_path")
         if configured and os.path.exists(configured):
@@ -635,6 +714,7 @@ class MainWindow:
             self._show_wow_setup_view()
 
     def _show_wow_setup_view(self):
+        self.root.overrideredirect(False)
         self._clear()
         W, H = self._W, self._H
         self.root.geometry(f"{W}x{H}")
@@ -695,6 +775,7 @@ class MainWindow:
     # =========================================================================
 
     def _show_login_view(self):
+        self.root.overrideredirect(False)
         self._clear()
         W, H = self._W, self._H
         self.root.geometry(f"{W}x{H}")
@@ -773,9 +854,11 @@ class MainWindow:
     # =========================================================================
 
     def _show_main_view(self):
+        self.root.overrideredirect(True)
         self._clear()
         W, H = self._W, self._H
         self.root.geometry(f"{W}x{H}")
+        self.root.after(100, lambda: self._ensure_taskbar_icon(True))
 
         content_H = H - BH - FH
 
@@ -862,19 +945,21 @@ class MainWindow:
         cv.create_line(TABS_X - 8, 14, TABS_X - 8, BH - 14, fill=CARD_BDR)
 
         # ── Username button (right side) ─────────────────────────────────────
+        window_controls_w = 86
+        user_right_x = W - window_controls_w - 14
         username = self.cfg.get("username", "—")
         self._user_btn = tk.Button(cv, text=f"  {username}  ▾",
                                    bg=BANNER_BG, fg=TEXT, font=("Segoe UI", 10),
                                    relief="flat", bd=0, padx=10, pady=4,
                                    activebackground=CARD_BDR, activeforeground=TEXT,
                                    cursor="hand2", command=self._toggle_user_dropdown)
-        self._cw(cv, self._user_btn, W - 14, BH // 2, anchor="e")
+        self._cw(cv, self._user_btn, user_right_x, BH // 2, anchor="e")
         self.root.update_idletasks()
 
         # Banner avatar — snug left of username button
         BAV_R  = 13
         _btn_w = self._user_btn.winfo_reqwidth()
-        BAV_X  = W - 14 - _btn_w - 6 - BAV_R
+        BAV_X  = user_right_x - _btn_w - 6 - BAV_R
         BAV_Y  = BH // 2
         self._banner_av_fill_id = cv.create_oval(
             BAV_X - BAV_R, BAV_Y - BAV_R, BAV_X + BAV_R, BAV_Y + BAV_R,
@@ -895,6 +980,27 @@ class MainWindow:
         self._banner_av_img_id = None
         self._banner_av_x = BAV_X
 
+        # Settings button — kept left of avatar with a clear gap
+        settings_x = max(TABS_X + 2 * TAB_W + 22, BAV_X - 44)
+        settings_tag = "settings_btn"
+        self._settings_btn_bg = cv.create_oval(
+            settings_x - 15, BH // 2 - 15, settings_x + 15, BH // 2 + 15,
+            fill="#121f2e", outline=CARD_BDR, tags=settings_tag)
+        self._settings_btn_ring = cv.create_oval(
+            settings_x - 19, BH // 2 - 19, settings_x + 19, BH // 2 + 19,
+            fill="", outline=BANNER_BG, tags=settings_tag)
+        self._settings_btn_txt = cv.create_text(
+            settings_x, BH // 2 - 1, text="⚙", fill="#d1d5db",
+            font=("Segoe UI Symbol", 14, "bold"), anchor="center", tags=settings_tag)
+        cv.tag_bind(settings_tag, "<Button-1>", lambda _e: self._toggle_settings_popup())
+        cv.tag_bind(settings_tag, "<Enter>", lambda _e: self._settings_btn_hover(True))
+        cv.tag_bind(settings_tag, "<Leave>", lambda _e: self._settings_btn_hover(False))
+
+        # Custom window controls (native titlebar is disabled in main view)
+        self._header_controls_left = settings_x - 24
+        self._draw_window_control(cv, W - 62, BH // 2, "—", self._minimize_window, "min")
+        self._draw_window_control(cv, W - 26, BH // 2, "×", self._on_close_btn, "close")
+
         # Start loading cached profile avatar immediately (before characters fetch)
         _cached_av = self.cfg.get("avatar_url") or self._selected_avatar_url
         if _cached_av and not self._profile_photo:
@@ -909,14 +1015,13 @@ class MainWindow:
         ttk.Button(footer, text=self._t("open_web"), style="Gray.TButton",
                    command=lambda: webbrowser.open(WEB_URL)).pack(
                        side="left", padx=(14, 0), pady=10)
-        self.autostart_var = tk.BooleanVar(value=_get_autostart())
-        ttk.Checkbutton(footer, text=self._t("autostart"),
-                        variable=self.autostart_var,
-                        command=self._toggle_autostart).pack(side="left", padx=(14, 0))
         ttk.Button(footer, text=self._t("minimize"), style="Gold.TButton",
                    command=self._minimize_to_tray).pack(side="right", padx=(0, 14), pady=10)
 
         cv.bind("<Button-1>", self._on_root_click, add="+")
+        cv.bind("<ButtonPress-1>", self._start_window_drag, add="+")
+        cv.bind("<B1-Motion>", self._drag_window, add="+")
+        cv.bind("<ButtonRelease-1>", self._end_window_drag, add="+")
 
         if self._active_tab == "sync":
             self._render_sync_tab(cv)
@@ -924,6 +1029,9 @@ class MainWindow:
             self._render_addon_tab(cv)
 
         threading.Thread(target=self._load_characters, daemon=True).start()
+        if self.cfg.get("start_minimized") and not self._startup_minimized_applied:
+            self._startup_minimized_applied = True
+            self.root.after(300, self._minimize_to_tray)
 
     # ── Tab switching ──────────────────────────────────────────────────────────
 
@@ -1578,6 +1686,287 @@ class MainWindow:
                   command=self._logout).pack(fill="x")
         self._user_dropdown_visible = True
 
+    def _toggle_settings_popup(self):
+        if self._settings_popup_visible:
+            self._hide_settings_popup()
+        else:
+            self._hide_user_dropdown()
+            self._hide_avatar_popup()
+            self._show_settings_popup()
+
+    def _settings_btn_hover(self, active):
+        cv = self._cv
+        if not (cv and cv.winfo_exists()):
+            return
+        cv.configure(cursor="hand2" if active else "")
+        try:
+            cv.itemconfigure(self._settings_btn_bg,
+                             fill="#1f2937" if active else "#121f2e",
+                             outline=ACCENT if active else CARD_BDR)
+            cv.itemconfigure(self._settings_btn_ring,
+                             outline="#3b2f14" if active else BANNER_BG)
+            cv.itemconfigure(self._settings_btn_txt,
+                             fill=ACCENT if active else "#d1d5db")
+        except Exception:
+            pass
+
+    def _draw_window_control(self, cv, x, y, text, command, role):
+        tag = f"window_control_{role}"
+        bg = cv.create_rectangle(x - 15, y - 13, x + 15, y + 13,
+                                 fill=BANNER_BG, outline=CARD_BDR, tags=tag)
+        fg = cv.create_text(x, y - 1, text=text, fill=MUTED,
+                            font=("Segoe UI", 13, "bold"), anchor="center", tags=tag)
+        cv.tag_bind(tag, "<Button-1>", lambda _e: command())
+        cv.tag_bind(tag, "<Enter>", lambda _e, t=tag, r=role: self._window_control_hover(t, r, True))
+        cv.tag_bind(tag, "<Leave>", lambda _e, t=tag, r=role: self._window_control_hover(t, r, False))
+        return bg, fg
+
+    def _window_control_hover(self, tag, role, active):
+        cv = self._cv
+        if not (cv and cv.winfo_exists()):
+            return
+        cv.configure(cursor="hand2" if active else "")
+        fill = RED_COL if role == "close" and active else ("#1f2937" if active else BANNER_BG)
+        fg = BG_DARK if role == "close" and active else (ACCENT if active else MUTED)
+        try:
+            for item in cv.find_withtag(tag):
+                if cv.type(item) == "rectangle":
+                    cv.itemconfigure(item, fill=fill, outline=ACCENT if active else CARD_BDR)
+                elif cv.type(item) == "text":
+                    cv.itemconfigure(item, fill=fg)
+        except Exception:
+            pass
+
+    def _start_window_drag(self, event):
+        if event.y > BH:
+            self._drag_offset = None
+            return
+
+        tabs_left = 188
+        tabs_right = 196 + 2 * 130
+        if tabs_left <= event.x <= tabs_right:
+            self._drag_offset = None
+            return
+        if event.x >= getattr(self, "_header_controls_left", self._W - 220):
+            self._drag_offset = None
+            return
+
+        self._drag_offset = (
+            event.x_root - self.root.winfo_x(),
+            event.y_root - self.root.winfo_y(),
+        )
+
+    def _drag_window(self, event):
+        if not self._drag_offset:
+            return
+        dx, dy = self._drag_offset
+        self.root.geometry(f"+{event.x_root - dx}+{event.y_root - dy}")
+
+    def _end_window_drag(self, _event=None):
+        self._drag_offset = None
+
+    def _minimize_window(self):
+        self._hide_user_dropdown()
+        self._hide_avatar_popup()
+        self._hide_settings_popup()
+        try:
+            self.root.overrideredirect(False)
+            self.root.iconify()
+            self._map_bind_id = self.root.bind("<Map>", self._restore_custom_chrome, add="+")
+        except Exception:
+            self.root.withdraw()
+
+    def _restore_custom_chrome(self, _event=None):
+        try:
+            if self.root.state() == "normal":
+                self.root.overrideredirect(True)
+                self._ensure_taskbar_icon(True)
+                if self._map_bind_id:
+                    self.root.unbind("<Map>", self._map_bind_id)
+                    self._map_bind_id = None
+        except Exception:
+            pass
+
+    def _hide_settings_popup(self):
+        if self._settings_popup:
+            try:
+                self._settings_popup.grab_release()
+            except Exception:
+                pass
+            try:
+                self._settings_popup.destroy()
+            except Exception:
+                pass
+            self._settings_popup = None
+        self._settings_popup_visible = False
+
+    def _settings_section(self, parent, title):
+        tk.Label(parent, text=title, bg=CARD_BG, fg=ACCENT,
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(14, 6))
+
+    def _settings_check(self, parent, text, variable, command):
+        return tk.Checkbutton(
+            parent, text=text, variable=variable, command=command,
+            bg=CARD_BG, fg=TEXT, selectcolor="#111827",
+            activebackground=CARD_BG, activeforeground=TEXT,
+            font=("Segoe UI", 9), relief="flat", bd=0,
+            cursor="hand2", anchor="w")
+
+    def _show_settings_popup(self):
+        if self._settings_popup_visible:
+            return
+
+        dlg = tk.Toplevel(self.root)
+        dlg.withdraw()
+        self._settings_popup = dlg
+        self._settings_popup_visible = True
+        dlg.title(self._t("settings"))
+        dlg.configure(bg=BG_DARK)
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.overrideredirect(True)
+        dlg.protocol("WM_DELETE_WINDOW", self._hide_settings_popup)
+
+        wrap = tk.Frame(dlg, bg=CARD_BG, padx=18, pady=16,
+                        highlightbackground=CARD_BDR, highlightthickness=1)
+        wrap.pack(fill="both", expand=True)
+
+        head = tk.Frame(wrap, bg=CARD_BG)
+        head.pack(fill="x")
+        tk.Label(head, text=self._t("settings"), bg=CARD_BG, fg=ACCENT,
+                 font=("Segoe UI", 15, "bold")).pack(side="left")
+        tk.Button(head, text="×", bg=CARD_BG, fg=MUTED,
+                  activebackground=CARD_BG, activeforeground=TEXT,
+                  relief="flat", bd=0, font=("Segoe UI", 14, "bold"),
+                  cursor="hand2", command=self._hide_settings_popup).pack(side="right")
+
+        self._settings_section(wrap, self._t("settings_general"))
+        self.settings_autostart_var = tk.BooleanVar(value=_get_autostart())
+        self._settings_check(
+            wrap, self._t("autostart"), self.settings_autostart_var,
+            self._toggle_autostart).pack(fill="x", pady=2)
+
+        self.settings_start_minimized_var = tk.BooleanVar(
+            value=bool(self.cfg.get("start_minimized")))
+        self._settings_check(
+            wrap, self._t("start_minimized"), self.settings_start_minimized_var,
+            self._toggle_start_minimized).pack(fill="x", pady=2)
+
+        self.settings_minimize_on_close_var = tk.BooleanVar(
+            value=bool(self.cfg.get("minimize_on_close")))
+        self._settings_check(
+            wrap, self._t("minimize_on_close"), self.settings_minimize_on_close_var,
+            self._toggle_minimize_on_close).pack(fill="x", pady=2)
+
+        self._settings_section(wrap, self._t("settings_wow"))
+        path_row = tk.Frame(wrap, bg=CARD_BG)
+        path_row.pack(fill="x", pady=(0, 8))
+        tk.Label(path_row, text=self._t("wow_install_path"), bg=CARD_BG, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w")
+        self.settings_wow_path_var = tk.StringVar(value=self.cfg.get("wow_install_path") or "")
+        entry_row = tk.Frame(path_row, bg=CARD_BG)
+        entry_row.pack(fill="x", pady=(3, 0))
+        tk.Entry(entry_row, textvariable=self.settings_wow_path_var,
+                 bg="#1f2937", fg=TEXT, insertbackground=ACCENT,
+                 font=("Segoe UI", 9), relief="flat", bd=1).pack(
+                     side="left", fill="x", expand=True, ipady=5)
+        ttk.Button(entry_row, text=self._t("change_btn"), style="Gray.TButton",
+                   command=self._settings_browse_wow).pack(side="left", padx=(8, 0))
+        ttk.Button(entry_row, text=self._t("save_btn"), style="Gold.TButton",
+                   command=self._settings_save_wow_path).pack(side="left", padx=(6, 0))
+
+        savedvars = self._savedvars_path() or self._t("not_found")
+        sv_row = tk.Frame(wrap, bg=CARD_BG)
+        sv_row.pack(fill="x", pady=(0, 8))
+        tk.Label(sv_row, text=self._t("savedvars_path"), bg=CARD_BG, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w")
+        sv_entry = tk.Entry(sv_row, bg="#1f2937", fg=MUTED,
+                            font=("Segoe UI", 9), relief="flat", bd=1)
+        sv_entry.insert(0, savedvars)
+        sv_entry.configure(state="readonly", readonlybackground="#1f2937")
+        sv_entry.pack(fill="x", pady=(3, 0), ipady=5)
+
+        addon_state, addon_detail, addon_color, _ = self._addon_status_for_path(self._addons_folder())
+        tk.Label(wrap, text=f"{addon_state} · {addon_detail}",
+                 bg=CARD_BG, fg=addon_color, font=("Segoe UI", 9, "bold"),
+                 wraplength=640, justify="left").pack(anchor="w", pady=(0, 8))
+
+        wow_btns = tk.Frame(wrap, bg=CARD_BG)
+        wow_btns.pack(fill="x")
+        ttk.Button(wow_btns, text=self._t("redetect_btn"), style="Gray.TButton",
+                   command=self._settings_redetect_wow).pack(side="left")
+        ttk.Button(wow_btns, text=self._t("addon_tab_btn"), style="Gold.TButton",
+                   command=self._settings_go_addon).pack(side="left", padx=(8, 0))
+
+        self._settings_section(wrap, self._t("settings_app"))
+        lang_row = tk.Frame(wrap, bg=CARD_BG)
+        lang_row.pack(anchor="w", pady=(0, 12))
+        tk.Label(lang_row, text=self._t("language"), bg=CARD_BG, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(side="left", padx=(0, 8))
+        for code, label in [("es", "Español"), ("en", "English")]:
+            active = self._lang == code
+            tk.Button(lang_row, text=label,
+                      bg=ACCENT if active else "#374151",
+                      fg=BG_DARK if active else TEXT,
+                      font=("Segoe UI", 9), relief="flat", bd=0,
+                      padx=8, pady=4, cursor="hand2",
+                      activebackground=ACCENT, activeforeground=BG_DARK,
+                      command=lambda c=code: self._set_lang(c)).pack(
+                          side="left", padx=(0, 4))
+
+        bottom = tk.Frame(wrap, bg=CARD_BG)
+        bottom.pack(fill="x", pady=(4, 0))
+        ttk.Button(bottom, text=self._t("close_btn"), style="Gray.TButton",
+                   command=self._hide_settings_popup).pack(side="right")
+
+        dlg.update_idletasks()
+        px, py = self.root.winfo_x(), self.root.winfo_y()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        dw, dh = dlg.winfo_width(), dlg.winfo_height()
+        dw = max(680, dw)
+        dlg.geometry(f"{dw}x{dh}+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
+        dlg.deiconify()
+        dlg.lift()
+        dlg.focus_force()
+        dlg.grab_set()
+
+    def _addon_status_for_path(self, path):
+        previous = self.addons_var
+        try:
+            self.addons_var = tk.StringVar(value=path or "")
+            return self._addon_status()
+        finally:
+            self.addons_var = previous
+
+    def _settings_browse_wow(self):
+        folder = filedialog.askdirectory(title=self._t("wow_folder_lbl"))
+        if folder and hasattr(self, "settings_wow_path_var"):
+            self.settings_wow_path_var.set(folder)
+
+    def _settings_save_wow_path(self):
+        raw = self.settings_wow_path_var.get().strip() if hasattr(self, "settings_wow_path_var") else ""
+        normalized = wow_path.normalize_wow_dir(raw)
+        if not normalized or not wow_path.is_wow_dir(normalized):
+            return
+        self.cfg["wow_install_path"] = str(normalized)
+        self.cfg["wow_path"] = wow_path.find_savedvars(normalized)
+        cfg_module.save(self.cfg)
+        self._hide_settings_popup()
+        self._show_main_view()
+
+    def _settings_redetect_wow(self):
+        self.cfg["wow_install_path"] = None
+        self.cfg["wow_path"] = None
+        found = self._wow_install_path()
+        self.cfg["wow_path"] = wow_path.find_savedvars(found) if found else None
+        cfg_module.save(self.cfg)
+        self._hide_settings_popup()
+        self._show_main_view()
+
+    def _settings_go_addon(self):
+        self._hide_settings_popup()
+        self._switch_tab("addon")
+
     def _toggle_avatar_popup(self):
         if self._avatar_popup_visible:
             self._hide_avatar_popup()
@@ -1712,6 +2101,7 @@ class MainWindow:
         self._lang = lang
         self.cfg["lang"] = lang
         cfg_module.save(self.cfg)
+        self._hide_settings_popup()
         self._show_main_view()
 
     # ── Sync ───────────────────────────────────────────────────────────────────
@@ -2078,12 +2468,24 @@ class MainWindow:
             self._set_install_msg(f"Error: {e}")
 
     def _toggle_autostart(self):
-        _set_autostart(self.autostart_var.get())
+        var = getattr(self, "settings_autostart_var", None)
+        _set_autostart(bool(var.get()) if var else False)
+
+    def _toggle_start_minimized(self):
+        var = getattr(self, "settings_start_minimized_var", None)
+        self.cfg["start_minimized"] = bool(var.get()) if var else False
+        cfg_module.save(self.cfg)
+
+    def _toggle_minimize_on_close(self):
+        var = getattr(self, "settings_minimize_on_close_var", None)
+        self.cfg["minimize_on_close"] = bool(var.get()) if var else False
+        cfg_module.save(self.cfg)
 
     # ── Logout ─────────────────────────────────────────────────────────────────
 
     def _logout(self):
         self._hide_user_dropdown()
+        self._hide_settings_popup()
         if self._worker: self._worker.stop(); self._worker = None
         if self._tray:   self._tray.stop();   self._tray   = None
         self.cfg.update({"sync_token": None, "access_token": None,
@@ -2147,7 +2549,10 @@ class MainWindow:
     # ── Close button ───────────────────────────────────────────────────────────
 
     def _on_close_btn(self):
-        self._quit()
+        if self.cfg.get("minimize_on_close"):
+            self._minimize_to_tray()
+        else:
+            self._quit()
 
     def _show_minimized_dialog(self):
         dlg = tk.Toplevel(self.root)

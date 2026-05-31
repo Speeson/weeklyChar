@@ -15,6 +15,8 @@ _DEFAULTS = {
     "avatar_url": None,
     "wow_path": None,
     "wow_install_path": None,
+    "start_minimized": False,
+    "minimize_on_close": False,
     "login_at": None,
     "lang": "es",
     "cached_characters": [],
