@@ -264,10 +264,19 @@ _TR = {
         "pwd_lbl":       "Contraseña",
         "login_btn":     "Entrar",
         "register_btn":  "Registrarse",
+        "wow_setup_title": "Ubicación de World of Warcraft",
+        "wow_setup_sub": "Selecciona la carpeta donde está instalado WoW para que KeystoneClient pueda instalar el addon y encontrar los datos.",
+        "wow_folder_lbl": "Carpeta de World of Warcraft",
+        "browse_btn": "Buscar",
+        "save_continue_btn": "Guardar y continuar",
+        "wow_folder_err": "Selecciona una carpeta válida de World of Warcraft.",
+        "wow_folder_hint": "Ejemplo: C:\\Program Files (x86)\\World of Warcraft",
         "wow_ok":        "WoW detectado",
         "wow_no":        "WoW no encontrado",
+        "sync_ready": "Listo para sincronizar",
+        "sync_not_ready": "Datos no encontrados",
         "sync_setup_install": "Instala el addon",
-        "sync_setup_rest": "y entra con tus personajes para recopilar datos.",
+        "sync_setup_rest": "y entra con tus personajes para recopilar datos de sincronización.",
         "min_title":     "Minimizado a la bandeja",
         "min_msg":       "KeystoneClient sigue corriendo en la bandeja\ndel sistema. Haz clic en el icono para volver.",
         "ok_btn":        "Entendido",
@@ -312,10 +321,19 @@ _TR = {
         "pwd_lbl":       "Password",
         "login_btn":     "Sign in",
         "register_btn":  "Register",
+        "wow_setup_title": "World of Warcraft location",
+        "wow_setup_sub": "Select your WoW install folder so KeystoneClient can install the addon and find sync data.",
+        "wow_folder_lbl": "World of Warcraft folder",
+        "browse_btn": "Browse",
+        "save_continue_btn": "Save and continue",
+        "wow_folder_err": "Select a valid World of Warcraft folder.",
+        "wow_folder_hint": "Example: C:\\Program Files (x86)\\World of Warcraft",
         "wow_ok":        "WoW detected",
         "wow_no":        "WoW not found",
+        "sync_ready": "Ready to sync",
+        "sync_not_ready": "Data not found",
         "sync_setup_install": "Install the addon",
-        "sync_setup_rest": "and log into your characters to collect data.",
+        "sync_setup_rest": "and log into your characters to collect sync data.",
         "min_title":     "Minimized to tray",
         "min_msg":       "KeystoneClient is still running in the\nsystem tray. Click the icon to return.",
         "ok_btn":        "Got it",
@@ -472,7 +490,7 @@ class MainWindow:
         self._setup_styles()
 
         if cfg_module.is_session_valid(self.cfg):
-            self._show_main_view()
+            self._show_wow_setup_or_main()
         else:
             self._show_login_view()
 
@@ -589,6 +607,89 @@ class MainWindow:
         if tags   is not None: kw["tags"]   = tags
         cv.create_window(x, y, anchor=anchor, window=widget, **kw)
 
+    def _savedvars_path(self):
+        configured = self.cfg.get("wow_path")
+        if configured and os.path.exists(configured):
+            return configured
+
+        found = wow_path.find_savedvars(self.cfg.get("wow_install_path"))
+        if found:
+            self.cfg["wow_path"] = found
+            cfg_module.save(self.cfg)
+        return found
+
+    def _wow_install_path(self):
+        found = wow_path.find_wow_dir(self.cfg.get("wow_install_path"))
+        if found and self.cfg.get("wow_install_path") != found:
+            self.cfg["wow_install_path"] = found
+            cfg_module.save(self.cfg)
+        return found
+
+    def _addons_folder(self):
+        return addon_installer.find_addons_folder(self.cfg.get("wow_install_path")) or ""
+
+    def _show_wow_setup_or_main(self):
+        if self._wow_install_path():
+            self._show_main_view()
+        else:
+            self._show_wow_setup_view()
+
+    def _show_wow_setup_view(self):
+        self._clear()
+        W, H = self._W, self._H
+        self.root.geometry(f"{W}x{H}")
+
+        bg_frame = tk.Frame(self.root, bg=BG_DARK)
+        bg_frame.place(x=0, y=0, width=W, height=H)
+        outer = tk.Frame(bg_frame, bg=BG_DARK)
+        outer.place(relx=0.5, rely=0.5, anchor="center", width=520)
+
+        tk.Label(outer, text=self._t("wow_setup_title"), bg=BG_DARK, fg=ACCENT,
+                 font=("Segoe UI", 22, "bold")).pack(anchor="w")
+        tk.Label(outer, text=self._t("wow_setup_sub"), bg=BG_DARK, fg=MUTED,
+                 font=("Segoe UI", 10), wraplength=500, justify="left").pack(
+                     anchor="w", pady=(4, 22))
+
+        tk.Label(outer, text=self._t("wow_folder_lbl"), bg=BG_DARK, fg=TEXT,
+                 font=("Segoe UI", 11)).pack(anchor="w")
+
+        row = tk.Frame(outer, bg=BG_DARK)
+        row.pack(fill="x", pady=(4, 8))
+        self.wow_install_var = tk.StringVar(value=self.cfg.get("wow_install_path") or "")
+        entry = tk.Entry(row, textvariable=self.wow_install_var,
+                         bg="#1f2937", fg="white", insertbackground=ACCENT,
+                         font=("Segoe UI", 10), relief="flat", bd=1)
+        entry.pack(side="left", fill="x", expand=True, ipady=8)
+        ttk.Button(row, text=self._t("browse_btn"), style="Gray.TButton",
+                   command=self._browse_wow_install).pack(side="left", padx=(8, 0))
+
+        tk.Label(outer, text=self._t("wow_folder_hint"), bg=BG_DARK, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w")
+
+        self.wow_setup_error = tk.StringVar()
+        tk.Label(outer, textvariable=self.wow_setup_error, bg=BG_DARK, fg=RED_COL,
+                 font=("Segoe UI", 9)).pack(anchor="w", pady=(10, 12))
+
+        ttk.Button(outer, text=self._t("save_continue_btn"), style="Gold.TButton",
+                   command=self._save_wow_install_path).pack(fill="x")
+
+    def _browse_wow_install(self):
+        folder = filedialog.askdirectory(title=self._t("wow_folder_lbl"))
+        if folder and hasattr(self, "wow_install_var"):
+            self.wow_install_var.set(folder)
+
+    def _save_wow_install_path(self):
+        raw = self.wow_install_var.get().strip() if hasattr(self, "wow_install_var") else ""
+        normalized = wow_path.normalize_wow_dir(raw)
+        if not normalized or not wow_path.is_wow_dir(normalized):
+            self.wow_setup_error.set(self._t("wow_folder_err"))
+            return
+
+        self.cfg["wow_install_path"] = str(normalized)
+        self.cfg["wow_path"] = wow_path.find_savedvars(normalized)
+        cfg_module.save(self.cfg)
+        self._show_main_view()
+
     # =========================================================================
     # LOGIN VIEW
     # =========================================================================
@@ -661,7 +762,7 @@ class MainWindow:
             self._selected_avatar_url = me.get("avatarUrl")
             cfg_module.save(self.cfg)
             self.root.unbind("<Return>")
-            self._show_main_view()
+            self._show_wow_setup_or_main()
         except requests.exceptions.ConnectionError:
             self.login_error.set(self._t("conn_err"))
         except Exception as e:
@@ -1266,63 +1367,80 @@ class MainWindow:
         self._draw_table_rows()
 
     def _draw_sync_block(self, cv, x, y, w, h):
+        HDR_H   = 30
         BTN_H   = 38
         BTN_PAD = 10
 
-        savedvars_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
-        wow_found = bool(savedvars_found or wow_path.find_addons_folder() or wow_path.find_wow_dir())
+        savedvars_found = bool(self._savedvars_path())
+        wow_found = bool(savedvars_found or self._addons_folder() or self._wow_install_path())
+        addon_info = addon_installer.installed_info(self._addons_folder())
+        addon_ready = bool(addon_info.get("installed") and not addon_info.get("corrupt"))
+        setup_pending = bool(wow_found and not addon_ready and not savedvars_found)
+
+        cv.create_rectangle(x, y, x + w, y + HDR_H,
+                            fill="#07111d", outline=CARD_BDR, tags="tab_content")
+        header_text = self._t("sync_ready") if savedvars_found else (
+            self._t("wow_ok") if wow_found else self._t("wow_no"))
         self._wow_status_id = cv.create_text(
-            x + w // 2, y + 20,
-            text=f"● {self._t('wow_ok' if wow_found else 'wow_no')}",
+            x + w // 2, y + HDR_H // 2,
+            text=f"● {header_text}",
             fill=GREEN if wow_found else RED_COL,
-            font=("Segoe UI", 9), anchor="center", tags="tab_content")
+            font=("Segoe UI", 9, "bold"), anchor="center", tags="tab_content")
 
-        if not savedvars_found:
-            link_tag = "sync_setup_addon_link"
-            hint_y = y + 42
-            cv.create_text(
-                x + w // 2, hint_y,
-                text=self._t("sync_setup_install"),
-                fill=ACCENT, font=("Segoe UI", 8, "bold"),
-                anchor="center", tags=("tab_content", link_tag))
-            cv.create_text(
-                x + w // 2, hint_y + 15,
-                text=self._t("sync_setup_rest"),
-                fill=MUTED, font=("Segoe UI", 8),
-                width=w - 22, justify=tk.CENTER,
-                anchor="center", tags="tab_content")
-            cv.tag_bind(link_tag, "<Button-1>", lambda _e: self._switch_tab("addon"))
-            cv.tag_bind(link_tag, "<Enter>", lambda _e: cv.configure(cursor="hand2"))
-            cv.tag_bind(link_tag, "<Leave>", lambda _e: cv.configure(cursor=""))
-
-        avail  = h - 40 - BTN_H - BTN_PAD * 2
-        mid_y  = y + 40 + avail // 2
+        body_y = y + HDR_H
+        body_h = h - HDR_H
+        avail  = body_h - BTN_H - BTN_PAD * 2
+        mid_y  = body_y + avail // 2
 
         _lbl = self._t("last_sync_lbl") if self._sync_ok else \
                (self._sync_primary or self._t("never"))
 
-        self._sync_icon_id = cv.create_text(
-            x + w // 2, mid_y - 36,
-            text="✓" if self._sync_ok else "✗",
-            fill=GREEN if self._sync_ok else RED_COL,
-            font=("Segoe UI", 26, "bold"), anchor="center", tags="tab_content")
+        if setup_pending:
+            link_tag = "sync_setup_addon_link"
+            self._sync_icon_id = None
+            self._sync_label_id = cv.create_text(
+                x + w // 2, mid_y - 30,
+                text=self._t("sync_setup_install"),
+                fill=ACCENT, font=("Segoe UI", 15, "bold"),
+                anchor="center", tags=("tab_content", link_tag))
+            self._sync_time_id = cv.create_text(
+                x + w // 2, mid_y + 2,
+                text=self._t("sync_setup_rest"),
+                fill=TEXT, font=("Segoe UI", 10),
+                width=w - 26, justify=tk.CENTER,
+                anchor="center", tags="tab_content")
+            self._sync_date_id = cv.create_text(
+                x + w // 2, mid_y + 38,
+                text=self._t("sync_not_ready"),
+                fill=MUTED, font=("Segoe UI", 9),
+                anchor="center", tags="tab_content")
+            cv.tag_bind(link_tag, "<Button-1>", lambda _e: self._switch_tab("addon"))
+            cv.tag_bind(link_tag, "<Enter>", lambda _e: cv.configure(cursor="hand2"))
+            cv.tag_bind(link_tag, "<Leave>", lambda _e: cv.configure(cursor=""))
+        else:
+            self._sync_icon_id = cv.create_text(
+                x + w // 2, mid_y - 38,
+                text="✓" if self._sync_ok else "✗",
+                fill=GREEN if self._sync_ok else RED_COL,
+                font=("Segoe UI", 30, "bold"), anchor="center", tags="tab_content")
 
-        self._sync_label_id = cv.create_text(
-            x + w // 2, mid_y + 4,
-            text=_lbl, fill=MUTED, font=("Segoe UI", 8),
-            anchor="center", tags="tab_content")
+            self._sync_label_id = cv.create_text(
+                x + w // 2, mid_y + 4,
+                text=_lbl, fill=TEXT if not self._sync_ok else MUTED,
+                font=("Segoe UI", 11, "bold" if not self._sync_ok else "normal"),
+                anchor="center", tags="tab_content")
 
-        self._sync_time_id = cv.create_text(
-            x + w // 2, mid_y + 22,
-            text=self._sync_primary if self._sync_ok else "",
-            fill=TEXT, font=("Segoe UI", 16, "bold"),
-            anchor="center", tags="tab_content")
+            self._sync_time_id = cv.create_text(
+                x + w // 2, mid_y + 28,
+                text=self._sync_primary if self._sync_ok else "",
+                fill=TEXT, font=("Segoe UI", 16, "bold"),
+                anchor="center", tags="tab_content")
 
-        self._sync_date_id = cv.create_text(
-            x + w // 2, mid_y + 42,
-            text=self._sync_secondary if self._sync_ok else "",
-            fill=MUTED, font=("Segoe UI", 9),
-            anchor="center", tags="tab_content")
+            self._sync_date_id = cv.create_text(
+                x + w // 2, mid_y + 48,
+                text=self._sync_secondary if self._sync_ok else "",
+                fill=MUTED, font=("Segoe UI", 9),
+                anchor="center", tags="tab_content")
 
         btn_y = y + h - BTN_H - BTN_PAD
         self._cw(cv, ttk.Button(cv, text=self._t("sync_btn"), style="Gold.TButton",
@@ -1389,7 +1507,7 @@ class MainWindow:
                  ACX, sel_y, anchor="n", width=sel_btn_w, height=32,
                  tags="tab_content")
 
-        self.addons_var = tk.StringVar(value=addon_installer.find_addons_folder() or "")
+        self.addons_var = tk.StringVar(value=self._addons_folder())
         self.addons_var.trace_add("write", lambda *_: self._refresh_addon_status())
         self._cw(cv, tk.Entry(cv, textvariable=self.addons_var,
                               bg="#1f2937", fg="white", insertbackground=ACCENT,
@@ -1607,7 +1725,7 @@ class MainWindow:
         def _run():
             try:
                 from sync_worker import SyncWorker
-                sv_path = self.cfg.get("wow_path") or wow_path.find_savedvars()
+                sv_path = self._savedvars_path()
                 if not sv_path:
                     self.root.after(0, lambda: self._update_sync_ui(False, self._t("wow_no")))
                     return
@@ -1984,7 +2102,7 @@ class MainWindow:
 
     def _minimize_to_tray(self):
         if not self.cfg.get("wow_path"):
-            path = wow_path.find_savedvars()
+            path = self._savedvars_path()
             if path:
                 self.cfg["wow_path"] = path
                 cfg_module.save(self.cfg)

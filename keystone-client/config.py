@@ -14,6 +14,7 @@ _DEFAULTS = {
     "username": None,
     "avatar_url": None,
     "wow_path": None,
+    "wow_install_path": None,
     "login_at": None,
     "lang": "es",
     "cached_characters": [],

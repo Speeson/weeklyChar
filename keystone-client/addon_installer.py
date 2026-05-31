@@ -19,8 +19,8 @@ def _addon_source() -> Path:
     return base / "addon" / ADDON_NAME
 
 
-def find_addons_folder() -> str | None:
-    return wow_path.find_addons_folder()
+def find_addons_folder(wow_dir: str | Path | None = None) -> str | None:
+    return wow_path.find_addons_folder(wow_dir)
 
 
 def read_addon_version(toc_path: str | Path) -> str | None:
