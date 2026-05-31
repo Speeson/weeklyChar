@@ -247,6 +247,9 @@ _TR = {
         "never":         "Sin sincronizar",
         "sync_btn":      "Sincronizar",
         "install_btn":   "Instalar / Actualizar",
+        "install_addon_btn": "Instalar addon",
+        "update_addon_btn": "Actualizar addon",
+        "reinstall_addon_btn": "Reinstalar addon",
         "sel_folder_btn":"Seleccionar carpeta de AddOns",
         "open_web":      "Acceder a la Web",
         "autostart":     "Arrancar con Windows",
@@ -263,6 +266,8 @@ _TR = {
         "register_btn":  "Registrarse",
         "wow_ok":        "WoW detectado",
         "wow_no":        "WoW no encontrado",
+        "sync_setup_install": "Instala el addon",
+        "sync_setup_rest": "y entra con tus personajes para recopilar datos.",
         "min_title":     "Minimizado a la bandeja",
         "min_msg":       "KeystoneClient sigue corriendo en la bandeja\ndel sistema. Haz clic en el icono para volver.",
         "ok_btn":        "Entendido",
@@ -270,6 +275,13 @@ _TR = {
         "connecting":    "Conectando...",
         "conn_err":      "No se puede conectar con la API.",
         "addon_desc":    "Instala o actualiza el addon de KeystoneClient\nen tu carpeta de World of Warcraft.",
+        "addon_status_title": "Estado del addon",
+        "addon_not_installed": "No instalado",
+        "addon_installed": "Instalado",
+        "addon_corrupt": "Instalación incompleta",
+        "addon_bundled": "Incluido",
+        "addon_update_available": "Actualización disponible",
+        "addon_up_to_date": "Al día",
     },
     "en": {
         "tab_sync":      "Sync",
@@ -283,6 +295,9 @@ _TR = {
         "never":         "Never synced",
         "sync_btn":      "Sync",
         "install_btn":   "Install / Update",
+        "install_addon_btn": "Install addon",
+        "update_addon_btn": "Update addon",
+        "reinstall_addon_btn": "Reinstall addon",
         "sel_folder_btn":"Select AddOns folder",
         "open_web":      "Open Web",
         "autostart":     "Start with Windows",
@@ -299,6 +314,8 @@ _TR = {
         "register_btn":  "Register",
         "wow_ok":        "WoW detected",
         "wow_no":        "WoW not found",
+        "sync_setup_install": "Install the addon",
+        "sync_setup_rest": "and log into your characters to collect data.",
         "min_title":     "Minimized to tray",
         "min_msg":       "KeystoneClient is still running in the\nsystem tray. Click the icon to return.",
         "ok_btn":        "Got it",
@@ -306,6 +323,13 @@ _TR = {
         "connecting":    "Connecting...",
         "conn_err":      "Cannot connect to API.",
         "addon_desc":    "Install or update the KeystoneClient addon\nin your World of Warcraft folder.",
+        "addon_status_title": "Addon status",
+        "addon_not_installed": "Not installed",
+        "addon_installed": "Installed",
+        "addon_corrupt": "Incomplete install",
+        "addon_bundled": "Bundled",
+        "addon_update_available": "Update available",
+        "addon_up_to_date": "Up to date",
     },
 }
 
@@ -400,6 +424,7 @@ class MainWindow:
         self._install_btn_text = None
         self._install_btn_w    = 0
         self._install_msg_id   = None
+        self._addon_status_ids = {}
 
         self.addons_var = None
 
@@ -520,6 +545,7 @@ class MainWindow:
         self._install_btn_text  = None
         self._install_btn_w     = 0
         self._install_msg_id    = None
+        self._addon_status_ids  = {}
         self.addons_var         = None
         self._class_icon_photos = {}
 
@@ -835,6 +861,7 @@ class MainWindow:
         self._install_btn_text = None
         self._install_btn_w  = 0
         self._install_msg_id = None
+        self._addon_status_ids = {}
 
         # Clear tab content and reset dynamic IDs
         cv.delete("tab_content")
@@ -1242,12 +1269,31 @@ class MainWindow:
         BTN_H   = 38
         BTN_PAD = 10
 
-        wow_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
+        savedvars_found = bool(self.cfg.get("wow_path") or wow_path.find_savedvars())
+        wow_found = bool(savedvars_found or wow_path.find_addons_folder() or wow_path.find_wow_dir())
         self._wow_status_id = cv.create_text(
             x + w // 2, y + 20,
             text=f"● {self._t('wow_ok' if wow_found else 'wow_no')}",
             fill=GREEN if wow_found else RED_COL,
             font=("Segoe UI", 9), anchor="center", tags="tab_content")
+
+        if not savedvars_found:
+            link_tag = "sync_setup_addon_link"
+            hint_y = y + 42
+            cv.create_text(
+                x + w // 2, hint_y,
+                text=self._t("sync_setup_install"),
+                fill=ACCENT, font=("Segoe UI", 8, "bold"),
+                anchor="center", tags=("tab_content", link_tag))
+            cv.create_text(
+                x + w // 2, hint_y + 15,
+                text=self._t("sync_setup_rest"),
+                fill=MUTED, font=("Segoe UI", 8),
+                width=w - 22, justify=tk.CENTER,
+                anchor="center", tags="tab_content")
+            cv.tag_bind(link_tag, "<Button-1>", lambda _e: self._switch_tab("addon"))
+            cv.tag_bind(link_tag, "<Enter>", lambda _e: cv.configure(cursor="hand2"))
+            cv.tag_bind(link_tag, "<Leave>", lambda _e: cv.configure(cursor=""))
 
         avail  = h - 40 - BTN_H - BTN_PAD * 2
         mid_y  = y + 40 + avail // 2
@@ -1304,9 +1350,28 @@ class MainWindow:
                        tags="tab_content")
         cv.create_line(AX, AY + TH, AX + AW, AY + TH, fill=CARD_BDR, tags="tab_content")
 
-        cv.create_text(ACX, AY + TH + 18, text=self._t("addon_desc"),
-                       fill=MUTED, font=("Segoe UI", 9), justify="center",
-                       anchor="n", tags="tab_content")
+        status_w = min(280, max(230, AW // 3))
+        status_x = AX + AW - status_w - 18
+        status_y = AY + TH + 12
+        status_h = 76
+        cv.create_rectangle(status_x, status_y, status_x + status_w, status_y + status_h,
+                            outline=CARD_BDR, fill="#111827", tags="tab_content")
+        cv.create_text(status_x + 12, status_y + 10, text=self._t("addon_status_title"),
+                       fill=ACCENT, font=("Segoe UI", 9, "bold"), anchor="nw",
+                       tags="tab_content")
+        self._addon_status_ids = {
+            "state": cv.create_text(status_x + 12, status_y + 32, text="",
+                                    fill=MUTED, font=("Segoe UI", 9, "bold"),
+                                    anchor="nw", tags="tab_content"),
+            "detail": cv.create_text(status_x + 12, status_y + 52, text="",
+                                     fill=MUTED, font=("Segoe UI", 8),
+                                     anchor="nw", tags="tab_content"),
+        }
+
+        desc_w = max(260, AW - status_w - 70)
+        cv.create_text(AX + 22, AY + TH + 18, text=self._t("addon_desc"),
+                       fill=MUTED, font=("Segoe UI", 9), justify="left",
+                       width=desc_w, anchor="nw", tags="tab_content")
 
         content_start = AY + TH + 56
         avail  = AH - TH - 56 - 56
@@ -1325,6 +1390,7 @@ class MainWindow:
                  tags="tab_content")
 
         self.addons_var = tk.StringVar(value=addon_installer.find_addons_folder() or "")
+        self.addons_var.trace_add("write", lambda *_: self._refresh_addon_status())
         self._cw(cv, tk.Entry(cv, textvariable=self.addons_var,
                               bg="#1f2937", fg="white", insertbackground=ACCENT,
                               font=("Segoe UI", 9), relief="flat", bd=1),
@@ -1352,6 +1418,7 @@ class MainWindow:
         install_y = AY + AH - ibh - 14
         self._cw(cv, ib, AX + 20, install_y, anchor="nw",
                  width=ibw, height=ibh, tags="tab_content")
+        self._refresh_addon_status()
 
     # ── User dropdown ──────────────────────────────────────────────────────────
 
@@ -1802,10 +1869,64 @@ class MainWindow:
 
     # ── Addon ──────────────────────────────────────────────────────────────────
 
+    def _addon_status(self):
+        path = self.addons_var.get().strip() if self.addons_var else ""
+        info = addon_installer.installed_info(path)
+        installed = info.get("installed")
+        corrupt = info.get("corrupt")
+        installed_version = info.get("version")
+        bundled_version = info.get("bundled_version")
+
+        if not installed:
+            return (
+                self._t("addon_not_installed"),
+                f"{self._t('addon_bundled')}: v{bundled_version or '?'}",
+                RED_COL,
+                self._t("install_addon_btn"),
+            )
+
+        if corrupt:
+            return (
+                self._t("addon_corrupt"),
+                f"{self._t('addon_bundled')}: v{bundled_version or '?'}",
+                RED_COL,
+                self._t("reinstall_addon_btn"),
+            )
+
+        if bundled_version and installed_version and installed_version != bundled_version:
+            return (
+                self._t("addon_update_available"),
+                f"v{installed_version} -> v{bundled_version}",
+                ACCENT,
+                self._t("update_addon_btn"),
+            )
+
+        return (
+            f"{self._t('addon_installed')}: v{installed_version or '?'}",
+            self._t("addon_up_to_date"),
+            GREEN,
+            self._t("reinstall_addon_btn"),
+        )
+
+    def _refresh_addon_status(self):
+        cv = self._cv
+        if not (cv and cv.winfo_exists()):
+            return
+
+        state, detail, color, button_text = self._addon_status()
+        ids = getattr(self, "_addon_status_ids", {})
+        if ids.get("state"):
+            cv.itemconfigure(ids["state"], text=state, fill=color)
+        if ids.get("detail"):
+            cv.itemconfigure(ids["detail"], text=detail, fill=MUTED)
+        if self._install_btn and self._install_btn_text:
+            self._install_btn.itemconfigure(self._install_btn_text, text=button_text)
+
     def _browse_addons(self):
         folder = filedialog.askdirectory(title="Selecciona la carpeta AddOns")
         if folder and self.addons_var:
             self.addons_var.set(folder)
+            self._refresh_addon_status()
 
     def _set_install_progress(self, val):
         ib = self._install_btn
@@ -1833,6 +1954,7 @@ class MainWindow:
             addon_installer.install(path)
             self._set_install_progress(100)
             self._set_install_msg(self._t("installed_ok"), color=GREEN)
+            self._refresh_addon_status()
         except Exception as e:
             self._set_install_progress(0)
             self._set_install_msg(f"Error: {e}")
