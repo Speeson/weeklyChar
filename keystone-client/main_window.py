@@ -17,8 +17,8 @@ import config as cfg_module
 import addon_installer
 import wow_path
 
-REGISTER_URL = "https://weekly-char.vercel.app/login"
-WEB_URL      = "https://weekly-char.vercel.app"
+REGISTER_URL = "https://keystonesync.esgarpe.dev/login"
+WEB_URL      = "https://keystonesync.esgarpe.dev"
 AUTOSTART_KEY  = r"Software\Microsoft\Windows\CurrentVersion\Run"
 AUTOSTART_NAME = "KeystoneClient"
 

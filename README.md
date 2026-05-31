@@ -2,7 +2,7 @@
 
 Sistema completo para registrar y sincronizar la **piedra angular mítica+ actual** de personajes de **World of Warcraft Retail**, con soporte multi-usuario, equipos y sincronización automática desde una app de escritorio.
 
-**Web:** https://weekly-char.vercel.app  
+**Web:** https://keystonesync.esgarpe.dev  
 **API:** https://weeklychar-production.up.railway.app  
 **Swagger:** https://weeklychar-production.up.railway.app/docs  
 **Addon (repo independiente):** https://github.com/Speeson/KeystoneSync
@@ -261,7 +261,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 | Componente | Plataforma | URL |
 |------------|------------|-----|
-| keystone-web | Vercel | https://weekly-char.vercel.app |
+| keystone-web | Vercel | https://keystonesync.esgarpe.dev |
 | keystone-api | Railway | https://weeklychar-production.up.railway.app |
 | Base de datos | Railway (PostgreSQL) | Mismo proyecto que la API |
 
@@ -269,7 +269,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ```env
 DATABASE_URL     →  ${{Postgres.DATABASE_URL}}
 SECRET_KEY       →  clave secreta larga
-ALLOWED_ORIGINS  →  https://weekly-char.vercel.app,http://localhost:3000
+ALLOWED_ORIGINS  →  https://keystonesync.esgarpe.dev,http://localhost:3000
 ```
 Root Directory: `keystone-api` · Target port: `8080`
 

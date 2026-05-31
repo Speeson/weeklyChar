@@ -76,7 +76,7 @@ def show_login_window(api_url: str) -> dict | None:
         row=4, column=0, columnspan=2, pady=(8, 0), sticky="ew"
     )
 
-    tk.Label(frame, text="¿No tienes cuenta? Regístrate en weekly-char.vercel.app",
+    tk.Label(frame, text="¿No tienes cuenta? Regístrate en keystonesync.esgarpe.dev",
              bg="#111827", fg="#6b7280", font=("Segoe UI", 8)).grid(
         row=5, column=0, columnspan=2, pady=(8, 0)
     )

@@ -2,7 +2,7 @@
 
 Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angulares míticas+, afijos semanales y equipos.
 
-**Producción:** https://weekly-char.vercel.app  
+**Producción:** https://keystonesync.esgarpe.dev  
 **API:** https://weeklychar-production.up.railway.app
 
 ---
