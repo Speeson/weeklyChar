@@ -142,29 +142,23 @@ function vaultSlots(bucket?: VaultBucket) {
   if (!slots.length) return '— — —'
   return slots.slice(0, 3).map(slot => {
     if (slot.unlocked) return slot.level ? String(slot.level) : '✓'
-    if ((slot.threshold ?? 0) > 0) return `${slot.progress ?? 0}/${slot.threshold}`
     return '—'
   }).join('  ')
 }
 
-function vaultTooltip(bucket?: VaultBucket) {
-  const slots = [...(bucket?.slots ?? [])].sort((a, b) => (a.threshold ?? 0) - (b.threshold ?? 0)).slice(0, 3)
-  if (!slots.length) return 'Sin datos de Great Vault'
-
-  return slots.map((slot, index) => {
-    const progress = slot.progress ?? 0
-    const threshold = slot.threshold ?? 0
-    const level = slot.level ? `Nivel ${slot.level}` : 'Nivel no disponible'
-    const state = slot.unlocked ? 'Desbloqueado' : 'En progreso'
-    const progressText = threshold > 0 ? `${progress}/${threshold}` : 'Sin progreso'
-    return `Slot ${index + 1}: ${state} - ${progressText} - ${level}`
-  }).join('\n')
+function vaultProgress(bucket: VaultBucket | undefined, maxProgress: number) {
+  const slots = bucket?.slots ?? []
+  if (!slots.length) return null
+  const current = Math.min(maxProgress, Math.max(...slots.map(slot => slot.progress ?? 0)))
+  return `(${current}/${maxProgress})`
 }
 
-function VaultProgress({ bucket }: { bucket?: VaultBucket }) {
+function VaultProgress({ bucket, maxProgress }: { bucket?: VaultBucket; maxProgress: number }) {
+  const progress = vaultProgress(bucket, maxProgress)
   return (
-    <span className="cursor-help whitespace-pre" title={vaultTooltip(bucket)}>
+    <span className="whitespace-pre">
       {vaultSlots(bucket)}
+      {progress && <span className="ml-2 text-xs text-gray-400">{progress}</span>}
     </span>
   )
 }
@@ -434,9 +428,9 @@ export default function SummaryPage() {
                   ))}
 
                   <InfoRow label="Great Vault" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
-                  <InfoRow label="Raids">{characters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.raid} /></Cell>)}</InfoRow>
-                  <InfoRow label="Dungeons">{characters.map(c => <Cell key={c.id} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} /></Cell>)}</InfoRow>
-                  <InfoRow label="World">{characters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.world} /></Cell>)}</InfoRow>
+                  <InfoRow label="Raids">{characters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
+                  <InfoRow label="Dungeons">{characters.map(c => <Cell key={c.id} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} maxProgress={8} /></Cell>)}</InfoRow>
+                  <InfoRow label="World">{characters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
 
                   <InfoRow label="Prey Hunts" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
                   <InfoRow label="Normal">{characters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.normal)}</Cell>)}</InfoRow>
