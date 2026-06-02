@@ -1029,6 +1029,8 @@ class MainWindow:
             self._render_addon_tab(cv)
 
         threading.Thread(target=self._load_characters, daemon=True).start()
+        if self._worker is None and self.cfg.get("sync_token"):
+            self.root.after(200, self._start_background_services)
         if self.cfg.get("start_minimized") and not self._startup_minimized_applied:
             self._startup_minimized_applied = True
             self.root.after(300, self._minimize_to_tray)
@@ -2513,6 +2515,9 @@ class MainWindow:
         self.root.withdraw()
 
     def _start_background_services(self):
+        if self._worker is not None:
+            return
+
         from sync_worker import SyncWorker
         from tray_app import TrayApp
 

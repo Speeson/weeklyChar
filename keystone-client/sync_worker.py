@@ -6,6 +6,9 @@ from typing import Callable, Optional, Tuple
 import requests
 from slpp import slpp as lua
 
+import config as cfg_module
+import wow_path
+
 _RIO_BASE = "https://raider.io/api/v1/characters/profile"
 
 
@@ -45,7 +48,11 @@ class SyncWorker(threading.Thread):
     def _check(self):
         path = self.config.get("wow_path")
         if not path or not os.path.exists(path):
-            return
+            path = wow_path.find_savedvars(self.config.get("wow_install_path"))
+            if not path:
+                return
+            self.config["wow_path"] = path
+            cfg_module.save(self.config)
         mtime = os.path.getmtime(path)
         if mtime <= self._last_mtime:
             return
