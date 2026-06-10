@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { API_URL, setToken, setUsername as saveUsername } from '@/lib/auth'
+import { API_URL, hydrateProfile, setToken, setUsername as saveUsername } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -44,6 +44,7 @@ export default function LoginPage() {
         setToken(data.accessToken)
       }
       saveUsername(username)
+      await hydrateProfile()
       router.push('/characters')
     } catch {
       setError('No se puede conectar con la API.')

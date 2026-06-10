@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { apiFetch, clearToken, getToken, getUsername, setUsername as saveUsername, getAvatarUrl, setAvatarUrl } from '@/lib/auth'
+import { apiFetch, clearToken, getToken, getUsername, hydrateProfile, getAvatarUrl, setAvatarUrl } from '@/lib/auth'
 
 interface Character {
   id: number
@@ -28,24 +28,19 @@ export default function Navbar() {
     const stored = getUsername()
     if (stored) {
       setUsernameState(stored)
-    } else if (getToken()) {
-      apiFetch('/api/me')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.username) {
-            saveUsername(data.username)
-            setUsernameState(data.username)
-          }
-          if (data?.avatarUrl) {
-            setAvatarUrl(data.avatarUrl)
-            setAvatarUrlState(data.avatarUrl)
-          }
-        })
-        .catch(() => {})
     }
 
     const cached = getAvatarUrl()
     if (cached) setAvatarUrlState(cached)
+
+    if (getToken()) {
+      hydrateProfile()
+        .then(data => {
+          if (data?.username) setUsernameState(data.username)
+          if (data?.avatarUrl) setAvatarUrlState(data.avatarUrl)
+        })
+        .catch(() => {})
+    }
   }, [])
 
   useEffect(() => {

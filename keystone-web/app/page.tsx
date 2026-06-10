@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { API_URL, setToken, setUsername as saveUsername } from '@/lib/auth'
+import { API_URL, hydrateProfile, setToken, setUsername as saveUsername } from '@/lib/auth'
 
 const downloadUrl = 'https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe'
 
@@ -115,6 +115,7 @@ export default function LandingPage() {
       }
 
       saveUsername(username)
+      await hydrateProfile()
       router.push('/characters')
     } catch {
       setError('No se puede conectar con la API.')

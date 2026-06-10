@@ -27,6 +27,17 @@ export function setAvatarUrl(url: string) {
   localStorage.setItem('avatar_url', url)
 }
 
+export async function hydrateProfile() {
+  const res = await apiFetch('/api/me')
+  if (!res.ok) return null
+
+  const data = await res.json()
+  if (data?.username) setUsername(data.username)
+  if (data?.avatarUrl) setAvatarUrl(data.avatarUrl)
+
+  return data
+}
+
 export function clearToken() {
   localStorage.removeItem('access_token')
   localStorage.removeItem('username')
