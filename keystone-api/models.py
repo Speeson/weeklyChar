@@ -59,7 +59,6 @@ class Character(Base):
     rio_score = Column(Float, nullable=True)
     wow_class = Column(String(50), nullable=True)
     ilvl = Column(Integer, nullable=True)
-    equipped_ilvl = Column(Integer, nullable=True)
     vault_json = Column(Text, nullable=True)
     prey_hunts_json = Column(Text, nullable=True)
     currencies_json = Column(Text, nullable=True)

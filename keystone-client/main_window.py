@@ -1127,7 +1127,7 @@ class MainWindow:
 
         AV_W   = 34
         CLS_W  = 22
-        ILVL_W = 72
+        ILVL_W = 46
         KEY_MIN = 120
 
         _nf   = tkfont.Font(family="Segoe UI", size=9,  weight="bold")
@@ -1367,7 +1367,6 @@ class MainWindow:
             class_color = WOW_CLASS_COLORS.get(wow_class, TEXT)
             rio_score   = char.get("rioScore")
             ilvl        = char.get("ilvl")
-            equipped_ilvl = char.get("equippedIlvl")
             region      = (char.get("region") or "eu").lower()
             rio_url     = (f"https://raider.io/characters/{region}/"
                            f"{urllib.parse.quote(realm.lower())}/"
@@ -1414,12 +1413,7 @@ class MainWindow:
 
             # ilvl
             ilvl_cx  = self._col_x["ilvl"] + self._col_widths["ilvl"] // 2
-            if ilvl and equipped_ilvl and int(round(ilvl)) != int(round(equipped_ilvl)):
-                ilvl_txt = f"{int(round(ilvl))} ({int(round(equipped_ilvl))})"
-            elif ilvl:
-                ilvl_txt = str(int(round(ilvl)))
-            else:
-                ilvl_txt = "—"
+            ilvl_txt = str(int(round(ilvl))) if ilvl else "—"
             bc.create_text(ilvl_cx, cy, text=ilvl_txt,
                            fill=_ilvl_color(ilvl) if ilvl else MUTED,
                            font=("Segoe UI", 9, "bold"), anchor="center", tags=tag)

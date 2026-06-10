@@ -37,7 +37,6 @@ with engine.connect() as _conn:
         ("characters", "rio_score", "FLOAT"),
         ("characters", "wow_class", "VARCHAR(50)"),
         ("characters", "ilvl", "INTEGER"),
-        ("characters", "equipped_ilvl", "INTEGER"),
         ("characters", "vault_json", "TEXT"),
         ("characters", "prey_hunts_json", "TEXT"),
         ("characters", "currencies_json", "TEXT"),
@@ -143,7 +142,6 @@ class KeystoneUpdateRequest(BaseModel):
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
     ilvl: Optional[int] = None
-    equippedIlvl: Optional[int] = None
     vault: Optional[dict[str, Any]] = None
     preyHunts: Optional[dict[str, Any]] = None
     currencies: Optional[dict[str, Any]] = None
@@ -160,7 +158,6 @@ class CharacterEnrichRequest(BaseModel):
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
     ilvl: Optional[int] = None
-    equippedIlvl: Optional[int] = None
     vault: Optional[dict[str, Any]] = None
     preyHunts: Optional[dict[str, Any]] = None
     currencies: Optional[dict[str, Any]] = None
@@ -230,8 +227,6 @@ def enrich_character(
         character.wow_class = payload.wowClass
     if payload.ilvl is not None:
         character.ilvl = payload.ilvl
-    if payload.equippedIlvl is not None:
-        character.equipped_ilvl = payload.equippedIlvl
     if payload.vault is not None:
         character.vault_json = _json_dump(payload.vault)
     if payload.preyHunts is not None:
@@ -296,8 +291,6 @@ def update_keystone(
         character.wow_class = payload.wowClass
     if payload.ilvl is not None:
         character.ilvl = payload.ilvl
-    if payload.equippedIlvl is not None:
-        character.equipped_ilvl = payload.equippedIlvl
     if payload.vault is not None:
         character.vault_json = _json_dump(payload.vault)
     if payload.preyHunts is not None:
@@ -426,7 +419,6 @@ def _character_response(c: Character):
         "rioScore": c.rio_score,
         "wowClass": c.wow_class,
         "ilvl": c.ilvl,
-        "equippedIlvl": c.equipped_ilvl,
         "currentKeystone": _keystone_dict(latest) if latest else None,
         "vault": _json_load(c.vault_json),
         "preyHunts": _json_load(c.prey_hunts_json),
