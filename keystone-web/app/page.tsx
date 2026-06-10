@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { API_URL, setToken, setUsername as saveUsername } from '@/lib/auth'
 
 const downloadUrl = 'https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe'
@@ -57,6 +57,7 @@ const currencyPreviewRows = [
 
 export default function LandingPage() {
   const router = useRouter()
+  const authRef = useRef<HTMLDivElement | null>(null)
   const [authAnchor, setAuthAnchor] = useState<'login' | 'register' | null>(null)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
@@ -69,6 +70,18 @@ export default function LandingPage() {
     setAuthAnchor(current => current === mode ? null : mode)
     setError(null)
   }
+
+  useEffect(() => {
+    if (!authAnchor) return
+
+    function handleClickOutside(event: MouseEvent) {
+      if (!authRef.current || authRef.current.contains(event.target as Node)) return
+      setAuthAnchor(null)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [authAnchor])
 
   async function handleAuthSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -176,7 +189,7 @@ export default function LandingPage() {
               <a href="#download" className="transition hover:text-white">Descargar</a>
               <Link href="/teams" className="transition hover:text-white">Equipos</Link>
             </nav>
-            <div className="flex items-center gap-3">
+            <div ref={authRef} className="flex items-center gap-3">
               <a
                 href={downloadUrl}
                 className="hidden rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 transition hover:border-yellow-400/60 hover:bg-yellow-400/15 hover:text-yellow-200 sm:inline-flex"
