@@ -1,6 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { API_URL, setToken, setUsername as saveUsername } from '@/lib/auth'
 
 const features = [
   ['Piedra actual', 'Nivel, mazmorra y abreviatura sincronizados por personaje.'],
@@ -25,6 +28,59 @@ const previewRows = [
 ]
 
 export default function LandingPage() {
+  const router = useRouter()
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  function openAuth(mode: 'login' | 'register') {
+    setAuthMode(mode)
+    setAuthOpen(true)
+    setError(null)
+  }
+
+  async function handleAuthSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register'
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.detail ?? 'Error desconocido')
+        return
+      }
+
+      if (authMode === 'register') {
+        const loginRes = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+        const loginData = await loginRes.json()
+        setToken(loginData.accessToken)
+      } else {
+        setToken(data.accessToken)
+      }
+      saveUsername(username)
+      router.push('/characters')
+    } catch {
+      setError('No se puede conectar con la API.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#070d14] text-gray-100">
       <section className="relative min-h-screen">
@@ -46,13 +102,65 @@ export default function LandingPage() {
               <a href="#download" className="transition hover:text-white">Descargar</a>
               <Link href="/teams" className="transition hover:text-white">Equipos</Link>
             </nav>
-            <div className="flex items-center gap-3">
-              <Link href="/login?mode=login" className="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-200 transition hover:border-yellow-400/50 hover:text-white">
+            <div className="relative flex items-center gap-3">
+              <a
+                href="https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe"
+                className="hidden rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 transition hover:border-yellow-400/60 hover:bg-yellow-400/15 hover:text-yellow-200 sm:inline-flex"
+              >
+                Descargar
+              </a>
+              <button onClick={() => openAuth('login')} className="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-200 transition hover:border-yellow-400/50 hover:text-white">
                 Iniciar sesión
-              </Link>
-              <Link href="/login?mode=register" className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-gray-950 shadow-lg shadow-yellow-500/20 transition hover:bg-yellow-400">
+              </button>
+              <button onClick={() => openAuth('register')} className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-gray-950 shadow-lg shadow-yellow-500/20 transition hover:bg-yellow-400">
                 Registrarse
-              </Link>
+              </button>
+
+              {authOpen && (
+                <div className="absolute right-0 top-14 w-[min(92vw,360px)] overflow-hidden rounded-2xl border border-white/10 bg-[#0b121b]/98 p-4 shadow-2xl shadow-black/50 backdrop-blur-xl">
+                  <div className="mb-4 flex overflow-hidden rounded-xl border border-white/10">
+                    <button
+                      onClick={() => { setAuthMode('login'); setError(null) }}
+                      className={`flex-1 py-2 text-sm font-bold transition ${authMode === 'login' ? 'bg-yellow-500 text-gray-950' : 'bg-[#111a26] text-gray-400 hover:text-white'}`}
+                    >
+                      Iniciar sesión
+                    </button>
+                    <button
+                      onClick={() => { setAuthMode('register'); setError(null) }}
+                      className={`flex-1 py-2 text-sm font-bold transition ${authMode === 'register' ? 'bg-yellow-500 text-gray-950' : 'bg-[#111a26] text-gray-400 hover:text-white'}`}
+                    >
+                      Registrarse
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleAuthSubmit} className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Nombre de usuario"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Contraseña"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
+                    />
+                    {error && <p className="text-sm text-red-400">{error}</p>}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full rounded-lg bg-yellow-500 py-2.5 text-sm font-black text-gray-950 transition hover:bg-yellow-400 disabled:opacity-50"
+                    >
+                      {loading ? 'Cargando...' : authMode === 'login' ? 'Entrar' : 'Crear cuenta'}
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -75,9 +183,9 @@ export default function LandingPage() {
               >
                 Descargar para Windows
               </a>
-              <Link href="/login?mode=login" className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/10">
+              <button onClick={() => openAuth('login')} className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/10">
                 Ir al dashboard
-              </Link>
+              </button>
             </div>
             <p className="mt-4 text-xs text-gray-500">Requiere World of Warcraft Retail. El instalador incluirá KeystoneClient y el addon KeystoneSync.</p>
           </div>
