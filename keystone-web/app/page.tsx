@@ -5,31 +5,59 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { API_URL, setToken, setUsername as saveUsername } from '@/lib/auth'
 
+const downloadUrl = 'https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe'
+
 const features = [
   ['Piedra actual', 'Nivel, mazmorra y abreviatura sincronizados por personaje.'],
   ['Great Vault', 'Progreso semanal de raid, dungeons y world activities.'],
   ['Currencies', 'Dawncrests, keys, manaflux y recursos semanales importantes.'],
   ['Mythic+ season', 'Mejores mazmorras, nivel timeado, medalla y rating estimado.'],
-  ['Equipos', 'Comparte personajes con tu grupo mediante código de invitación.'],
+  ['Equipos', 'Comparte personajes con tu grupo mediante codigo de invitacion.'],
   ['Raider.IO', 'Avatar, clase, score y datos complementarios desde Raider.IO.'],
 ]
 
 const steps = [
   ['01', 'Instala KeystoneClient', 'El cliente de Windows lee los datos del addon y sincroniza con tu cuenta.'],
   ['02', 'Instala el addon', 'Desde el cliente puedes instalar o actualizar KeystoneSync en tu carpeta de WoW.'],
-  ['03', 'Entra con tus personajes', 'Al logear/logout, el addon guarda la información semanal en SavedVariables.'],
+  ['03', 'Entra con tus personajes', 'Al logear/logout, el addon guarda la informacion semanal en SavedVariables.'],
   ['04', 'Consulta el dashboard', 'La web muestra resumen, equipos, vault, currencies y llaves en tiempo real.'],
 ]
 
-const previewRows = [
-  ['Speen', 'MT +12', '14 13 12', '2/8', 'Hero 395'],
-  ['Spee', 'SR +13', '14 12 —', '4/8', 'Myth 186'],
-  ['Speeral', 'AA +14', '14 14 13', '8/8', 'Keys 11'],
+const previewCharacters = [
+  { name: 'Aether', className: 'text-pink-400/70', realm: "Zul'jin", ilvl: '288', rating: '3401', key: 'MT +16' },
+  { name: 'Korra', className: 'text-cyan-300/70', realm: "Zul'jin", ilvl: '286', rating: '3214', key: 'WS +14' },
+  { name: 'Nyra', className: 'text-emerald-300/70', realm: "Zul'jin", ilvl: '287', rating: '3108', key: 'SR +15' },
+  { name: 'Ravik', className: 'text-lime-300/70', realm: "Zul'jin", ilvl: '283', rating: '3072', key: 'SEAT +13' },
+]
+
+const dungeonPreviewRows = [
+  ['Algeth\'ar Academy', ['16', '14', '13', '13'], ['427', '397', '382', '382']],
+  ['Magisters\' Terrace', ['15', '14', '14', '14'], ['412', '399', '397', '397']],
+  ['Nexus-Point Xenas', ['15', '14', '15', '12'], ['412', '397', '414', '369']],
+  ['Skyreach', ['16', '14', '13', '13'], ['427', '399', '382', '384']],
+]
+
+const vaultPreviewRows = [
+  ['Raids', ['- - - (0/6)', '- - - (0/6)', '- - - (0/6)', '- - - (0/6)']],
+  ['Dungeons', ['- - - (0/8)', '- - - (0/8)', '- - - (0/8)', '- - - (0/8)']],
+  ['World', ['- - - (0/8)', '8 1 - (4/8)', '- - - (0/8)', '- - - (0/8)']],
+]
+
+const preyPreviewRows = [
+  ['Normal', ['-', '-', '-', '-']],
+  ['Hard', ['-', '-', '-', '-']],
+]
+
+const currencyPreviewRows = [
+  ['Hero Dawncrest', 'text-purple-300', ['90', '10', '98', '5']],
+  ['Myth Dawncrest', 'text-orange-300', ['92', '58', '47', '33']],
+  ['Dawnlight Manaflux', 'text-orange-300', ['8', '6', '4', '5']],
+  ['Coffer Key Shards', 'text-sky-300', ['188', '714', '16', '530']],
 ]
 
 export default function LandingPage() {
   const router = useRouter()
-  const [authOpen, setAuthOpen] = useState(false)
+  const [authAnchor, setAuthAnchor] = useState<'login' | 'register' | null>(null)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -38,7 +66,7 @@ export default function LandingPage() {
 
   function openAuth(mode: 'login' | 'register') {
     setAuthMode(mode)
-    setAuthOpen(true)
+    setAuthAnchor(current => current === mode ? null : mode)
     setError(null)
   }
 
@@ -72,6 +100,7 @@ export default function LandingPage() {
       } else {
         setToken(data.accessToken)
       }
+
       saveUsername(username)
       router.push('/characters')
     } catch {
@@ -80,6 +109,51 @@ export default function LandingPage() {
       setLoading(false)
     }
   }
+
+  const authPanel = authAnchor ? (
+    <div className="absolute right-0 top-12 z-[100] w-[min(92vw,360px)] overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b121b]/98 p-5 shadow-2xl shadow-black/70 backdrop-blur-xl">
+      <div className="mb-4">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-400">
+          {authMode === 'login' ? 'Acceso' : 'Registro'}
+        </p>
+        <h2 className="mt-1 text-xl font-black text-white">
+          {authMode === 'login' ? 'Entra a tu cuenta' : 'Crea tu cuenta'}
+        </h2>
+        <p className="mt-1 text-xs leading-5 text-gray-400">
+          {authMode === 'login'
+            ? 'Accede a tu dashboard de personajes y equipos.'
+            : 'Crea una cuenta para empezar a sincronizar tus personajes.'}
+        </p>
+      </div>
+
+      <form onSubmit={handleAuthSubmit} className="space-y-3">
+        <input
+          type="text"
+          placeholder="Nombre de usuario"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          required
+          className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
+        />
+        <input
+          type="password"
+          placeholder="Contrasena"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
+        />
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg bg-yellow-500 py-2.5 text-sm font-black text-gray-950 transition hover:bg-yellow-400 disabled:opacity-50"
+        >
+          {loading ? 'Cargando...' : authMode === 'login' ? 'Entrar' : 'Crear cuenta'}
+        </button>
+      </form>
+    </div>
+  ) : null
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#070d14] text-gray-100">
@@ -91,81 +165,49 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(245,158,11,0.24),transparent_34%),linear-gradient(180deg,rgba(7,13,20,0.76),#070d14_88%)]" />
         <div className="absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full bg-yellow-500/10 blur-3xl" />
 
-        <header className="relative z-10 border-b border-white/10 bg-[#0f1923]/80 px-5 py-4 backdrop-blur-xl">
+        <header className="relative z-[80] border-b border-white/10 bg-[#0f1923]/80 px-5 py-4 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">
             <Link href="/" className="text-xl font-black tracking-tight text-yellow-400">
               KeystoneSync
             </Link>
             <nav className="hidden items-center gap-7 text-sm text-gray-300 md:flex">
-              <a href="#features" className="transition hover:text-white">Características</a>
-              <a href="#how" className="transition hover:text-white">Cómo funciona</a>
+              <a href="#features" className="transition hover:text-white">Caracteristicas</a>
+              <a href="#how" className="transition hover:text-white">Como funciona</a>
               <a href="#download" className="transition hover:text-white">Descargar</a>
               <Link href="/teams" className="transition hover:text-white">Equipos</Link>
             </nav>
-            <div className="relative flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <a
-                href="https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe"
+                href={downloadUrl}
                 className="hidden rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 transition hover:border-yellow-400/60 hover:bg-yellow-400/15 hover:text-yellow-200 sm:inline-flex"
               >
                 Descargar
               </a>
-              <button onClick={() => openAuth('login')} className="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-200 transition hover:border-yellow-400/50 hover:text-white">
-                Iniciar sesión
-              </button>
-              <button onClick={() => openAuth('register')} className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-gray-950 shadow-lg shadow-yellow-500/20 transition hover:bg-yellow-400">
-                Registrarse
-              </button>
 
-              {authOpen && (
-                <div className="absolute right-0 top-14 w-[min(92vw,360px)] overflow-hidden rounded-2xl border border-white/10 bg-[#0b121b]/98 p-4 shadow-2xl shadow-black/50 backdrop-blur-xl">
-                  <div className="mb-4 flex overflow-hidden rounded-xl border border-white/10">
-                    <button
-                      onClick={() => { setAuthMode('login'); setError(null) }}
-                      className={`flex-1 py-2 text-sm font-bold transition ${authMode === 'login' ? 'bg-yellow-500 text-gray-950' : 'bg-[#111a26] text-gray-400 hover:text-white'}`}
-                    >
-                      Iniciar sesión
-                    </button>
-                    <button
-                      onClick={() => { setAuthMode('register'); setError(null) }}
-                      className={`flex-1 py-2 text-sm font-bold transition ${authMode === 'register' ? 'bg-yellow-500 text-gray-950' : 'bg-[#111a26] text-gray-400 hover:text-white'}`}
-                    >
-                      Registrarse
-                    </button>
-                  </div>
+              <div className="relative">
+                <button
+                  onClick={() => openAuth('login')}
+                  className={`rounded-lg border px-4 py-2 text-sm transition ${authAnchor === 'login' ? 'border-yellow-400/70 bg-yellow-400/15 text-yellow-200 shadow-lg shadow-yellow-500/10' : 'border-white/10 text-gray-200 hover:border-yellow-400/50 hover:text-white'}`}
+                >
+                  Iniciar sesion
+                </button>
+                {authAnchor === 'login' && authPanel}
+              </div>
 
-                  <form onSubmit={handleAuthSubmit} className="space-y-3">
-                    <input
-                      type="text"
-                      placeholder="Nombre de usuario"
-                      value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      required
-                      className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Contraseña"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                      className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
-                    />
-                    {error && <p className="text-sm text-red-400">{error}</p>}
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full rounded-lg bg-yellow-500 py-2.5 text-sm font-black text-gray-950 transition hover:bg-yellow-400 disabled:opacity-50"
-                    >
-                      {loading ? 'Cargando...' : authMode === 'login' ? 'Entrar' : 'Crear cuenta'}
-                    </button>
-                  </form>
-                </div>
-              )}
+              <div className="relative">
+                <button
+                  onClick={() => openAuth('register')}
+                  className={`rounded-lg px-4 py-2 text-sm font-bold shadow-lg transition ${authAnchor === 'register' ? 'bg-yellow-300 text-gray-950 shadow-yellow-500/30' : 'bg-yellow-500 text-gray-950 shadow-yellow-500/20 hover:bg-yellow-400'}`}
+                >
+                  Registrarse
+                </button>
+                {authAnchor === 'register' && authPanel}
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[1fr_0.86fr]">
+        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[0.92fr_1.08fr]">
           <div>
             <div className="mb-5 inline-flex rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-yellow-300">
               Addon WoW + cliente Windows + dashboard web
@@ -178,7 +220,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-9 flex flex-wrap gap-4">
               <a
-                href="https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe"
+                href={downloadUrl}
                 className="rounded-xl bg-yellow-500 px-6 py-3 text-sm font-black text-gray-950 shadow-2xl shadow-yellow-500/20 transition hover:-translate-y-0.5 hover:bg-yellow-400"
               >
                 Descargar para Windows
@@ -187,43 +229,13 @@ export default function LandingPage() {
                 Ir al dashboard
               </button>
             </div>
-            <p className="mt-4 text-xs text-gray-500">Requiere World of Warcraft Retail. El instalador incluirá KeystoneClient y el addon KeystoneSync.</p>
+            <p className="mt-4 text-xs text-gray-500">Requiere World of Warcraft Retail. El instalador incluira KeystoneClient y el addon KeystoneSync.</p>
           </div>
 
           <div className="relative">
             <div className="absolute -inset-6 rounded-[2rem] bg-yellow-500/10 blur-3xl" />
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#111a26]/88 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-white/10 bg-[#0f1923] px-5 py-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-yellow-400">Resumen semanal</p>
-                  <p className="text-sm text-gray-400">Zul'jin roster</p>
-                </div>
-                <div className="h-3 w-3 rounded-full bg-green-400 shadow-lg shadow-green-400/40" />
-              </div>
-              <div className="p-5">
-                <div className="grid grid-cols-5 gap-2 border-b border-white/10 pb-3 text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                  <span>Character</span>
-                  <span>Key</span>
-                  <span>Dungeons</span>
-                  <span>Vault</span>
-                  <span>Currency</span>
-                </div>
-                {previewRows.map((row, index) => (
-                  <div key={row[0]} className={`grid grid-cols-5 gap-2 py-4 text-sm ${index !== previewRows.length - 1 ? 'border-b border-white/5' : ''}`}>
-                    <span className="font-bold text-cyan-300">{row[0]}</span>
-                    <span className="font-bold text-white">{row[1]}</span>
-                    <span className="text-green-400">{row[2]}</span>
-                    <span className="text-yellow-300">{row[3]}</span>
-                    <span className="text-purple-300">{row[4]}</span>
-                  </div>
-                ))}
-                <div className="mt-5 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4">
-                  <p className="text-sm font-bold text-yellow-300">Sincronización automática</p>
-                  <p className="mt-1 text-xs leading-5 text-gray-300">
-                    El cliente detecta cambios en SavedVariables y actualiza API, cliente y web sin intervención manual.
-                  </p>
-                </div>
-              </div>
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#050a12]/95 shadow-2xl shadow-black/60 backdrop-blur-xl">
+              <WeeklyPreviewTable />
             </div>
           </div>
         </div>
@@ -233,7 +245,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Cómo funciona</p>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Como funciona</p>
               <h2 className="mt-3 text-3xl font-black text-white md:text-5xl">De WoW al dashboard en cuatro pasos.</h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-gray-400">
@@ -254,7 +266,7 @@ export default function LandingPage() {
 
       <section id="features" className="px-5 py-20">
         <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Características</p>
+          <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Caracteristicas</p>
           <h2 className="mt-3 max-w-3xl text-3xl font-black text-white md:text-5xl">Todo lo importante de la semana en una sola pantalla.</h2>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {features.map(feature => (
@@ -274,11 +286,11 @@ export default function LandingPage() {
               <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Descarga</p>
               <h2 className="mt-3 text-3xl font-black text-white">KeystoneClient para Windows</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300">
-                El cliente instala o actualiza el addon, detecta tu carpeta de WoW, sincroniza automáticamente y te avisa cuando haya nuevas versiones.
+                El cliente instala o actualiza el addon, detecta tu carpeta de WoW, sincroniza automaticamente y te avisa cuando haya nuevas versiones.
               </p>
             </div>
             <a
-              href="https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe"
+              href={downloadUrl}
               className="shrink-0 rounded-xl bg-yellow-500 px-7 py-4 text-sm font-black text-gray-950 shadow-2xl shadow-yellow-500/20 transition hover:bg-yellow-400"
             >
               Descargar instalador
@@ -298,5 +310,103 @@ export default function LandingPage() {
         </div>
       </footer>
     </main>
+  )
+}
+
+function WeeklyPreviewTable() {
+  return (
+    <div className="relative w-full overflow-hidden">
+      <div className="absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-[#050a12]/30 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 z-20 h-28 bg-gradient-to-t from-[#050a12] to-transparent pointer-events-none" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_72%_18%,rgba(245,158,11,0.12),transparent_34%)]" />
+
+      <div className="min-w-[610px] scale-[0.92] origin-top-left opacity-90 sm:scale-100">
+        <div className="grid grid-cols-[150px_repeat(4,1fr)] border-b border-white/5 text-[9px] font-black">
+          <SummaryLabel>Character</SummaryLabel>
+          {previewCharacters.map(character => (
+            <SummaryCell key={character.name} className={character.className}>{character.name}</SummaryCell>
+          ))}
+          <SummaryLabel>Realm</SummaryLabel>
+          {previewCharacters.map(character => <SummaryCell key={`${character.name}-realm`}>{character.realm}</SummaryCell>)}
+          <SummaryLabel>Item Level</SummaryLabel>
+          {previewCharacters.map(character => <SummaryCell key={`${character.name}-ilvl`} className="text-purple-300">{character.ilvl}</SummaryCell>)}
+          <SummaryLabel>Rating</SummaryLabel>
+          {previewCharacters.map(character => <SummaryCell key={`${character.name}-rating`} className="text-orange-400">{character.rating}</SummaryCell>)}
+          <SummaryLabel>Current Keystone</SummaryLabel>
+          {previewCharacters.map(character => <SummaryCell key={`${character.name}-key`}>{character.key}</SummaryCell>)}
+        </div>
+
+        <SectionRow>Dungeons</SectionRow>
+        {dungeonPreviewRows.map(row => (
+          <div key={row[0] as string} className="grid grid-cols-[150px_repeat(4,1fr)] border-b border-white/5 text-[9px]">
+            <SummaryLabel>{row[0]}</SummaryLabel>
+            {(row[1] as string[]).map((level, index) => (
+              <SummaryCell key={`${row[0]}-${index}`}>
+                <span className="font-black text-white">{level}</span>
+                <span className="mx-1.5 inline-block h-1.5 w-1.5 rotate-45 bg-amber-500/80" />
+                <span className="font-black text-orange-400">{(row[2] as string[])[index]}</span>
+              </SummaryCell>
+            ))}
+          </div>
+        ))}
+
+        <SectionRow>Great Vault</SectionRow>
+        {vaultPreviewRows.map(row => (
+          <div key={row[0] as string} className="grid grid-cols-[150px_repeat(4,1fr)] border-b border-white/5 text-[9px]">
+            <SummaryLabel>{row[0]}</SummaryLabel>
+            {(row[1] as string[]).map((value, index) => (
+              <SummaryCell key={`${row[0]}-${index}`} className="text-gray-300">{value}</SummaryCell>
+            ))}
+          </div>
+        ))}
+
+        <SectionRow>Prey Hunts</SectionRow>
+        {preyPreviewRows.map(row => (
+          <div key={row[0] as string} className="grid grid-cols-[150px_repeat(4,1fr)] border-b border-white/5 text-[9px]">
+            <SummaryLabel>{row[0]}</SummaryLabel>
+            {(row[1] as string[]).map((value, index) => (
+              <SummaryCell key={`${row[0]}-${index}`}>{value}</SummaryCell>
+            ))}
+          </div>
+        ))}
+
+        <SectionRow>Currencies</SectionRow>
+        {currencyPreviewRows.map(row => (
+          <div key={row[0] as string} className="grid grid-cols-[150px_repeat(4,1fr)] border-b border-white/5 text-[9px]">
+            <SummaryLabel className={row[1] as string}>{row[0]}</SummaryLabel>
+            {(row[2] as string[]).map((value, index) => (
+              <SummaryCell key={`${row[0]}-${index}`}>
+                <span className="mr-2 inline-block h-3 w-3 rounded-sm border border-white/20 bg-gradient-to-br from-yellow-300/80 to-orange-700/90 align-[-2px]" />
+                {value}
+              </SummaryCell>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SectionRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="border-b border-white/5 bg-[#050912]/95 px-3 py-1.5 text-[9px] font-black text-yellow-400">
+      {children}
+    </div>
+  )
+}
+
+function SummaryLabel({ children, className = '' }: { children: React.ReactNode, className?: string }) {
+  return (
+    <div className={`truncate border-r border-white/5 bg-[#050912] px-3 py-2 text-left font-black text-white/90 ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+function SummaryCell({ children, className = '' }: { children: React.ReactNode, className?: string }) {
+  return (
+    <div className={`border-r border-white/5 bg-[#111827]/70 px-2 py-2 text-center font-black text-white/80 odd:bg-[#0f1623]/80 ${className}`}>
+      {children}
+    </div>
   )
 }
