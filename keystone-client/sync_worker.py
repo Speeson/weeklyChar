@@ -102,6 +102,8 @@ class SyncWorker(threading.Thread):
             region = entry.get("region", "eu")
 
             avatar_url, rio_score, wow_class, ilvl = self._fetch_raiderio(name, realm, region)
+            addon_ilvl = entry.get("ilvl")
+            addon_equipped_ilvl = entry.get("equippedIlvl")
 
             payload = {
                 "character": name,
@@ -117,7 +119,8 @@ class SyncWorker(threading.Thread):
                 "avatarUrl": avatar_url,
                 "rioScore": rio_score,
                 "wowClass": wow_class,
-                "ilvl": ilvl,
+                "ilvl": addon_ilvl if addon_ilvl is not None else ilvl,
+                "equippedIlvl": addon_equipped_ilvl,
                 "vault": entry.get("vault"),
                 "preyHunts": entry.get("preyHunts"),
                 "currencies": entry.get("currencies"),

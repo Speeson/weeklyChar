@@ -61,6 +61,7 @@ interface Character {
   rioScore: number | null
   wowClass: string | null
   ilvl: number | null
+  equippedIlvl: number | null
   currentKeystone: Keystone | null
   vault: {
     raid?: VaultBucket
@@ -128,6 +129,14 @@ const CURRENCIES = [
 
 function dash(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
+}
+
+function itemLevelLabel(char: Character) {
+  if (!char.ilvl) return '—'
+  if (char.equippedIlvl && Math.round(char.equippedIlvl) !== Math.round(char.ilvl)) {
+    return `${Math.round(char.ilvl)} (${Math.round(char.equippedIlvl)})`
+  }
+  return String(Math.round(char.ilvl))
 }
 
 function keystoneLabel(char: Character) {
@@ -409,7 +418,7 @@ export default function SummaryPage() {
                     ))}
                   </InfoRow>
                   <InfoRow label="Realm">{characters.map(c => <Cell key={c.id}>{c.realm}</Cell>)}</InfoRow>
-                  <InfoRow label="Item Level">{characters.map(c => <Cell key={c.id} className="font-bold text-purple-400">{dash(c.ilvl)}</Cell>)}</InfoRow>
+                  <InfoRow label="Item Level">{characters.map(c => <Cell key={c.id} className="font-bold text-purple-400">{itemLevelLabel(c)}</Cell>)}</InfoRow>
                   <InfoRow label="Rating">{characters.map(c => <Cell key={c.id} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
                   <InfoRow label="Current Keystone">{characters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
 

@@ -1127,7 +1127,7 @@ class MainWindow:
 
         AV_W   = 34
         CLS_W  = 22
-        ILVL_W = 46
+        ILVL_W = 72
         KEY_MIN = 120
 
         _nf   = tkfont.Font(family="Segoe UI", size=9,  weight="bold")
@@ -1367,6 +1367,7 @@ class MainWindow:
             class_color = WOW_CLASS_COLORS.get(wow_class, TEXT)
             rio_score   = char.get("rioScore")
             ilvl        = char.get("ilvl")
+            equipped_ilvl = char.get("equippedIlvl")
             region      = (char.get("region") or "eu").lower()
             rio_url     = (f"https://raider.io/characters/{region}/"
                            f"{urllib.parse.quote(realm.lower())}/"
@@ -1413,7 +1414,12 @@ class MainWindow:
 
             # ilvl
             ilvl_cx  = self._col_x["ilvl"] + self._col_widths["ilvl"] // 2
-            ilvl_txt = str(int(round(ilvl))) if ilvl else "—"
+            if ilvl and equipped_ilvl and int(round(ilvl)) != int(round(equipped_ilvl)):
+                ilvl_txt = f"{int(round(ilvl))} ({int(round(equipped_ilvl))})"
+            elif ilvl:
+                ilvl_txt = str(int(round(ilvl)))
+            else:
+                ilvl_txt = "—"
             bc.create_text(ilvl_cx, cy, text=ilvl_txt,
                            fill=_ilvl_color(ilvl) if ilvl else MUTED,
                            font=("Segoe UI", 9, "bold"), anchor="center", tags=tag)
@@ -2276,22 +2282,21 @@ class MainWindow:
             from sync_worker import SyncWorker
             _sw = SyncWorker(self.cfg)
             for c in chars:
-                if c.get("avatarUrl") and c.get("rioScore") and c.get("wowClass") and c.get("ilvl"):
+                if c.get("avatarUrl") and c.get("rioScore") and c.get("wowClass"):
                     continue
-                av, score, klass, ilvl = _sw._fetch_raiderio(
+                av, score, klass, _ilvl = _sw._fetch_raiderio(
                     c.get("name", ""), c.get("realm", ""), c.get("region", "eu"))
                 if av:                c["avatarUrl"] = av
                 if score is not None: c["rioScore"]  = score
                 if klass:             c["wowClass"]  = klass
-                if ilvl is not None:  c["ilvl"]      = ilvl
-                if av or score or klass or ilvl:
+                if av or score or klass:
                     try:
                         requests.post(
                             f"{api_url}/api/me/characters/enrich",
                             json={"name": c.get("name"), "realm": c.get("realm"),
                                   "region": c.get("region", "eu"),
                                   "avatarUrl": av, "rioScore": score,
-                                  "wowClass": klass, "ilvl": ilvl},
+                                  "wowClass": klass},
                             headers=sync_hdrs, timeout=8)
                     except Exception:
                         pass
