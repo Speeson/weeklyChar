@@ -44,7 +44,7 @@ export default function LoginPage() {
         setToken(data.accessToken)
       }
       saveUsername(username)
-      router.push('/')
+      router.push('/characters')
     } catch {
       setError('No se puede conectar con la API.')
     } finally {

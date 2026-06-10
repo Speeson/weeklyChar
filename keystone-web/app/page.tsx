@@ -1,322 +1,194 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { apiFetch, getToken } from '@/lib/auth'
-import Navbar from '@/app/components/Navbar'
-import WeeklyReset from '@/app/components/WeeklyReset'
-import WeeklyAffixes from '@/app/components/WeeklyAffixes'
+import Link from 'next/link'
 
-interface Keystone {
-  level: number | null
-  dungeon: string | null
-  challengeMapId: number | null
-  updatedAt: number | null
-}
+const features = [
+  ['Piedra actual', 'Nivel, mazmorra y abreviatura sincronizados por personaje.'],
+  ['Great Vault', 'Progreso semanal de raid, dungeons y world activities.'],
+  ['Currencies', 'Dawncrests, keys, manaflux y recursos semanales importantes.'],
+  ['Mythic+ season', 'Mejores mazmorras, nivel timeado, medalla y rating estimado.'],
+  ['Equipos', 'Comparte personajes con tu grupo mediante código de invitación.'],
+  ['Raider.IO', 'Avatar, clase, score y datos complementarios desde Raider.IO.'],
+]
 
-interface Character {
-  id: number
-  name: string
-  realm: string
-  region: string
-  avatarUrl?: string | null
-  wowClass?: string | null
-  currentKeystone: Keystone | null
-}
+const steps = [
+  ['01', 'Instala KeystoneClient', 'El cliente de Windows lee los datos del addon y sincroniza con tu cuenta.'],
+  ['02', 'Instala el addon', 'Desde el cliente puedes instalar o actualizar KeystoneSync en tu carpeta de WoW.'],
+  ['03', 'Entra con tus personajes', 'Al logear/logout, el addon guarda la información semanal en SavedVariables.'],
+  ['04', 'Consulta el dashboard', 'La web muestra resumen, equipos, vault, currencies y llaves en tiempo real.'],
+]
 
-const CLASS_COLORS: Record<string, string> = {
-  'Death Knight': '#C41E3A',
-  'Demon Hunter': '#A330C9',
-  Druid: '#FF7C0A',
-  Evoker: '#33937F',
-  Hunter: '#AAD372',
-  Mage: '#3FC7EB',
-  Monk: '#00FF98',
-  Paladin: '#F48CBA',
-  Priest: '#FFFFFF',
-  Rogue: '#FFF468',
-  Shaman: '#0070DD',
-  Warlock: '#8788EE',
-  Warrior: '#C69B6D',
-}
+const previewRows = [
+  ['Speen', 'MT +12', '14 13 12', '2/8', 'Hero 395'],
+  ['Spee', 'SR +13', '14 12 —', '4/8', 'Myth 186'],
+  ['Speeral', 'AA +14', '14 14 13', '8/8', 'Keys 11'],
+]
 
-const CLASS_ICON_NAMES: Record<string, string> = {
-  'Death Knight': 'classicon_deathknight',
-  'Demon Hunter': 'classicon_demonhunter',
-  Druid: 'classicon_druid',
-  Evoker: 'classicon_evoker',
-  Hunter: 'classicon_hunter',
-  Mage: 'classicon_mage',
-  Monk: 'classicon_monk',
-  Paladin: 'classicon_paladin',
-  Priest: 'classicon_priest',
-  Rogue: 'classicon_rogue',
-  Shaman: 'classicon_shaman',
-  Warlock: 'classicon_warlock',
-  Warrior: 'classicon_warrior',
-}
-
-function classColor(wowClass: string | null | undefined) {
-  return CLASS_COLORS[wowClass ?? ''] ?? '#E5E7EB'
-}
-
-function classIconUrl(wowClass: string | null | undefined) {
-  const icon = CLASS_ICON_NAMES[wowClass ?? '']
-  return icon ? `https://wow.zamimg.com/images/wow/icons/small/${icon}.jpg` : null
-}
-
-function formatDate(unix: number | null): string {
-  if (!unix) return '—'
-  return new Date(unix * 1000).toLocaleString('es-ES', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
-const HIDDEN_KEY = 'ks_hidden_chars'
-
-function getHidden(): Set<number> {
-  try {
-    const raw = localStorage.getItem(HIDDEN_KEY)
-    return raw ? new Set(JSON.parse(raw) as number[]) : new Set()
-  } catch { return new Set() }
-}
-
-function saveHidden(h: Set<number>) {
-  localStorage.setItem(HIDDEN_KEY, JSON.stringify([...h]))
-}
-
-export default function Dashboard() {
-  const router = useRouter()
-  const [characters, setCharacters] = useState<Character[]>([])
-  const [hidden, setHidden] = useState<Set<number>>(new Set())
-  const [managing, setManaging] = useState(false)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!getToken()) { router.push('/login'); return }
-    setHidden(getHidden())
-    apiFetch('/api/me/characters')
-      .then(r => {
-        if (r.status === 401) { router.push('/login'); return [] }
-        return r.ok ? r.json() : []
-      })
-      .then((chars: Character[]) => {
-        chars.sort((a, b) => (b.currentKeystone?.level ?? -1) - (a.currentKeystone?.level ?? -1))
-        setCharacters(chars)
-      })
-      .finally(() => setLoading(false))
-  }, [router])
-
-  function toggleHidden(id: number) {
-    setHidden(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      saveHidden(next)
-      return next
-    })
-  }
-
-  if (loading) return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">Cargando...</p>
-      </main>
-    </>
-  )
-
-  const visible = managing ? characters : characters.filter(c => !hidden.has(c.id))
-  const hiddenCount = characters.filter(c => hidden.has(c.id)).length
-
+export default function LandingPage() {
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
-        <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen overflow-hidden bg-[#070d14] text-gray-100">
+      <section className="relative min-h-screen">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-35"
+          style={{ backgroundImage: "url('/client-bg.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(245,158,11,0.24),transparent_34%),linear-gradient(180deg,rgba(7,13,20,0.76),#070d14_88%)]" />
+        <div className="absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full bg-yellow-500/10 blur-3xl" />
 
-          <div className="flex justify-center items-stretch gap-4 mb-8 flex-wrap">
-            <WeeklyAffixes />
-            <WeeklyReset />
+        <header className="relative z-10 border-b border-white/10 bg-[#0f1923]/80 px-5 py-4 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">
+            <Link href="/" className="text-xl font-black tracking-tight text-yellow-400">
+              KeystoneSync
+            </Link>
+            <nav className="hidden items-center gap-7 text-sm text-gray-300 md:flex">
+              <a href="#features" className="transition hover:text-white">Características</a>
+              <a href="#how" className="transition hover:text-white">Cómo funciona</a>
+              <a href="#download" className="transition hover:text-white">Descargar</a>
+              <Link href="/teams" className="transition hover:text-white">Equipos</Link>
+            </nav>
+            <div className="flex items-center gap-3">
+              <Link href="/login?mode=login" className="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-200 transition hover:border-yellow-400/50 hover:text-white">
+                Iniciar sesión
+              </Link>
+              <Link href="/login?mode=register" className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-gray-950 shadow-lg shadow-yellow-500/20 transition hover:bg-yellow-400">
+                Registrarse
+              </Link>
+            </div>
           </div>
+        </header>
 
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-200">
-              Mis personajes
-              {hiddenCount > 0 && !managing && (
-                <span className="ml-2 text-xs text-gray-500">
-                  ({hiddenCount} oculto{hiddenCount !== 1 ? 's' : ''})
-                </span>
-              )}
-            </h2>
-            {characters.length > 0 && (
-              <button
-                onClick={() => setManaging(m => !m)}
-                className={`text-xs px-3 py-1.5 rounded border transition ${
-                  managing
-                    ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20'
-                    : 'border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
-                }`}
+        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[1fr_0.86fr]">
+          <div>
+            <div className="mb-5 inline-flex rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-yellow-300">
+              Addon WoW + cliente Windows + dashboard web
+            </div>
+            <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-tight text-white md:text-7xl">
+              Control semanal de todos tus alters sin abrir mil hojas.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-300">
+              KeystoneSync recopila llaves, Great Vault, currencies, progreso Mythic+ y datos de Raider.IO para mostrarlo todo en una vista clara para ti y tu equipo.
+            </p>
+            <div className="mt-9 flex flex-wrap gap-4">
+              <a
+                href="https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe"
+                className="rounded-xl bg-yellow-500 px-6 py-3 text-sm font-black text-gray-950 shadow-2xl shadow-yellow-500/20 transition hover:-translate-y-0.5 hover:bg-yellow-400"
               >
-                {managing ? '✓ Hecho' : '✎ Gestionar'}
-              </button>
-            )}
+                Descargar para Windows
+              </a>
+              <Link href="/login?mode=login" className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/10">
+                Ir al dashboard
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-gray-500">Requiere World of Warcraft Retail. El instalador incluirá KeystoneClient y el addon KeystoneSync.</p>
           </div>
 
-          {managing && (
-            <div className="mb-6 p-4 bg-gray-900 border border-gray-700 rounded-lg">
-              <p className="text-xs text-gray-500 mb-3">
-                Activa o desactiva los personajes que quieres ver en la tabla.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {characters.map(c => (
-                  <label key={c.id} className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={!hidden.has(c.id)}
-                      onChange={() => toggleHidden(c.id)}
-                      className="accent-yellow-400 w-4 h-4 cursor-pointer"
-                    />
-                    <span
-                      className={`text-sm ${hidden.has(c.id) ? 'opacity-40' : ''}`}
-                      style={{ color: hidden.has(c.id) ? undefined : classColor(c.wowClass) }}
-                    >
-                      {c.name}
-                    </span>
-                    <span className="text-xs text-gray-600 truncate">{c.realm}</span>
-                  </label>
+          <div className="relative">
+            <div className="absolute -inset-6 rounded-[2rem] bg-yellow-500/10 blur-3xl" />
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#111a26]/88 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/10 bg-[#0f1923] px-5 py-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-yellow-400">Resumen semanal</p>
+                  <p className="text-sm text-gray-400">Zul'jin roster</p>
+                </div>
+                <div className="h-3 w-3 rounded-full bg-green-400 shadow-lg shadow-green-400/40" />
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-5 gap-2 border-b border-white/10 pb-3 text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                  <span>Character</span>
+                  <span>Key</span>
+                  <span>Dungeons</span>
+                  <span>Vault</span>
+                  <span>Currency</span>
+                </div>
+                {previewRows.map((row, index) => (
+                  <div key={row[0]} className={`grid grid-cols-5 gap-2 py-4 text-sm ${index !== previewRows.length - 1 ? 'border-b border-white/5' : ''}`}>
+                    <span className="font-bold text-cyan-300">{row[0]}</span>
+                    <span className="font-bold text-white">{row[1]}</span>
+                    <span className="text-green-400">{row[2]}</span>
+                    <span className="text-yellow-300">{row[3]}</span>
+                    <span className="text-purple-300">{row[4]}</span>
+                  </div>
                 ))}
+                <div className="mt-5 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4">
+                  <p className="text-sm font-bold text-yellow-300">Sincronización automática</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-300">
+                    El cliente detecta cambios en SavedVariables y actualiza API, cliente y web sin intervención manual.
+                  </p>
+                </div>
               </div>
             </div>
-          )}
-
-          {characters.length === 0 ? (
-            <p className="text-gray-500 text-sm">
-              Sin personajes todavía. Ejecuta KeystoneClient para importarlos.
-            </p>
-          ) : visible.length === 0 ? (
-            <p className="text-gray-500 text-sm">
-              Todos los personajes están ocultos.{' '}
-              <button onClick={() => setManaging(true)} className="text-yellow-400 underline">
-                Gestionar
-              </button>
-            </p>
-          ) : (
-            <CharacterTable characters={visible} />
-          )}
+          </div>
         </div>
-      </main>
-    </>
-  )
-}
+      </section>
 
-type SortKey = 'name' | 'realm' | 'dungeon' | 'level' | 'updatedAt'
-type SortDir = 'asc' | 'desc'
+      <section id="how" className="border-y border-white/10 bg-[#0b121b] px-5 py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Cómo funciona</p>
+              <h2 className="mt-3 text-3xl font-black text-white md:text-5xl">De WoW al dashboard en cuatro pasos.</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-gray-400">
+              El addon solo recopila datos del personaje. El cliente los lee, los enriquece cuando hace falta y los sincroniza con la API.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-4">
+            {steps.map(step => (
+              <div key={step[0]} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:-translate-y-1 hover:border-yellow-400/40 hover:bg-yellow-400/[0.04]">
+                <span className="text-sm font-black text-yellow-400">{step[0]}</span>
+                <h3 className="mt-5 text-lg font-bold text-white">{step[1]}</h3>
+                <p className="mt-3 text-sm leading-6 text-gray-400">{step[2]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-export function CharacterTable({ characters }: { characters: Character[] }) {
-  const [sortKey, setSortKey] = useState<SortKey>('level')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+      <section id="features" className="px-5 py-20">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Características</p>
+          <h2 className="mt-3 max-w-3xl text-3xl font-black text-white md:text-5xl">Todo lo importante de la semana en una sola pantalla.</h2>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {features.map(feature => (
+              <div key={feature[0]} className="rounded-2xl border border-white/10 bg-[#111a26] p-6 shadow-xl shadow-black/20">
+                <h3 className="text-lg font-bold text-white">{feature[0]}</h3>
+                <p className="mt-3 text-sm leading-6 text-gray-400">{feature[1]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortKey(key)
-      setSortDir(key === 'level' || key === 'updatedAt' ? 'desc' : 'asc')
-    }
-  }
+      <section id="download" className="px-5 pb-24">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-yellow-400/20 bg-gradient-to-r from-yellow-500/15 via-[#111a26] to-cyan-500/10 p-8 md:p-10">
+          <div className="flex flex-col justify-between gap-8 md:flex-row md:items-center">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-400">Descarga</p>
+              <h2 className="mt-3 text-3xl font-black text-white">KeystoneClient para Windows</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300">
+                El cliente instala o actualiza el addon, detecta tu carpeta de WoW, sincroniza automáticamente y te avisa cuando haya nuevas versiones.
+              </p>
+            </div>
+            <a
+              href="https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe"
+              className="shrink-0 rounded-xl bg-yellow-500 px-7 py-4 text-sm font-black text-gray-950 shadow-2xl shadow-yellow-500/20 transition hover:bg-yellow-400"
+            >
+              Descargar instalador
+            </a>
+          </div>
+        </div>
+      </section>
 
-  const sorted = [...characters].sort((a, b) => {
-    let cmp = 0
-    switch (sortKey) {
-      case 'name':     cmp = a.name.localeCompare(b.name, 'es'); break
-      case 'realm':    cmp = a.realm.localeCompare(b.realm, 'es'); break
-      case 'dungeon': {
-        const da = a.currentKeystone?.dungeon ?? ''
-        const db = b.currentKeystone?.dungeon ?? ''
-        cmp = da.localeCompare(db, 'es')
-        break
-      }
-      case 'level':
-        cmp = (a.currentKeystone?.level ?? -1) - (b.currentKeystone?.level ?? -1)
-        break
-      case 'updatedAt':
-        cmp = (a.currentKeystone?.updatedAt ?? 0) - (b.currentKeystone?.updatedAt ?? 0)
-        break
-    }
-    return sortDir === 'asc' ? cmp : -cmp
-  })
-
-  function Th({ col, children, last }: { col: SortKey; children: React.ReactNode; last?: boolean }) {
-    const active = col === sortKey
-    return (
-      <th
-        className={`pb-3 ${last ? '' : 'pr-6'} cursor-pointer select-none whitespace-nowrap`}
-        onClick={() => handleSort(col)}
-      >
-        <span className={`inline-flex items-center gap-1 transition hover:text-white ${active ? 'text-yellow-400' : 'text-gray-400'}`}>
-          {children}
-          <span className="text-xs">{active ? (sortDir === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}</span>
-        </span>
-      </th>
-    )
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left border-b border-gray-800">
-            <Th col="name">Personaje</Th>
-            <Th col="realm">Reino</Th>
-            <Th col="dungeon">Mazmorra</Th>
-            <Th col="level">Nivel</Th>
-            <Th col="updatedAt" last>Última actualización</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(char => (
-            <tr key={char.id} className="border-b border-gray-900 hover:bg-gray-900/50 transition">
-              <td className="py-3 pr-6 font-semibold">
-                <span className="flex items-center gap-2">
-                  {char.avatarUrl ? (
-                    <img
-                      src={char.avatarUrl}
-                      alt=""
-                      className="h-8 w-8 rounded-full border border-gray-700 object-cover"
-                    />
-                  ) : (
-                    <span className="h-8 w-8 rounded-full border border-gray-700 bg-gray-900" />
-                  )}
-                  {classIconUrl(char.wowClass) && (
-                    <img
-                      src={classIconUrl(char.wowClass)!}
-                      alt={char.wowClass ?? ''}
-                      title={char.wowClass ?? ''}
-                      className="h-5 w-5 rounded border border-gray-700 object-cover"
-                    />
-                  )}
-                  <span style={{ color: classColor(char.wowClass) }}>{char.name}</span>
-                </span>
-              </td>
-              <td className="py-3 pr-6 text-gray-300">{char.realm}</td>
-              <td className="py-3 pr-6 text-gray-300">
-                {char.currentKeystone?.dungeon ?? (char.currentKeystone?.challengeMapId
-                  ? `ID ${char.currentKeystone.challengeMapId}`
-                  : '—')}
-              </td>
-              <td className="py-3 pr-6">
-                {char.currentKeystone?.level
-                  ? <span className="font-bold text-yellow-400">+{char.currentKeystone.level}</span>
-                  : <span className="text-gray-600">—</span>}
-              </td>
-              <td className="py-3 text-gray-400 text-xs">
-                {formatDate(char.currentKeystone?.updatedAt ?? null)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <footer className="border-t border-white/10 px-5 py-8 text-sm text-gray-500">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 md:flex-row">
+          <span>KeystoneSync</span>
+          <div className="flex gap-5">
+            <Link href="/login?mode=login" className="hover:text-white">Login</Link>
+            <Link href="/characters" className="hover:text-white">Dashboard</Link>
+            <a href="https://github.com/Speeson/weeklyChar" className="hover:text-white">GitHub</a>
+          </div>
+        </div>
+      </footer>
+    </main>
   )
 }
