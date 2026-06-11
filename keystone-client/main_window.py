@@ -346,7 +346,7 @@ _TR = {
         "addon_up_to_date": "Al día",
         "client_version": "Version del cliente",
         "update_title": "Actualizacion disponible",
-        "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.\n\nSe descargara el instalador oficial desde GitHub Releases.",
+        "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.\n\nSe descargara el instalador oficial desde GitHub Releases y se aplicara automaticamente.",
         "update_btn": "Actualizar",
         "check_update_btn": "Buscar actualizaciones",
         "last_update_check": "Ultima comprobacion",
@@ -436,7 +436,7 @@ _TR = {
         "addon_up_to_date": "Up to date",
         "client_version": "Client version",
         "update_title": "Update available",
-        "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.\n\nThe official installer will be downloaded from GitHub Releases.",
+        "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.\n\nThe official installer will be downloaded from GitHub Releases and applied automatically.",
         "update_btn": "Update",
         "check_update_btn": "Check for updates",
         "last_update_check": "Last check",
@@ -2910,28 +2910,44 @@ class MainWindow:
         self._update_dialog_visible = True
 
         dlg = tk.Toplevel(self.root)
-        dlg.title(self._t("update_title"))
+        dlg.withdraw()
         dlg.configure(bg=BG_DARK)
         dlg.resizable(False, False)
         dlg.transient(self.root)
+        dlg.overrideredirect(True)
         dlg.grab_set()
         dlg.protocol("WM_DELETE_WINDOW", lambda: self._close_update_dialog(dlg))
 
-        wrap = tk.Frame(dlg, bg=CARD_BG, padx=22, pady=20,
+        wrap = tk.Frame(dlg, bg=CARD_BG, padx=0, pady=0,
                         highlightbackground=CARD_BDR, highlightthickness=1)
         wrap.pack(fill="both", expand=True)
 
-        tk.Label(wrap, text=self._t("update_title"), bg=CARD_BG, fg=ACCENT,
-                 font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        head = tk.Frame(wrap, bg=BANNER_BG, height=44)
+        head.pack(fill="x")
+        head.pack_propagate(False)
+        tk.Label(head, text=self._t("update_title"), bg=BANNER_BG, fg=ACCENT,
+                 font=("Segoe UI", 14, "bold")).pack(side="left", padx=16)
+        tk.Button(head, text="×", bg=BANNER_BG, fg=MUTED,
+                  activebackground=BANNER_BG, activeforeground=TEXT,
+                  relief="flat", bd=0, font=("Segoe UI", 14, "bold"),
+                  cursor="hand2",
+                  command=lambda: self._close_update_dialog(dlg)).pack(
+                      side="right", padx=12)
+
+        content = tk.Frame(wrap, bg=CARD_BG, padx=22, pady=18)
+        content.pack(fill="both", expand=True)
+
+        tk.Label(content, text=f"KeystoneClient v{info['version']}",
+                 bg=CARD_BG, fg=TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
         msg = self._t("update_msg").format(current=CLIENT_VERSION, latest=info["version"])
-        tk.Label(wrap, text=msg, bg=CARD_BG, fg=TEXT, justify="left",
-                 font=("Segoe UI", 10), wraplength=390).pack(anchor="w", pady=(10, 14))
+        tk.Label(content, text=msg, bg=CARD_BG, fg=TEXT, justify="left",
+                 font=("Segoe UI", 10), wraplength=430).pack(anchor="w", pady=(10, 14))
 
         status_var = tk.StringVar(value="")
-        tk.Label(wrap, textvariable=status_var, bg=CARD_BG, fg=MUTED,
+        tk.Label(content, textvariable=status_var, bg=CARD_BG, fg=MUTED,
                  font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
 
-        btns = tk.Frame(wrap, bg=CARD_BG)
+        btns = tk.Frame(content, bg=CARD_BG)
         btns.pack(fill="x")
         cancel_btn = ttk.Button(
             btns, text=self._t("cancel_btn"), style="Gray.TButton",
@@ -2947,6 +2963,7 @@ class MainWindow:
         pw, ph = self.root.winfo_width(), self.root.winfo_height()
         dw, dh = dlg.winfo_width(), dlg.winfo_height()
         dlg.geometry(f"{dw}x{dh}+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
+        dlg.deiconify()
         dlg.lift()
         dlg.focus_force()
 
@@ -2988,11 +3005,35 @@ class MainWindow:
             self.cfg["pending_update_version"] = info["version"]
             self.cfg["pending_update_changelog"] = info.get("body") or ""
             cfg_module.save(self.cfg)
-            subprocess.Popen([installer_path], close_fds=True)
+            self._launch_silent_update_installer(installer_path)
             self.root.after(250, self._quit)
         except Exception:
             self.root.after(0, lambda: status_var.set(self._t("update_launch_error")))
             return
+
+    def _launch_silent_update_installer(self, installer_path):
+        args = [
+            installer_path,
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/CLOSEAPPLICATIONS",
+        ]
+
+        exe_path = sys.executable if getattr(sys, "frozen", False) else None
+        if exe_path:
+            helper_path = os.path.join(tempfile.gettempdir(), "KeystoneClientUpdate.cmd")
+            with open(helper_path, "w", encoding="utf-8") as f:
+                f.write("@echo off\n")
+                f.write("timeout /t 2 /nobreak >nul\n")
+                f.write('"' + '" "'.join(args) + '"\n')
+                f.write('start "" "' + exe_path + '"\n')
+            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            subprocess.Popen(["cmd", "/c", helper_path], close_fds=True,
+                             creationflags=creationflags)
+            return
+
+        subprocess.Popen(args, close_fds=True)
 
     def _show_pending_update_changelog(self):
         version = self.cfg.get("pending_update_version")
