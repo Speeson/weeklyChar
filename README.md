@@ -307,6 +307,14 @@ NEXT_PUBLIC_API_URL  →  https://weeklychar-production.up.railway.app
 
 ---
 
+## Licencia
+
+Este proyecto es **propietario**. El codigo esta publicado para consulta y transparencia del desarrollo, pero **no se concede permiso** para copiar, modificar, redistribuir, revender, republicar, alojar, empaquetar ni crear trabajos derivados sin autorizacion previa por escrito.
+
+Consulta [LICENSE](LICENSE) para los terminos completos.
+
+---
+
 ## Estado del proyecto
 
 | Componente | Estado | Notas |

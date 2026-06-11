@@ -23,6 +23,7 @@ import wow_path
 REGISTER_URL = "https://keystonesync.esgarpe.dev/login"
 WEB_URL      = "https://keystonesync.esgarpe.dev"
 UPDATE_API_URL = "https://api.github.com/repos/Speeson/weeklyChar/releases/latest"
+RELEASES_URL = "https://github.com/Speeson/weeklyChar/releases"
 UPDATE_ASSET_NAME = "KeystoneClientSetup.exe"
 AUTOSTART_KEY  = r"Software\Microsoft\Windows\CurrentVersion\Run"
 AUTOSTART_NAME = "KeystoneClient"
@@ -349,6 +350,7 @@ _TR = {
         "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.\n\nSe descargara el instalador oficial desde GitHub Releases y se aplicara automaticamente.",
         "update_btn": "Actualizar",
         "check_update_btn": "Buscar actualizaciones",
+        "view_releases_btn": "Ver releases",
         "last_update_check": "Ultima comprobacion",
         "never_checked": "Nunca",
         "cancel_btn": "Cancelar",
@@ -439,6 +441,7 @@ _TR = {
         "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.\n\nThe official installer will be downloaded from GitHub Releases and applied automatically.",
         "update_btn": "Update",
         "check_update_btn": "Check for updates",
+        "view_releases_btn": "View releases",
         "last_update_check": "Last check",
         "never_checked": "Never",
         "cancel_btn": "Cancel",
@@ -2112,6 +2115,9 @@ class MainWindow:
             update_row, text=self._t("check_update_btn"), style="Gray.TButton",
             command=self._check_update_from_settings)
         self._settings_update_check_button.pack(side="right")
+        ttk.Button(
+            update_row, text=self._t("view_releases_btn"), style="Gray.TButton",
+            command=lambda: webbrowser.open(RELEASES_URL)).pack(side="right", padx=(0, 8))
         self._settings_update_button = ttk.Button(
             update_row, text=self._t("update_btn"), style="Gold.TButton",
             command=self._manual_update_from_settings)
