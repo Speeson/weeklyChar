@@ -180,8 +180,9 @@ export default function LandingPage() {
 
         <header className="relative z-[80] border-b border-white/10 bg-[#0f1923]/80 px-5 py-4 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">
-            <Link href="/" className="text-xl font-black tracking-tight text-yellow-400">
-              KeystoneSync
+            <Link href="/" className="flex items-center gap-2 text-xl font-black tracking-tight text-yellow-400">
+              <img src="/app-icon.png" alt="" className="h-8 w-8 rounded-full object-contain" />
+              <span>KeystoneSync</span>
             </Link>
             <nav className="hidden items-center gap-7 text-sm text-gray-300 md:flex">
               <a href="#features" className="transition hover:text-white">Caracteristicas</a>

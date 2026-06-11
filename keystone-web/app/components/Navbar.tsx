@@ -109,7 +109,10 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
 
         <div className="flex items-center gap-8">
-          <span className="text-yellow-400 font-bold text-xl tracking-tight">⚔ KeystoneSync</span>
+          <Link href="/characters" className="flex items-center gap-2 text-yellow-400 font-bold text-xl tracking-tight">
+            <img src="/app-icon.png" alt="" className="h-8 w-8 rounded-full object-contain" />
+            <span>KeystoneSync</span>
+          </Link>
           {navLink('/characters', 'Mis personajes')}
           {navLink('/summary', 'Resumen')}
           {navLink('/teams', 'Equipos')}
