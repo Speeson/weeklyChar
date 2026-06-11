@@ -31,7 +31,7 @@ Name: "startmenuicon"; Description: "Crear acceso directo en el menu Inicio"; Gr
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Accesos directos:"; Flags: unchecked
 
 [Files]
-Source: "..\dist\KeystoneClient.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\KeystoneClient\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: startmenuicon
