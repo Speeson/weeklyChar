@@ -23,6 +23,7 @@ _DEFAULTS = {
     "pending_update_changelog": None,
     "pending_update_version": None,
     "last_changelog_version": None,
+    "last_update_check": None,
 }
 
 def load() -> dict:

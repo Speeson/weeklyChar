@@ -289,6 +289,7 @@ _TR = {
         "update_addon_btn": "Actualizar addon",
         "reinstall_addon_btn": "Reinstalar addon",
         "sel_folder_btn":"Seleccionar carpeta de AddOns",
+        "open_addon_folder_btn": "Abrir carpeta del addon",
         "open_web":      "Acceder a la Web",
         "autostart":     "Arrancar con Windows",
         "start_minimized": "Arrancar minimizado",
@@ -345,8 +346,11 @@ _TR = {
         "addon_up_to_date": "Al día",
         "client_version": "Version del cliente",
         "update_title": "Actualizacion disponible",
-        "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.",
+        "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.\n\nSe descargara el instalador oficial desde GitHub Releases.",
         "update_btn": "Actualizar",
+        "check_update_btn": "Buscar actualizaciones",
+        "last_update_check": "Ultima comprobacion",
+        "never_checked": "Nunca",
         "cancel_btn": "Cancelar",
         "downloading_update": "Descargando actualizacion...",
         "update_download_error": "No se pudo descargar la actualizacion.",
@@ -375,6 +379,7 @@ _TR = {
         "update_addon_btn": "Update addon",
         "reinstall_addon_btn": "Reinstall addon",
         "sel_folder_btn":"Select AddOns folder",
+        "open_addon_folder_btn": "Open addon folder",
         "open_web":      "Open Web",
         "autostart":     "Start with Windows",
         "start_minimized": "Start minimized",
@@ -431,8 +436,11 @@ _TR = {
         "addon_up_to_date": "Up to date",
         "client_version": "Client version",
         "update_title": "Update available",
-        "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.",
+        "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.\n\nThe official installer will be downloaded from GitHub Releases.",
         "update_btn": "Update",
+        "check_update_btn": "Check for updates",
+        "last_update_check": "Last check",
+        "never_checked": "Never",
         "cancel_btn": "Cancel",
         "downloading_update": "Downloading update...",
         "update_download_error": "Could not download the update.",
@@ -565,6 +573,8 @@ class MainWindow:
         self._login_update_status_var = None
         self._settings_update_status_var = None
         self._settings_update_button = None
+        self._settings_update_check_button = None
+        self._settings_last_update_check_var = None
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
@@ -686,6 +696,8 @@ class MainWindow:
         self._settings_update_status_var = None
         self._settings_update_status_label = None
         self._settings_update_button = None
+        self._settings_update_check_button = None
+        self._settings_last_update_check_var = None
         self.addons_var         = None
         self._class_icon_photos = {}
 
@@ -1774,10 +1786,19 @@ class MainWindow:
         msg_y   = entry_y + 28 + 10
 
         sel_btn_w = min(AW - 40, 340)
+        open_btn_w = 190
+        buttons_total_w = sel_btn_w + 10 + open_btn_w
+        buttons_x = ACX - buttons_total_w // 2
         self._cw(cv, ttk.Button(cv, text=self._t("sel_folder_btn"),
                                 style="Gray.TButton",
                                 command=self._browse_addons),
-                 ACX, sel_y, anchor="n", width=sel_btn_w, height=32,
+                 buttons_x, sel_y, anchor="nw", width=sel_btn_w, height=32,
+                 tags="tab_content")
+        self._cw(cv, ttk.Button(cv, text=self._t("open_addon_folder_btn"),
+                                style="Gray.TButton",
+                                command=self._open_addon_folder),
+                 buttons_x + sel_btn_w + 10, sel_y, anchor="nw",
+                 width=open_btn_w, height=32,
                  tags="tab_content")
 
         self.addons_var = tk.StringVar(value=self._addons_folder())
@@ -2080,19 +2101,27 @@ class MainWindow:
                           side="left", padx=(0, 4))
 
         update_row = tk.Frame(wrap, bg=CARD_BG)
-        update_row.pack(fill="x", pady=(0, 10))
+        update_row.pack(fill="x", pady=(0, 6))
         self._settings_update_status_var = tk.StringVar(value=self._client_update_status_text())
         self._settings_update_status_label = tk.Label(
             update_row, textvariable=self._settings_update_status_var,
             bg=CARD_BG, fg=self._client_update_status_color(),
             font=("Segoe UI", 9, "bold"))
         self._settings_update_status_label.pack(side="left", anchor="w")
+        self._settings_update_check_button = ttk.Button(
+            update_row, text=self._t("check_update_btn"), style="Gray.TButton",
+            command=self._check_update_from_settings)
+        self._settings_update_check_button.pack(side="right")
         self._settings_update_button = ttk.Button(
             update_row, text=self._t("update_btn"), style="Gold.TButton",
             command=self._manual_update_from_settings)
-        self._settings_update_button.pack(side="right")
+        self._settings_update_button.pack(side="right", padx=(0, 8))
         if not (self._latest_update_info and self._latest_update_info.get("is_update")):
             self._settings_update_button.configure(state="disabled")
+
+        self._settings_last_update_check_var = tk.StringVar(value=self._last_update_check_text())
+        tk.Label(wrap, textvariable=self._settings_last_update_check_var,
+                 bg=CARD_BG, fg=MUTED, font=("Segoe UI", 8)).pack(anchor="w", pady=(0, 10))
 
         bottom = tk.Frame(wrap, bg=CARD_BG)
         bottom.pack(fill="x", pady=(4, 0))
@@ -2615,6 +2644,22 @@ class MainWindow:
             self.addons_var.set(folder)
             self._refresh_addon_status()
 
+    def _open_addon_folder(self):
+        base = (self.addons_var.get().strip() if self.addons_var else "") or self._addons_folder()
+        if not base:
+            self._set_install_msg(self._t("sel_folder_err"))
+            return
+        addon_dir = os.path.join(base, "KeystoneSync")
+        target = addon_dir if os.path.isdir(addon_dir) else base
+        if os.path.isdir(target):
+            try:
+                os.startfile(target)
+                self._set_install_msg("")
+            except Exception as e:
+                self._set_install_msg(f"Error: {e}")
+        else:
+            self._set_install_msg(self._t("sel_folder_err"))
+
     def _set_install_progress(self, val):
         ib = self._install_btn
         if not (ib and ib.winfo_exists()):
@@ -2700,7 +2745,8 @@ class MainWindow:
 
         self._worker = SyncWorker(self.cfg)
         self._tray   = TrayApp(self.cfg, self._worker,
-                               on_open=self._show_from_tray, on_quit=self._quit)
+                               on_open=self._show_from_tray, on_quit=self._quit,
+                               version=CLIENT_VERSION)
 
         def _on_sync(_chars):
             ts = time.strftime("%H:%M")
@@ -2728,6 +2774,8 @@ class MainWindow:
         info = self._fetch_latest_update_info()
         self._latest_update_info = info
         self._update_check_done = True
+        self.cfg["last_update_check"] = int(time.time())
+        cfg_module.save(self.cfg)
         self.root.after(0, self._refresh_client_update_status_ui)
         if info and info.get("is_update"):
             self.root.after(0, lambda: self._show_update_available_dialog(info))
@@ -2752,12 +2800,25 @@ class MainWindow:
 
             return {
                 "version": match.group(1),
+                "name": release.get("name") or release.get("tag_name") or "",
+                "html_url": release.get("html_url") or "",
                 "download_url": asset["browser_download_url"] if asset else None,
                 "body": release.get("body") or "",
                 "is_update": _is_newer_version(latest, CLIENT_VERSION) and bool(asset),
             }
         except Exception:
             return None
+
+    def _last_update_check_text(self):
+        checked_at = self.cfg.get("last_update_check")
+        if not checked_at:
+            value = self._t("never_checked")
+        else:
+            try:
+                value = time.strftime("%d/%m/%Y %H:%M", time.localtime(int(checked_at)))
+            except Exception:
+                value = self._t("never_checked")
+        return f"{self._t('last_update_check')}: {value}"
 
     def _client_update_status_text(self):
         if not self._update_check_done:
@@ -2810,18 +2871,35 @@ class MainWindow:
                 self._settings_update_button.configure(state=state)
             except Exception:
                 pass
+        if self._settings_update_check_button:
+            try:
+                self._settings_update_check_button.configure(state="normal")
+            except Exception:
+                pass
+        if self._settings_last_update_check_var:
+            self._settings_last_update_check_var.set(self._last_update_check_text())
 
     def _manual_update_from_settings(self):
         if self._latest_update_info and self._latest_update_info.get("is_update"):
             self._show_update_available_dialog(self._latest_update_info)
             return
+        self._check_update_from_settings()
+
+    def _check_update_from_settings(self):
         self._settings_update_status_var.set(self._t("update_checking"))
+        if self._settings_update_check_button:
+            try:
+                self._settings_update_check_button.configure(state="disabled")
+            except Exception:
+                pass
         threading.Thread(target=self._manual_update_check, daemon=True).start()
 
     def _manual_update_check(self):
         info = self._fetch_latest_update_info()
         self._latest_update_info = info
         self._update_check_done = True
+        self.cfg["last_update_check"] = int(time.time())
+        cfg_module.save(self.cfg)
         self.root.after(0, self._refresh_client_update_status_ui)
         if info and info.get("is_update"):
             self.root.after(0, lambda: self._show_update_available_dialog(info))
@@ -2933,27 +3011,51 @@ class MainWindow:
 
     def _show_changelog_dialog(self, version, body):
         dlg = tk.Toplevel(self.root)
-        dlg.title(self._t("changelog_title").format(version=version))
+        dlg.withdraw()
         dlg.configure(bg=BG_DARK)
         dlg.resizable(False, False)
         dlg.transient(self.root)
+        dlg.overrideredirect(True)
         dlg.grab_set()
+        dlg.protocol("WM_DELETE_WINDOW", lambda: (dlg.grab_release(), dlg.destroy()))
 
-        wrap = tk.Frame(dlg, bg=CARD_BG, padx=18, pady=16,
+        wrap = tk.Frame(dlg, bg=CARD_BG, padx=0, pady=0,
                         highlightbackground=CARD_BDR, highlightthickness=1)
         wrap.pack(fill="both", expand=True)
 
-        tk.Label(wrap, text=self._t("changelog_title").format(version=version),
-                 bg=CARD_BG, fg=ACCENT, font=("Segoe UI", 15, "bold")).pack(anchor="w")
+        head = tk.Frame(wrap, bg=BANNER_BG, height=44)
+        head.pack(fill="x")
+        head.pack_propagate(False)
+        tk.Label(head, text=self._t("changelog_title").format(version=version),
+                 bg=BANNER_BG, fg=ACCENT, font=("Segoe UI", 14, "bold")).pack(
+                     side="left", padx=16)
+        tk.Button(head, text="×", bg=BANNER_BG, fg=MUTED,
+                  activebackground=BANNER_BG, activeforeground=TEXT,
+                  relief="flat", bd=0, font=("Segoe UI", 14, "bold"),
+                  cursor="hand2",
+                  command=lambda: (dlg.grab_release(), dlg.destroy())).pack(
+                      side="right", padx=12)
 
-        text = tk.Text(wrap, width=62, height=14, bg="#111827", fg=TEXT,
+        content = tk.Frame(wrap, bg=CARD_BG, padx=18, pady=16)
+        content.pack(fill="both", expand=True)
+
+        tk.Label(content, text=f"KeystoneClient v{version}",
+                 bg=CARD_BG, fg=TEXT, font=("Segoe UI", 11, "bold")).pack(anchor="w")
+
+        text_wrap = tk.Frame(content, bg="#111827",
+                             highlightbackground=CARD_BDR, highlightthickness=1)
+        text_wrap.pack(fill="both", expand=True, pady=(12, 12))
+        text = tk.Text(text_wrap, width=66, height=16, bg="#111827", fg=TEXT,
                        insertbackground=ACCENT, relief="flat", bd=0,
-                       font=("Segoe UI", 9), wrap="word")
-        text.pack(fill="both", expand=True, pady=(12, 12))
-        text.insert("1.0", body)
+                       font=("Segoe UI", 9), wrap="word", padx=12, pady=10)
+        scroll = ttk.Scrollbar(text_wrap, orient="vertical", command=text.yview)
+        text.configure(yscrollcommand=scroll.set)
+        text.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+        text.insert("1.0", self._format_changelog_body(body))
         text.configure(state="disabled")
 
-        ttk.Button(wrap, text=self._t("ok_btn"), style="Gold.TButton",
+        ttk.Button(content, text=self._t("ok_btn"), style="Gold.TButton",
                    command=lambda: (dlg.grab_release(), dlg.destroy())).pack(anchor="e")
 
         dlg.update_idletasks()
@@ -2961,8 +3063,16 @@ class MainWindow:
         pw, ph = self.root.winfo_width(), self.root.winfo_height()
         dw, dh = dlg.winfo_width(), dlg.winfo_height()
         dlg.geometry(f"{dw}x{dh}+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
+        dlg.deiconify()
         dlg.lift()
         dlg.focus_force()
+
+    def _format_changelog_body(self, body):
+        text = (body or self._t("changelog_empty")).strip()
+        text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+        text = text.replace("**", "")
+        text = text.replace("`", "")
+        return text or self._t("changelog_empty")
 
     def _quit(self):
         if self._worker:

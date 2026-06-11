@@ -21,16 +21,18 @@ def _load_icon() -> Image.Image:
 
 
 class TrayApp:
-    def __init__(self, config: dict, worker, on_open=None, on_quit=None):
+    def __init__(self, config: dict, worker, on_open=None, on_quit=None, version=None):
         self.config   = config
         self.worker   = worker
         self._on_open = on_open
         self._on_quit = on_quit
+        self._version = version
         self._status  = "Esperando cambios..."
+        title = f"KeystoneClient v{version}" if version else "KeystoneClient"
         self._icon    = pystray.Icon(
             "KeystoneClient",
             _load_icon(),
-            "KeystoneClient",
+            title,
             menu=self._build_menu(),
         )
 
