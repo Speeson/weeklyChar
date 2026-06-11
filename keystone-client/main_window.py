@@ -353,6 +353,11 @@ _TR = {
         "update_launch_error": "No se pudo iniciar el instalador.",
         "changelog_title": "Cambios de la version {version}",
         "changelog_empty": "No hay changelog disponible para esta version.",
+        "update_checking": "Comprobando actualizaciones...",
+        "update_current": "Actualizado a la ultima version",
+        "update_latest_available": "Ultima version disponible {version}",
+        "update_current_short": "Actualizado",
+        "login_info": "Sincroniza tus personajes de World of Warcraft, instala el addon y consulta tus llaves desde el cliente o la web.",
     },
     "en": {
         "tab_sync":      "Sync",
@@ -434,6 +439,11 @@ _TR = {
         "update_launch_error": "Could not start the installer.",
         "changelog_title": "Changes in version {version}",
         "changelog_empty": "No changelog is available for this version.",
+        "update_checking": "Checking for updates...",
+        "update_current": "Up to date",
+        "update_latest_available": "Latest version available {version}",
+        "update_current_short": "Updated",
+        "login_info": "Sync your World of Warcraft characters, install the addon, and check your keystones from the client or web.",
     },
 }
 
@@ -550,6 +560,11 @@ class MainWindow:
         self._drag_offset = None
         self._map_bind_id = None
         self._taskbar_refreshing = False
+        self._latest_update_info = None
+        self._update_check_done = False
+        self._login_update_status_var = None
+        self._settings_update_status_var = None
+        self._settings_update_button = None
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
@@ -665,6 +680,12 @@ class MainWindow:
         self._install_btn_w     = 0
         self._install_msg_id    = None
         self._addon_status_ids  = {}
+        self._login_update_status_var = None
+        self._login_update_status_label = None
+        self._login_banner_update_id = None
+        self._settings_update_status_var = None
+        self._settings_update_status_label = None
+        self._settings_update_button = None
         self.addons_var         = None
         self._class_icon_photos = {}
 
@@ -834,46 +855,115 @@ class MainWindow:
     # =========================================================================
 
     def _show_login_view(self):
-        self.root.overrideredirect(False)
+        self.root.overrideredirect(True)
         self._clear()
         W, H = self._W, self._H
         self.root.geometry(f"{W}x{H}")
-        # Full-window dark background
-        bg_frame = tk.Frame(self.root, bg=BG_DARK)
-        bg_frame.place(x=0, y=0, width=W, height=H)
-        # Centered 420-px login card
-        outer = tk.Frame(bg_frame, bg=BG_DARK)
-        outer.place(relx=0.5, rely=0.5, anchor="center", width=420)
+        self.root.after(100, lambda: self._ensure_taskbar_icon(True))
 
-        tk.Label(outer, text="KeystoneClient", bg=BG_DARK, fg=ACCENT,
-                 font=("Segoe UI", 24, "bold")).pack(anchor="w")
-        tk.Label(outer, text=self._t("login_sub"), bg=BG_DARK, fg=MUTED,
-                 font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 24))
+        content_H = H - BH
+        if self._bg_pil_orig:
+            try:
+                from PIL import Image
+                self._bg_pil_content = self._bg_pil_orig.resize(
+                    (W, content_H), Image.LANCZOS)
+            except Exception:
+                self._bg_pil_content = None
 
-        tk.Label(outer, text=self._t("usr_lbl"), bg=BG_DARK, fg=TEXT,
-                 font=("Segoe UI", 11)).pack(anchor="w")
+        cv = tk.Canvas(self.root, bd=0, highlightthickness=0, bg=BG_DARK)
+        cv.place(x=0, y=0, width=W, height=H)
+        self._cv = cv
+
+        if self._bg_pil_content:
+            try:
+                from PIL import ImageTk
+                _ph = ImageTk.PhotoImage(self._bg_pil_content)
+                self._photos.append(_ph)
+                cv.create_image(0, BH, anchor="nw", image=_ph)
+            except Exception:
+                pass
+
+        cv.create_rectangle(0, 0, W, BH, fill=BANNER_BG, outline="")
+        cv.create_line(0, BH, W, BH, fill=CARD_BDR)
+        try:
+            from PIL import Image, ImageTk
+            _ico = Image.open(os.path.join(self._base, "icon.ico")).resize((26, 26), Image.LANCZOS)
+            self._banner_icon = ImageTk.PhotoImage(_ico)
+            self._cw(cv, tk.Label(cv, image=self._banner_icon, bg=BANNER_BG, bd=0),
+                     12, BH // 2, anchor="w")
+        except Exception:
+            pass
+        cv.create_text(46, BH // 2, text="KeystoneClient",
+                       fill=ACCENT, font=("Segoe UI", 15, "bold"), anchor="w")
+        self._login_banner_update_id = cv.create_text(
+            W - 104, BH // 2,
+            text=self._client_update_banner_text(),
+            fill=self._client_update_status_color(),
+            font=("Segoe UI", 9, "bold"),
+            anchor="e")
+        self._header_controls_left = W - 92
+        self._draw_window_control(cv, W - 62, BH // 2, "—", self._minimize_window, "min")
+        self._draw_window_control(cv, W - 24, BH // 2, "×", self._quit, "close")
+        cv.bind("<ButtonPress-1>", self._start_window_drag, add="+")
+        cv.bind("<B1-Motion>", self._drag_window, add="+")
+        cv.bind("<ButtonRelease-1>", self._end_window_drag, add="+")
+
+        card_w, card_h = 500, 360
+        card_x = (W - card_w) // 2
+        card_y = BH + max(26, (content_H - card_h) // 2)
+        login_card_bg = "#101a27"
+        self._overlay(cv, card_x, card_y, card_w, card_h, login_card_bg, 0.64)
+        cv.create_rectangle(card_x, card_y, card_x + card_w, card_y + 4,
+                            fill=ACCENT, outline="")
+        cv.create_rectangle(card_x, card_y, card_x + card_w, card_y + card_h,
+                            outline=CARD_BDR, width=1)
+        cv.create_rectangle(card_x + 1, card_y + 1, card_x + card_w - 1, card_y + card_h - 1,
+                            outline="#0b1220", width=1)
+
+        inner_x = card_x + 34
+        inner_w = card_w - 68
+        cv.create_text(inner_x, card_y + 58, text="KeystoneClient",
+                       fill=ACCENT, font=("Segoe UI", 25, "bold"), anchor="w")
+        cv.create_text(inner_x, card_y + 94, text=self._t("login_sub"),
+                       fill=MUTED, font=("Segoe UI", 10, "bold"), anchor="w")
+        try:
+            from PIL import Image, ImageTk
+            _ico = Image.open(os.path.join(self._base, "icon.ico")).resize((64, 64), Image.LANCZOS)
+            _ico = _ico.convert("RGBA")
+            _mask = Image.new("L", _ico.size, 0)
+            from PIL import ImageDraw
+            ImageDraw.Draw(_mask).ellipse((0, 0, _ico.size[0] - 1, _ico.size[1] - 1), fill=255)
+            _ico.putalpha(_mask)
+            self._login_icon = ImageTk.PhotoImage(_ico)
+            self._photos.append(self._login_icon)
+            cv.create_image(card_x + card_w - 64, card_y + 68, image=self._login_icon, anchor="center")
+        except Exception:
+            pass
+
+        cv.create_text(inner_x, card_y + 145, text=self._t("usr_lbl"),
+                       fill=ACCENT, font=("Segoe UI", 11, "bold"), anchor="w")
         self.username_var = tk.StringVar()
-        u_border, u_entry = self._make_entry(outer, self.username_var)
-        u_border.pack(fill="x", pady=(4, 14))
+        u_border, u_entry = self._make_entry(cv, self.username_var)
+        self._cw(cv, u_border, inner_x, card_y + 158, width=inner_w, height=46)
         u_entry.focus()
 
-        tk.Label(outer, text=self._t("pwd_lbl"), bg=BG_DARK, fg=TEXT,
-                 font=("Segoe UI", 11)).pack(anchor="w")
+        cv.create_text(inner_x, card_y + 236, text=self._t("pwd_lbl"),
+                       fill=ACCENT, font=("Segoe UI", 11, "bold"), anchor="w")
         self.password_var = tk.StringVar()
-        p_border, _ = self._make_entry(outer, self.password_var, show="*")
-        p_border.pack(fill="x", pady=(4, 6))
+        p_border, _ = self._make_entry(cv, self.password_var, show="*")
+        self._cw(cv, p_border, inner_x, card_y + 249, width=inner_w, height=46)
 
         self.login_error = tk.StringVar()
-        tk.Label(outer, textvariable=self.login_error, bg=BG_DARK, fg=RED_COL,
-                 font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+        self._login_error_text_id = None
+        self._login_error_xy = (inner_x, card_y + 304)
 
-        bf = tk.Frame(outer, bg=BG_DARK)
-        bf.pack(fill="x")
-        ttk.Button(bf, text=self._t("login_btn"), style="Gold.TButton",
-                   command=self._login).pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ttk.Button(bf, text=self._t("register_btn"), style="Gray.TButton",
-                   command=lambda: webbrowser.open(REGISTER_URL)).pack(
-                       side="left", fill="x", expand=True)
+        btn_w = (inner_w - 10) // 2
+        login_btn = ttk.Button(cv, text=self._t("login_btn"), style="Gold.TButton",
+                               command=self._login)
+        register_btn = ttk.Button(cv, text=self._t("register_btn"), style="Gray.TButton",
+                                  command=lambda: webbrowser.open(REGISTER_URL))
+        self._cw(cv, login_btn, inner_x, card_y + 312, width=btn_w, height=34)
+        self._cw(cv, register_btn, inner_x + btn_w + 10, card_y + 312, width=btn_w, height=34)
 
         self.root.bind("<Return>", lambda _: self._login())
 
@@ -881,15 +971,15 @@ class MainWindow:
         username = self.username_var.get().strip()
         password = self.password_var.get()
         if not username or not password:
-            self.login_error.set(self._t("err_fields"))
+            self._set_login_error(self._t("err_fields"))
             return
-        self.login_error.set(self._t("connecting"))
+        self._set_login_error(self._t("connecting"), MUTED)
         self.root.update()
         try:
             r = requests.post(f"{self.cfg['api_url']}/api/auth/login",
                               json={"username": username, "password": password}, timeout=10)
             if not r.ok:
-                self.login_error.set(r.json().get("detail", "Error de login."))
+                self._set_login_error(r.json().get("detail", "Error de login."))
                 return
             token = r.json()["accessToken"]
             me = requests.get(f"{self.cfg['api_url']}/api/me",
@@ -904,9 +994,23 @@ class MainWindow:
             self.root.unbind("<Return>")
             self._show_wow_setup_or_main()
         except requests.exceptions.ConnectionError:
-            self.login_error.set(self._t("conn_err"))
+            self._set_login_error(self._t("conn_err"))
         except Exception as e:
-            self.login_error.set(f"Error: {e}")
+            self._set_login_error(f"Error: {e}")
+
+    def _set_login_error(self, message, color=RED_COL):
+        self.login_error.set(message)
+        if not self._cv:
+            return
+        if self._login_error_text_id:
+            try:
+                self._cv.itemconfigure(self._login_error_text_id, text=message, fill=color)
+                return
+            except Exception:
+                self._login_error_text_id = None
+        x, y = self._login_error_xy
+        self._login_error_text_id = self._cv.create_text(
+            x, y, text=message, fill=color, font=("Segoe UI", 9), anchor="w")
 
     # =========================================================================
     # MAIN VIEW
@@ -1975,8 +2079,20 @@ class MainWindow:
                       command=lambda c=code: self._set_lang(c)).pack(
                           side="left", padx=(0, 4))
 
-        tk.Label(wrap, text=f"{self._t('client_version')}: {CLIENT_VERSION}",
-                 bg=CARD_BG, fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+        update_row = tk.Frame(wrap, bg=CARD_BG)
+        update_row.pack(fill="x", pady=(0, 10))
+        self._settings_update_status_var = tk.StringVar(value=self._client_update_status_text())
+        self._settings_update_status_label = tk.Label(
+            update_row, textvariable=self._settings_update_status_var,
+            bg=CARD_BG, fg=self._client_update_status_color(),
+            font=("Segoe UI", 9, "bold"))
+        self._settings_update_status_label.pack(side="left", anchor="w")
+        self._settings_update_button = ttk.Button(
+            update_row, text=self._t("update_btn"), style="Gold.TButton",
+            command=self._manual_update_from_settings)
+        self._settings_update_button.pack(side="right")
+        if not (self._latest_update_info and self._latest_update_info.get("is_update")):
+            self._settings_update_button.configure(state="disabled")
 
         bottom = tk.Frame(wrap, bg=CARD_BG)
         bottom.pack(fill="x", pady=(4, 0))
@@ -2609,31 +2725,106 @@ class MainWindow:
         threading.Thread(target=self._check_for_client_updates, daemon=True).start()
 
     def _check_for_client_updates(self):
+        info = self._fetch_latest_update_info()
+        self._latest_update_info = info
+        self._update_check_done = True
+        self.root.after(0, self._refresh_client_update_status_ui)
+        if info and info.get("is_update"):
+            self.root.after(0, lambda: self._show_update_available_dialog(info))
+
+    def _fetch_latest_update_info(self):
         try:
             r = requests.get(UPDATE_API_URL, timeout=8)
             if not r.ok:
-                return
+                return None
             release = r.json()
             latest = release.get("tag_name") or release.get("name") or ""
-            if not _is_newer_version(latest, CLIENT_VERSION):
-                return
 
             asset = None
             for item in release.get("assets", []):
                 if item.get("name") == UPDATE_ASSET_NAME and item.get("browser_download_url"):
                     asset = item
                     break
-            if not asset:
-                return
 
-            info = {
-                "version": re.search(r"(\d+(?:\.\d+){0,3})", latest).group(1),
-                "download_url": asset["browser_download_url"],
+            match = re.search(r"(\d+(?:\.\d+){0,3})", latest)
+            if not match:
+                return None
+
+            return {
+                "version": match.group(1),
+                "download_url": asset["browser_download_url"] if asset else None,
                 "body": release.get("body") or "",
+                "is_update": _is_newer_version(latest, CLIENT_VERSION) and bool(asset),
             }
-            self.root.after(0, lambda: self._show_update_available_dialog(info))
         except Exception:
+            return None
+
+    def _client_update_status_text(self):
+        if not self._update_check_done:
+            return f"{self._t('client_version')}: {CLIENT_VERSION} · {self._t('update_checking')}"
+        if self._latest_update_info and self._latest_update_info.get("is_update"):
+            return f"{self._t('client_version')}: {CLIENT_VERSION} · {self._t('update_latest_available').format(version=self._latest_update_info['version'])}"
+        return f"{self._t('client_version')}: {CLIENT_VERSION} · {self._t('update_current')}"
+
+    def _client_update_banner_text(self):
+        if not self._update_check_done:
+            return f"v{CLIENT_VERSION}"
+        if self._latest_update_info and self._latest_update_info.get("is_update"):
+            return f"v{CLIENT_VERSION} ({self._t('update_latest_available').format(version=self._latest_update_info['version'])})"
+        return f"v{CLIENT_VERSION} ({self._t('update_current_short')})"
+
+    def _client_update_status_color(self):
+        if self._latest_update_info and self._latest_update_info.get("is_update"):
+            return RED_COL
+        if self._update_check_done:
+            return GREEN
+        return MUTED
+
+    def _refresh_client_update_status_ui(self):
+        text = self._client_update_status_text()
+        color = self._client_update_status_color()
+        if self._login_update_status_var:
+            self._login_update_status_var.set(text)
+            try:
+                self._login_update_status_label.configure(fg=color)
+            except Exception:
+                pass
+        if self._login_banner_update_id and self._cv:
+            try:
+                self._cv.itemconfigure(
+                    self._login_banner_update_id,
+                    text=self._client_update_banner_text(),
+                    fill=color,
+                )
+            except Exception:
+                pass
+        if self._settings_update_status_var:
+            self._settings_update_status_var.set(text)
+            try:
+                self._settings_update_status_label.configure(fg=color)
+            except Exception:
+                pass
+        if self._settings_update_button:
+            state = "normal" if self._latest_update_info and self._latest_update_info.get("is_update") else "disabled"
+            try:
+                self._settings_update_button.configure(state=state)
+            except Exception:
+                pass
+
+    def _manual_update_from_settings(self):
+        if self._latest_update_info and self._latest_update_info.get("is_update"):
+            self._show_update_available_dialog(self._latest_update_info)
             return
+        self._settings_update_status_var.set(self._t("update_checking"))
+        threading.Thread(target=self._manual_update_check, daemon=True).start()
+
+    def _manual_update_check(self):
+        info = self._fetch_latest_update_info()
+        self._latest_update_info = info
+        self._update_check_done = True
+        self.root.after(0, self._refresh_client_update_status_ui)
+        if info and info.get("is_update"):
+            self.root.after(0, lambda: self._show_update_available_dialog(info))
 
     def _show_update_available_dialog(self, info):
         if getattr(self, "_update_dialog_visible", False):
