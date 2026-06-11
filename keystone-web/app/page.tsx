@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { API_URL, hydrateProfile, setToken, setUsername as saveUsername } from '@/lib/auth'
-
-const downloadUrl = 'https://github.com/Speeson/weeklyChar/releases/latest/download/KeystoneClientSetup.exe'
+import { CLIENT_DOWNLOAD_URL } from '@/lib/downloads'
 
 const features = [
   ['Piedra actual', 'Nivel, mazmorra y abreviatura sincronizados por personaje.'],
@@ -192,7 +191,7 @@ export default function LandingPage() {
             </nav>
             <div ref={authRef} className="flex items-center gap-3">
               <a
-                href={downloadUrl}
+                href={CLIENT_DOWNLOAD_URL}
                 className="hidden rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 transition hover:border-yellow-400/60 hover:bg-yellow-400/15 hover:text-yellow-200 sm:inline-flex"
               >
                 Descargar
@@ -234,7 +233,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-9 flex flex-wrap gap-4">
               <a
-                href={downloadUrl}
+                href={CLIENT_DOWNLOAD_URL}
                 className="rounded-xl bg-yellow-500 px-6 py-3 text-sm font-black text-gray-950 shadow-2xl shadow-yellow-500/20 transition hover:-translate-y-0.5 hover:bg-yellow-400"
               >
                 Descargar para Windows
@@ -304,7 +303,7 @@ export default function LandingPage() {
               </p>
             </div>
             <a
-              href={downloadUrl}
+              href={CLIENT_DOWNLOAD_URL}
               className="shrink-0 rounded-xl bg-yellow-500 px-7 py-4 text-sm font-black text-gray-950 shadow-2xl shadow-yellow-500/20 transition hover:bg-yellow-400"
             >
               Descargar instalador

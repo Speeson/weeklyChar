@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { apiFetch, clearToken, getToken, getUsername, hydrateProfile, getAvatarUrl, setAvatarUrl } from '@/lib/auth'
+import { CLIENT_DOWNLOAD_URL } from '@/lib/downloads'
 
 interface Character {
   id: number
@@ -114,8 +115,16 @@ export default function Navbar() {
           {navLink('/teams', 'Equipos')}
         </div>
 
-        {/* Profile dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="flex items-center gap-3">
+          <a
+            href={CLIENT_DOWNLOAD_URL}
+            className="hidden rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-1.5 text-sm font-semibold text-yellow-300 transition hover:border-yellow-400/60 hover:bg-yellow-400/15 hover:text-yellow-200 md:inline-flex"
+          >
+            Descargar cliente
+          </a>
+
+          {/* Profile dropdown */}
+          <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => handleOpen(!open)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800 transition"
@@ -229,6 +238,7 @@ export default function Navbar() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </nav>
