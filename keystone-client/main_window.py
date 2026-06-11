@@ -2,7 +2,10 @@ import hashlib
 import ctypes
 import io
 import os
+import re
+import subprocess
 import sys
+import tempfile
 import time
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -19,6 +22,8 @@ import wow_path
 
 REGISTER_URL = "https://keystonesync.esgarpe.dev/login"
 WEB_URL      = "https://keystonesync.esgarpe.dev"
+UPDATE_API_URL = "https://api.github.com/repos/Speeson/weeklyChar/releases/latest"
+UPDATE_ASSET_NAME = "KeystoneClientSetup.exe"
 AUTOSTART_KEY  = r"Software\Microsoft\Windows\CurrentVersion\Run"
 AUTOSTART_NAME = "KeystoneClient"
 
@@ -38,6 +43,38 @@ BH = 58   # banner height (tabs live here)
 FH = 58   # footer height
 TH = 32   # card title strip height
 P  = 14   # outer padding
+
+
+def _resource_path(name):
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, name)
+
+
+def _read_client_version():
+    try:
+        with open(_resource_path("VERSION"), encoding="utf-8") as f:
+            return f.read().strip() or "0.0.0"
+    except Exception:
+        return "0.0.0"
+
+
+CLIENT_VERSION = _read_client_version()
+
+
+def _version_tuple(value):
+    match = re.search(r"(\d+(?:\.\d+){0,3})", str(value or ""))
+    if not match:
+        return (0,)
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _is_newer_version(latest, current):
+    latest_parts = _version_tuple(latest)
+    current_parts = _version_tuple(current)
+    size = max(len(latest_parts), len(current_parts))
+    latest_parts += (0,) * (size - len(latest_parts))
+    current_parts += (0,) * (size - len(current_parts))
+    return latest_parts > current_parts
 
 # (full_name) → (display_name, abbreviation)
 _DUNGEON_ABBR = {
@@ -306,6 +343,16 @@ _TR = {
         "addon_bundled": "Incluido",
         "addon_update_available": "Actualización disponible",
         "addon_up_to_date": "Al día",
+        "client_version": "Version del cliente",
+        "update_title": "Actualizacion disponible",
+        "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.",
+        "update_btn": "Actualizar",
+        "cancel_btn": "Cancelar",
+        "downloading_update": "Descargando actualizacion...",
+        "update_download_error": "No se pudo descargar la actualizacion.",
+        "update_launch_error": "No se pudo iniciar el instalador.",
+        "changelog_title": "Cambios de la version {version}",
+        "changelog_empty": "No hay changelog disponible para esta version.",
     },
     "en": {
         "tab_sync":      "Sync",
@@ -377,6 +424,16 @@ _TR = {
         "addon_bundled": "Bundled",
         "addon_update_available": "Update available",
         "addon_up_to_date": "Up to date",
+        "client_version": "Client version",
+        "update_title": "Update available",
+        "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.",
+        "update_btn": "Update",
+        "cancel_btn": "Cancel",
+        "downloading_update": "Downloading update...",
+        "update_download_error": "Could not download the update.",
+        "update_launch_error": "Could not start the installer.",
+        "changelog_title": "Changes in version {version}",
+        "changelog_empty": "No changelog is available for this version.",
     },
 }
 
@@ -530,6 +587,8 @@ class MainWindow:
             self._show_login_view()
 
         self.root.eval("tk::PlaceWindow . center")
+        self.root.after(1200, self._show_pending_update_changelog)
+        self.root.after(2500, self._check_for_client_updates_async)
 
     def _calc_window_size(self):
         if self._bg_pil_orig:
@@ -1916,6 +1975,9 @@ class MainWindow:
                       command=lambda c=code: self._set_lang(c)).pack(
                           side="left", padx=(0, 4))
 
+        tk.Label(wrap, text=f"{self._t('client_version')}: {CLIENT_VERSION}",
+                 bg=CARD_BG, fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+
         bottom = tk.Frame(wrap, bg=CARD_BG)
         bottom.pack(fill="x", pady=(4, 0))
         ttk.Button(bottom, text=self._t("close_btn"), style="Gray.TButton",
@@ -2540,6 +2602,176 @@ class MainWindow:
         self.root.after(0, self.root.deiconify)
         self.root.after(0, self.root.lift)
         self.root.after(0, self.root.focus_force)
+
+    # ── Client updates ────────────────────────────────────────────────────────
+
+    def _check_for_client_updates_async(self):
+        threading.Thread(target=self._check_for_client_updates, daemon=True).start()
+
+    def _check_for_client_updates(self):
+        try:
+            r = requests.get(UPDATE_API_URL, timeout=8)
+            if not r.ok:
+                return
+            release = r.json()
+            latest = release.get("tag_name") or release.get("name") or ""
+            if not _is_newer_version(latest, CLIENT_VERSION):
+                return
+
+            asset = None
+            for item in release.get("assets", []):
+                if item.get("name") == UPDATE_ASSET_NAME and item.get("browser_download_url"):
+                    asset = item
+                    break
+            if not asset:
+                return
+
+            info = {
+                "version": re.search(r"(\d+(?:\.\d+){0,3})", latest).group(1),
+                "download_url": asset["browser_download_url"],
+                "body": release.get("body") or "",
+            }
+            self.root.after(0, lambda: self._show_update_available_dialog(info))
+        except Exception:
+            return
+
+    def _show_update_available_dialog(self, info):
+        if getattr(self, "_update_dialog_visible", False):
+            return
+        self._update_dialog_visible = True
+
+        dlg = tk.Toplevel(self.root)
+        dlg.title(self._t("update_title"))
+        dlg.configure(bg=BG_DARK)
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.protocol("WM_DELETE_WINDOW", lambda: self._close_update_dialog(dlg))
+
+        wrap = tk.Frame(dlg, bg=CARD_BG, padx=22, pady=20,
+                        highlightbackground=CARD_BDR, highlightthickness=1)
+        wrap.pack(fill="both", expand=True)
+
+        tk.Label(wrap, text=self._t("update_title"), bg=CARD_BG, fg=ACCENT,
+                 font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        msg = self._t("update_msg").format(current=CLIENT_VERSION, latest=info["version"])
+        tk.Label(wrap, text=msg, bg=CARD_BG, fg=TEXT, justify="left",
+                 font=("Segoe UI", 10), wraplength=390).pack(anchor="w", pady=(10, 14))
+
+        status_var = tk.StringVar(value="")
+        tk.Label(wrap, textvariable=status_var, bg=CARD_BG, fg=MUTED,
+                 font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+
+        btns = tk.Frame(wrap, bg=CARD_BG)
+        btns.pack(fill="x")
+        cancel_btn = ttk.Button(
+            btns, text=self._t("cancel_btn"), style="Gray.TButton",
+            command=lambda: self._close_update_dialog(dlg))
+        cancel_btn.pack(side="right")
+        update_btn = ttk.Button(
+            btns, text=self._t("update_btn"), style="Gold.TButton",
+            command=lambda: self._start_update_download(info, dlg, status_var, update_btn, cancel_btn))
+        update_btn.pack(side="right", padx=(0, 8))
+
+        dlg.update_idletasks()
+        px, py = self.root.winfo_x(), self.root.winfo_y()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        dw, dh = dlg.winfo_width(), dlg.winfo_height()
+        dlg.geometry(f"{dw}x{dh}+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
+        dlg.lift()
+        dlg.focus_force()
+
+    def _close_update_dialog(self, dlg):
+        self._update_dialog_visible = False
+        try:
+            dlg.grab_release()
+            dlg.destroy()
+        except Exception:
+            pass
+
+    def _start_update_download(self, info, dlg, status_var, update_btn, cancel_btn):
+        update_btn.configure(state="disabled")
+        cancel_btn.configure(state="disabled")
+        status_var.set(self._t("downloading_update"))
+        threading.Thread(
+            target=self._download_and_launch_update,
+            args=(info, dlg, status_var),
+            daemon=True,
+        ).start()
+
+    def _download_and_launch_update(self, info, dlg, status_var):
+        installer_path = os.path.join(
+            tempfile.gettempdir(),
+            f"KeystoneClientSetup-{info['version']}.exe",
+        )
+        try:
+            with requests.get(info["download_url"], stream=True, timeout=30) as r:
+                r.raise_for_status()
+                with open(installer_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=1024 * 256):
+                        if chunk:
+                            f.write(chunk)
+        except Exception:
+            self.root.after(0, lambda: status_var.set(self._t("update_download_error")))
+            return
+
+        try:
+            self.cfg["pending_update_version"] = info["version"]
+            self.cfg["pending_update_changelog"] = info.get("body") or ""
+            cfg_module.save(self.cfg)
+            subprocess.Popen([installer_path], close_fds=True)
+            self.root.after(250, self._quit)
+        except Exception:
+            self.root.after(0, lambda: status_var.set(self._t("update_launch_error")))
+            return
+
+    def _show_pending_update_changelog(self):
+        version = self.cfg.get("pending_update_version")
+        body = self.cfg.get("pending_update_changelog")
+        if not version or self.cfg.get("last_changelog_version") == version:
+            return
+        if not _is_newer_version(CLIENT_VERSION, version) and _version_tuple(CLIENT_VERSION) != _version_tuple(version):
+            return
+
+        self.cfg["last_changelog_version"] = version
+        self.cfg["pending_update_version"] = None
+        self.cfg["pending_update_changelog"] = None
+        cfg_module.save(self.cfg)
+
+        self._show_changelog_dialog(version, body or self._t("changelog_empty"))
+
+    def _show_changelog_dialog(self, version, body):
+        dlg = tk.Toplevel(self.root)
+        dlg.title(self._t("changelog_title").format(version=version))
+        dlg.configure(bg=BG_DARK)
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.grab_set()
+
+        wrap = tk.Frame(dlg, bg=CARD_BG, padx=18, pady=16,
+                        highlightbackground=CARD_BDR, highlightthickness=1)
+        wrap.pack(fill="both", expand=True)
+
+        tk.Label(wrap, text=self._t("changelog_title").format(version=version),
+                 bg=CARD_BG, fg=ACCENT, font=("Segoe UI", 15, "bold")).pack(anchor="w")
+
+        text = tk.Text(wrap, width=62, height=14, bg="#111827", fg=TEXT,
+                       insertbackground=ACCENT, relief="flat", bd=0,
+                       font=("Segoe UI", 9), wrap="word")
+        text.pack(fill="both", expand=True, pady=(12, 12))
+        text.insert("1.0", body)
+        text.configure(state="disabled")
+
+        ttk.Button(wrap, text=self._t("ok_btn"), style="Gold.TButton",
+                   command=lambda: (dlg.grab_release(), dlg.destroy())).pack(anchor="e")
+
+        dlg.update_idletasks()
+        px, py = self.root.winfo_x(), self.root.winfo_y()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        dw, dh = dlg.winfo_width(), dlg.winfo_height()
+        dlg.geometry(f"{dw}x{dh}+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
+        dlg.lift()
+        dlg.focus_force()
 
     def _quit(self):
         if self._worker:

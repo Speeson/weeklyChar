@@ -20,6 +20,9 @@ _DEFAULTS = {
     "login_at": None,
     "lang": "es",
     "cached_characters": [],
+    "pending_update_changelog": None,
+    "pending_update_version": None,
+    "last_changelog_version": None,
 }
 
 def load() -> dict:

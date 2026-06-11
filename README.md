@@ -139,18 +139,45 @@ Los íconos de clase se descargan de `https://wow.zamimg.com/images/wow/icons/me
 
 #### Build
 
-```bash
+```bat
 cd keystone-client
-python -m PyInstaller --noconfirm --onefile --windowed \
-  --icon=icon.ico \
-  --add-data "icon.ico;." \
-  --add-data "bg.jpg;." \
-  --name KeystoneClient \
-  main.py
-
-# Copiar el exe a la carpeta raíz del componente
-copy dist\KeystoneClient.exe KeystoneClient.exe
+build.bat
 ```
+
+Genera el ejecutable portable en `keystone-client\dist\KeystoneClient.exe`.
+
+#### Instalador Windows
+
+El instalador se genera con Inno Setup. Permite elegir ruta de instalacion, crear acceso directo en el menu Inicio y, opcionalmente, crear acceso directo en el escritorio.
+
+Ruta por defecto:
+
+```text
+%ProgramFiles%\KeystoneSync
+```
+
+El instalador solicita permisos de administrador para poder instalar en Archivos de programa o en cualquier carpeta protegida del sistema.
+
+La configuracion de usuario se mantiene fuera de la carpeta de instalacion:
+
+```text
+%APPDATA%\KeystoneClient
+```
+
+Para generar el instalador:
+
+```bat
+cd keystone-client
+build_installer.bat
+```
+
+Salida:
+
+```text
+keystone-client\installer\output\KeystoneClientSetup.exe
+```
+
+Requisito local: Inno Setup instalado y `iscc.exe` disponible en el `PATH`.
 
 #### Archivos principales
 
