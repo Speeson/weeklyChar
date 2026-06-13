@@ -91,7 +91,7 @@ export default function LandingPage() {
         </p>
       </div>
 
-      <AuthForm mode={authMode} />
+      <AuthForm mode={authMode} showLabels />
     </div>
   ) : null
 
