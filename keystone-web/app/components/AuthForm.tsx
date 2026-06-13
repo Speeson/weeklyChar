@@ -149,7 +149,6 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
           </div>
           <div>
             <FieldLabel>Fecha de nacimiento</FieldLabel>
-            {!showLabels && <p className="-mt-1 mb-2 text-[11px] text-gray-500">Selecciona dia, mes y año</p>}
             <div className="grid grid-cols-3 gap-2">
               <select value={birthDay} onChange={e => setBirthDay(e.target.value)} required className={selectClass}>
                 <option value="">Dia</option>
