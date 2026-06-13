@@ -2178,7 +2178,7 @@ class MainWindow:
             dlg.attributes("-topmost", True)
             dlg.lift()
             dlg.focus_force()
-            dlg.after(250, lambda d=dlg: d.winfo_exists() and d.attributes("-topmost", False))
+            self._keep_modal_above(dlg)
         except Exception:
             pass
 
@@ -2215,7 +2215,19 @@ class MainWindow:
             dlg.attributes("-topmost", True)
             dlg.lift()
             dlg.focus_force()
-            dlg.after(150, lambda d=dlg: d.winfo_exists() and d.attributes("-topmost", False))
+        except Exception:
+            pass
+
+    def _keep_modal_above(self, dlg):
+        if self._active_modal is not dlg:
+            return
+        try:
+            if not dlg.winfo_exists():
+                self._modal_closed(dlg)
+                return
+            dlg.attributes("-topmost", True)
+            dlg.lift()
+            dlg.after(400, lambda d=dlg: self._keep_modal_above(d))
         except Exception:
             pass
 
