@@ -1,6 +1,6 @@
 import secrets
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -13,6 +13,15 @@ class User(Base):
     password_hash = Column(String(200), nullable=False)
     sync_token = Column(String(64), unique=True, nullable=False, default=lambda: secrets.token_hex(32))
     avatar_url = Column(String(512), nullable=True)
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(150), nullable=True)
+    email = Column(String(255), unique=True, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    email_verified = Column(Boolean, default=True, nullable=False)
+    email_verification_token_hash = Column(String(64), nullable=True)
+    email_verification_expires_at = Column(DateTime, nullable=True)
+    password_reset_token_hash = Column(String(64), nullable=True)
+    password_reset_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     characters = relationship("Character", back_populates="user")

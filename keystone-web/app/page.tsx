@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { API_URL, hydrateProfile, setToken, setUsername as saveUsername } from '@/lib/auth'
 import { CLIENT_DOWNLOAD_URL } from '@/lib/downloads'
+import AuthForm from '@/app/components/AuthForm'
 
 const features = [
   ['Piedra actual', 'Nivel, mazmorra y abreviatura sincronizados por personaje.'],
@@ -55,19 +54,13 @@ const currencyPreviewRows = [
 ]
 
 export default function LandingPage() {
-  const router = useRouter()
   const authRef = useRef<HTMLDivElement | null>(null)
   const [authAnchor, setAuthAnchor] = useState<'login' | 'register' | null>(null)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
 
   function openAuth(mode: 'login' | 'register') {
     setAuthMode(mode)
     setAuthAnchor(current => current === mode ? null : mode)
-    setError(null)
   }
 
   useEffect(() => {
@@ -82,49 +75,8 @@ export default function LandingPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [authAnchor])
 
-  async function handleAuthSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    try {
-      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register'
-      const res = await fetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.detail ?? 'Error desconocido')
-        return
-      }
-
-      if (authMode === 'register') {
-        const loginRes = await fetch(`${API_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-        })
-        const loginData = await loginRes.json()
-        setToken(loginData.accessToken)
-      } else {
-        setToken(data.accessToken)
-      }
-
-      saveUsername(username)
-      await hydrateProfile()
-      router.push('/characters')
-    } catch {
-      setError('No se puede conectar con la API.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const authPanel = authAnchor ? (
-    <div className="absolute right-0 top-12 z-[100] w-[min(92vw,360px)] overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b121b]/98 p-5 shadow-2xl shadow-black/70 backdrop-blur-xl">
+    <div className="absolute right-0 top-12 z-[100] w-[min(92vw,430px)] overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b121b]/98 p-5 shadow-2xl shadow-black/70 backdrop-blur-xl">
       <div className="mb-4">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-400">
           {authMode === 'login' ? 'Acceso' : 'Registro'}
@@ -139,32 +91,7 @@ export default function LandingPage() {
         </p>
       </div>
 
-      <form onSubmit={handleAuthSubmit} className="space-y-3">
-        <input
-          type="text"
-          placeholder="Nombre de usuario"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          required
-          className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
-        />
-        <input
-          type="password"
-          placeholder="Contrasena"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-          className="w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500"
-        />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-yellow-500 py-2.5 text-sm font-black text-gray-950 transition hover:bg-yellow-400 disabled:opacity-50"
-        >
-          {loading ? 'Cargando...' : authMode === 'login' ? 'Entrar' : 'Crear cuenta'}
-        </button>
-      </form>
+      <AuthForm mode={authMode} />
     </div>
   ) : null
 

@@ -1,5 +1,12 @@
 import os
 import json
+import hashlib
+import html
+import re
+import secrets
+import urllib.error
+import urllib.request
+from datetime import date
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -21,6 +28,11 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
+EMAIL_TOKEN_EXPIRE_HOURS = 24
+PASSWORD_RESET_EXPIRE_MINUTES = 60
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "KeystoneSync <noreply@keystonesync.esgarpe.dev>")
+WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://localhost:3000").rstrip("/")
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,6 +45,15 @@ def _add_column_if_missing(conn, table_name: str, column_name: str, column_sql: 
 with engine.connect() as _conn:
     for _table, _column, _definition in [
         ("users", "avatar_url", "VARCHAR(512)"),
+        ("users", "first_name", "VARCHAR(100)"),
+        ("users", "last_name", "VARCHAR(150)"),
+        ("users", "email", "VARCHAR(255)"),
+        ("users", "date_of_birth", "DATE"),
+        ("users", "email_verified", "BOOLEAN DEFAULT TRUE NOT NULL"),
+        ("users", "email_verification_token_hash", "VARCHAR(64)"),
+        ("users", "email_verification_expires_at", "TIMESTAMP"),
+        ("users", "password_reset_token_hash", "VARCHAR(64)"),
+        ("users", "password_reset_expires_at", "TIMESTAMP"),
         ("characters", "avatar_url", "VARCHAR(512)"),
         ("characters", "wow_account", "VARCHAR(100)"),
         ("characters", "rio_score", "FLOAT"),
@@ -73,6 +94,100 @@ def verify_password(plain: str, hashed: str) -> bool:
 def create_access_token(user_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRE_DAYS)
     return jwt.encode({"sub": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+def _is_valid_email(email: str) -> bool:
+    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email))
+
+def _new_plain_token() -> str:
+    return secrets.token_urlsafe(32)
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+def _send_email(to_email: str, subject: str, html: str, text: str):
+    if not RESEND_API_KEY:
+        raise HTTPException(500, "Servicio de email no configurado")
+
+    payload = json.dumps({
+        "from": EMAIL_FROM,
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+        "text": text,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            if response.status >= 300:
+                raise HTTPException(502, "No se pudo enviar el email")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise HTTPException(502, f"No se pudo enviar el email: {detail or exc.reason}")
+    except urllib.error.URLError:
+        raise HTTPException(502, "No se pudo conectar con el servicio de email")
+
+def _send_verification_email(user: User, token: str):
+    link = f"{WEB_BASE_URL}/verify-email?token={token}"
+    safe_username = html.escape(user.username)
+    subject = "Verifica tu cuenta de KeystoneSync"
+    text = (
+        f"Hola {user.username},\n\n"
+        "Confirma tu cuenta de KeystoneSync abriendo este enlace:\n"
+        f"{link}\n\n"
+        "Este enlace caduca en 24 horas."
+    )
+    html = f"""
+    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
+      <h2>Verifica tu cuenta de KeystoneSync</h2>
+      <p>Hola <strong>{safe_username}</strong>, confirma tu cuenta para poder iniciar sesion.</p>
+      <p><a href="{link}" style="display:inline-block;background:#f59e0b;color:#111827;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:bold">Verificar cuenta</a></p>
+      <p>Si el boton no funciona, copia este enlace:</p>
+      <p>{link}</p>
+      <p>Este enlace caduca en 24 horas.</p>
+    </div>
+    """
+    _send_email(user.email, subject, html, text)
+
+def _send_password_reset_email(user: User, token: str):
+    link = f"{WEB_BASE_URL}/reset-password?token={token}"
+    safe_username = html.escape(user.username)
+    subject = "Recupera tu password de KeystoneSync"
+    text = (
+        f"Hola {user.username},\n\n"
+        "Puedes establecer una nueva password desde este enlace:\n"
+        f"{link}\n\n"
+        "Este enlace caduca en 60 minutos."
+    )
+    html = f"""
+    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
+      <h2>Recupera tu password de KeystoneSync</h2>
+      <p>Hola <strong>{safe_username}</strong>, usa este enlace para establecer una nueva password.</p>
+      <p><a href="{link}" style="display:inline-block;background:#f59e0b;color:#111827;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:bold">Cambiar password</a></p>
+      <p>Si el boton no funciona, copia este enlace:</p>
+      <p>{link}</p>
+      <p>Este enlace caduca en 60 minutos.</p>
+    </div>
+    """
+    _send_email(user.email, subject, html, text)
+
+def _is_expired(value: Optional[datetime]) -> bool:
+    if not value:
+        return True
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value < datetime.now(timezone.utc)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
@@ -121,12 +236,28 @@ def get_user_by_sync_token(
 # --- Schemas ---
 
 class RegisterRequest(BaseModel):
+    firstName: str
+    lastName: str
+    email: str
     username: str
     password: str
+    confirmPassword: str
+    dateOfBirth: date
 
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+    confirmPassword: str
 
 class KeystoneUpdateRequest(BaseModel):
     character: str
@@ -176,24 +307,108 @@ class JoinTeamRequest(BaseModel):
 
 @app.post("/api/auth/register", status_code=201)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-    if len(payload.username) < 3:
+    username = payload.username.strip()
+    first_name = payload.firstName.strip()
+    last_name = payload.lastName.strip()
+    email = _normalize_email(payload.email)
+
+    if len(username) < 3:
         raise HTTPException(400, "El nombre de usuario debe tener al menos 3 caracteres")
+    if not first_name or not last_name:
+        raise HTTPException(400, "Nombre y apellidos son obligatorios")
+    if not _is_valid_email(email):
+        raise HTTPException(400, "Email invalido")
     if len(payload.password) < 6:
-        raise HTTPException(400, "La contraseña debe tener al menos 6 caracteres")
-    if db.query(User).filter_by(username=payload.username).first():
+        raise HTTPException(400, "La password debe tener al menos 6 caracteres")
+    if payload.password != payload.confirmPassword:
+        raise HTTPException(400, "Las passwords no coinciden")
+    if payload.dateOfBirth >= date.today():
+        raise HTTPException(400, "Fecha de nacimiento invalida")
+    if db.query(User).filter_by(username=username).first():
         raise HTTPException(400, "Nombre de usuario ya en uso")
-    user = User(username=payload.username, password_hash=hash_password(payload.password))
+    if db.query(User).filter_by(email=email).first():
+        raise HTTPException(400, "Email ya en uso")
+
+    token = _new_plain_token()
+    user = User(
+        username=username,
+        password_hash=hash_password(payload.password),
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        date_of_birth=payload.dateOfBirth,
+        email_verified=False,
+        email_verification_token_hash=_hash_token(token),
+        email_verification_expires_at=datetime.now(timezone.utc) + timedelta(hours=EMAIL_TOKEN_EXPIRE_HOURS),
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"id": user.id, "username": user.username, "syncToken": user.sync_token}
+    try:
+        _send_verification_email(user, token)
+    except HTTPException:
+        db.delete(user)
+        db.commit()
+        raise
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "emailVerified": user.email_verified,
+        "message": "Cuenta creada. Revisa tu email para verificarla.",
+    }
 
 @app.post("/api/auth/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(username=payload.username).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(401, "Credenciales incorrectas")
+    if user.email and not user.email_verified:
+        raise HTTPException(403, "Email no verificado. Revisa tu correo antes de iniciar sesion.")
     return {"accessToken": create_access_token(user.id), "tokenType": "bearer"}
+
+@app.post("/api/auth/verify-email")
+def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
+    token_hash = _hash_token(payload.token.strip())
+    user = db.query(User).filter_by(email_verification_token_hash=token_hash).first()
+    if not user or _is_expired(user.email_verification_expires_at):
+        raise HTTPException(400, "Link de verificacion invalido o caducado")
+
+    user.email_verified = True
+    user.email_verification_token_hash = None
+    user.email_verification_expires_at = None
+    db.commit()
+    return {"message": "Email verificado correctamente"}
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email = _normalize_email(payload.email)
+    user = db.query(User).filter_by(email=email).first()
+    if user:
+        token = _new_plain_token()
+        user.password_reset_token_hash = _hash_token(token)
+        user.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES)
+        db.commit()
+        _send_password_reset_email(user, token)
+    return {"message": "Si el email existe, recibiras un enlace para recuperar la password."}
+
+@app.post("/api/auth/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    if len(payload.password) < 6:
+        raise HTTPException(400, "La password debe tener al menos 6 caracteres")
+    if payload.password != payload.confirmPassword:
+        raise HTTPException(400, "Las passwords no coinciden")
+
+    token_hash = _hash_token(payload.token.strip())
+    user = db.query(User).filter_by(password_reset_token_hash=token_hash).first()
+    if not user or _is_expired(user.password_reset_expires_at):
+        raise HTTPException(400, "Link de recuperacion invalido o caducado")
+
+    user.password_hash = hash_password(payload.password)
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+    db.commit()
+    return {"message": "Password actualizada correctamente"}
 
 
 # --- Me endpoints ---
@@ -205,6 +420,10 @@ def get_me(current_user: User = Depends(get_current_user)):
         "username": current_user.username,
         "syncToken": current_user.sync_token,
         "avatarUrl": current_user.avatar_url,
+        "firstName": current_user.first_name,
+        "lastName": current_user.last_name,
+        "email": current_user.email,
+        "emailVerified": current_user.email_verified,
     }
 
 @app.post("/api/me/characters/enrich")
