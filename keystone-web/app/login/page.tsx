@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import AuthForm from '@/app/components/AuthForm'
@@ -12,6 +13,14 @@ function LoginContent() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-950 p-4 text-gray-100">
       <div className="w-full max-w-md">
+        <Link
+          href="/"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-400 transition hover:text-yellow-300"
+        >
+          <span aria-hidden="true">←</span>
+          Volver a la portada
+        </Link>
+
         <h1 className="mb-8 text-center text-3xl font-black text-yellow-400">KeystoneSync</h1>
 
         <div className="mb-6 flex overflow-hidden rounded border border-gray-800">
