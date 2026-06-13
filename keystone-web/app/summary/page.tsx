@@ -358,9 +358,13 @@ function InfoRow({
   icon?: React.ReactNode
   labelClassName?: string
 }) {
+  const headerClass = section
+    ? 'bg-gray-950/95 text-yellow-400 uppercase tracking-wide'
+    : 'bg-gray-950/95 text-gray-100'
+
   return (
     <tr className={section ? 'bg-gray-950/80' : 'odd:bg-gray-900/70 even:bg-gray-900/45'}>
-      <th className={`sticky left-0 z-[1] min-w-56 max-w-56 px-3 py-2 text-left text-xs font-bold ${section ? 'bg-gray-950/95 text-yellow-400' : 'bg-gray-950 text-gray-100'} ${labelClassName}`}>
+      <th className={`sticky left-0 z-[2] min-w-56 max-w-56 border-r border-gray-800/90 px-3 py-2 text-left text-xs font-bold shadow-[inset_-1px_0_0_rgba(0,0,0,0.45)] ${headerClass} ${labelClassName}`}>
         <span className="flex min-w-0 items-center gap-2">
           {icon}
           <span className="truncate">{label}</span>
@@ -398,23 +402,23 @@ function SectionToggleRow({
   onToggle: () => void
   colSpan: number
 }) {
-  const arrows = collapsed ? '↓↓↓↓' : '↑↑↑↑'
+  const arrows = collapsed ? '▼ ▼ ▼ ▼' : '▲ ▲ ▲ ▲'
   const action = collapsed ? 'Desplegar' : 'Compactar'
 
   return (
     <tr className="bg-gray-950/80">
-      <th className="sticky left-0 z-[1] min-w-56 max-w-56 bg-gray-950/95 px-3 py-2 text-left text-xs font-bold text-yellow-400">
+      <th className="sticky left-0 z-[2] min-w-56 max-w-56 border-r border-gray-800/90 bg-gray-950/95 px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-yellow-400 shadow-[inset_-1px_0_0_rgba(0,0,0,0.45)]">
         {label}
       </th>
-      <td colSpan={Math.max(1, colSpan)} className="border-l border-gray-950/60 px-3 py-1.5 text-right">
+      <td colSpan={Math.max(1, colSpan)} className="border-l border-gray-950/60 p-0">
         <button
           type="button"
           onClick={onToggle}
-          className="rounded-md border border-yellow-500/60 bg-yellow-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-yellow-400 transition hover:bg-yellow-500 hover:text-gray-950"
+          className="flex w-full items-center justify-center gap-4 border-y border-yellow-500/40 bg-yellow-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-yellow-400 transition hover:bg-yellow-500 hover:text-gray-950"
         >
-          <span className="mr-2">{arrows}</span>
+          <span className="font-black tracking-[0.35em]">{arrows}</span>
           {action}
-          <span className="ml-2">{arrows}</span>
+          <span className="font-black tracking-[0.35em]">{arrows}</span>
         </button>
       </td>
     </tr>

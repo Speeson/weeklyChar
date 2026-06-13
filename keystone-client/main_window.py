@@ -587,6 +587,9 @@ class MainWindow:
         self._settings_popup_visible = False
         self._startup_minimized_applied = False
         self._drag_offset = None
+        self._modal_drag_offset = None
+        self._active_modal = None
+        self._modal_root_binds = []
         self._map_bind_id = None
         self._taskbar_refreshing = False
         self._latest_update_info = None
@@ -960,7 +963,7 @@ class MainWindow:
         if len(accounts) <= 1:
             return
         if self._account_selector_popup and self._account_selector_popup.winfo_exists():
-            self._account_selector_popup.lift()
+            self._raise_active_modal()
             return
 
         dlg = tk.Toplevel(self.root)
@@ -1013,7 +1016,8 @@ class MainWindow:
             if not names:
                 names = [a["name"] for a in accounts]
             self._set_selected_accounts(names)
-            dlg.destroy()
+            self._close_modal_dialog(dlg)
+            self._account_selector_popup = None
             self._show_main_view()
 
         ttk.Button(btns, text=self._t("save_btn"), style="Gold.TButton",
@@ -1030,6 +1034,7 @@ class MainWindow:
         dlg.lift()
         dlg.focus_force()
         dlg.grab_set()
+        self._register_modal(dlg, head)
 
     # =========================================================================
     # LOGIN VIEW
@@ -2166,6 +2171,92 @@ class MainWindow:
     def _end_window_drag(self, _event=None):
         self._drag_offset = None
 
+    def _register_modal(self, dlg, drag_handle=None):
+        self._active_modal = dlg
+        try:
+            dlg.transient(self.root)
+            dlg.attributes("-topmost", True)
+            dlg.lift()
+            dlg.focus_force()
+            dlg.after(250, lambda d=dlg: d.winfo_exists() and d.attributes("-topmost", False))
+        except Exception:
+            pass
+
+        if not self._modal_root_binds:
+            try:
+                self._modal_root_binds = [
+                    ("<Button-1>", self.root.bind("<Button-1>", self._raise_active_modal, add="+")),
+                    ("<FocusIn>", self.root.bind("<FocusIn>", self._raise_active_modal, add="+")),
+                ]
+            except Exception:
+                self._modal_root_binds = []
+
+        if drag_handle is not None:
+            drag_handle.bind(
+                "<ButtonPress-1>",
+                lambda event, d=dlg: self._start_modal_drag(event, d),
+                add="+",
+            )
+            drag_handle.bind(
+                "<B1-Motion>",
+                lambda event, d=dlg: self._drag_modal(event, d),
+                add="+",
+            )
+            drag_handle.bind("<ButtonRelease-1>", self._end_modal_drag, add="+")
+
+    def _raise_active_modal(self, _event=None):
+        dlg = self._active_modal
+        if not dlg:
+            return
+        try:
+            if not dlg.winfo_exists():
+                self._modal_closed(dlg)
+                return
+            dlg.attributes("-topmost", True)
+            dlg.lift()
+            dlg.focus_force()
+            dlg.after(150, lambda d=dlg: d.winfo_exists() and d.attributes("-topmost", False))
+        except Exception:
+            pass
+
+    def _modal_closed(self, dlg):
+        if self._active_modal is dlg:
+            self._active_modal = None
+        self._modal_drag_offset = None
+        if not self._active_modal and self._modal_root_binds:
+            for sequence, bind_id in self._modal_root_binds:
+                try:
+                    self.root.unbind(sequence, bind_id)
+                except Exception:
+                    pass
+            self._modal_root_binds = []
+
+    def _start_modal_drag(self, event, dlg):
+        self._modal_drag_offset = (
+            event.x_root - dlg.winfo_x(),
+            event.y_root - dlg.winfo_y(),
+        )
+
+    def _drag_modal(self, event, dlg):
+        if not self._modal_drag_offset:
+            return
+        dx, dy = self._modal_drag_offset
+        dlg.geometry(f"+{event.x_root - dx}+{event.y_root - dy}")
+
+    def _end_modal_drag(self, _event=None):
+        self._modal_drag_offset = None
+
+    def _close_modal_dialog(self, dlg):
+        self._modal_closed(dlg)
+        try:
+            dlg.grab_release()
+        except Exception:
+            pass
+        try:
+            dlg.destroy()
+        except Exception:
+            pass
+
     def _minimize_window(self):
         self._hide_user_dropdown()
         self._hide_avatar_popup()
@@ -2190,12 +2281,14 @@ class MainWindow:
 
     def _hide_settings_popup(self):
         if self._settings_popup:
+            popup = self._settings_popup
+            self._modal_closed(popup)
             try:
-                self._settings_popup.grab_release()
+                popup.grab_release()
             except Exception:
                 pass
             try:
-                self._settings_popup.destroy()
+                popup.destroy()
             except Exception:
                 pass
             self._settings_popup = None
@@ -2215,6 +2308,7 @@ class MainWindow:
 
     def _show_settings_popup(self):
         if self._settings_popup_visible:
+            self._raise_active_modal()
             return
 
         dlg = tk.Toplevel(self.root)
@@ -2349,6 +2443,7 @@ class MainWindow:
         dlg.lift()
         dlg.focus_force()
         dlg.grab_set()
+        self._register_modal(dlg, head)
 
     def _addon_status_for_path(self, path):
         previous = self.addons_var
@@ -3292,14 +3387,11 @@ class MainWindow:
         dlg.deiconify()
         dlg.lift()
         dlg.focus_force()
+        self._register_modal(dlg, head)
 
     def _close_update_dialog(self, dlg):
         self._update_dialog_visible = False
-        try:
-            dlg.grab_release()
-            dlg.destroy()
-        except Exception:
-            pass
+        self._close_modal_dialog(dlg)
 
     def _start_update_download(self, info, dlg, status_var, update_btn, cancel_btn):
         update_btn.configure(state="disabled")
@@ -3384,7 +3476,7 @@ class MainWindow:
         dlg.transient(self.root)
         dlg.overrideredirect(True)
         dlg.grab_set()
-        dlg.protocol("WM_DELETE_WINDOW", lambda: (dlg.grab_release(), dlg.destroy()))
+        dlg.protocol("WM_DELETE_WINDOW", lambda: self._close_modal_dialog(dlg))
 
         wrap = tk.Frame(dlg, bg=CARD_BG, padx=0, pady=0,
                         highlightbackground=CARD_BDR, highlightthickness=1)
@@ -3400,7 +3492,7 @@ class MainWindow:
                   activebackground=BANNER_BG, activeforeground=TEXT,
                   relief="flat", bd=0, font=("Segoe UI", 14, "bold"),
                   cursor="hand2",
-                  command=lambda: (dlg.grab_release(), dlg.destroy())).pack(
+                  command=lambda: self._close_modal_dialog(dlg)).pack(
                       side="right", padx=12)
 
         content = tk.Frame(wrap, bg=CARD_BG, padx=18, pady=16)
@@ -3423,7 +3515,7 @@ class MainWindow:
         text.configure(state="disabled")
 
         ttk.Button(content, text=self._t("ok_btn"), style="Gold.TButton",
-                   command=lambda: (dlg.grab_release(), dlg.destroy())).pack(anchor="e")
+                   command=lambda: self._close_modal_dialog(dlg)).pack(anchor="e")
 
         dlg.update_idletasks()
         px, py = self.root.winfo_x(), self.root.winfo_y()
@@ -3433,6 +3525,7 @@ class MainWindow:
         dlg.deiconify()
         dlg.lift()
         dlg.focus_force()
+        self._register_modal(dlg, head)
 
     def _format_changelog_body(self, body):
         text = (body or self._t("changelog_empty")).strip()
