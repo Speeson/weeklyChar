@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
+import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 
 interface Keystone {
   level: number | null
@@ -17,6 +18,7 @@ interface Character {
   name: string
   realm: string
   region: string
+  wowAccount?: string | null
   avatarUrl?: string | null
   wowClass?: string | null
   currentKeystone: Keystone | null
@@ -133,15 +135,18 @@ function CompactCharacterRow({ char }: { char: Character }) {
 function MemberCard({
   member,
   query,
+  selectedAccount,
   collapsed,
   onToggle,
 }: {
   member: Member
   query: string
+  selectedAccount: string
   collapsed: boolean
   onToggle: () => void
 }) {
-  const characters = member.characters
+  const accountCharacters = filterByAccount(member.characters, selectedAccount)
+  const characters = accountCharacters
     .filter(char => matchesDungeon(char, query))
     .sort((a, b) => (b.currentKeystone?.level ?? -1) - (a.currentKeystone?.level ?? -1) || a.name.localeCompare(b.name, 'es'))
 
@@ -155,7 +160,7 @@ function MemberCard({
       >
         <span className="truncate font-semibold text-gray-100">{member.username}</span>
         <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-gray-500">
-          <span>{characters.length} / {member.characters.length} personajes</span>
+          <span>{characters.length} / {accountCharacters.length} personajes</span>
           <svg className={`h-3.5 w-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
           </svg>
@@ -192,6 +197,7 @@ export default function TeamDetailPage() {
   const [team, setTeam] = useState<TeamDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
   const [copied, setCopied] = useState(false)
   const [collapsedMembers, setCollapsedMembers] = useState<Set<number>>(new Set())
 
@@ -218,7 +224,12 @@ export default function TeamDetailPage() {
   if (!team) return null
 
   const allCharacters = team.members.flatMap(member => member.characters)
-  const visibleCount = team.members.reduce((total, member) => total + member.characters.filter(char => matchesDungeon(char, query)).length, 0)
+  const accounts = accountOptions(allCharacters)
+  const accountCharacters = filterByAccount(allCharacters, selectedAccount)
+  const visibleCount = team.members.reduce(
+    (total, member) => total + filterByAccount(member.characters, selectedAccount).filter(char => matchesDungeon(char, query)).length,
+    0,
+  )
 
   async function copyInviteCode() {
     if (!team) return
@@ -247,6 +258,8 @@ export default function TeamDetailPage() {
                 <h1 className="mt-1 text-2xl font-bold text-gray-100">{team.name}</h1>
               </div>
 
+              <div className="flex flex-col items-start gap-3 sm:items-end">
+              <AccountSelect accounts={accounts} value={selectedAccount} onChange={setSelectedAccount} />
               {team.isOwner && (
                 <button
                   onClick={copyInviteCode}
@@ -264,6 +277,7 @@ export default function TeamDetailPage() {
                   {copied && <span className="text-xs text-green-400">Copiado</span>}
                 </button>
               )}
+              </div>
             </div>
 
             <div className="mt-5">
@@ -274,7 +288,7 @@ export default function TeamDetailPage() {
                 placeholder="Ej: Magister, Academy, +12..."
                 className="w-full rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
               />
-              <p className="mt-2 text-xs text-gray-600">{visibleCount} de {allCharacters.length} personajes visibles</p>
+              <p className="mt-2 text-xs text-gray-600">{visibleCount} de {accountCharacters.length} personajes visibles</p>
             </div>
           </section>
 
@@ -287,6 +301,7 @@ export default function TeamDetailPage() {
                   key={member.userId}
                   member={member}
                   query={query}
+                  selectedAccount={selectedAccount}
                   collapsed={collapsedMembers.has(member.userId)}
                   onToggle={() => toggleMember(member.userId)}
                 />

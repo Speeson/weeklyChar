@@ -56,6 +56,7 @@ class Character(Base):
     realm = Column(String(100), nullable=False)
     region = Column(String(10), nullable=False, default="eu")
     avatar_url = Column(String(512), nullable=True)
+    wow_account = Column(String(100), nullable=True)
     rio_score = Column(Float, nullable=True)
     wow_class = Column(String(50), nullable=True)
     ilvl = Column(Integer, nullable=True)

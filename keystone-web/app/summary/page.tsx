@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { apiFetch, getToken } from '@/lib/auth'
+import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 
 interface Keystone {
   level: number | null
@@ -58,6 +59,7 @@ interface Character {
   id: number
   name: string
   realm: string
+  wowAccount?: string | null
   rioScore: number | null
   wowClass: string | null
   ilvl: number | null
@@ -125,6 +127,33 @@ const CURRENCIES = [
   { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
   { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, localIcon: 'nebulous-voidcore.jpg' },
 ] as const
+
+const SUMMARY_SECTIONS = ['dungeons', 'greatVault', 'preyHunts', 'currencies'] as const
+const SUMMARY_COLLAPSED_KEY = 'ks_summary_collapsed_sections'
+
+type SummarySection = typeof SUMMARY_SECTIONS[number]
+type CollapsedSections = Record<SummarySection, boolean>
+
+const DEFAULT_COLLAPSED_SECTIONS: CollapsedSections = {
+  dungeons: false,
+  greatVault: false,
+  preyHunts: false,
+  currencies: false,
+}
+
+function loadCollapsedSections(): CollapsedSections {
+  if (typeof window === 'undefined') return DEFAULT_COLLAPSED_SECTIONS
+  try {
+    const raw = window.localStorage.getItem(SUMMARY_COLLAPSED_KEY)
+    return { ...DEFAULT_COLLAPSED_SECTIONS, ...(raw ? JSON.parse(raw) : {}) }
+  } catch {
+    return DEFAULT_COLLAPSED_SECTIONS
+  }
+}
+
+function saveCollapsedSections(value: CollapsedSections) {
+  window.localStorage.setItem(SUMMARY_COLLAPSED_KEY, JSON.stringify(value))
+}
 
 function dash(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
@@ -358,10 +387,54 @@ function Cell({
   )
 }
 
+function SectionToggleRow({
+  label,
+  collapsed,
+  onToggle,
+  colSpan,
+}: {
+  label: string
+  collapsed: boolean
+  onToggle: () => void
+  colSpan: number
+}) {
+  const arrows = collapsed ? '↓↓↓↓' : '↑↑↑↑'
+  const action = collapsed ? 'Desplegar' : 'Compactar'
+
+  return (
+    <tr className="bg-gray-950/80">
+      <th className="sticky left-0 z-[1] min-w-56 max-w-56 bg-gray-950/95 px-3 py-2 text-left text-xs font-bold text-yellow-400">
+        {label}
+      </th>
+      <td colSpan={Math.max(1, colSpan)} className="border-l border-gray-950/60 px-3 py-1.5 text-right">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="rounded-md border border-yellow-500/60 bg-yellow-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-yellow-400 transition hover:bg-yellow-500 hover:text-gray-950"
+        >
+          <span className="mr-2">{arrows}</span>
+          {action}
+          <span className="ml-2">{arrows}</span>
+        </button>
+      </td>
+    </tr>
+  )
+}
+
 export default function SummaryPage() {
   const router = useRouter()
   const [characters, setCharacters] = useState<Character[]>([])
+  const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
+  const [collapsedSections, setCollapsedSections] = useState<CollapsedSections>(loadCollapsedSections)
   const [loading, setLoading] = useState(true)
+
+  function toggleSection(section: SummarySection) {
+    setCollapsedSections(prev => {
+      const next = { ...prev, [section]: !prev[section] }
+      saveCollapsedSections(next)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!getToken()) {
@@ -386,7 +459,10 @@ export default function SummaryPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => window.$WowheadPower?.refreshLinks?.(), 100)
     return () => window.clearTimeout(timer)
-  }, [characters])
+  }, [characters, selectedAccount, collapsedSections])
+
+  const accounts = accountOptions(characters)
+  const visibleCharacters = filterByAccount(characters, selectedAccount)
 
   return (
     <>
@@ -397,24 +473,40 @@ export default function SummaryPage() {
             <p className="text-gray-500">Cargando...</p>
           ) : characters.length === 0 ? (
             <p className="text-sm text-gray-500">Sin personajes todavía. Sincroniza desde KeystoneClient para generar el resumen.</p>
+          ) : visibleCharacters.length === 0 ? (
+            <>
+              <div className="mb-4 flex justify-end">
+                <AccountSelect accounts={accounts} value={selectedAccount} onChange={setSelectedAccount} />
+              </div>
+              <p className="text-sm text-gray-500">No hay personajes para esta cuenta.</p>
+            </>
           ) : (
+            <>
+            <div className="mb-4 flex justify-end">
+              <AccountSelect accounts={accounts} value={selectedAccount} onChange={setSelectedAccount} />
+            </div>
             <div className="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900/40 shadow-2xl">
               <table className="w-full border-collapse text-sm">
                 <tbody>
                   <InfoRow label="Character">
-                    {characters.map(c => (
+                    {visibleCharacters.map(c => (
                       <Cell key={c.id} className="font-bold" style={{ color: CLASS_COLORS[c.wowClass ?? ''] ?? '#67E8F9' }}>
                         {c.name}
                       </Cell>
                     ))}
                   </InfoRow>
-                  <InfoRow label="Realm">{characters.map(c => <Cell key={c.id}>{c.realm}</Cell>)}</InfoRow>
-                  <InfoRow label="Item Level">{characters.map(c => <Cell key={c.id} className="font-bold text-purple-400">{dash(c.ilvl)}</Cell>)}</InfoRow>
-                  <InfoRow label="Rating">{characters.map(c => <Cell key={c.id} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
-                  <InfoRow label="Current Keystone">{characters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
+                  <InfoRow label="Realm">{visibleCharacters.map(c => <Cell key={c.id}>{c.realm}</Cell>)}</InfoRow>
+                  <InfoRow label="Item Level">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-purple-400">{dash(c.ilvl)}</Cell>)}</InfoRow>
+                  <InfoRow label="Rating">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
+                  <InfoRow label="Current Keystone">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
 
-                  <InfoRow label="Dungeons" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
-                  {DUNGEONS.map(dungeon => (
+                  <SectionToggleRow
+                    label="Dungeons"
+                    collapsed={collapsedSections.dungeons}
+                    onToggle={() => toggleSection('dungeons')}
+                    colSpan={visibleCharacters.length}
+                  />
+                  {!collapsedSections.dungeons && DUNGEONS.map(dungeon => (
                     <InfoRow
                       key={dungeon.id}
                       label={
@@ -423,22 +515,45 @@ export default function SummaryPage() {
                         </WowheadLink>
                       }
                     >
-                      {characters.map(c => <Cell key={c.id}>{dungeonCellWithRating(c, dungeon.id)}</Cell>)}
+                      {visibleCharacters.map(c => <Cell key={c.id}>{dungeonCellWithRating(c, dungeon.id)}</Cell>)}
                     </InfoRow>
                   ))}
 
-                  <InfoRow label="Great Vault" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
-                  <InfoRow label="Raids">{characters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
-                  <InfoRow label="Dungeons">{characters.map(c => <Cell key={c.id} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} maxProgress={8} /></Cell>)}</InfoRow>
-                  <InfoRow label="World">{characters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
+                  <SectionToggleRow
+                    label="Great Vault"
+                    collapsed={collapsedSections.greatVault}
+                    onToggle={() => toggleSection('greatVault')}
+                    colSpan={visibleCharacters.length}
+                  />
+                  {!collapsedSections.greatVault && (
+                    <>
+                      <InfoRow label="Raids">{visibleCharacters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
+                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} maxProgress={8} /></Cell>)}</InfoRow>
+                      <InfoRow label="World">{visibleCharacters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
+                    </>
+                  )}
 
-                  <InfoRow label="Prey Hunts" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
-                  <InfoRow label="Normal">{characters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.normal)}</Cell>)}</InfoRow>
-                  <InfoRow label="Hard">{characters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.hard)}</Cell>)}</InfoRow>
-                  <InfoRow label="Nightmare">{characters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.nightmare)}</Cell>)}</InfoRow>
+                  <SectionToggleRow
+                    label="Prey Hunts"
+                    collapsed={collapsedSections.preyHunts}
+                    onToggle={() => toggleSection('preyHunts')}
+                    colSpan={visibleCharacters.length}
+                  />
+                  {!collapsedSections.preyHunts && (
+                    <>
+                      <InfoRow label="Normal">{visibleCharacters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.normal)}</Cell>)}</InfoRow>
+                      <InfoRow label="Hard">{visibleCharacters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.hard)}</Cell>)}</InfoRow>
+                      <InfoRow label="Nightmare">{visibleCharacters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.nightmare)}</Cell>)}</InfoRow>
+                    </>
+                  )}
 
-                  <InfoRow label="Currencies" section>{characters.map(c => <Cell key={c.id} />)}</InfoRow>
-                  {CURRENCIES.map(currency => (
+                  <SectionToggleRow
+                    label="Currencies"
+                    collapsed={collapsedSections.currencies}
+                    onToggle={() => toggleSection('currencies')}
+                    colSpan={visibleCharacters.length}
+                  />
+                  {!collapsedSections.currencies && CURRENCIES.map(currency => (
                     <InfoRow
                       key={currency.key}
                       label={
@@ -449,7 +564,7 @@ export default function SummaryPage() {
                       }
                       labelClassName={currency.color}
                     >
-                      {characters.map(c => (
+                      {visibleCharacters.map(c => (
                         <Cell key={c.id} className={currency.color}>
                           {currencyValue(c, currency)}
                         </Cell>
@@ -459,6 +574,7 @@ export default function SummaryPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </main>

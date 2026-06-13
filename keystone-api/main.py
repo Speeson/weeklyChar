@@ -34,6 +34,7 @@ with engine.connect() as _conn:
     for _table, _column, _definition in [
         ("users", "avatar_url", "VARCHAR(512)"),
         ("characters", "avatar_url", "VARCHAR(512)"),
+        ("characters", "wow_account", "VARCHAR(100)"),
         ("characters", "rio_score", "FLOAT"),
         ("characters", "wow_class", "VARCHAR(50)"),
         ("characters", "ilvl", "INTEGER"),
@@ -138,6 +139,7 @@ class KeystoneUpdateRequest(BaseModel):
     keystoneDungeon: Optional[str] = None
     updatedAt: Optional[int] = None
     updatedReason: Optional[str] = None
+    wowAccount: Optional[str] = None
     avatarUrl: Optional[str] = None
     rioScore: Optional[float] = None
     wowClass: Optional[str] = None
@@ -283,6 +285,8 @@ def update_keystone(
         db.flush()
 
     character.updated_at = datetime.now(timezone.utc)
+    if payload.wowAccount is not None:
+        character.wow_account = payload.wowAccount
     if payload.avatarUrl is not None:
         character.avatar_url = payload.avatarUrl
     if payload.rioScore is not None:
@@ -415,6 +419,7 @@ def _character_response(c: Character):
         "name": c.name,
         "realm": c.realm,
         "region": c.region,
+        "wowAccount": c.wow_account,
         "avatarUrl": c.avatar_url,
         "rioScore": c.rio_score,
         "wowClass": c.wow_class,

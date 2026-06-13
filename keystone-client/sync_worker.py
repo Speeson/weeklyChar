@@ -142,6 +142,7 @@ class SyncWorker(threading.Thread):
                 "keystoneDungeon": entry.get("keystoneDungeon"),
                 "updatedAt": entry.get("updatedAt"),
                 "updatedReason": entry.get("updatedReason"),
+                "wowAccount": account_name or self._account_name_from_path(path),
                 "avatarUrl": avatar_url,
                 "rioScore": rio_score,
                 "wowClass": wow_class,

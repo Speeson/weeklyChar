@@ -6,6 +6,7 @@ import { apiFetch, getToken } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
 import WeeklyReset from '@/app/components/WeeklyReset'
 import WeeklyAffixes from '@/app/components/WeeklyAffixes'
+import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 
 interface Keystone {
   level: number | null
@@ -19,6 +20,7 @@ interface Character {
   name: string
   realm: string
   region: string
+  wowAccount?: string | null
   avatarUrl?: string | null
   wowClass?: string | null
   currentKeystone: Keystone | null
@@ -91,6 +93,7 @@ export default function Dashboard() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [hidden, setHidden] = useState<Set<number>>(new Set())
   const [managing, setManaging] = useState(false)
+  const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -126,8 +129,10 @@ export default function Dashboard() {
     </>
   )
 
-  const visible = managing ? characters : characters.filter(c => !hidden.has(c.id))
-  const hiddenCount = characters.filter(c => hidden.has(c.id)).length
+  const accounts = accountOptions(characters)
+  const scopedCharacters = filterByAccount(characters, selectedAccount)
+  const visible = managing ? scopedCharacters : scopedCharacters.filter(c => !hidden.has(c.id))
+  const hiddenCount = scopedCharacters.filter(c => hidden.has(c.id)).length
 
   return (
     <>
@@ -140,16 +145,26 @@ export default function Dashboard() {
             <WeeklyReset />
           </div>
 
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-200">
-              Mis personajes
-              {hiddenCount > 0 && !managing && (
-                <span className="ml-2 text-xs text-gray-500">
-                  ({hiddenCount} oculto{hiddenCount !== 1 ? 's' : ''})
-                </span>
-              )}
-            </h2>
-            {characters.length > 0 && (
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-200">
+                Mis personajes
+                {hiddenCount > 0 && !managing && (
+                  <span className="ml-2 text-xs text-gray-500">
+                    ({hiddenCount} oculto{hiddenCount !== 1 ? 's' : ''})
+                  </span>
+                )}
+              </h2>
+              <AccountSelect
+                accounts={accounts}
+                value={selectedAccount}
+                onChange={value => {
+                  setSelectedAccount(value)
+                  setManaging(false)
+                }}
+              />
+            </div>
+            {scopedCharacters.length > 0 && (
               <button
                 onClick={() => setManaging(m => !m)}
                 className={`text-xs px-3 py-1.5 rounded border transition ${
@@ -169,7 +184,7 @@ export default function Dashboard() {
                 Activa o desactiva los personajes que quieres ver en la tabla.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {characters.map(c => (
+                {scopedCharacters.map(c => (
                   <label key={c.id} className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -193,6 +208,10 @@ export default function Dashboard() {
           {characters.length === 0 ? (
             <p className="text-gray-500 text-sm">
               Sin personajes todavía. Ejecuta KeystoneClient para importarlos.
+            </p>
+          ) : scopedCharacters.length === 0 ? (
+            <p className="text-gray-500 text-sm">
+              No hay personajes para esta cuenta.
             </p>
           ) : visible.length === 0 ? (
             <p className="text-gray-500 text-sm">
