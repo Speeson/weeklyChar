@@ -300,10 +300,18 @@ _TR = {
         "language":      "Idioma",
         "settings":      "Ajustes",
         "settings_general": "General",
-        "settings_wow": "World of Warcraft",
+        "settings_wow": "Seleccion de cuentas",
         "settings_app": "Aplicación",
-        "wow_install_path": "Ruta de WoW",
+        "wow_install_path": "Ruta de carpeta de instalacion",
         "savedvars_path": "SavedVariables",
+        "wow_accounts_detected": "Cuentas detectadas",
+        "wow_accounts_multi_title": "Selecciona cuentas de WoW",
+        "wow_accounts_multi_sub": "Se han detectado varias cuentas con datos de KeystoneSync. Marca cuales quieres sincronizar.",
+        "wow_accounts_none": "No hay cuentas con datos de KeystoneSync. Instala el addon y entra con tus personajes.",
+        "wow_account_no_data": "Sin datos de KeystoneSync",
+        "wow_account_chars": "Personajes detectados",
+        "active_accounts": "{count} cuentas activas",
+        "select_all_btn": "Seleccionar todas",
         "change_btn": "Cambiar",
         "save_btn": "Guardar",
         "redetect_btn": "Redetectar",
@@ -391,10 +399,18 @@ _TR = {
         "language":      "Language",
         "settings":      "Settings",
         "settings_general": "General",
-        "settings_wow": "World of Warcraft",
+        "settings_wow": "Account selection",
         "settings_app": "Application",
-        "wow_install_path": "WoW path",
+        "wow_install_path": "Installation folder path",
         "savedvars_path": "SavedVariables",
+        "wow_accounts_detected": "Detected accounts",
+        "wow_accounts_multi_title": "Select WoW accounts",
+        "wow_accounts_multi_sub": "Multiple accounts with KeystoneSync data were detected. Select which ones should be synced.",
+        "wow_accounts_none": "No accounts with KeystoneSync data found. Install the addon and log into your characters.",
+        "wow_account_no_data": "No KeystoneSync data",
+        "wow_account_chars": "Detected characters",
+        "active_accounts": "{count} active accounts",
+        "select_all_btn": "Select all",
         "change_btn": "Change",
         "save_btn": "Save",
         "redetect_btn": "Redetect",
@@ -506,6 +522,8 @@ class MainWindow:
         self._sync_time_id  = None
         self._sync_date_id  = None
         self._wow_status_id = None
+        self._sync_account_item_ids = {}
+        self._sync_account_status = {}
 
         # Characters
         self._characters       = []
@@ -578,6 +596,9 @@ class MainWindow:
         self._settings_update_button = None
         self._settings_update_check_button = None
         self._settings_last_update_check_var = None
+        self._settings_account_vars = {}
+        self._settings_account_detail_frames = {}
+        self._account_selector_popup = None
 
         self.root = tk.Tk()
         self.root.title("KeystoneClient")
@@ -656,6 +677,11 @@ class MainWindow:
                 self._settings_popup.destroy()
             except Exception:
                 pass
+        if getattr(self, "_account_selector_popup", None):
+            try:
+                self._account_selector_popup.destroy()
+            except Exception:
+                pass
         for w in self.root.winfo_children():
             w.destroy()
         self._photos.clear()
@@ -670,6 +696,7 @@ class MainWindow:
         self._col_widths      = {}
         self._col_x           = {}
         self._user_dd         = None
+        self._account_selector_popup = None
         self._user_dropdown_visible = False
         self._avatar_popup         = None
         self._avatar_popup_visible = False
@@ -680,6 +707,7 @@ class MainWindow:
         self._sync_time_id    = None
         self._sync_date_id    = None
         self._wow_status_id   = None
+        self._sync_account_item_ids = {}
         self._char_canvas_items = []
         self._profile_photo     = None
         self._banner_av_ph      = None
@@ -781,7 +809,66 @@ class MainWindow:
         finally:
             self._taskbar_refreshing = False
 
+    def _savedvars_accounts(self):
+        return wow_path.discover_savedvars_accounts(self.cfg.get("wow_install_path"))
+
+    def _existing_savedvars_accounts(self):
+        return [a for a in self._savedvars_accounts() if a.get("exists")]
+
+    def _active_savedvars_accounts(self):
+        return wow_path.selected_savedvars_paths(self.cfg)
+
+    def _selected_account_names(self):
+        return {str(name) for name in (self.cfg.get("wow_accounts_selected") or [])}
+
+    def _account_name_from_savedvars(self, path):
+        try:
+            return os.path.basename(os.path.dirname(os.path.dirname(path)))
+        except Exception:
+            return "WoW"
+
+    def _set_selected_accounts(self, names):
+        existing = {a["name"]: a for a in self._existing_savedvars_accounts()}
+        selected = [name for name in sorted(set(names), key=str.lower) if name in existing]
+        self.cfg["wow_accounts_selected"] = selected
+        self.cfg["wow_accounts_prompted"] = True
+        active = [existing[name] for name in selected]
+        self.cfg["wow_path"] = active[0]["savedvars_path"] if active else None
+        cfg_module.save(self.cfg)
+
+    def _ensure_default_account_selection(self, prompt=False):
+        accounts = self._existing_savedvars_accounts()
+        if len(accounts) == 1 and not self.cfg.get("wow_accounts_selected"):
+            self._set_selected_accounts([accounts[0]["name"]])
+            return
+        if len(accounts) > 1 and not self.cfg.get("wow_accounts_selected") and prompt:
+            if not self.cfg.get("wow_accounts_prompted"):
+                self.cfg["wow_accounts_prompted"] = True
+                cfg_module.save(self.cfg)
+                self.root.after(350, self._show_wow_accounts_selector)
+
+    def _savedvars_character_count(self, path):
+        try:
+            from slpp import slpp as lua
+            with open(path, encoding="utf-8") as f:
+                content = f.read().strip()
+            table_str = content[content.index("=") + 1:].strip()
+            data = lua.decode(table_str) or {}
+            return len(data)
+        except Exception:
+            return None
+
     def _savedvars_path(self):
+        active = self._active_savedvars_accounts()
+        if active:
+            path = active[0]["savedvars_path"]
+            if path and os.path.exists(path):
+                self.cfg["wow_path"] = path
+                return path
+
+        if len(self._existing_savedvars_accounts()) > 1 and not self.cfg.get("wow_accounts_selected"):
+            return None
+
         configured = self.cfg.get("wow_path")
         if configured and os.path.exists(configured):
             return configured
@@ -861,9 +948,88 @@ class MainWindow:
             return
 
         self.cfg["wow_install_path"] = str(normalized)
-        self.cfg["wow_path"] = wow_path.find_savedvars(normalized)
+        self.cfg["wow_accounts_selected"] = []
+        self.cfg["wow_accounts_prompted"] = False
+        self.cfg["wow_path"] = None
         cfg_module.save(self.cfg)
+        self._ensure_default_account_selection(prompt=True)
         self._show_main_view()
+
+    def _show_wow_accounts_selector(self):
+        accounts = self._existing_savedvars_accounts()
+        if len(accounts) <= 1:
+            return
+        if self._account_selector_popup and self._account_selector_popup.winfo_exists():
+            self._account_selector_popup.lift()
+            return
+
+        dlg = tk.Toplevel(self.root)
+        dlg.withdraw()
+        dlg.overrideredirect(True)
+        dlg.configure(bg=CARD_BDR)
+        dlg.transient(self.root)
+        self._account_selector_popup = dlg
+
+        wrap = tk.Frame(dlg, bg=CARD_BG, padx=16, pady=14)
+        wrap.pack(fill="both", expand=True, padx=1, pady=1)
+
+        head = tk.Frame(wrap, bg=CARD_BG)
+        head.pack(fill="x", pady=(0, 8))
+        tk.Label(head, text=self._t("wow_accounts_multi_title"),
+                 bg=CARD_BG, fg=ACCENT, font=("Segoe UI", 15, "bold")).pack(side="left")
+        tk.Button(head, text="x", bg=CARD_BG, fg=MUTED,
+                  activebackground=CARD_BG, activeforeground=TEXT,
+                  relief="flat", bd=0, font=("Segoe UI", 14, "bold"),
+                  cursor="hand2", command=lambda: _save()).pack(side="right")
+
+        tk.Label(wrap, text=self._t("wow_accounts_multi_sub"),
+                 bg=CARD_BG, fg=MUTED, font=("Segoe UI", 9),
+                 wraplength=500, justify="left").pack(anchor="w", pady=(0, 12))
+
+        selected = self._selected_account_names() or {a["name"] for a in accounts}
+        vars_by_name = {}
+        for account in accounts:
+            row = tk.Frame(wrap, bg="#101a27", padx=10, pady=8)
+            row.pack(fill="x", pady=(0, 6))
+            var = tk.BooleanVar(value=account["name"] in selected)
+            vars_by_name[account["name"]] = var
+            cb = tk.Checkbutton(row, text=account["name"], variable=var,
+                                bg="#101a27", fg=TEXT, selectcolor="#1f2937",
+                                activebackground="#101a27", activeforeground=TEXT,
+                                font=("Segoe UI", 10, "bold"), relief="flat", bd=0)
+            cb.pack(anchor="w")
+            count = self._savedvars_character_count(account["savedvars_path"])
+            detail = account["savedvars_path"]
+            if count is not None:
+                detail = f"{self._t('wow_account_chars')}: {count} - {detail}"
+            tk.Label(row, text=detail, bg="#101a27", fg=MUTED,
+                     font=("Segoe UI", 8), wraplength=500, justify="left").pack(anchor="w", pady=(3, 0))
+
+        btns = tk.Frame(wrap, bg=CARD_BG)
+        btns.pack(fill="x", pady=(8, 0))
+
+        def _save():
+            names = [name for name, var in vars_by_name.items() if var.get()]
+            if not names:
+                names = [a["name"] for a in accounts]
+            self._set_selected_accounts(names)
+            dlg.destroy()
+            self._show_main_view()
+
+        ttk.Button(btns, text=self._t("save_btn"), style="Gold.TButton",
+                   command=_save).pack(side="right")
+        ttk.Button(btns, text=self._t("select_all_btn"), style="Gray.TButton",
+                   command=lambda: [var.set(True) for var in vars_by_name.values()]).pack(side="right", padx=(0, 8))
+
+        dlg.update_idletasks()
+        px, py = self.root.winfo_x(), self.root.winfo_y()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        dw, dh = max(560, dlg.winfo_width()), dlg.winfo_height()
+        dlg.geometry(f"{dw}x{dh}+{px + (pw - dw) // 2}+{py + (ph - dh) // 2}")
+        dlg.deiconify()
+        dlg.lift()
+        dlg.focus_force()
+        dlg.grab_set()
 
     # =========================================================================
     # LOGIN VIEW
@@ -1034,6 +1200,7 @@ class MainWindow:
     def _show_main_view(self):
         self.root.overrideredirect(True)
         self._clear()
+        self._ensure_default_account_selection(prompt=True)
         W, H = self._W, self._H
         self.root.geometry(f"{W}x{H}")
         self.root.after(100, lambda: self._ensure_taskbar_icon(True))
@@ -1659,16 +1826,21 @@ class MainWindow:
         BTN_H   = 38
         BTN_PAD = 10
 
-        savedvars_found = bool(self._savedvars_path())
+        active_accounts = self._active_savedvars_accounts()
+        savedvars_found = bool(active_accounts or self._savedvars_path())
         wow_found = bool(savedvars_found or self._addons_folder() or self._wow_install_path())
         addon_info = addon_installer.installed_info(self._addons_folder())
         addon_ready = bool(addon_info.get("installed") and not addon_info.get("corrupt"))
         setup_pending = bool(wow_found and not addon_ready and not savedvars_found)
+        self._sync_account_item_ids = {}
 
         cv.create_rectangle(x, y, x + w, y + HDR_H,
                             fill="#07111d", outline=CARD_BDR, tags="tab_content")
-        header_text = self._t("sync_ready") if savedvars_found else (
-            self._t("wow_ok") if wow_found else self._t("wow_no"))
+        if len(active_accounts) > 1:
+            header_text = self._t("active_accounts").format(count=len(active_accounts))
+        else:
+            header_text = self._t("sync_ready") if savedvars_found else (
+                self._t("wow_ok") if wow_found else self._t("wow_no"))
         self._wow_status_id = cv.create_text(
             x + w // 2, y + HDR_H // 2,
             text=f"● {header_text}",
@@ -1705,6 +1877,46 @@ class MainWindow:
             cv.tag_bind(link_tag, "<Button-1>", lambda _e: self._switch_tab("addon"))
             cv.tag_bind(link_tag, "<Enter>", lambda _e: cv.configure(cursor="hand2"))
             cv.tag_bind(link_tag, "<Leave>", lambda _e: cv.configure(cursor=""))
+        elif len(active_accounts) > 1:
+            row_gap = 8
+            row_h = max(54, min(72, (avail - row_gap * (len(active_accounts) - 1)) // len(active_accounts)))
+            total_h = row_h * len(active_accounts) + row_gap * (len(active_accounts) - 1)
+            row_y = body_y + max(8, (avail - total_h) // 2)
+            for account in active_accounts:
+                name = account["name"]
+                status = self._sync_account_status.get(name, {})
+                ok = bool(status.get("ok"))
+                primary = status.get("primary") or self._t("never")
+                secondary = status.get("secondary") or ""
+                cv.create_rectangle(x + 10, row_y, x + w - 10, row_y + row_h,
+                                    fill="#101a27", outline=CARD_BDR, tags="tab_content")
+                cv.create_text(x + 22, row_y + 15, text=name,
+                               fill=ACCENT, font=("Segoe UI", 9, "bold"),
+                               anchor="w", tags="tab_content")
+                icon_id = cv.create_text(x + 24, row_y + row_h - 20,
+                                         text="OK" if ok else "X",
+                                         fill=GREEN if ok else RED_COL,
+                                         font=("Segoe UI", 11, "bold"),
+                                         anchor="w", tags="tab_content")
+                label_id = cv.create_text(x + 56, row_y + row_h - 21,
+                                          text=self._t("last_sync_lbl") if ok else primary,
+                                          fill=MUTED, font=("Segoe UI", 9, "bold"),
+                                          anchor="w", tags="tab_content")
+                time_id = cv.create_text(x + w - 76, row_y + row_h - 22,
+                                         text=primary if ok else "",
+                                         fill=TEXT, font=("Segoe UI", 11, "bold"),
+                                         anchor="e", tags="tab_content")
+                date_id = cv.create_text(x + w - 22, row_y + row_h - 22,
+                                         text=secondary if ok else "",
+                                         fill=MUTED, font=("Segoe UI", 8),
+                                         anchor="e", tags="tab_content")
+                self._sync_account_item_ids[name] = {
+                    "icon": icon_id,
+                    "label": label_id,
+                    "time": time_id,
+                    "date": date_id,
+                }
+                row_y += row_h + row_gap
         else:
             self._sync_icon_id = cv.create_text(
                 x + w // 2, mid_y - 38,
@@ -2064,16 +2276,7 @@ class MainWindow:
         ttk.Button(entry_row, text=self._t("save_btn"), style="Gold.TButton",
                    command=self._settings_save_wow_path).pack(side="left", padx=(6, 0))
 
-        savedvars = self._savedvars_path() or self._t("not_found")
-        sv_row = tk.Frame(wrap, bg=CARD_BG)
-        sv_row.pack(fill="x", pady=(0, 8))
-        tk.Label(sv_row, text=self._t("savedvars_path"), bg=CARD_BG, fg=MUTED,
-                 font=("Segoe UI", 8)).pack(anchor="w")
-        sv_entry = tk.Entry(sv_row, bg="#1f2937", fg=MUTED,
-                            font=("Segoe UI", 9), relief="flat", bd=1)
-        sv_entry.insert(0, savedvars)
-        sv_entry.configure(state="readonly", readonlybackground="#1f2937")
-        sv_entry.pack(fill="x", pady=(3, 0), ipady=5)
+        self._render_settings_accounts(wrap)
 
         addon_state, addon_detail, addon_color, _ = self._addon_status_for_path(self._addons_folder())
         tk.Label(wrap, text=f"{addon_state} · {addon_detail}",
@@ -2084,6 +2287,8 @@ class MainWindow:
         wow_btns.pack(fill="x")
         ttk.Button(wow_btns, text=self._t("redetect_btn"), style="Gray.TButton",
                    command=self._settings_redetect_wow).pack(side="left")
+        ttk.Button(wow_btns, text=self._t("select_all_btn"), style="Gray.TButton",
+                   command=self._settings_select_all_accounts).pack(side="left", padx=(8, 0))
         ttk.Button(wow_btns, text=self._t("addon_tab_btn"), style="Gold.TButton",
                    command=self._settings_go_addon).pack(side="left", padx=(8, 0))
 
@@ -2153,6 +2358,82 @@ class MainWindow:
         finally:
             self.addons_var = previous
 
+    def _render_settings_accounts(self, parent):
+        self._settings_account_vars = {}
+        self._settings_account_detail_frames = {}
+        accounts = self._savedvars_accounts()
+        selected = self._selected_account_names()
+
+        tk.Label(parent, text=self._t("wow_accounts_detected"), bg=CARD_BG, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w", pady=(2, 4))
+
+        if not accounts:
+            tk.Label(parent, text=self._t("wow_accounts_none"), bg=CARD_BG, fg=MUTED,
+                     font=("Segoe UI", 9), wraplength=640, justify="left").pack(
+                         anchor="w", pady=(0, 8))
+            return
+
+        for account in accounts:
+            name = account["name"]
+            exists = bool(account.get("exists"))
+            card = tk.Frame(parent, bg="#101a27", padx=10, pady=8)
+            card.pack(fill="x", pady=(0, 6))
+
+            var = tk.BooleanVar(value=exists and name in selected)
+            self._settings_account_vars[name] = var
+            cb = tk.Checkbutton(
+                card, text=name if exists else f"{name} ({self._t('wow_account_no_data')})",
+                variable=var,
+                command=lambda n=name: self._settings_toggle_account(n),
+                bg="#101a27", fg=TEXT if exists else MUTED, selectcolor="#1f2937",
+                activebackground="#101a27", activeforeground=TEXT,
+                font=("Segoe UI", 9, "bold"), relief="flat", bd=0,
+                cursor="hand2", anchor="w")
+            cb.pack(anchor="w")
+            if not exists:
+                cb.configure(state="disabled")
+
+            detail = tk.Frame(card, bg="#101a27")
+            detail.pack(fill="x", pady=(6, 0)) if var.get() else detail.pack_forget()
+            self._settings_account_detail_frames[name] = detail
+
+            tk.Label(detail, text=self._t("savedvars_path"), bg="#101a27", fg=MUTED,
+                     font=("Segoe UI", 8)).pack(anchor="w")
+            sv_entry = tk.Entry(detail, bg="#1f2937", fg=MUTED,
+                                font=("Segoe UI", 8), relief="flat", bd=1)
+            sv_entry.insert(0, account.get("savedvars_path") or self._t("not_found"))
+            sv_entry.configure(state="readonly", readonlybackground="#1f2937")
+            sv_entry.pack(fill="x", pady=(3, 0), ipady=4)
+
+            count = self._savedvars_character_count(account.get("savedvars_path")) if exists else None
+            if count is not None:
+                tk.Label(detail, text=f"{self._t('wow_account_chars')}: {count}",
+                         bg="#101a27", fg=MUTED, font=("Segoe UI", 8)).pack(
+                             anchor="w", pady=(3, 0))
+
+    def _settings_toggle_account(self, name):
+        selected = set(self.cfg.get("wow_accounts_selected") or [])
+        var = self._settings_account_vars.get(name)
+        if var and var.get():
+            selected.add(name)
+        else:
+            selected.discard(name)
+        self._set_selected_accounts(selected)
+
+        detail = self._settings_account_detail_frames.get(name)
+        if detail:
+            if var and var.get():
+                detail.pack(fill="x", pady=(6, 0))
+            else:
+                detail.pack_forget()
+
+    def _settings_select_all_accounts(self):
+        accounts = self._existing_savedvars_accounts()
+        self._set_selected_accounts([a["name"] for a in accounts])
+        self._hide_settings_popup()
+        self._show_main_view()
+        self._show_settings_popup()
+
     def _settings_browse_wow(self):
         folder = filedialog.askdirectory(title=self._t("wow_folder_lbl"))
         if folder and hasattr(self, "settings_wow_path_var"):
@@ -2164,17 +2445,25 @@ class MainWindow:
         if not normalized or not wow_path.is_wow_dir(normalized):
             return
         self.cfg["wow_install_path"] = str(normalized)
-        self.cfg["wow_path"] = wow_path.find_savedvars(normalized)
+        self.cfg["wow_accounts_selected"] = []
+        self.cfg["wow_accounts_prompted"] = False
+        self.cfg["wow_path"] = None
         cfg_module.save(self.cfg)
+        self._ensure_default_account_selection(prompt=True)
         self._hide_settings_popup()
         self._show_main_view()
 
     def _settings_redetect_wow(self):
-        self.cfg["wow_install_path"] = None
+        raw = self.settings_wow_path_var.get().strip() if hasattr(self, "settings_wow_path_var") else ""
+        normalized = wow_path.normalize_wow_dir(raw)
+        found = str(normalized) if normalized and wow_path.is_wow_dir(normalized) else None
+        found = found or wow_path.find_wow_dir(self.cfg.get("wow_install_path"))
+        self.cfg["wow_install_path"] = str(found) if found else None
         self.cfg["wow_path"] = None
-        found = self._wow_install_path()
-        self.cfg["wow_path"] = wow_path.find_savedvars(found) if found else None
+        self.cfg["wow_accounts_selected"] = []
+        self.cfg["wow_accounts_prompted"] = False
         cfg_module.save(self.cfg)
+        self._ensure_default_account_selection(prompt=True)
         self._hide_settings_popup()
         self._show_main_view()
 
@@ -2330,16 +2619,24 @@ class MainWindow:
         def _run():
             try:
                 from sync_worker import SyncWorker
-                sv_path = self._savedvars_path()
-                if not sv_path:
+                accounts = self._active_savedvars_accounts()
+                if not accounts:
+                    sv_path = self._savedvars_path()
+                    if sv_path:
+                        accounts = [{
+                            "name": self._account_name_from_savedvars(sv_path),
+                            "savedvars_path": sv_path,
+                        }]
+                if not accounts:
                     self.root.after(0, lambda: self._update_sync_ui(False, self._t("wow_no")))
                     return
                 w = SyncWorker(self.cfg)
 
-                def _done(_chars):
+                def _done(payload):
                     ts = time.strftime("%H:%M")
                     ds = time.strftime("%d/%m/%Y")
-                    self.root.after(0, lambda: self._update_sync_ui(True, ts, ds))
+                    account = payload.get("account") if isinstance(payload, dict) else None
+                    self.root.after(0, lambda: self._update_sync_ui(True, ts, ds, account=account))
                     threading.Thread(target=self._load_characters, daemon=True).start()
 
                 def _err(msg):
@@ -2347,19 +2644,41 @@ class MainWindow:
 
                 w.on_sync  = _done
                 w.on_error = _err
-                w._sync(sv_path)
+                for account in accounts:
+                    w._sync(account["savedvars_path"], account.get("name"))
             except Exception as e:
                 self.root.after(0, lambda: self._update_sync_ui(False, f"Error: {e}"))
 
         threading.Thread(target=_run, daemon=True).start()
 
-    def _update_sync_ui(self, ok, primary="", secondary=""):
+    def _update_sync_ui(self, ok, primary="", secondary="", account=None):
         self._sync_ok        = ok
         self._sync_primary   = primary
         self._sync_secondary = secondary
 
+        if account:
+            self._sync_account_status[account] = {
+                "ok": ok,
+                "primary": primary,
+                "secondary": secondary,
+            }
+
         cv = self._cv
         if not (cv and cv.winfo_exists()):
+            return
+
+        if account and account in self._sync_account_item_ids:
+            ids = self._sync_account_item_ids[account]
+            cv.itemconfigure(ids["icon"], text="OK" if ok else "X",
+                             fill=GREEN if ok else RED_COL)
+            if ok:
+                cv.itemconfigure(ids["label"], text=self._t("last_sync_lbl"), fill=MUTED)
+                cv.itemconfigure(ids["time"], text=primary, fill=TEXT)
+                cv.itemconfigure(ids["date"], text=secondary, fill=MUTED)
+            else:
+                cv.itemconfigure(ids["label"], text=primary, fill=MUTED)
+                cv.itemconfigure(ids["time"], text="", fill=TEXT)
+                cv.itemconfigure(ids["date"], text="", fill=MUTED)
             return
 
         if self._sync_icon_id:
@@ -2754,11 +3073,12 @@ class MainWindow:
                                on_open=self._show_from_tray, on_quit=self._quit,
                                version=CLIENT_VERSION)
 
-        def _on_sync(_chars):
+        def _on_sync(payload):
             ts = time.strftime("%H:%M")
             ds = time.strftime("%d/%m/%Y")
-            self._tray.set_status(f"Sync: {ts}")
-            self.root.after(0, lambda: self._update_sync_ui(True, ts, ds))
+            account = payload.get("account") if isinstance(payload, dict) else None
+            self._tray.set_status(f"Sync: {account or ts}")
+            self.root.after(0, lambda: self._update_sync_ui(True, ts, ds, account=account))
             threading.Thread(target=self._load_characters, daemon=True).start()
 
         self._worker.on_sync  = _on_sync

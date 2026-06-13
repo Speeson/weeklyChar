@@ -15,6 +15,8 @@ _DEFAULTS = {
     "avatar_url": None,
     "wow_path": None,
     "wow_install_path": None,
+    "wow_accounts_selected": [],
+    "wow_accounts_prompted": False,
     "start_minimized": False,
     "minimize_on_close": False,
     "login_at": None,

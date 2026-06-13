@@ -114,7 +114,15 @@ Gradientes de color:
 Bloque de sincronización (derecha):
 - Indicador WoW detectado (● verde/rojo).
 - Ícono ✓/✗ grande + fecha/hora de la última sync.
+- Si hay varias cuentas de WoW seleccionadas, muestra una tarjeta de estado por cuenta con su propia última sincronización.
 - Botón "Sincronizar".
+
+**Selección de cuentas WoW:**
+- KeystoneClient detecta cuentas en `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
+- Si solo existe una cuenta con datos de KeystoneSync, se selecciona automáticamente y no se muestra ningún selector.
+- Si hay varias cuentas con datos y todavía no hay selección guardada, aparece una ventana inicial con el mismo estilo visual del cliente para elegir qué cuentas sincronizar.
+- En `Ajustes > Seleccion de cuentas` se puede cambiar la ruta de instalación de WoW, activar o desactivar cuentas detectadas, ver la ruta concreta de cada `SavedVariables`, redetectar cuentas y seleccionar todas.
+- El sincronizador solo lee las cuentas seleccionadas. Si hay varias cuentas detectadas pero ninguna seleccionada, no fuerza la sincronización de la primera cuenta para evitar mezclar datos por error.
 
 **Pestaña Addon:**
 - Selector de carpeta AddOns + campo de texto con la ruta.

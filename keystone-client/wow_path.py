@@ -104,3 +104,53 @@ def find_savedvars(extra_dir: str | Path | None = None) -> str | None:
             if sv.exists():
                 return str(sv)
     return None
+
+
+def discover_savedvars_accounts(extra_dir: str | Path | None = None) -> list[dict]:
+    """Return WoW account folders and their KeystoneSync SavedVariables status."""
+    wow_dir = find_wow_dir(extra_dir)
+    if not wow_dir:
+        return []
+
+    account_dir = Path(wow_dir) / "_retail_" / "WTF" / "Account"
+    if not account_dir.exists():
+        return []
+
+    accounts: list[dict] = []
+    for account in sorted(account_dir.iterdir(), key=lambda p: p.name.lower()):
+        if not account.is_dir():
+            continue
+        sv = account / "SavedVariables" / "KeystoneSync.lua"
+        exists = sv.exists()
+        accounts.append(
+            {
+                "name": account.name,
+                "account_dir": str(account),
+                "savedvars_path": str(sv),
+                "exists": exists,
+                "mtime": sv.stat().st_mtime if exists else None,
+            }
+        )
+    return accounts
+
+
+def selected_savedvars_paths(config: dict) -> list[dict]:
+    """Return selected, existing KeystoneSync.lua files for sync."""
+    accounts = discover_savedvars_accounts(config.get("wow_install_path"))
+    existing = [a for a in accounts if a.get("exists")]
+    selected = config.get("wow_accounts_selected") or []
+
+    if selected:
+        selected_set = {str(name).lower() for name in selected}
+        return [a for a in existing if a["name"].lower() in selected_set]
+
+    # Backwards compatibility: a single account should behave exactly as before.
+    if len(existing) == 1:
+        return existing
+
+    legacy = config.get("wow_path")
+    if legacy:
+        legacy_norm = str(legacy).lower()
+        return [a for a in existing if a["savedvars_path"].lower() == legacy_norm]
+
+    return []

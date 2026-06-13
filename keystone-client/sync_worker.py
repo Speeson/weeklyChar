@@ -28,10 +28,12 @@ class SyncWorker(threading.Thread):
         self.on_sync = on_sync
         self.on_error = on_error
         self._last_mtime = 0
+        self._last_mtimes = {}
         self._stop = threading.Event()
 
     def force_sync(self):
         self._last_mtime = 0
+        self._last_mtimes = {}
 
     def stop(self):
         self._stop.set()
@@ -46,19 +48,44 @@ class SyncWorker(threading.Thread):
             time.sleep(2)
 
     def _check(self):
-        path = self.config.get("wow_path")
-        if not path or not os.path.exists(path):
-            path = wow_path.find_savedvars(self.config.get("wow_install_path"))
-            if not path:
+        accounts = wow_path.selected_savedvars_paths(self.config)
+        if not accounts:
+            discovered = wow_path.discover_savedvars_accounts(self.config.get("wow_install_path"))
+            existing = [a for a in discovered if a.get("exists")]
+            if len(existing) > 1 and not self.config.get("wow_accounts_selected"):
                 return
+            path = self.config.get("wow_path")
+            if not path or not os.path.exists(path):
+                path = wow_path.find_savedvars(self.config.get("wow_install_path"))
+            if not path or not os.path.exists(path):
+                return
+            accounts = [{"name": self._account_name_from_path(path), "savedvars_path": path}]
             self.config["wow_path"] = path
             cfg_module.save(self.config)
-        mtime = os.path.getmtime(path)
-        if mtime <= self._last_mtime:
+
+        changed = []
+        for account in accounts:
+            path = account["savedvars_path"]
+            if not path or not os.path.exists(path):
+                continue
+            mtime = os.path.getmtime(path)
+            if mtime <= self._last_mtimes.get(path, 0):
+                continue
+            self._last_mtimes[path] = mtime
+            changed.append(account)
+
+        if not changed:
             return
-        self._last_mtime = mtime
+
         time.sleep(0.5)
-        self._sync(path)
+        for account in changed:
+            self._sync(account["savedvars_path"], account.get("name"))
+
+    def _account_name_from_path(self, path: str) -> str:
+        try:
+            return os.path.basename(os.path.dirname(os.path.dirname(path)))
+        except Exception:
+            return "WoW"
 
     def _fetch_raiderio(self, name: str, realm: str, region: str) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[int]]:
         """Return (avatar_url, rio_score, wow_class, ilvl) from Raider.IO, or (None, None, None, None) on failure."""
@@ -82,7 +109,7 @@ class SyncWorker(threading.Thread):
         except Exception:
             return None, None, None, None
 
-    def _sync(self, path: str):
+    def _sync(self, path: str, account_name: str | None = None):
         with open(path, encoding="utf-8") as f:
             content = f.read().strip()
 
@@ -147,4 +174,4 @@ class SyncWorker(threading.Thread):
                 return
 
         if synced and self.on_sync:
-            self.on_sync(synced)
+            self.on_sync({"account": account_name or self._account_name_from_path(path), "characters": synced})
