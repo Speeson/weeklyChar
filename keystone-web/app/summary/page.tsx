@@ -402,7 +402,7 @@ function SectionToggleRow({
   onToggle: () => void
   colSpan: number
 }) {
-  const arrows = collapsed ? '▼ ▼ ▼ ▼' : '▲ ▲ ▲ ▲'
+  const arrows = collapsed ? '▼' : '▲'
   const action = collapsed ? 'Desplegar' : 'Compactar'
 
   return (
