@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { API_URL } from '@/lib/auth'
+import AuthPageShell from '@/app/components/AuthPageShell'
 
 export default function VerifyEmailPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -34,11 +35,9 @@ export default function VerifyEmailPage() {
   }, [])
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-950 p-4 text-gray-100">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b121b] p-7 text-center shadow-2xl shadow-black/50">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-400">KeystoneSync</p>
-        <h1 className="mt-2 text-2xl font-black text-white">Verificacion de email</h1>
-        <p className={`mt-5 text-sm ${status === 'success' ? 'text-green-300' : status === 'error' ? 'text-red-300' : 'text-gray-300'}`}>
+    <AuthPageShell eyebrow="Cuenta" title="Verificacion de email">
+      <div className="text-center">
+        <p className={`text-sm ${status === 'success' ? 'text-green-300' : status === 'error' ? 'text-red-300' : 'text-gray-300'}`}>
           {message}
         </p>
         <Link
@@ -48,6 +47,6 @@ export default function VerifyEmailPage() {
           Ir a iniciar sesion
         </Link>
       </div>
-    </main>
+    </AuthPageShell>
   )
 }

@@ -260,6 +260,14 @@ class ResetPasswordRequest(BaseModel):
     password: str
     confirmPassword: str
 
+class ResendVerificationRequest(BaseModel):
+    emailOrUsername: str
+
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str
+    password: str
+    confirmPassword: str
+
 class KeystoneUpdateRequest(BaseModel):
     character: str
     realm: str
@@ -381,6 +389,23 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Email verificado correctamente"}
 
+@app.post("/api/auth/resend-verification")
+def resend_verification(payload: ResendVerificationRequest, db: Session = Depends(get_db)):
+    value = payload.emailOrUsername.strip()
+    normalized = _normalize_email(value)
+    user = db.query(User).filter_by(email=normalized).first()
+    if not user:
+        user = db.query(User).filter_by(username=value).first()
+
+    if user and user.email and not user.email_verified:
+        token = _new_plain_token()
+        user.email_verification_token_hash = _hash_token(token)
+        user.email_verification_expires_at = datetime.now(timezone.utc) + timedelta(hours=EMAIL_TOKEN_EXPIRE_HOURS)
+        db.commit()
+        _send_verification_email(user, token)
+
+    return {"message": "Si la cuenta existe y esta pendiente, recibiras un nuevo email de verificacion."}
+
 @app.post("/api/auth/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     email = _normalize_email(payload.email)
@@ -411,6 +436,25 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     db.commit()
     return {"message": "Password actualizada correctamente"}
 
+@app.post("/api/me/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(payload.currentPassword, current_user.password_hash):
+        raise HTTPException(400, "La password actual no es correcta")
+    if len(payload.password) < 6:
+        raise HTTPException(400, "La nueva password debe tener al menos 6 caracteres")
+    if payload.password != payload.confirmPassword:
+        raise HTTPException(400, "Las passwords no coinciden")
+
+    current_user.password_hash = hash_password(payload.password)
+    current_user.password_reset_token_hash = None
+    current_user.password_reset_expires_at = None
+    db.commit()
+    return {"message": "Password actualizada correctamente"}
+
 
 # --- Me endpoints ---
 
@@ -424,6 +468,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "firstName": current_user.first_name,
         "lastName": current_user.last_name,
         "email": current_user.email,
+        "dateOfBirth": current_user.date_of_birth.isoformat() if current_user.date_of_birth else None,
         "emailVerified": current_user.email_verified,
     }
 

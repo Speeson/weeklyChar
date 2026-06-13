@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { API_URL } from '@/lib/auth'
+import AuthPageShell from '@/app/components/AuthPageShell'
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState('')
@@ -44,14 +45,11 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-950 p-4 text-gray-100">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b121b] p-7 shadow-2xl shadow-black/50">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-400">KeystoneSync</p>
-        <h1 className="mt-2 text-2xl font-black text-white">Nueva password</h1>
-        <p className="mt-2 text-sm leading-6 text-gray-400">
-          Establece una nueva password para tu cuenta.
-        </p>
-
+    <AuthPageShell
+      eyebrow="Seguridad"
+      title="Nueva password"
+      description="Establece una nueva password para tu cuenta."
+    >
         {!token && <p className="mt-5 text-sm text-red-400">Link de recuperacion invalido.</p>}
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -87,7 +85,6 @@ export default function ResetPasswordPage() {
         <Link href="/login" className="mt-5 inline-flex text-sm font-semibold text-yellow-400 hover:text-yellow-300">
           Volver al login
         </Link>
-      </div>
-    </main>
+    </AuthPageShell>
   )
 }

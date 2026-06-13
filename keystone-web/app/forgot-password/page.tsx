@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { API_URL } from '@/lib/auth'
+import AuthPageShell from '@/app/components/AuthPageShell'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -36,15 +37,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-950 p-4 text-gray-100">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b121b] p-7 shadow-2xl shadow-black/50">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-400">KeystoneSync</p>
-        <h1 className="mt-2 text-2xl font-black text-white">Recuperar password</h1>
-        <p className="mt-2 text-sm leading-6 text-gray-400">
-          Introduce tu email y te enviaremos un enlace para crear una nueva password.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+    <AuthPageShell
+      eyebrow="Seguridad"
+      title="Recuperar password"
+      description="Introduce tu email y te enviaremos un enlace para crear una nueva password."
+    >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
@@ -67,7 +65,6 @@ export default function ForgotPasswordPage() {
         <Link href="/login" className="mt-5 inline-flex text-sm font-semibold text-yellow-400 hover:text-yellow-300">
           Volver al login
         </Link>
-      </div>
-    </main>
+    </AuthPageShell>
   )
 }

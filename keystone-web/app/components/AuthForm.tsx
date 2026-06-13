@@ -24,6 +24,8 @@ export default function AuthForm({ mode, className = '' }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
+  const canResendVerification = mode === 'login' && !!error?.toLowerCase().includes('email no verificado') && !!username
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -64,6 +66,29 @@ export default function AuthForm({ mode, className = '' }: Props) {
       setError('No se puede conectar con la API.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function resendVerification() {
+    setResending(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch(`${API_URL}/api/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailOrUsername: username }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.detail ?? 'No se pudo reenviar el email.')
+        return
+      }
+      setSuccess(data.message ?? 'Si la cuenta esta pendiente, recibiras un nuevo email.')
+    } catch {
+      setError('No se puede conectar con la API.')
+    } finally {
+      setResending(false)
     }
   }
 
@@ -145,6 +170,16 @@ export default function AuthForm({ mode, className = '' }: Props) {
       )}
 
       {error && <p className="text-sm text-red-400">{error}</p>}
+      {canResendVerification && (
+        <button
+          type="button"
+          onClick={resendVerification}
+          disabled={resending}
+          className="w-full rounded-lg border border-yellow-400/40 bg-yellow-400/10 py-2 text-xs font-bold text-yellow-300 transition hover:bg-yellow-400/15 disabled:opacity-50"
+        >
+          {resending ? 'Reenviando...' : 'Reenviar email de verificacion'}
+        </button>
+      )}
       {success && <p className="rounded-lg border border-green-400/30 bg-green-400/10 p-3 text-sm text-green-300">{success}</p>}
 
       <button
