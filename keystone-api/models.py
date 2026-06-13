@@ -72,6 +72,7 @@ class Character(Base):
     vault_json = Column(Text, nullable=True)
     prey_hunts_json = Column(Text, nullable=True)
     currencies_json = Column(Text, nullable=True)
+    money_json = Column(Text, nullable=True)
     mythic_plus_season_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

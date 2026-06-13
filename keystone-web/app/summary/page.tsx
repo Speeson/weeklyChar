@@ -44,6 +44,13 @@ interface CurrencyInfo {
   displayColor?: string | null
 }
 
+interface MoneyInfo {
+  copper?: number
+  gold?: number
+  silver?: number
+  copperOnly?: number
+}
+
 interface SeasonDungeon {
   challengeMapId: number
   name: string | null
@@ -75,6 +82,7 @@ interface Character {
     nightmare?: PreyBucket
   } | null
   currencies: Record<string, CurrencyInfo> | null
+  money: MoneyInfo | null
   mythicPlusSeason: {
     rating?: number
     dungeons?: SeasonDungeon[]
@@ -128,13 +136,15 @@ const CURRENCIES = [
   { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, localIcon: 'nebulous-voidcore.jpg' },
 ] as const
 
-const SUMMARY_SECTIONS = ['dungeons', 'greatVault', 'preyHunts', 'currencies'] as const
+const SUMMARY_SECTIONS = ['money', 'dungeons', 'greatVault', 'preyHunts', 'currencies'] as const
 const SUMMARY_COLLAPSED_KEY = 'ks_summary_collapsed_sections'
+const WEB_SETTINGS_KEY = 'ks_web_settings'
 
 type SummarySection = typeof SUMMARY_SECTIONS[number]
 type CollapsedSections = Record<SummarySection, boolean>
 
 const DEFAULT_COLLAPSED_SECTIONS: CollapsedSections = {
+  money: false,
   dungeons: false,
   greatVault: false,
   preyHunts: false,
@@ -153,6 +163,17 @@ function loadCollapsedSections(): CollapsedSections {
 
 function saveCollapsedSections(value: CollapsedSections) {
   window.localStorage.setItem(SUMMARY_COLLAPSED_KEY, JSON.stringify(value))
+}
+
+function loadSummaryBlockVisibility(): Record<string, boolean> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(WEB_SETTINGS_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    return parsed?.summaryBlocks ?? {}
+  } catch {
+    return {}
+  }
 }
 
 function dash(value: unknown) {
@@ -194,6 +215,26 @@ function VaultProgress({ bucket, maxProgress }: { bucket?: VaultBucket; maxProgr
 
 function preyCount(bucket?: PreyBucket) {
   return bucket?.count ? String(bucket.count) : '—'
+}
+
+function moneyCopper(money?: MoneyInfo | null) {
+  if (!money) return 0
+  if (typeof money.copper === 'number') return money.copper
+  return ((money.gold ?? 0) * 10000) + ((money.silver ?? 0) * 100) + (money.copperOnly ?? 0)
+}
+
+function formatMoney(copper: number) {
+  if (!copper || copper < 0) return '—'
+  const gold = Math.floor(copper / 10000)
+  const silver = Math.floor((copper % 10000) / 100)
+  const copperOnly = copper % 100
+  return (
+    <span className="inline-flex items-center justify-center gap-1 whitespace-nowrap text-xs font-semibold">
+      <span className="text-yellow-300">{gold.toLocaleString('es-ES')}g</span>
+      <span className="text-gray-300">{silver}s</span>
+      <span className="text-orange-300">{copperOnly}c</span>
+    </span>
+  )
 }
 
 function dungeonFor(char: Character, mapId: number) {
@@ -379,13 +420,15 @@ function Cell({
   children = null,
   className = '',
   style,
+  colSpan,
 }: {
   children?: React.ReactNode
   className?: string
   style?: React.CSSProperties
+  colSpan?: number
 }) {
   return (
-    <td className={`min-w-36 px-3 py-2 text-center text-sm border-l border-gray-950/60 ${className}`} style={style}>
+    <td colSpan={colSpan} className={`min-w-36 px-3 py-2 text-center text-sm border-l border-gray-950/60 ${className}`} style={style}>
       {children}
     </td>
   )
@@ -430,6 +473,7 @@ export default function SummaryPage() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
   const [collapsedSections, setCollapsedSections] = useState<CollapsedSections>(loadCollapsedSections)
+  const [summaryBlocks, setSummaryBlocks] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
 
   function toggleSection(section: SummarySection) {
@@ -445,6 +489,7 @@ export default function SummaryPage() {
       router.push('/login')
       return
     }
+    setSummaryBlocks(loadSummaryBlockVisibility())
     apiFetch('/api/me/characters')
       .then(r => {
         if (r.status === 401) {
@@ -503,6 +548,25 @@ export default function SummaryPage() {
                   <InfoRow label="Item Level">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-purple-400">{dash(c.ilvl)}</Cell>)}</InfoRow>
                   <InfoRow label="Rating">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
                   <InfoRow label="Current Keystone">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
+
+                  {summaryBlocks.money !== false && <SectionToggleRow
+                    label="Oro"
+                    collapsed={collapsedSections.money}
+                    onToggle={() => toggleSection('money')}
+                    colSpan={visibleCharacters.length}
+                  />}
+                  {summaryBlocks.money !== false && !collapsedSections.money && (
+                    <>
+                      <InfoRow label="Personaje">
+                        {visibleCharacters.map(c => <Cell key={c.id}>{formatMoney(moneyCopper(c.money))}</Cell>)}
+                      </InfoRow>
+                      <InfoRow label="Total cuenta">
+                        <Cell colSpan={visibleCharacters.length} className="bg-yellow-500/5 font-bold" style={{ color: '#facc15' }}>
+                          {formatMoney(visibleCharacters.reduce((sum, c) => sum + moneyCopper(c.money), 0))}
+                        </Cell>
+                      </InfoRow>
+                    </>
+                  )}
 
                   <SectionToggleRow
                     label="Dungeons"

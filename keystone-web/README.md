@@ -23,6 +23,8 @@ Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angu
 | `/` | Dashboard: personajes, afijos, countdown de reset |
 | `/teams` | Crear equipos, unirse por código, listar equipos propios |
 | `/teams/[id]` | Detalle de equipo: todos los miembros y sus personajes |
+| `/summary` | Resumen semanal: oro, mazmorras, Great Vault, Prey Hunts y currencies |
+| `/settings` | Ajustes de visibilidad de resumen, currencies, personajes, equipos y sincronización |
 
 ---
 
@@ -34,6 +36,12 @@ Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angu
 - **Visibilidad de personajes** — botón "Gestionar" para mostrar/ocultar personajes individualmente; estado persistido en `localStorage` (`ks_hidden_chars`).
 - **Afijos semanales** — obtiene los afijos EU actuales de la API pública de Raider.IO (`/api/v1/mythic-plus/affixes?region=eu`); muestra íconos en fila horizontal con badges de nivel (`5+` / `7+` / `10+` / `12+`) y tooltip CSS al hover (nombre + descripción).
 - **Countdown de reset semanal** — cuenta atrás en tiempo real hasta el miércoles 09:00 CEST.
+
+### Resumen (`/summary`)
+
+- **Sección Oro** — muestra oro/plata/cobre por personaje y el total de la cuenta.
+- **Bloques compactables** — Dungeons, Great Vault, Prey Hunts y Currencies se pueden compactar/desplegar.
+- **Visibilidad configurable** — desde `/settings` se puede ocultar la sección de oro por ser información sensible.
 
 ### Navbar
 

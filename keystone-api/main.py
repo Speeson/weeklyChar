@@ -62,6 +62,7 @@ with engine.connect() as _conn:
         ("characters", "vault_json", "TEXT"),
         ("characters", "prey_hunts_json", "TEXT"),
         ("characters", "currencies_json", "TEXT"),
+        ("characters", "money_json", "TEXT"),
         ("characters", "mythic_plus_season_json", "TEXT"),
     ]:
         _add_column_if_missing(_conn, _table, _column, _definition)
@@ -287,6 +288,7 @@ class KeystoneUpdateRequest(BaseModel):
     vault: Optional[dict[str, Any]] = None
     preyHunts: Optional[dict[str, Any]] = None
     currencies: Optional[dict[str, Any]] = None
+    money: Optional[dict[str, Any]] = None
     mythicPlusSeason: Optional[dict[str, Any]] = None
 
 class AvatarUpdateRequest(BaseModel):
@@ -303,6 +305,7 @@ class CharacterEnrichRequest(BaseModel):
     vault: Optional[dict[str, Any]] = None
     preyHunts: Optional[dict[str, Any]] = None
     currencies: Optional[dict[str, Any]] = None
+    money: Optional[dict[str, Any]] = None
     mythicPlusSeason: Optional[dict[str, Any]] = None
 
 class CreateTeamRequest(BaseModel):
@@ -500,6 +503,8 @@ def enrich_character(
         character.prey_hunts_json = _json_dump(payload.preyHunts)
     if payload.currencies is not None:
         character.currencies_json = _json_dump(payload.currencies)
+    if payload.money is not None:
+        character.money_json = _json_dump(payload.money)
     if payload.mythicPlusSeason is not None:
         character.mythic_plus_season_json = _json_dump(payload.mythicPlusSeason)
     db.commit()
@@ -566,6 +571,8 @@ def update_keystone(
         character.prey_hunts_json = _json_dump(payload.preyHunts)
     if payload.currencies is not None:
         character.currencies_json = _json_dump(payload.currencies)
+    if payload.money is not None:
+        character.money_json = _json_dump(payload.money)
     if payload.mythicPlusSeason is not None:
         character.mythic_plus_season_json = _json_dump(payload.mythicPlusSeason)
 
@@ -693,6 +700,7 @@ def _character_response(c: Character):
         "vault": _json_load(c.vault_json),
         "preyHunts": _json_load(c.prey_hunts_json),
         "currencies": _json_load(c.currencies_json),
+        "money": _json_load(c.money_json),
         "mythicPlusSeason": _json_load(c.mythic_plus_season_json),
     }
 

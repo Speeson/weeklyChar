@@ -457,6 +457,16 @@ local function GetItemLevel(prev)
     return prev and prev.ilvl or nil
 end
 
+local function GetMoneyData()
+    local copper = GetMoney() or 0
+    return {
+        copper = copper,
+        gold = math.floor(copper / 10000),
+        silver = math.floor((copper % 10000) / 100),
+        copperOnly = copper % 100,
+    }
+end
+
 local function SaveCharacterData(reason)
     if UnitLevel("player") < MAX_LEVEL then return end
 
@@ -482,6 +492,7 @@ local function SaveCharacterData(reason)
     KeystoneSyncDB[key].vault = GetVaultData()
     KeystoneSyncDB[key].preyHunts = GetPreyHunts()
     KeystoneSyncDB[key].currencies = GetCurrencyData()
+    KeystoneSyncDB[key].money = GetMoneyData()
     KeystoneSyncDB[key].mythicPlusSeason = GetMythicPlusSeason()
     KeystoneSyncDB[key].updatedAt = time()
     KeystoneSyncDB[key].updatedReason = reason

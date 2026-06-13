@@ -150,6 +150,7 @@ class SyncWorker(threading.Thread):
                 "vault": entry.get("vault"),
                 "preyHunts": entry.get("preyHunts"),
                 "currencies": entry.get("currencies"),
+                "money": entry.get("money"),
                 "mythicPlusSeason": entry.get("mythicPlusSeason"),
             }
             try:

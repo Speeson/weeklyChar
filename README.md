@@ -30,11 +30,11 @@ keystone-web (panel web Next.js)
 
 Addon de World of Warcraft Retail escrito en Lua. Repo propio con changelog: https://github.com/Speeson/KeystoneSync
 
-**Versión actual:** 0.1.4 — WoW 12.0.5.67602 (Interface `120005`)
+**Versión actual del addon empaquetado:** 0.1.11 — WoW Retail (Interface `120005`)
 
-- Lee la piedra al iniciar sesión (`PLAYER_LOGIN` inmediato + lectura diferida 5 s).
-- Detecta cambios en el inventario con `BAG_UPDATE_DELAYED` (reseteos semanales).
-- Guarda el estado final al salir (`PLAYER_LOGOUT`).
+- Lee la piedra al iniciar sesión (`PLAYER_LOGIN`) y guarda el estado final al salir (`PLAYER_LOGOUT`).
+- Captura información semanal adicional: Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada e item level.
+- Captura oro/plata/cobre del personaje mediante `GetMoney()`, guardando total en cobre y desglose visible.
 - Actualiza al completar míticas+ (`CHALLENGE_MODE_COMPLETED`, lecturas diferidas 5/10/20 s).
 - **Ignora personajes por debajo del nivel máximo (90).**
 - Resuelve el nombre de la mazmorra via `C_ChallengeMode.GetMapUIInfo`.
@@ -52,8 +52,18 @@ KeystoneSyncDB["Realm-Personaje"] = {
     keystoneChallengeMapId = 558,
     keystoneMapId          = 2290,
     keystoneDungeon        = "Algeth'ar Academy",
+    ilvl                   = 287,
+    money                  = {
+        copper     = 123456789,
+        gold       = 12345,
+        silver     = 67,
+        copperOnly = 89,
+    },
+    greatVault             = { ... },
+    currencies             = { ... },
+    timedDungeons          = { ... },
     updatedAt              = 1780000000,
-    updatedReason          = "PLAYER_LOGIN_5S",
+    updatedReason          = "PLAYER_LOGIN",
 }
 ```
 
@@ -141,7 +151,8 @@ Cada personaje enriquece su perfil consultando la API pública de Raider.IO:
 - Avatar (foto de perfil circular recortada).
 - Clase WoW (para color de nombre e ícono de clase).
 - Puntuación M+ de la temporada actual.
-- Item level equipado.
+- Item level.
+- Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada y oro/plata/cobre.
 
 Los íconos de clase se descargan de `https://wow.zamimg.com/images/wow/icons/medium/classicon_{slug}.jpg` y se cachean en `%APPDATA%\KeystoneClient\class_icons\`.
 
@@ -286,7 +297,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 5. El addon guarda las piedras en SavedVariables al login/logout/bag change.
 6. Al minimizar a la bandeja, KeystoneClient empieza a vigilar el archivo.
 7. Detecta cambios → consulta Raider.IO (avatar, clase, RIO, ilvl) → envía a la API.
-8. La web muestra personajes con foto, clase, ilvl, piedra, puntuación RIO, afijos y countdown.
+8. La web muestra personajes con foto, clase, ilvl, piedra, puntuación RIO, afijos, countdown, resumen semanal, currencies y oro/plata/cobre si el usuario decide mostrarlo.
 9. Al completar una mítica+, el addon actualiza SavedVariables → KeystoneClient sincroniza.
 ```
 
@@ -327,7 +338,7 @@ Consulta [LICENSE](LICENSE) para los terminos completos.
 
 | Componente | Estado | Notas |
 |------------|--------|-------|
-| KeystoneSync (addon) | ✅ | v0.1.4, repo propio con CHANGELOG |
+| KeystoneSync (addon) | ✅ | v0.1.11, repo propio con CHANGELOG |
 | keystone-sync-client | ✅ | Polling cada 2 s, legacy |
 | keystone-api | ✅ | JWT, sync token, teams, PostgreSQL |
 | keystone-web | ✅ | Navbar, afijos, reset, tabla ordenable, equipos |
