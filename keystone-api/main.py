@@ -1,7 +1,7 @@
 import os
 import json
 import hashlib
-import html
+import html as html_lib
 import re
 import secrets
 import urllib.error
@@ -140,7 +140,7 @@ def _send_email(to_email: str, subject: str, html: str, text: str):
 
 def _send_verification_email(user: User, token: str):
     link = f"{WEB_BASE_URL}/verify-email?token={token}"
-    safe_username = html.escape(user.username)
+    safe_username = html_lib.escape(user.username)
     subject = "Verifica tu cuenta de KeystoneSync"
     text = (
         f"Hola {user.username},\n\n"
@@ -148,7 +148,7 @@ def _send_verification_email(user: User, token: str):
         f"{link}\n\n"
         "Este enlace caduca en 24 horas."
     )
-    html = f"""
+    email_html = f"""
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
       <h2>Verifica tu cuenta de KeystoneSync</h2>
       <p>Hola <strong>{safe_username}</strong>, confirma tu cuenta para poder iniciar sesion.</p>
@@ -158,11 +158,11 @@ def _send_verification_email(user: User, token: str):
       <p>Este enlace caduca en 24 horas.</p>
     </div>
     """
-    _send_email(user.email, subject, html, text)
+    _send_email(user.email, subject, email_html, text)
 
 def _send_password_reset_email(user: User, token: str):
     link = f"{WEB_BASE_URL}/reset-password?token={token}"
-    safe_username = html.escape(user.username)
+    safe_username = html_lib.escape(user.username)
     subject = "Recupera tu password de KeystoneSync"
     text = (
         f"Hola {user.username},\n\n"
@@ -170,7 +170,7 @@ def _send_password_reset_email(user: User, token: str):
         f"{link}\n\n"
         "Este enlace caduca en 60 minutos."
     )
-    html = f"""
+    email_html = f"""
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
       <h2>Recupera tu password de KeystoneSync</h2>
       <p>Hola <strong>{safe_username}</strong>, usa este enlace para establecer una nueva password.</p>
@@ -180,7 +180,7 @@ def _send_password_reset_email(user: User, token: str):
       <p>Este enlace caduca en 60 minutos.</p>
     </div>
     """
-    _send_email(user.email, subject, html, text)
+    _send_email(user.email, subject, email_html, text)
 
 def _is_expired(value: Optional[datetime]) -> bool:
     if not value:
