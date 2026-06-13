@@ -550,7 +550,7 @@ export default function SummaryPage() {
                   <InfoRow label="Current Keystone">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
 
                   {summaryBlocks.money !== false && <SectionToggleRow
-                    label="Oro"
+                    label="Money"
                     collapsed={collapsedSections.money}
                     onToggle={() => toggleSection('money')}
                     colSpan={visibleCharacters.length}
@@ -560,8 +560,8 @@ export default function SummaryPage() {
                       <InfoRow label="Personaje">
                         {visibleCharacters.map(c => <Cell key={c.id}>{formatMoney(moneyCopper(c.money))}</Cell>)}
                       </InfoRow>
-                      <InfoRow label="Total cuenta">
-                        <Cell colSpan={visibleCharacters.length} className="bg-yellow-500/5 font-bold" style={{ color: '#facc15' }}>
+                      <InfoRow label="TOTAL">
+                        <Cell colSpan={visibleCharacters.length} className="bg-emerald-500/10 font-bold" style={{ color: '#34d399' }}>
                           {formatMoney(visibleCharacters.reduce((sum, c) => sum + moneyCopper(c.money), 0))}
                         </Cell>
                       </InfoRow>

@@ -457,8 +457,11 @@ local function GetItemLevel(prev)
     return prev and prev.ilvl or nil
 end
 
-local function GetMoneyData()
+local function GetMoneyData(prev, reason)
     local copper = GetMoney() or 0
+    if reason == "PLAYER_LOGOUT" and copper == 0 and prev and prev.money and prev.money.copper and prev.money.copper > 0 then
+        return prev.money
+    end
     return {
         copper = copper,
         gold = math.floor(copper / 10000),
@@ -492,7 +495,7 @@ local function SaveCharacterData(reason)
     KeystoneSyncDB[key].vault = GetVaultData()
     KeystoneSyncDB[key].preyHunts = GetPreyHunts()
     KeystoneSyncDB[key].currencies = GetCurrencyData()
-    KeystoneSyncDB[key].money = GetMoneyData()
+    KeystoneSyncDB[key].money = GetMoneyData(prev, reason)
     KeystoneSyncDB[key].mythicPlusSeason = GetMythicPlusSeason()
     KeystoneSyncDB[key].updatedAt = time()
     KeystoneSyncDB[key].updatedReason = reason

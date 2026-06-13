@@ -30,7 +30,7 @@ keystone-web (panel web Next.js)
 
 Addon de World of Warcraft Retail escrito en Lua. Repo propio con changelog: https://github.com/Speeson/KeystoneSync
 
-**Versión actual del addon empaquetado:** 0.1.11 — WoW Retail (Interface `120005`)
+**Versión actual del addon empaquetado:** 0.1.12 — WoW Retail (Interface `120005`)
 
 - Lee la piedra al iniciar sesión (`PLAYER_LOGIN`) y guarda el estado final al salir (`PLAYER_LOGOUT`).
 - Captura información semanal adicional: Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada e item level.
@@ -338,7 +338,7 @@ Consulta [LICENSE](LICENSE) para los terminos completos.
 
 | Componente | Estado | Notas |
 |------------|--------|-------|
-| KeystoneSync (addon) | ✅ | v0.1.11, repo propio con CHANGELOG |
+| KeystoneSync (addon) | ✅ | v0.1.12, repo propio con CHANGELOG |
 | keystone-sync-client | ✅ | Polling cada 2 s, legacy |
 | keystone-api | ✅ | JWT, sync token, teams, PostgreSQL |
 | keystone-web | ✅ | Navbar, afijos, reset, tabla ordenable, equipos |
