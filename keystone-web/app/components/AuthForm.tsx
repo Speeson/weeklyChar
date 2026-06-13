@@ -39,6 +39,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
   const [resending, setResending] = useState(false)
   const canResendVerification = mode === 'login' && !!error?.toLowerCase().includes('email no verificado') && !!username
   const dateOfBirth = birthYear && birthMonth && birthDay ? `${birthYear}-${birthMonth}-${birthDay}` : ''
+  const shouldShowLabels = showLabels || mode === 'register'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -114,7 +115,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              {showLabels && <FieldLabel>Nombre</FieldLabel>}
+              {shouldShowLabels && <FieldLabel>Nombre</FieldLabel>}
               <input
                 type="text"
                 placeholder="Nombre"
@@ -125,7 +126,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
               />
             </div>
             <div>
-              {showLabels && <FieldLabel>Apellidos</FieldLabel>}
+              {shouldShowLabels && <FieldLabel>Apellidos</FieldLabel>}
               <input
                 type="text"
                 placeholder="Apellidos"
@@ -137,7 +138,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
             </div>
           </div>
           <div>
-            {showLabels && <FieldLabel>Email</FieldLabel>}
+            {shouldShowLabels && <FieldLabel>Email</FieldLabel>}
             <input
               type="email"
               placeholder="Email"
@@ -168,7 +169,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
       )}
 
       <div>
-        {showLabels && <FieldLabel>Username</FieldLabel>}
+        {shouldShowLabels && <FieldLabel>Username</FieldLabel>}
         <input
           type="text"
           placeholder="Nombre de usuario"
@@ -179,7 +180,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
         />
       </div>
       <div>
-        {showLabels && <FieldLabel>Password</FieldLabel>}
+        {shouldShowLabels && <FieldLabel>Password</FieldLabel>}
         <input
           type="password"
           placeholder="Password"
@@ -191,7 +192,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
       </div>
       {mode === 'register' && (
         <div>
-          {showLabels && <FieldLabel>Confirmar password</FieldLabel>}
+          {shouldShowLabels && <FieldLabel>Confirmar password</FieldLabel>}
           <input
             type="password"
             placeholder="Confirmar password"
