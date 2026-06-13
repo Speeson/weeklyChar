@@ -125,6 +125,7 @@ def _send_email(to_email: str, subject: str, html: str, text: str):
         headers={
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json",
+            "User-Agent": "KeystoneSync/1.0",
         },
         method="POST",
     )
