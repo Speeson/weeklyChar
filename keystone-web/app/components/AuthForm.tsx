@@ -10,9 +10,19 @@ type AuthMode = 'login' | 'register'
 type Props = {
   mode: AuthMode
   className?: string
+  showLabels?: boolean
 }
 
-export default function AuthForm({ mode, className = '' }: Props) {
+const currentYear = new Date().getFullYear()
+const days = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, '0'))
+const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'))
+const years = Array.from({ length: currentYear - 1900 + 1 }, (_, index) => String(currentYear - index))
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="mb-1.5 block text-xs font-black uppercase tracking-[0.16em] text-yellow-400">{children}</label>
+}
+
+export default function AuthForm({ mode, className = '', showLabels = false }: Props) {
   const router = useRouter()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -20,12 +30,15 @@ export default function AuthForm({ mode, className = '' }: Props) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [birthDay, setBirthDay] = useState('')
+  const [birthMonth, setBirthMonth] = useState('')
+  const [birthYear, setBirthYear] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const canResendVerification = mode === 'login' && !!error?.toLowerCase().includes('email no verificado') && !!username
+  const dateOfBirth = birthYear && birthMonth && birthDay ? `${birthYear}-${birthMonth}-${birthDay}` : ''
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -93,72 +106,102 @@ export default function AuthForm({ mode, className = '' }: Props) {
   }
 
   const inputClass = 'w-full rounded-lg border border-white/10 bg-[#111a26] px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition focus:border-yellow-500'
+  const selectClass = `${inputClass} appearance-none text-gray-300`
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-3 ${className}`}>
       {mode === 'register' && (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              {showLabels && <FieldLabel>Nombre</FieldLabel>}
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              {showLabels && <FieldLabel>Apellidos</FieldLabel>}
+              <input
+                type="text"
+                placeholder="Apellidos"
+                value={lastName}
+                onChange={e => setLastName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            {showLabels && <FieldLabel>Email</FieldLabel>}
             <input
-              type="text"
-              placeholder="Nombre"
-              value={firstName}
-              onChange={e => setFirstName(e.target.value)}
-              required
-              className={inputClass}
-            />
-            <input
-              type="text"
-              placeholder="Apellidos"
-              value={lastName}
-              onChange={e => setLastName(e.target.value)}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
               required
               className={inputClass}
             />
           </div>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className={inputClass}
-          />
-          <input
-            type="date"
-            value={dateOfBirth}
-            onChange={e => setDateOfBirth(e.target.value)}
-            required
-            className={`${inputClass} text-gray-300`}
-          />
+          <div>
+            <FieldLabel>Fecha de nacimiento</FieldLabel>
+            {!showLabels && <p className="-mt-1 mb-2 text-[11px] text-gray-500">Selecciona dia, mes y año</p>}
+            <div className="grid grid-cols-3 gap-2">
+              <select value={birthDay} onChange={e => setBirthDay(e.target.value)} required className={selectClass}>
+                <option value="">Dia</option>
+                {days.map(day => <option key={day} value={day}>{day}</option>)}
+              </select>
+              <select value={birthMonth} onChange={e => setBirthMonth(e.target.value)} required className={selectClass}>
+                <option value="">Mes</option>
+                {months.map(month => <option key={month} value={month}>{month}</option>)}
+              </select>
+              <select value={birthYear} onChange={e => setBirthYear(e.target.value)} required className={selectClass}>
+                <option value="">Año</option>
+                {years.map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </div>
+          </div>
         </>
       )}
 
-      <input
-        type="text"
-        placeholder="Nombre de usuario"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-        required
-        className={inputClass}
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        required
-        className={inputClass}
-      />
-      {mode === 'register' && (
+      <div>
+        {showLabels && <FieldLabel>Username</FieldLabel>}
         <input
-          type="password"
-          placeholder="Confirmar password"
-          value={confirmPassword}
-          onChange={e => setConfirmPassword(e.target.value)}
+          type="text"
+          placeholder="Nombre de usuario"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
           required
           className={inputClass}
         />
+      </div>
+      <div>
+        {showLabels && <FieldLabel>Password</FieldLabel>}
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          className={inputClass}
+        />
+      </div>
+      {mode === 'register' && (
+        <div>
+          {showLabels && <FieldLabel>Confirmar password</FieldLabel>}
+          <input
+            type="password"
+            placeholder="Confirmar password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            required
+            className={inputClass}
+          />
+        </div>
       )}
 
       {mode === 'login' && (

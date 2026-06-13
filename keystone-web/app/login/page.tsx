@@ -29,7 +29,7 @@ function LoginContent() {
           </button>
         </div>
 
-        <AuthForm mode={mode} />
+        <AuthForm mode={mode} showLabels />
       </div>
     </main>
   )
