@@ -114,6 +114,29 @@ const CLASS_COLORS: Record<string, string> = {
   Warrior: '#C69B6D',
 }
 
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '')
+  const value = parseInt(normalized.length === 3
+    ? normalized.split('').map(char => char + char).join('')
+    : normalized, 16)
+  const r = (value >> 16) & 255
+  const g = (value >> 8) & 255
+  const b = value & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function classColumnStyle(char: Character): React.CSSProperties {
+  const color = CLASS_COLORS[char.wowClass ?? ''] ?? '#67E8F9'
+  return {
+    background: `linear-gradient(180deg, ${hexToRgba(color, 0.18)} 0%, ${hexToRgba(color, 0.10)} 48%, ${hexToRgba(color, 0.16)} 100%)`,
+    boxShadow: [
+      `inset 1px 0 0 ${hexToRgba(color, 0.26)}`,
+      `inset -1px 0 0 ${hexToRgba(color, 0.26)}`,
+      `inset 0 0 22px ${hexToRgba(color, 0.14)}`,
+    ].join(', '),
+  }
+}
+
 const DUNGEONS = [
   { id: 402, name: "Algeth'ar Academy", abbr: 'AA', spellId: 393273 },
   { id: 558, name: "Magister's Terrace", abbr: 'MT', spellId: 1254572 },
@@ -221,7 +244,7 @@ function VaultProgress({ bucket, maxProgress }: { bucket?: VaultBucket; maxProgr
 }
 
 function preyCount(bucket?: PreyBucket) {
-  return bucket?.count ? String(bucket.count) : '—'
+  return bucket?.count ? `${bucket.count}/4` : '—'
 }
 
 function moneyCopper(money?: MoneyInfo | null) {
@@ -428,14 +451,21 @@ function Cell({
   className = '',
   style,
   colSpan,
+  character,
 }: {
   children?: React.ReactNode
   className?: string
   style?: React.CSSProperties
   colSpan?: number
+  character?: Character
 }) {
+  const columnStyle = character ? classColumnStyle(character) : undefined
   return (
-    <td colSpan={colSpan} className={`min-w-36 px-3 py-2 text-center text-sm border-l border-gray-950/60 ${className}`} style={style}>
+    <td
+      colSpan={colSpan}
+      className={`min-w-36 px-3 py-2 text-center text-sm border-l border-gray-950/60 ${className}`}
+      style={{ ...columnStyle, ...style }}
+    >
       {children}
     </td>
   )
@@ -546,15 +576,15 @@ export default function SummaryPage() {
                 <tbody>
                   <InfoRow label="Character">
                     {visibleCharacters.map(c => (
-                      <Cell key={c.id} className="font-bold" style={{ color: CLASS_COLORS[c.wowClass ?? ''] ?? '#67E8F9' }}>
+                      <Cell key={c.id} character={c} className="font-bold" style={{ color: CLASS_COLORS[c.wowClass ?? ''] ?? '#67E8F9' }}>
                         {c.name}
                       </Cell>
                     ))}
                   </InfoRow>
-                  <InfoRow label="Realm">{visibleCharacters.map(c => <Cell key={c.id}>{c.realm}</Cell>)}</InfoRow>
-                  <InfoRow label="Item Level">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-purple-400">{dash(c.ilvl)}</Cell>)}</InfoRow>
-                  <InfoRow label="Rating">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
-                  <InfoRow label="Current Keystone">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
+                  <InfoRow label="Realm">{visibleCharacters.map(c => <Cell key={c.id} character={c}>{c.realm}</Cell>)}</InfoRow>
+                  <InfoRow label="Item Level">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="font-bold text-purple-400">{dash(c.ilvl)}</Cell>)}</InfoRow>
+                  <InfoRow label="Rating">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="font-bold text-orange-400">{c.rioScore ? Math.round(c.rioScore) : '—'}</Cell>)}</InfoRow>
+                  <InfoRow label="Current Keystone">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
 
                   {summaryBlocks.money !== false && <SectionToggleRow
                     label="Coins"
@@ -565,7 +595,7 @@ export default function SummaryPage() {
                   {summaryBlocks.money !== false && !collapsedSections.money && (
                     <>
                       <InfoRow label="Gold">
-                        {visibleCharacters.map(c => <Cell key={c.id}>{formatMoney(moneyCopper(c.money))}</Cell>)}
+                        {visibleCharacters.map(c => <Cell key={c.id} character={c}>{formatMoney(moneyCopper(c.money))}</Cell>)}
                       </InfoRow>
                       <InfoRow label="TOTAL">
                         <Cell colSpan={visibleCharacters.length} className="bg-emerald-500/10 font-bold" style={{ color: '#34d399' }}>
@@ -590,7 +620,7 @@ export default function SummaryPage() {
                         </WowheadLink>
                       }
                     >
-                      {visibleCharacters.map(c => <Cell key={c.id}>{dungeonCellWithRating(c, dungeon.id)}</Cell>)}
+                      {visibleCharacters.map(c => <Cell key={c.id} character={c}>{dungeonCellWithRating(c, dungeon.id)}</Cell>)}
                     </InfoRow>
                   ))}
 
@@ -602,9 +632,9 @@ export default function SummaryPage() {
                   />
                   {!collapsedSections.greatVault && (
                     <>
-                      <InfoRow label="Raids">{visibleCharacters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
-                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} maxProgress={8} /></Cell>)}</InfoRow>
-                      <InfoRow label="World">{visibleCharacters.map(c => <Cell key={c.id}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
+                      <InfoRow label="Raids">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
+                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} maxProgress={8} /></Cell>)}</InfoRow>
+                      <InfoRow label="World">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
                     </>
                   )}
 
@@ -616,9 +646,9 @@ export default function SummaryPage() {
                   />
                   {!collapsedSections.preyHunts && (
                     <>
-                      <InfoRow label="Normal">{visibleCharacters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.normal)}</Cell>)}</InfoRow>
-                      <InfoRow label="Hard">{visibleCharacters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.hard)}</Cell>)}</InfoRow>
-                      <InfoRow label="Nightmare">{visibleCharacters.map(c => <Cell key={c.id}>{preyCount(c.preyHunts?.nightmare)}</Cell>)}</InfoRow>
+                      <InfoRow label="Normal">{visibleCharacters.map(c => <Cell key={c.id} character={c}>{preyCount(c.preyHunts?.normal)}</Cell>)}</InfoRow>
+                      <InfoRow label="Hard">{visibleCharacters.map(c => <Cell key={c.id} character={c}>{preyCount(c.preyHunts?.hard)}</Cell>)}</InfoRow>
+                      <InfoRow label="Nightmare">{visibleCharacters.map(c => <Cell key={c.id} character={c}>{preyCount(c.preyHunts?.nightmare)}</Cell>)}</InfoRow>
                     </>
                   )}
 
@@ -640,7 +670,7 @@ export default function SummaryPage() {
                       labelClassName={currency.color}
                     >
                       {visibleCharacters.map(c => (
-                        <Cell key={c.id} className={currency.color}>
+                        <Cell key={c.id} character={c} className={currency.color}>
                           {currencyValue(c, currency)}
                         </Cell>
                       ))}
