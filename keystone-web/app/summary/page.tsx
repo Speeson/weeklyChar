@@ -550,14 +550,14 @@ export default function SummaryPage() {
                   <InfoRow label="Current Keystone">{visibleCharacters.map(c => <Cell key={c.id} className="font-bold text-gray-100">{keystoneLabel(c)}</Cell>)}</InfoRow>
 
                   {summaryBlocks.money !== false && <SectionToggleRow
-                    label="Money"
+                    label="Coins"
                     collapsed={collapsedSections.money}
                     onToggle={() => toggleSection('money')}
                     colSpan={visibleCharacters.length}
                   />}
                   {summaryBlocks.money !== false && !collapsedSections.money && (
                     <>
-                      <InfoRow label="Personaje">
+                      <InfoRow label="Gold">
                         {visibleCharacters.map(c => <Cell key={c.id}>{formatMoney(moneyCopper(c.money))}</Cell>)}
                       </InfoRow>
                       <InfoRow label="TOTAL">

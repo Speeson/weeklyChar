@@ -220,7 +220,7 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Section title="Resumen" description="Controla qué bloques aparecen en la tabla de resumen.">
-              <ToggleRow label="Mostrar Money" checked={settings.summaryBlocks.money} onChange={value => toggleGroup('summaryBlocks', 'money', value)} />
+              <ToggleRow label="Mostrar Coins" checked={settings.summaryBlocks.money} onChange={value => toggleGroup('summaryBlocks', 'money', value)} />
               <ToggleRow label="Mostrar Dungeons" checked={settings.summaryBlocks.dungeons} onChange={value => toggleGroup('summaryBlocks', 'dungeons', value)} />
               <ToggleRow label="Mostrar Great Vault" checked={settings.summaryBlocks.greatVault} onChange={value => toggleGroup('summaryBlocks', 'greatVault', value)} />
               <ToggleRow label="Mostrar Prey Hunts" checked={settings.summaryBlocks.preyHunts} onChange={value => toggleGroup('summaryBlocks', 'preyHunts', value)} />
