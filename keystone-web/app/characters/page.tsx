@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
-import WeeklyReset from '@/app/components/WeeklyReset'
-import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
+import { keystoneColor } from '@/lib/colors'
 
 interface Keystone {
   level: number | null
@@ -139,11 +138,6 @@ export default function Dashboard() {
       <Navbar />
       <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
         <div className="max-w-4xl mx-auto">
-
-          <div className="flex justify-center items-stretch gap-4 mb-8 flex-wrap">
-            <WeeklyAffixes />
-            <WeeklyReset />
-          </div>
 
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -295,7 +289,14 @@ export function CharacterTable({ characters }: { characters: Character[] }) {
         </thead>
         <tbody>
           {sorted.map(char => (
-            <tr key={char.id} className="border-b border-gray-900 hover:bg-gray-900/50 transition">
+            <tr
+              key={char.id}
+              className="border-b border-gray-900 transition hover:bg-gray-900/50"
+              style={{
+                boxShadow: `inset 3px 0 0 ${classColor(char.wowClass)}, inset 0 0 18px ${classColor(char.wowClass)}24`,
+                background: `linear-gradient(90deg, ${classColor(char.wowClass)}14 0%, rgba(17,24,39,0.18) 38%, transparent 100%)`,
+              }}
+            >
               <td className="py-3 pr-6 font-semibold">
                 <span className="flex items-center gap-2">
                   {char.avatarUrl ? (
@@ -326,7 +327,7 @@ export function CharacterTable({ characters }: { characters: Character[] }) {
               </td>
               <td className="py-3 pr-6">
                 {char.currentKeystone?.level
-                  ? <span className="font-bold text-yellow-400">+{char.currentKeystone.level}</span>
+                  ? <span className="font-bold" style={{ color: keystoneColor(char.currentKeystone.level) }}>+{char.currentKeystone.level}</span>
                   : <span className="text-gray-600">—</span>}
               </td>
               <td className="py-3 text-gray-400 text-xs">

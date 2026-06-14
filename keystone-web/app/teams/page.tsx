@@ -18,6 +18,7 @@ export default function TeamsPage() {
   const router = useRouter()
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [newTeamName, setNewTeamName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -84,31 +85,93 @@ export default function TeamsPage() {
     <>
       <Navbar />
       <main className="min-h-screen bg-gray-950 text-gray-100 px-8 py-10">
-        <div className="max-w-3xl mx-auto">
-
-          <h1 className="text-xl font-bold text-gray-100 mb-8">Equipos</h1>
+        <div className="max-w-5xl mx-auto">
 
           {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="p-4 bg-gray-900/60 border border-gray-800 rounded-2xl shadow-xl">
+              <h2 className="font-semibold text-gray-200 mb-3">Crear equipo</h2>
+              <form onSubmit={createTeam} className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Nombre del equipo"
+                  value={newTeamName}
+                  onChange={e => setNewTeamName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 text-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-gray-900 font-semibold rounded-xl transition text-sm"
+                >
+                  {creating ? 'Creando...' : 'Crear'}
+                </button>
+              </form>
+            </div>
+
+            <div className="p-4 bg-gray-900/60 border border-gray-800 rounded-2xl shadow-xl">
+              <h2 className="font-semibold text-gray-200 mb-3">Unirse a un equipo</h2>
+              <form onSubmit={joinTeam} className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Código de invitación"
+                  value={inviteCode}
+                  onChange={e => setInviteCode(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 text-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={joining}
+                  className="w-full py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-semibold rounded-xl transition text-sm"
+                >
+                  {joining ? 'Uniéndose...' : 'Unirse'}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h1 className="text-lg font-bold text-gray-100">Tus equipos</h1>
+            <div className="inline-flex rounded-xl border border-gray-800 bg-gray-900 p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'grid' ? 'bg-yellow-500 text-gray-950' : 'text-gray-400 hover:text-white'}`}
+              >
+                Cuadrícula
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'list' ? 'bg-yellow-500 text-gray-950' : 'text-gray-400 hover:text-white'}`}
+              >
+                Lista
+              </button>
+            </div>
+          </div>
+
           {teams.length === 0 ? (
-            <p className="text-gray-500 text-sm mb-8">No perteneces a ningún equipo todavía.</p>
+            <p className="text-gray-500 text-sm">No perteneces a ningún equipo todavía.</p>
           ) : (
-            <div className="space-y-3 mb-8">
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 md:grid-cols-2' : 'space-y-3'}>
               {teams.map(team => (
                 <Link
                   key={team.id}
                   href={`/teams/${team.id}`}
-                  className="flex items-center justify-between p-4 bg-gray-900 border border-gray-800 rounded hover:border-yellow-500 transition"
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 p-4 shadow-xl transition hover:border-yellow-500/60 hover:bg-gray-900"
                 >
-                  <div>
-                    <p className="font-semibold text-white">{team.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white">{team.name}</p>
                     <p className="text-sm text-gray-500">
                       {team.memberCount} miembro{team.memberCount !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="flex-shrink-0 text-right">
                     {team.isOwner && (
-                      <p className="text-xs text-gray-500 mb-1">
+                      <p className="mb-1 text-xs text-gray-500">
                         Código: <code className="text-yellow-400">{team.inviteCode}</code>
                       </p>
                     )}
@@ -118,50 +181,6 @@ export default function TeamsPage() {
               ))}
             </div>
           )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-4 bg-gray-900 border border-gray-800 rounded">
-              <h2 className="font-semibold text-gray-200 mb-3">Crear equipo</h2>
-              <form onSubmit={createTeam} className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Nombre del equipo"
-                  value={newTeamName}
-                  onChange={e => setNewTeamName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-gray-900 font-semibold rounded transition text-sm"
-                >
-                  {creating ? 'Creando...' : 'Crear'}
-                </button>
-              </form>
-            </div>
-
-            <div className="p-4 bg-gray-900 border border-gray-800 rounded">
-              <h2 className="font-semibold text-gray-200 mb-3">Unirse a un equipo</h2>
-              <form onSubmit={joinTeam} className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Código de invitación"
-                  value={inviteCode}
-                  onChange={e => setInviteCode(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={joining}
-                  className="w-full py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-semibold rounded transition text-sm"
-                >
-                  {joining ? 'Uniéndose...' : 'Unirse'}
-                </button>
-              </form>
-            </div>
-          </div>
         </div>
       </main>
     </>

@@ -19,8 +19,10 @@ Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angu
 
 | Ruta | Descripción |
 |------|-------------|
+| `/dashboard` | Vista principal compacta con personajes propios, equipos, afijos, reset y filtro rapido |
 | `/login` | Registro e inicio de sesión |
-| `/` | Dashboard: personajes, afijos, countdown de reset |
+| `/` | Landing publica del proyecto |
+| `/characters` | Tabla de personajes propios |
 | `/teams` | Crear equipos, unirse por código, listar equipos propios |
 | `/teams/[id]` | Detalle de equipo: todos los miembros y sus personajes |
 | `/summary` | Resumen semanal: Coins, mazmorras, Great Vault, Prey Hunts y currencies |
@@ -30,12 +32,17 @@ Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angu
 
 ## Funcionalidades
 
-### Dashboard (`/`)
+### Dashboard (`/dashboard`)
+
+- **Columna lateral** — afijos semanales, reset semanal, filtro rapido por mazmorra/nivel y resumen de keys disponibles.
+- **Mis personajes** — cards compactas con avatar, nombre con color de clase, piedra abreviada y ultima actualizacion.
+- **Equipos** — grid compacto de equipos, con miembros agrupados por usuario y cards plegables.
+- **Filtro global** — permite buscar por abreviatura (`AA`, `MT`, `PoS`), nombre de mazmorra, personaje o nivel (`+14`).
+
+### Mis personajes (`/characters`)
 
 - **Tabla de personajes ordenable** — clic en cualquier cabecera ordena (asc/desc); columna activa resaltada en amarillo con indicador ↑/↓.
 - **Visibilidad de personajes** — botón "Gestionar" para mostrar/ocultar personajes individualmente; estado persistido en `localStorage` (`ks_hidden_chars`).
-- **Afijos semanales** — obtiene los afijos EU actuales de la API pública de Raider.IO (`/api/v1/mythic-plus/affixes?region=eu`); muestra íconos en fila horizontal con badges de nivel (`5+` / `7+` / `10+` / `12+`) y tooltip CSS al hover (nombre + descripción).
-- **Countdown de reset semanal** — cuenta atrás en tiempo real hasta el miércoles 09:00 CEST.
 
 ### Resumen (`/summary`)
 
@@ -53,7 +60,8 @@ Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angu
 
 - Crear un equipo genera un código de invitación (hex 8 chars).
 - Otros usuarios se unen pegando el código en `/teams`.
-- La vista de equipo muestra todos los personajes de todos los miembros en una tabla ordenable.
+- `/teams` muestra crear/unirse arriba y permite ver los equipos en cuadrícula o lista.
+- La vista de detalle del equipo tiene cabecera compacta, código de invitación arriba a la derecha, filtro, botón de volver y modo cuadrícula/lista de cuentas.
 
 ---
 

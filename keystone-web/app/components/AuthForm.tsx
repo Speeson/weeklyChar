@@ -75,7 +75,7 @@ export default function AuthForm({ mode, className = '', showLabels = false }: P
       setToken(data.accessToken)
       saveUsername(username)
       await hydrateProfile()
-      router.push('/characters')
+      router.push('/dashboard')
     } catch {
       setError('No se puede conectar con la API.')
     } finally {

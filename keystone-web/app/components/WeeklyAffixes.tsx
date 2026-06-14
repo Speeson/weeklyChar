@@ -36,11 +36,11 @@ export default function WeeklyAffixes() {
   if (!affixes.length) return null
 
   return (
-    <section className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl flex flex-col w-fit">
+    <section className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl flex w-full flex-col">
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
         Afijos Míticos+ · Semana actual
       </h2>
-      <div className="flex-1 flex items-center gap-6">
+      <div className="grid grid-cols-4 gap-3">
         {affixes.map((a, i) => (
           <div key={a.id} className="relative group">
             {/* Level threshold badge */}
@@ -53,7 +53,7 @@ export default function WeeklyAffixes() {
             <img
               src={a.icon_url}
               alt={a.name}
-              className="w-12 h-12 rounded-lg border border-gray-700 group-hover:border-yellow-500/60 transition cursor-pointer"
+              className="h-12 w-12 rounded-lg border border-gray-700 object-cover transition cursor-pointer group-hover:border-yellow-500/60"
             />
 
             {/* Tooltip */}

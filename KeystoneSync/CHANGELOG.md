@@ -2,6 +2,12 @@
 
 All notable changes to KeystoneSync will be documented here.
 
+## [0.1.13] - 2026-06-14
+
+### Fixed
+- Improved Prey Hunts tracking by storing the full quest-completion map per character and deriving Normal, Hard, and Nightmare counts from that data.
+- Prevented transient all-zero Prey Hunt reads from overwriting a previously valid weekly Prey state during login/logout or early quest-log updates.
+
 ## [0.1.12] - 2026-06-13
 
 ### Fixed

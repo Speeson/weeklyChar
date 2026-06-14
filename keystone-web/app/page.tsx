@@ -245,7 +245,7 @@ export default function LandingPage() {
           <span>KeystoneSync</span>
           <div className="flex gap-5">
             <Link href="/login?mode=login" className="hover:text-white">Login</Link>
-            <Link href="/characters" className="hover:text-white">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-white">Dashboard</Link>
             <a href="https://github.com/Speeson/weeklyChar" className="hover:text-white">GitHub</a>
           </div>
         </div>

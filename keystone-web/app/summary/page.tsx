@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { apiFetch, getToken } from '@/lib/auth'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
+import { keystoneColor } from '@/lib/colors'
 
 interface Keystone {
   level: number | null
@@ -184,7 +185,13 @@ function keystoneLabel(char: Character) {
   const key = char.currentKeystone
   if (!key?.level) return '—'
   const abbr = key.challengeMapId ? DUNGEON_ABBR.get(key.challengeMapId) : null
-  return `${abbr ?? key.dungeon ?? `ID ${key.challengeMapId}`} +${key.level}`
+  const dungeon = abbr ?? key.dungeon ?? `ID ${key.challengeMapId}`
+  return (
+    <span className="inline-flex items-center justify-center gap-1">
+      <span>{dungeon}</span>
+      <span className="font-bold" style={{ color: keystoneColor(key.level) }}>+{key.level}</span>
+    </span>
+  )
 }
 
 function vaultSlots(bucket?: VaultBucket) {
@@ -276,7 +283,7 @@ function dungeonCell(char: Character, mapId: number) {
   if (!run || !run.level) return <span className="text-gray-600">—</span>
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <span className="min-w-5 font-bold text-white">{run.level}</span>
+      <span className="min-w-5 font-bold" style={{ color: keystoneColor(run.level) }}>{run.level}</span>
       <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
       <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{Math.round(run.rating ?? 0)}</span>
     </span>
@@ -290,7 +297,7 @@ function dungeonCellWithRating(char: Character, mapId: number) {
 
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <span className="min-w-5 font-bold text-white">{run.level}</span>
+      <span className="min-w-5 font-bold" style={{ color: keystoneColor(run.level) }}>{run.level}</span>
       <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
       <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{rating || '-'}</span>
     </span>

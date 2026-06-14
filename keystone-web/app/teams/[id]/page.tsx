@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
+import { keystoneColor } from '@/lib/colors'
 import Navbar from '@/app/components/Navbar'
-import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 
 interface Keystone {
   level: number | null
@@ -70,6 +71,41 @@ const CLASS_ICON_NAMES: Record<string, string> = {
   Warrior: 'classicon_warrior',
 }
 
+const DUNGEON_ABBR_BY_ID = new Map<number, string>([
+  [557, 'WS'],
+  [556, 'PoS'],
+  [402, 'AA'],
+  [239, 'SEAT'],
+  [161, 'SR'],
+  [560, 'MS'],
+  [559, 'NPX'],
+  [558, 'MT'],
+])
+
+const DUNGEON_ABBR_BY_NAME = new Map<string, string>([
+  ['windrunner spire', 'WS'],
+  ['pit of saron', 'PoS'],
+  ["algeth'ar academy", 'AA'],
+  ['seat of the triumvirate', 'SEAT'],
+  ['skyreach', 'SR'],
+  ['maisara caverns', 'MS'],
+  ['nexus-point xenas', 'NPX'],
+  ['nexus point xenas', 'NPX'],
+  ["magister's terrace", 'MT'],
+  ["magisters' terrace", 'MT'],
+])
+
+const TEAM_DUNGEONS = [
+  { name: "Algeth'ar Academy", abbr: 'AA' },
+  { name: "Magister's Terrace", abbr: 'MT' },
+  { name: 'Maisara Caverns', abbr: 'MS' },
+  { name: 'Nexus-Point Xenas', abbr: 'NPX' },
+  { name: 'Pit of Saron', abbr: 'PoS' },
+  { name: 'Seat of the Triumvirate', abbr: 'SEAT' },
+  { name: 'Skyreach', abbr: 'SR' },
+  { name: 'Windrunner Spire', abbr: 'WS' },
+]
+
 function formatDate(unix: number | null): string {
   if (!unix) return '-'
   return new Date(unix * 1000).toLocaleString('es-ES', {
@@ -93,10 +129,30 @@ function dungeonLabel(char: Character) {
   return char.currentKeystone?.dungeon ?? (char.currentKeystone?.challengeMapId ? `ID ${char.currentKeystone.challengeMapId}` : '-')
 }
 
-function matchesDungeon(char: Character, query: string) {
+function dungeonLabelWithAbbr(char: Character) {
+  const key = char.currentKeystone
+  const name = key?.dungeon ?? (key?.challengeMapId ? `ID ${key.challengeMapId}` : '-')
+  if (!key || name === '-') return name
+  const abbr = key.challengeMapId ? DUNGEON_ABBR_BY_ID.get(key.challengeMapId) : null
+  const nameAbbr = key.dungeon ? DUNGEON_ABBR_BY_NAME.get(key.dungeon.toLowerCase()) : null
+  const finalAbbr = abbr ?? nameAbbr
+  return finalAbbr ? `${name} (${finalAbbr})` : name
+}
+
+function dungeonAbbr(char: Character) {
+  const key = char.currentKeystone
+  if (!key) return null
+  const byId = key.challengeMapId ? DUNGEON_ABBR_BY_ID.get(key.challengeMapId) : null
+  const byName = key.dungeon ? DUNGEON_ABBR_BY_NAME.get(key.dungeon.toLowerCase()) : null
+  return byId ?? byName ?? null
+}
+
+function matchesDungeon(char: Character, query: string, selectedDungeons: string[]) {
   const normalized = query.trim().toLowerCase()
+  const selectedMatch = selectedDungeons.length === 0 || (dungeonAbbr(char) ? selectedDungeons.includes(dungeonAbbr(char)!) : false)
+  if (!selectedMatch) return false
   if (!normalized) return true
-  const dungeon = dungeonLabel(char).toLowerCase()
+  const dungeon = dungeonLabelWithAbbr(char).toLowerCase()
   const level = char.currentKeystone?.level ? `+${char.currentKeystone.level}` : ''
   const character = `${char.name} ${char.realm}`.toLowerCase()
   return dungeon.includes(normalized) || level.includes(normalized) || character.includes(normalized)
@@ -123,35 +179,61 @@ function CompactCharacterRow({ char }: { char: Character }) {
           </div>
         </div>
       </td>
-      <td className="py-2 pr-3 text-xs text-gray-300">{dungeonLabel(char)}</td>
+      <td className="py-2 pr-3 text-xs text-gray-300">{dungeonLabelWithAbbr(char)}</td>
       <td className="py-2 pr-3 text-center">
-        {char.currentKeystone?.level ? <span className="font-bold text-white">+{char.currentKeystone.level}</span> : <span className="text-gray-600">-</span>}
+        {char.currentKeystone?.level ? <span className="font-bold" style={{ color: keystoneColor(char.currentKeystone.level) }}>+{char.currentKeystone.level}</span> : <span className="text-gray-600">-</span>}
       </td>
       <td className="py-2 pr-4 text-right text-[11px] text-gray-500">{formatDate(char.currentKeystone?.updatedAt ?? null)}</td>
     </tr>
   )
 }
 
+function CompactCharacterCard({ char }: { char: Character }) {
+  const classIcon = classIconUrl(char.wowClass)
+
+  return (
+    <div className="grid min-w-0 grid-cols-[minmax(120px,1fr)_minmax(100px,1fr)_44px_70px] items-center gap-2 rounded-lg border border-gray-900/90 bg-gray-950/40 px-3 py-2 transition hover:bg-gray-900/70">
+      <div className="flex min-w-0 items-center gap-2">
+        {char.avatarUrl ? (
+          <img src={char.avatarUrl} alt="" className="h-7 w-7 flex-shrink-0 rounded-full border border-gray-700 object-cover" />
+        ) : (
+          <span className="h-7 w-7 flex-shrink-0 rounded-full border border-gray-700 bg-gray-900" />
+        )}
+        {classIcon && (
+          <img src={classIcon} alt={char.wowClass ?? ''} title={char.wowClass ?? ''} className="h-5 w-5 flex-shrink-0 rounded border border-gray-700 object-cover" />
+        )}
+        <p className="min-w-0 truncate text-sm font-semibold" style={{ color: classColor(char.wowClass) }}>{char.name}</p>
+      </div>
+      <span className="truncate text-xs text-gray-300">{dungeonLabelWithAbbr(char)}</span>
+      <span className="text-center text-sm">
+        {char.currentKeystone?.level ? <span className="font-bold" style={{ color: keystoneColor(char.currentKeystone.level) }}>+{char.currentKeystone.level}</span> : <span className="text-gray-600">-</span>}
+      </span>
+      <span className="text-right text-[10px] text-gray-500">{formatDate(char.currentKeystone?.updatedAt ?? null)}</span>
+    </div>
+  )
+}
+
 function MemberCard({
   member,
   query,
-  selectedAccount,
+  selectedDungeons,
   collapsed,
   onToggle,
+  layout,
 }: {
   member: Member
   query: string
-  selectedAccount: string
+  selectedDungeons: string[]
   collapsed: boolean
   onToggle: () => void
+  layout: 'grid' | 'list'
 }) {
-  const accountCharacters = filterByAccount(member.characters, selectedAccount)
-  const characters = accountCharacters
-    .filter(char => matchesDungeon(char, query))
+  const characters = member.characters
+    .filter(char => matchesDungeon(char, query, selectedDungeons))
     .sort((a, b) => (b.currentKeystone?.level ?? -1) - (a.currentKeystone?.level ?? -1) || a.name.localeCompare(b.name, 'es'))
 
   return (
-    <section className="rounded-xl border border-gray-800 bg-gray-900/45 shadow-xl overflow-hidden">
+    <section className="mb-5 break-inside-avoid overflow-hidden rounded-xl border border-gray-800 bg-gray-900/45 shadow-xl">
       <button
         type="button"
         onClick={onToggle}
@@ -160,7 +242,7 @@ function MemberCard({
       >
         <span className="truncate font-semibold text-gray-100">{member.username}</span>
         <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-gray-500">
-          <span>{characters.length} / {accountCharacters.length} personajes</span>
+          <span>{characters.length} / {member.characters.length} personajes</span>
           <svg className={`h-3.5 w-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
           </svg>
@@ -169,6 +251,10 @@ function MemberCard({
       {!collapsed && (
         characters.length === 0 ? (
           <p className="px-4 py-5 text-center text-xs text-gray-600">Sin personajes para este filtro.</p>
+        ) : layout === 'list' ? (
+          <div className="grid grid-cols-1 gap-2 p-3 md:grid-cols-2">
+            {characters.map(char => <CompactCharacterCard key={char.id} char={char} />)}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left">
@@ -197,7 +283,10 @@ export default function TeamDetailPage() {
   const [team, setTeam] = useState<TeamDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement | null>(null)
+  const [selectedDungeons, setSelectedDungeons] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [copied, setCopied] = useState(false)
   const [collapsedMembers, setCollapsedMembers] = useState<Set<number>>(new Set())
 
@@ -212,6 +301,20 @@ export default function TeamDetailPage() {
       .finally(() => setLoading(false))
   }, [params.id, router])
 
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!filterRef.current?.contains(event.target as Node)) {
+        setFilterOpen(false)
+      }
+    }
+
+    if (filterOpen) {
+      document.addEventListener('mousedown', handleOutsideClick)
+    }
+
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [filterOpen])
+
   if (loading) return (
     <>
       <Navbar />
@@ -224,10 +327,8 @@ export default function TeamDetailPage() {
   if (!team) return null
 
   const allCharacters = team.members.flatMap(member => member.characters)
-  const accounts = accountOptions(allCharacters)
-  const accountCharacters = filterByAccount(allCharacters, selectedAccount)
   const visibleCount = team.members.reduce(
-    (total, member) => total + filterByAccount(member.characters, selectedAccount).filter(char => matchesDungeon(char, query)).length,
+    (total, member) => total + member.characters.filter(char => matchesDungeon(char, query, selectedDungeons)).length,
     0,
   )
 
@@ -246,64 +347,133 @@ export default function TeamDetailPage() {
     })
   }
 
+  function toggleDungeon(abbr: string) {
+    setSelectedDungeons(prev => (
+      prev.includes(abbr) ? prev.filter(value => value !== abbr) : [...prev, abbr]
+    ))
+  }
+
+  function clearFilters() {
+    setQuery('')
+    setSelectedDungeons([])
+  }
+
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-gray-950 text-gray-100 px-4 py-8 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <section className="rounded-2xl border border-gray-800 bg-gray-900/55 p-5 shadow-2xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500">Equipo</p>
-                <h1 className="mt-1 text-2xl font-bold text-gray-100">{team.name}</h1>
+          <section className="rounded-2xl border border-gray-800 bg-gray-900/55 p-4 shadow-2xl">
+            <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,420px)_1fr] lg:items-stretch">
+              <div className="flex flex-col justify-between gap-4">
+                <Link href="/teams" className="inline-flex w-fit items-center gap-2 rounded-xl border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-gray-300 transition hover:border-yellow-500/60 hover:text-yellow-300">
+                  <span className="text-lg leading-none">←</span>
+                  Volver a equipos
+                </Link>
+                <div ref={filterRef} className="relative flex w-fit items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(open => !open)}
+                    className="rounded-xl bg-yellow-500 px-4 py-2 text-xs font-black uppercase tracking-wide text-gray-950 shadow-lg shadow-yellow-500/10 transition hover:bg-yellow-400"
+                  >
+                    Filtrar{selectedDungeons.length > 0 || query ? ` (${visibleCount})` : ''}
+                  </button>
+                  {(query || selectedDungeons.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="rounded-xl border border-yellow-500/40 bg-gray-950 px-3 py-2 text-xs font-bold uppercase tracking-wide text-yellow-400 transition hover:bg-yellow-500 hover:text-gray-950"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                  {filterOpen && (
+                    <div className="absolute left-0 top-full z-20 mt-2 w-80 rounded-2xl border border-yellow-500/30 bg-gray-950/95 p-4 shadow-2xl shadow-black/50 backdrop-blur">
+                      <input
+                        value={query}
+                        onChange={event => setQuery(event.target.value)}
+                        placeholder="Buscar personaje, dungeon o +nivel..."
+                        className="mb-3 w-full rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        {TEAM_DUNGEONS.map(dungeon => (
+                          <label key={dungeon.abbr} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-800 bg-gray-900/70 px-2 py-2 text-xs text-gray-300 transition hover:border-yellow-500/50 hover:text-white">
+                            <input
+                              type="checkbox"
+                              checked={selectedDungeons.includes(dungeon.abbr)}
+                              onChange={() => toggleDungeon(dungeon.abbr)}
+                              className="accent-yellow-500"
+                            />
+                            <span className="truncate">{dungeon.name}</span>
+                            <span className="ml-auto font-bold text-yellow-400">{dungeon.abbr}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>{visibleCount} de {allCharacters.length} visibles</span>
+                        <span>{selectedDungeons.length ? `${selectedDungeons.length} dungeons` : 'Todas las dungeons'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-col items-start gap-3 sm:items-end">
-              <AccountSelect accounts={accounts} value={selectedAccount} onChange={setSelectedAccount} />
-              {team.isOwner && (
-                <button
-                  onClick={copyInviteCode}
-                  className="inline-flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-950 px-4 py-3 text-left transition hover:border-yellow-500/60 hover:bg-gray-900"
-                  title="Copiar codigo de invitacion"
-                >
-                  <span>
-                    <span className="block text-[11px] uppercase tracking-wide text-gray-500">Codigo</span>
-                    <code className="text-sm font-bold text-yellow-400">{team.inviteCode}</code>
-                  </span>
-                  <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h10v12H8z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  {copied && <span className="text-xs text-green-400">Copiado</span>}
-                </button>
-              )}
+              <div className="flex items-center justify-center rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-5 text-center">
+                <h1 className="text-3xl font-black text-yellow-400">{team.name}</h1>
               </div>
-            </div>
 
-            <div className="mt-5">
-              <label className="mb-2 block text-xs font-medium text-gray-500">Buscar por mazmorra o nivel</label>
-              <input
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                placeholder="Ej: Magister, Academy, +12..."
-                className="w-full rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
-              />
-              <p className="mt-2 text-xs text-gray-600">{visibleCount} de {accountCharacters.length} personajes visibles</p>
+              <div className="flex flex-col justify-between gap-4 lg:items-end">
+                {team.isOwner ? (
+                  <button
+                    onClick={copyInviteCode}
+                    className="inline-flex w-fit items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-950 px-4 py-3 text-left transition hover:border-yellow-500/60 hover:bg-gray-900"
+                    title="Copiar codigo de invitacion"
+                  >
+                    <span>
+                      <span className="block text-[11px] uppercase tracking-wide text-gray-500">Codigo</span>
+                      <code className="text-sm font-bold text-yellow-400">{team.inviteCode}</code>
+                    </span>
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h10v12H8z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    {copied && <span className="text-xs text-green-400">Copiado</span>}
+                  </button>
+                ) : <span />}
+
+                <div className="inline-flex w-fit rounded-xl border border-gray-800 bg-gray-950 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'grid' ? 'bg-yellow-500 text-gray-950' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Cuadrícula
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'list' ? 'bg-yellow-500 text-gray-950' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Lista de cuentas
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 
           {allCharacters.length === 0 ? (
             <p className="mt-8 text-sm text-gray-500">Ningun miembro tiene personajes registrados todavia.</p>
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <div className={viewMode === 'grid' ? 'mt-6 columns-1 gap-5 xl:columns-2' : 'mt-6 space-y-5'}>
               {team.members.map(member => (
                 <MemberCard
                   key={member.userId}
                   member={member}
                   query={query}
-                  selectedAccount={selectedAccount}
+                  selectedDungeons={selectedDungeons}
                   collapsed={collapsedMembers.has(member.userId)}
                   onToggle={() => toggleMember(member.userId)}
+                  layout={viewMode}
                 />
               ))}
             </div>

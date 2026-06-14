@@ -36,8 +36,8 @@ export default function WeeklyReset() {
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
         Reset semanal
       </h2>
-      <div className="flex-1 flex flex-col items-center justify-center gap-2">
-        <div className="flex items-end gap-2 text-white">
+      <div className="flex flex-1 items-center justify-between gap-4">
+        <div className="flex items-end gap-3 text-white">
           {d > 0 && (
             <span className="text-3xl font-bold leading-none">
               {d}<span className="text-sm font-normal text-gray-500 ml-0.5">d</span>
@@ -50,7 +50,10 @@ export default function WeeklyReset() {
             {m}<span className="text-sm font-normal text-gray-500 ml-0.5">m</span>
           </span>
         </div>
-        <p className="text-xs text-gray-600">Miércoles · 09:00 CEST</p>
+        <div className="text-right text-sm leading-tight text-gray-500">
+          <p>Miércoles</p>
+          <p>09:00 CEST</p>
+        </div>
       </div>
     </section>
   )
