@@ -128,11 +128,11 @@ function hexToRgba(hex: string, alpha: number) {
 function classColumnStyle(char: Character): React.CSSProperties {
   const color = CLASS_COLORS[char.wowClass ?? ''] ?? '#67E8F9'
   return {
-    background: `linear-gradient(180deg, ${hexToRgba(color, 0.18)} 0%, ${hexToRgba(color, 0.10)} 48%, ${hexToRgba(color, 0.16)} 100%)`,
+    background: `linear-gradient(180deg, ${hexToRgba(color, 0.14)} 0%, ${hexToRgba(color, 0.08)} 48%, ${hexToRgba(color, 0.12)} 100%)`,
     boxShadow: [
-      `inset 1px 0 0 ${hexToRgba(color, 0.26)}`,
-      `inset -1px 0 0 ${hexToRgba(color, 0.26)}`,
-      `inset 0 0 22px ${hexToRgba(color, 0.14)}`,
+      `inset 1px 0 0 ${hexToRgba(color, 0.22)}`,
+      `inset -1px 0 0 ${hexToRgba(color, 0.22)}`,
+      `inset 0 0 18px ${hexToRgba(color, 0.10)}`,
     ].join(', '),
   }
 }
