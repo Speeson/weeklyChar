@@ -30,11 +30,11 @@ keystone-web (panel web Next.js)
 
 Addon de World of Warcraft Retail escrito en Lua. Repo propio con changelog: https://github.com/Speeson/KeystoneSync
 
-**Versión actual del addon empaquetado:** 0.1.13 — WoW Retail (Interface `120005`)
+**Versión actual del addon empaquetado:** 0.1.14 — WoW Retail (Interface `120005`)
 
 - Lee la piedra al iniciar sesión (`PLAYER_LOGIN`) y guarda el estado final al salir (`PLAYER_LOGOUT`).
 - Captura información semanal adicional: Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada e item level.
-- Las Prey Hunts se guardan por dificultad (`Normal`, `Hard`, `Nightmare`) y conservan el mapa completo de quests completadas para evitar perder progreso por lecturas transitorias vacías de WoW.
+- Las Prey Hunts se guardan por dificultad (`Normal`, `Hard`, `Nightmare`) con una clave de reset semanal. Esto evita perder progreso por lecturas transitorias vacías de WoW, pero permite limpiar correctamente los datos antiguos tras el reset del miércoles.
 - Captura oro/plata/cobre del personaje mediante `GetMoney()`, guardando total en cobre y desglose visible.
 - Actualiza al completar míticas+ (`CHALLENGE_MODE_COMPLETED`, lecturas diferidas 5/10/20 s).
 - **Ignora personajes por debajo del nivel máximo (90).**
@@ -339,7 +339,7 @@ Consulta [LICENSE](LICENSE) para los terminos completos.
 
 | Componente | Estado | Notas |
 |------------|--------|-------|
-| KeystoneSync (addon) | ✅ | v0.1.13, repo propio con CHANGELOG |
+| KeystoneSync (addon) | ✅ | v0.1.14, repo propio con CHANGELOG |
 | keystone-sync-client | ✅ | Polling cada 2 s, legacy |
 | keystone-api | ✅ | JWT, sync token, teams, PostgreSQL |
 | keystone-web | ✅ | Navbar, afijos, reset, tabla ordenable, equipos |
