@@ -150,6 +150,7 @@ export default function Navbar() {
   )
 
   return (
+    <>
     <nav className="sticky top-0 z-10 border-b border-gray-800 bg-gray-950/95 backdrop-blur px-8 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
 
@@ -343,6 +344,8 @@ export default function Navbar() {
         </div>
       </div>
 
+    </nav>
+
       {selectedInvitation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-yellow-500/30 bg-gray-950 p-5 shadow-2xl shadow-black">
@@ -374,6 +377,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </nav>
+    </>
   )
 }
