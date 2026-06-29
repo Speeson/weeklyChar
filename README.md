@@ -239,6 +239,12 @@ API REST con **FastAPI** y **SQLAlchemy** (SQLite local, PostgreSQL en producci�
 | POST | `/api/teams` | JWT | Crear equipo |
 | POST | `/api/teams/join` | JWT | Unirse por código |
 | GET | `/api/teams/{id}` | JWT | Detalle de equipo con miembros |
+| POST | `/api/teams/{id}/invites` | JWT | Invitar a un usuario existente por username |
+| DELETE | `/api/teams/{id}/members/{user_id}` | JWT | El creador del equipo elimina a un miembro |
+| POST | `/api/teams/{id}/leave` | JWT | Salir voluntariamente de un equipo |
+| GET | `/api/me/team-invitations` | JWT | Listar invitaciones pendientes del usuario |
+| POST | `/api/team-invitations/{id}/accept` | JWT | Aceptar una invitación de equipo |
+| POST | `/api/team-invitations/{id}/decline` | JWT | Rechazar una invitación de equipo |
 
 **Puesta en marcha:**
 
@@ -265,12 +271,12 @@ Panel web con **Next.js** y **Tailwind CSS**.
 
 **Funcionalidades:**
 
-- **Navbar sticky** — avatar con dropdown (Perfil, Ajustes, Cerrar sesión), username desde localStorage.
+- **Navbar sticky** — avatar con dropdown (Perfil, Ajustes, Cerrar sesión), campana de invitaciones pendientes, username desde localStorage.
 - **Afijos semanales** — API pública Raider.IO EU; íconos en fila, badges de nivel (`5+`/`7+`/`10+`/`12+`), tooltip al hover.
 - **Countdown de reset** — cuenta atrás hasta el miércoles 09:00 CEST en tiempo real.
 - **Tabla de personajes ordenable** — clic en cabeceras, columna activa amarilla, ↑/↓.
 - **Visibilidad de personajes** — toggle individual, persistido en localStorage (`ks_hidden_chars`).
-- **Equipos** — crear, unirse por código, ver todos los personajes de todos los miembros.
+- **Equipos** — crear, unirse por código, ver todos los personajes de todos los miembros, copiar código de invitación, invitar usuarios por username con aceptación/rechazo desde notificaciones, salir de un equipo y eliminar miembros si eres el creador.
 - **Favicon** personalizado.
 
 **Puesta en marcha:**

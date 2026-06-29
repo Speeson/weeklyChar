@@ -15,6 +15,16 @@ interface Character {
   wowClass: string | null
 }
 
+interface TeamInvitation {
+  id: number
+  teamId: number
+  teamName: string | null
+  invitedBy: string | null
+  status: string
+  createdAt: string | null
+  expiresAt: string | null
+}
+
 export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
@@ -23,7 +33,20 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [characters, setCharacters] = useState<Character[] | null>(null)
   const [loadingChars, setLoadingChars] = useState(false)
+  const [invitations, setInvitations] = useState<TeamInvitation[]>([])
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [selectedInvitation, setSelectedInvitation] = useState<TeamInvitation | null>(null)
+  const [handlingInvitation, setHandlingInvitation] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const notificationsRef = useRef<HTMLDivElement>(null)
+
+  async function fetchInvitations() {
+    try {
+      const res = await apiFetch('/api/me/team-invitations')
+      if (!res.ok) return
+      setInvitations(await res.json())
+    } catch {}
+  }
 
   useEffect(() => {
     const stored = getUsername()
@@ -41,6 +64,7 @@ export default function Navbar() {
           if (data?.avatarUrl) setAvatarUrlState(data.avatarUrl)
         })
         .catch(() => {})
+      fetchInvitations()
     }
   }, [])
 
@@ -48,6 +72,9 @@ export default function Navbar() {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false)
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+        setNotificationsOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -89,6 +116,24 @@ export default function Navbar() {
     router.push('/login')
   }
 
+  async function answerInvitation(invitation: TeamInvitation, action: 'accept' | 'decline') {
+    setHandlingInvitation(true)
+    try {
+      const res = await apiFetch(`/api/team-invitations/${invitation.id}/${action}`, {
+        method: 'POST',
+      })
+      if (!res.ok) return
+      setInvitations(prev => prev.filter(item => item.id !== invitation.id))
+      setSelectedInvitation(null)
+      setNotificationsOpen(false)
+      if (action === 'accept') {
+        router.push(`/teams/${invitation.teamId}`)
+      }
+    } finally {
+      setHandlingInvitation(false)
+    }
+  }
+
   const charsWithAvatars = (characters ?? []).filter(c => c.avatarUrl)
 
   const navLink = (href: string, label: string) => (
@@ -127,6 +172,57 @@ export default function Navbar() {
             <span className="sm:hidden">Cliente</span>
             <span className="hidden sm:inline">Descargar cliente</span>
           </a>
+
+          <div className="relative" ref={notificationsRef}>
+            <button
+              type="button"
+              aria-label="Campana de notificaciones"
+              onClick={() => setNotificationsOpen(open => !open)}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg border transition ${
+                invitations.length > 0
+                  ? 'border-yellow-400/60 bg-yellow-400/15 text-yellow-300 shadow-lg shadow-yellow-500/10'
+                  : 'border-gray-800 bg-gray-900/70 text-gray-500 hover:border-gray-700 hover:text-gray-300'
+              }`}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022 23.848 23.848 0 0 0 5.455 1.31m5.714 0a3 3 0 0 1-5.714 0" />
+              </svg>
+              {invitations.length > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-yellow-400 px-1 text-[11px] font-black text-gray-950">
+                  {invitations.length}
+                </span>
+              )}
+            </button>
+
+            {notificationsOpen && (
+              <div className="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
+                <div className="border-b border-gray-800 px-4 py-3">
+                  <p className="text-sm font-bold text-white">Notificaciones</p>
+                  <p className="text-[11px] text-gray-500">{invitations.length} invitacion{invitations.length !== 1 ? 'es' : ''} pendiente{invitations.length !== 1 ? 's' : ''}</p>
+                </div>
+                {invitations.length === 0 ? (
+                  <p className="px-4 py-5 text-sm text-gray-500">No tienes invitaciones pendientes.</p>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto py-1">
+                    {invitations.map(invitation => (
+                      <button
+                        key={invitation.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedInvitation(invitation)
+                          setNotificationsOpen(false)
+                        }}
+                        className="block w-full px-4 py-3 text-left transition hover:bg-gray-800"
+                      >
+                        <p className="text-sm font-semibold text-yellow-300">{invitation.teamName ?? 'Equipo'}</p>
+                        <p className="mt-0.5 text-xs text-gray-400">Invitado por {invitation.invitedBy ?? 'un miembro'}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Profile dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -246,6 +342,38 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      {selectedInvitation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-yellow-500/30 bg-gray-950 p-5 shadow-2xl shadow-black">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400">Invitacion de equipo</p>
+              <h2 className="mt-2 text-2xl font-black text-white">{selectedInvitation.teamName ?? 'Equipo'}</h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Tienes una invitacion pendiente de {selectedInvitation.invitedBy ?? 'un miembro'} para unirte a este equipo.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={handlingInvitation}
+                onClick={() => answerInvitation(selectedInvitation, 'decline')}
+                className="rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:bg-gray-800 disabled:opacity-50"
+              >
+                Rechazar
+              </button>
+              <button
+                type="button"
+                disabled={handlingInvitation}
+                onClick={() => answerInvitation(selectedInvitation, 'accept')}
+                className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-black text-gray-950 transition hover:bg-yellow-400 disabled:opacity-50"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }

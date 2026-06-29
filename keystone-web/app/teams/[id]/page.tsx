@@ -36,6 +36,8 @@ interface TeamDetail {
   name: string
   inviteCode: string
   isOwner: boolean
+  ownerId: number
+  currentUserId: number
   members: Member[]
 }
 
@@ -220,6 +222,9 @@ function MemberCard({
   collapsed,
   onToggle,
   layout,
+  canRemove,
+  onRemove,
+  removing,
 }: {
   member: Member
   query: string
@@ -227,6 +232,9 @@ function MemberCard({
   collapsed: boolean
   onToggle: () => void
   layout: 'grid' | 'list'
+  canRemove: boolean
+  onRemove: () => void
+  removing: boolean
 }) {
   const characters = member.characters
     .filter(char => matchesDungeon(char, query, selectedDungeons))
@@ -234,20 +242,32 @@ function MemberCard({
 
   return (
     <section className="mb-5 break-inside-avoid overflow-hidden rounded-xl border border-gray-800 bg-gray-900/45 shadow-xl">
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`flex w-full items-center justify-between gap-4 bg-gray-950/70 px-4 py-3 text-left transition hover:bg-gray-900 ${collapsed ? '' : 'border-b border-gray-800'}`}
-        title={collapsed ? 'Expandir cuenta' : 'Contraer cuenta'}
-      >
-        <span className="truncate font-semibold text-gray-100">{member.username}</span>
-        <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-gray-500">
-          <span>{characters.length} / {member.characters.length} personajes</span>
-          <svg className={`h-3.5 w-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-          </svg>
-        </span>
-      </button>
+      <div className={`flex w-full items-center gap-2 bg-gray-950/70 px-4 py-3 transition ${collapsed ? '' : 'border-b border-gray-800'}`}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 items-center justify-between gap-4 text-left"
+          title={collapsed ? 'Expandir cuenta' : 'Contraer cuenta'}
+        >
+          <span className="truncate font-semibold text-gray-100">{member.username}</span>
+          <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-gray-500">
+            <span>{characters.length} / {member.characters.length} personajes</span>
+            <svg className={`h-3.5 w-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </button>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={removing}
+            className="flex-shrink-0 rounded-lg border border-red-500/30 px-3 py-1.5 text-[11px] font-bold text-red-300 transition hover:border-red-400 hover:bg-red-500/10 disabled:opacity-50"
+          >
+            {removing ? 'Eliminando...' : 'Eliminar'}
+          </button>
+        )}
+      </div>
       {!collapsed && (
         characters.length === 0 ? (
           <p className="px-4 py-5 text-center text-xs text-gray-600">Sin personajes para este filtro.</p>
@@ -289,6 +309,14 @@ export default function TeamDetailPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [copied, setCopied] = useState(false)
   const [collapsedMembers, setCollapsedMembers] = useState<Set<number>>(new Set())
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [inviteUsername, setInviteUsername] = useState('')
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [sendingInvite, setSendingInvite] = useState(false)
+  const [teamActionError, setTeamActionError] = useState<string | null>(null)
+  const [removingUserId, setRemovingUserId] = useState<number | null>(null)
+  const [leavingTeam, setLeavingTeam] = useState(false)
 
   useEffect(() => {
     if (!getToken()) {
@@ -358,6 +386,71 @@ export default function TeamDetailPage() {
     setSelectedDungeons([])
   }
 
+  async function sendUsernameInvite(event: React.FormEvent) {
+    event.preventDefault()
+    if (!team) return
+    setInviteError(null)
+    setInviteMessage(null)
+    setSendingInvite(true)
+    try {
+      const res = await apiFetch(`/api/teams/${team.id}/invites`, {
+        method: 'POST',
+        body: JSON.stringify({ username: inviteUsername }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setInviteError(data.detail ?? 'No se pudo enviar la invitacion.')
+        return
+      }
+      setInviteUsername('')
+      setInviteMessage(`Invitacion enviada a ${data.invitedUsername ?? 'usuario'}.`)
+    } finally {
+      setSendingInvite(false)
+    }
+  }
+
+  async function removeMember(member: Member) {
+    if (!team) return
+    const confirmed = window.confirm(`Eliminar a ${member.username} del equipo ${team.name}?`)
+    if (!confirmed) return
+    setTeamActionError(null)
+    setRemovingUserId(member.userId)
+    try {
+      const res = await apiFetch(`/api/teams/${team.id}/members/${member.userId}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setTeamActionError(data.detail ?? 'No se pudo eliminar el miembro.')
+        return
+      }
+      setTeam(prev => prev ? { ...prev, members: prev.members.filter(item => item.userId !== member.userId) } : prev)
+    } finally {
+      setRemovingUserId(null)
+    }
+  }
+
+  async function leaveTeam() {
+    if (!team) return
+    const confirmed = window.confirm(`Salir del equipo ${team.name}?`)
+    if (!confirmed) return
+    setTeamActionError(null)
+    setLeavingTeam(true)
+    try {
+      const res = await apiFetch(`/api/teams/${team.id}/leave`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setTeamActionError(data.detail ?? 'No se pudo salir del equipo.')
+        return
+      }
+      router.push('/teams')
+    } finally {
+      setLeavingTeam(false)
+    }
+  }
+
   return (
     <>
       <Navbar />
@@ -423,7 +516,7 @@ export default function TeamDetailPage() {
               </div>
 
               <div className="flex flex-col justify-between gap-4 lg:items-end">
-                {team.isOwner ? (
+                <div className="flex flex-wrap justify-end gap-2">
                   <button
                     onClick={copyInviteCode}
                     className="inline-flex w-fit items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-950 px-4 py-3 text-left transition hover:border-yellow-500/60 hover:bg-gray-900"
@@ -439,7 +532,26 @@ export default function TeamDetailPage() {
                     </svg>
                     {copied && <span className="text-xs text-green-400">Copiado</span>}
                   </button>
-                ) : <span />}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInviteModalOpen(true)
+                      setInviteError(null)
+                      setInviteMessage(null)
+                    }}
+                    className="inline-flex items-center justify-center rounded-xl bg-yellow-500 px-4 py-3 text-sm font-black text-gray-950 shadow-lg shadow-yellow-500/10 transition hover:bg-yellow-400"
+                  >
+                    Invitar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={leaveTeam}
+                    disabled={leavingTeam}
+                    className="inline-flex items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300 transition hover:border-red-400 hover:bg-red-500/15 disabled:opacity-50"
+                  >
+                    {leavingTeam ? 'Saliendo...' : 'Salir del equipo'}
+                  </button>
+                </div>
 
                 <div className="inline-flex w-fit rounded-xl border border-gray-800 bg-gray-950 p-1">
                   <button
@@ -461,6 +573,10 @@ export default function TeamDetailPage() {
             </div>
           </section>
 
+          {teamActionError && (
+            <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{teamActionError}</p>
+          )}
+
           {allCharacters.length === 0 ? (
             <p className="mt-8 text-sm text-gray-500">Ningun miembro tiene personajes registrados todavia.</p>
           ) : (
@@ -474,12 +590,71 @@ export default function TeamDetailPage() {
                   collapsed={collapsedMembers.has(member.userId)}
                   onToggle={() => toggleMember(member.userId)}
                   layout={viewMode}
+                  canRemove={team.isOwner && member.userId !== team.currentUserId}
+                  onRemove={() => removeMember(member)}
+                  removing={removingUserId === member.userId}
                 />
               ))}
             </div>
           )}
         </div>
       </main>
+
+      {inviteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-yellow-500/30 bg-gray-950 p-5 shadow-2xl shadow-black">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400">Invitar al grupo</p>
+                <h2 className="mt-2 text-2xl font-black text-white">{team.name}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(false)}
+                className="rounded-lg border border-gray-800 px-3 py-1.5 text-sm text-gray-400 transition hover:border-gray-600 hover:text-white"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+              <p className="mb-2 text-sm font-semibold text-gray-200">Invitacion manual</p>
+              <div className="flex gap-2">
+                <code className="flex-1 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm font-bold text-yellow-400">{team.inviteCode}</code>
+                <button
+                  type="button"
+                  onClick={copyInviteCode}
+                  className="rounded-lg bg-yellow-500 px-3 py-2 text-xs font-black text-gray-950 transition hover:bg-yellow-400"
+                >
+                  {copied ? 'Copiado' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={sendUsernameInvite} className="mt-4 rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+              <label className="mb-2 block text-sm font-semibold text-gray-200">Invitar por username</label>
+              <div className="flex gap-2">
+                <input
+                  value={inviteUsername}
+                  onChange={event => setInviteUsername(event.target.value)}
+                  placeholder="Username"
+                  required
+                  className="flex-1 rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-yellow-500/70"
+                />
+                <button
+                  type="submit"
+                  disabled={sendingInvite}
+                  className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-black text-gray-950 transition hover:bg-yellow-400 disabled:opacity-50"
+                >
+                  {sendingInvite ? 'Enviando...' : 'Enviar'}
+                </button>
+              </div>
+              {inviteError && <p className="mt-3 text-sm text-red-400">{inviteError}</p>}
+              {inviteMessage && <p className="mt-3 text-sm text-green-400">{inviteMessage}</p>}
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }

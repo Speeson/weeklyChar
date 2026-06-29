@@ -170,11 +170,9 @@ export default function TeamsPage() {
                     </p>
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    {team.isOwner && (
-                      <p className="mb-1 text-xs text-gray-500">
-                        Código: <code className="text-yellow-400">{team.inviteCode}</code>
-                      </p>
-                    )}
+                    <p className="mb-1 text-xs text-gray-500">
+                      Codigo: <code className="text-yellow-400">{team.inviteCode}</code>
+                    </p>
                     <span className="text-xs text-gray-600">Ver →</span>
                   </div>
                 </Link>

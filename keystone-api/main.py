@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy import inspect, text
 from database import Base, engine, get_db
-from models import Character, Keystone, Team, TeamMember, User
+from models import Character, Keystone, Team, TeamInvitation, TeamMember, User
 
 load_dotenv()
 
@@ -32,6 +32,7 @@ ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 EMAIL_TOKEN_EXPIRE_HOURS = 24
 PASSWORD_RESET_EXPIRE_MINUTES = 60
+TEAM_INVITATION_EXPIRE_DAYS = 7
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "KeystoneSync <noreply@keystonesync.esgarpe.dev>")
 WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://localhost:3000").rstrip("/")
@@ -370,6 +371,9 @@ class CreateTeamRequest(BaseModel):
 
 class JoinTeamRequest(BaseModel):
     invite_code: str
+
+class CreateTeamInviteRequest(BaseModel):
+    username: str
 
 
 # --- Auth endpoints ---
@@ -718,6 +722,190 @@ def get_team(
         raise HTTPException(403, "No perteneces a este team")
     return _team_detail_response(membership.team, current_user)
 
+@app.post("/api/teams/{team_id}/invites", status_code=201)
+def create_team_invite(
+    team_id: int,
+    payload: CreateTeamInviteRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    membership = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id).first()
+    if not membership:
+        raise HTTPException(403, "No perteneces a este team")
+
+    username = payload.username.strip()
+    if len(username) < 3:
+        raise HTTPException(400, "Introduce un username valido")
+
+    invited_user = db.query(User).filter_by(username=username).first()
+    if not invited_user:
+        raise HTTPException(404, "Usuario no encontrado")
+    if invited_user.id == current_user.id:
+        raise HTTPException(400, "No puedes invitarte a ti mismo")
+
+    already_member = db.query(TeamMember).filter_by(team_id=team_id, user_id=invited_user.id).first()
+    if already_member:
+        raise HTTPException(400, "Ese usuario ya pertenece al equipo")
+
+    pending = db.query(TeamInvitation).filter_by(
+        team_id=team_id,
+        invited_user_id=invited_user.id,
+        status="pending",
+    ).first()
+    if pending and not _is_expired(pending.expires_at):
+        raise HTTPException(400, "Ese usuario ya tiene una invitacion pendiente")
+    if pending and _is_expired(pending.expires_at):
+        pending.status = "declined"
+        pending.responded_at = datetime.now(timezone.utc)
+
+    invitation = TeamInvitation(
+        team_id=team_id,
+        invited_user_id=invited_user.id,
+        invited_by_user_id=current_user.id,
+        status="pending",
+        expires_at=datetime.now(timezone.utc) + timedelta(days=TEAM_INVITATION_EXPIRE_DAYS),
+    )
+    db.add(invitation)
+    db.commit()
+    db.refresh(invitation)
+    return _team_invitation_response(invitation)
+
+@app.delete("/api/teams/{team_id}/members/{user_id}")
+def remove_team_member(
+    team_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    team = db.query(Team).filter_by(id=team_id).first()
+    if not team:
+        raise HTTPException(404, "Equipo no encontrado")
+    if team.created_by != current_user.id:
+        raise HTTPException(403, "Solo el creador del equipo puede eliminar miembros")
+    if user_id == current_user.id:
+        raise HTTPException(400, "No puedes eliminarte a ti mismo desde esta accion")
+
+    membership = db.query(TeamMember).filter_by(team_id=team_id, user_id=user_id).first()
+    if not membership:
+        raise HTTPException(404, "Ese usuario no pertenece al equipo")
+
+    now = datetime.now(timezone.utc)
+    pending_invites = db.query(TeamInvitation).filter_by(
+        team_id=team_id,
+        invited_user_id=user_id,
+        status="pending",
+    ).all()
+    for invitation in pending_invites:
+        invitation.status = "declined"
+        invitation.responded_at = now
+
+    db.delete(membership)
+    db.commit()
+    return {"message": "Miembro eliminado del equipo"}
+
+@app.post("/api/teams/{team_id}/leave")
+def leave_team(
+    team_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    team = db.query(Team).filter_by(id=team_id).first()
+    if not team:
+        raise HTTPException(404, "Equipo no encontrado")
+
+    membership = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id).first()
+    if not membership:
+        raise HTTPException(404, "No perteneces a este equipo")
+
+    member_count = db.query(TeamMember).filter_by(team_id=team_id).count()
+    if team.created_by == current_user.id and member_count > 1:
+        raise HTTPException(400, "El creador no puede salir mientras haya otros miembros")
+
+    now = datetime.now(timezone.utc)
+    pending_invites = db.query(TeamInvitation).filter_by(
+        team_id=team_id,
+        invited_user_id=current_user.id,
+        status="pending",
+    ).all()
+    for invitation in pending_invites:
+        invitation.status = "declined"
+        invitation.responded_at = now
+
+    db.delete(membership)
+    if member_count == 1:
+        db.query(TeamInvitation).filter_by(team_id=team_id).delete()
+        db.delete(team)
+    db.commit()
+    return {"message": "Has salido del equipo"}
+
+@app.get("/api/me/team-invitations")
+def list_team_invitations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    invitations = db.query(TeamInvitation).filter_by(
+        invited_user_id=current_user.id,
+        status="pending",
+    ).order_by(TeamInvitation.created_at.desc()).all()
+
+    now = datetime.now(timezone.utc)
+    active = []
+    changed = False
+    for invitation in invitations:
+        expires_at = invitation.expires_at
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at and expires_at < now:
+            invitation.status = "declined"
+            invitation.responded_at = now
+            changed = True
+        else:
+            active.append(invitation)
+
+    if changed:
+        db.commit()
+
+    return [_team_invitation_response(invitation) for invitation in active]
+
+@app.post("/api/team-invitations/{invitation_id}/accept")
+def accept_team_invitation(
+    invitation_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    invitation = db.query(TeamInvitation).filter_by(id=invitation_id, invited_user_id=current_user.id).first()
+    if not invitation or invitation.status != "pending":
+        raise HTTPException(404, "Invitacion no encontrada")
+    if _is_expired(invitation.expires_at):
+        invitation.status = "declined"
+        invitation.responded_at = datetime.now(timezone.utc)
+        db.commit()
+        raise HTTPException(400, "La invitacion ha caducado")
+
+    already_member = db.query(TeamMember).filter_by(team_id=invitation.team_id, user_id=current_user.id).first()
+    if not already_member:
+        db.add(TeamMember(team_id=invitation.team_id, user_id=current_user.id))
+
+    invitation.status = "accepted"
+    invitation.responded_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": "Invitacion aceptada", "team": _team_response(invitation.team, current_user)}
+
+@app.post("/api/team-invitations/{invitation_id}/decline")
+def decline_team_invitation(
+    invitation_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    invitation = db.query(TeamInvitation).filter_by(id=invitation_id, invited_user_id=current_user.id).first()
+    if not invitation or invitation.status != "pending":
+        raise HTTPException(404, "Invitacion no encontrada")
+
+    invitation.status = "declined"
+    invitation.responded_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": "Invitacion rechazada"}
+
 
 # --- Helpers ---
 
@@ -777,6 +965,8 @@ def _team_response(team: Team, current_user: User):
         "name": team.name,
         "inviteCode": team.invite_code,
         "isOwner": team.created_by == current_user.id,
+        "ownerId": team.created_by,
+        "currentUserId": current_user.id,
         "memberCount": len(team.members),
     }
 
@@ -794,7 +984,21 @@ def _team_detail_response(team: Team, current_user: User):
         "name": team.name,
         "inviteCode": team.invite_code,
         "isOwner": team.created_by == current_user.id,
+        "ownerId": team.created_by,
+        "currentUserId": current_user.id,
         "members": members,
+    }
+
+def _team_invitation_response(invitation: TeamInvitation):
+    return {
+        "id": invitation.id,
+        "teamId": invitation.team_id,
+        "teamName": invitation.team.name if invitation.team else None,
+        "invitedUsername": invitation.invited_user.username if invitation.invited_user else None,
+        "invitedBy": invitation.invited_by.username if invitation.invited_by else None,
+        "status": invitation.status,
+        "createdAt": invitation.created_at.isoformat() if invitation.created_at else None,
+        "expiresAt": invitation.expires_at.isoformat() if invitation.expires_at else None,
     }
 
 def db_characters_for_user(user_id: int, user: User):

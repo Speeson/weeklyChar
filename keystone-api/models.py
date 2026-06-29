@@ -27,6 +27,8 @@ class User(Base):
     characters = relationship("Character", back_populates="user")
     teams_created = relationship("Team", back_populates="creator")
     team_memberships = relationship("TeamMember", back_populates="user")
+    team_invitations_received = relationship("TeamInvitation", foreign_keys="TeamInvitation.invited_user_id", back_populates="invited_user")
+    team_invitations_sent = relationship("TeamInvitation", foreign_keys="TeamInvitation.invited_by_user_id", back_populates="invited_by")
 
 
 class Team(Base):
@@ -40,6 +42,7 @@ class Team(Base):
 
     creator = relationship("User", back_populates="teams_created")
     members = relationship("TeamMember", back_populates="team")
+    invitations = relationship("TeamInvitation", back_populates="team")
 
 
 class TeamMember(Base):
@@ -54,6 +57,23 @@ class TeamMember(Base):
     user = relationship("User", back_populates="team_memberships")
 
     __table_args__ = (UniqueConstraint("team_id", "user_id"),)
+
+
+class TeamInvitation(Base):
+    __tablename__ = "team_invitations"
+
+    id = Column(Integer, primary_key=True)
+    team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    invited_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    invited_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    expires_at = Column(DateTime, nullable=False)
+    responded_at = Column(DateTime, nullable=True)
+
+    team = relationship("Team", back_populates="invitations")
+    invited_user = relationship("User", foreign_keys=[invited_user_id], back_populates="team_invitations_received")
+    invited_by = relationship("User", foreign_keys=[invited_by_user_id], back_populates="team_invitations_sent")
 
 
 class Character(Base):
