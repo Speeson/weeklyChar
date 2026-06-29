@@ -161,20 +161,12 @@ export default function TeamsPage() {
                 <Link
                   key={team.id}
                   href={`/teams/${team.id}`}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 p-4 shadow-xl transition hover:border-yellow-500/60 hover:bg-gray-900"
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 px-4 py-3 shadow-xl transition hover:border-yellow-500/60 hover:bg-gray-900"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-white">{team.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {team.memberCount} miembro{team.memberCount !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="mb-1 text-xs text-gray-500">
-                      Codigo: <code className="text-yellow-400">{team.inviteCode}</code>
-                    </p>
-                    <span className="text-xs text-gray-600">Ver →</span>
-                  </div>
+                  <p className="min-w-0 truncate font-semibold text-white">{team.name}</p>
+                  <span className="flex-shrink-0 rounded-full border border-gray-700 bg-gray-950/80 px-3 py-1 text-xs font-bold text-yellow-300">
+                    {team.memberCount} miembro{team.memberCount !== 1 ? 's' : ''}
+                  </span>
                 </Link>
               ))}
             </div>

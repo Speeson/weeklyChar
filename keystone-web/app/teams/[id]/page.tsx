@@ -316,6 +316,7 @@ export default function TeamDetailPage() {
   const [sendingInvite, setSendingInvite] = useState(false)
   const [teamActionError, setTeamActionError] = useState<string | null>(null)
   const [removingUserId, setRemovingUserId] = useState<number | null>(null)
+  const [memberToRemove, setMemberToRemove] = useState<Member | null>(null)
   const [leavingTeam, setLeavingTeam] = useState(false)
 
   useEffect(() => {
@@ -409,10 +410,9 @@ export default function TeamDetailPage() {
     }
   }
 
-  async function removeMember(member: Member) {
-    if (!team) return
-    const confirmed = window.confirm(`Eliminar a ${member.username} del equipo ${team.name}?`)
-    if (!confirmed) return
+  async function confirmRemoveMember() {
+    if (!team || !memberToRemove) return
+    const member = memberToRemove
     setTeamActionError(null)
     setRemovingUserId(member.userId)
     try {
@@ -425,6 +425,7 @@ export default function TeamDetailPage() {
         return
       }
       setTeam(prev => prev ? { ...prev, members: prev.members.filter(item => item.userId !== member.userId) } : prev)
+      setMemberToRemove(null)
     } finally {
       setRemovingUserId(null)
     }
@@ -585,7 +586,7 @@ export default function TeamDetailPage() {
                   onToggle={() => toggleMember(member.userId)}
                   layout={viewMode}
                   canRemove={team.isOwner && member.userId !== team.currentUserId}
-                  onRemove={() => removeMember(member)}
+                  onRemove={() => setMemberToRemove(member)}
                   removing={removingUserId === member.userId}
                 />
               ))}
@@ -646,6 +647,39 @@ export default function TeamDetailPage() {
               {inviteError && <p className="mt-3 text-sm text-red-400">{inviteError}</p>}
               {inviteMessage && <p className="mt-3 text-sm text-green-400">{inviteMessage}</p>}
             </form>
+          </div>
+        </div>
+      )}
+
+      {memberToRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-gray-950 p-5 shadow-2xl shadow-black">
+            <div className="mb-5">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-300">Eliminar miembro</p>
+              <h2 className="mt-2 text-2xl font-black text-white">{memberToRemove.username}</h2>
+            </div>
+            <p className="rounded-xl border border-gray-800 bg-gray-900/60 p-4 text-sm leading-6 text-gray-300">
+              Vas a eliminar a <span className="font-bold text-white">{memberToRemove.username}</span> del equipo{' '}
+              <span className="font-bold text-yellow-400">{team.name}</span>. No se borraran sus personajes ni su cuenta.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setMemberToRemove(null)}
+                disabled={removingUserId === memberToRemove.userId}
+                className="rounded-xl border border-gray-700 px-4 py-2 text-sm font-bold text-gray-300 transition hover:border-gray-500 hover:text-white disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveMember}
+                disabled={removingUserId === memberToRemove.userId}
+                className="rounded-xl bg-red-500 px-4 py-2 text-sm font-black text-white transition hover:bg-red-400 disabled:opacity-50"
+              >
+                {removingUserId === memberToRemove.userId ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
