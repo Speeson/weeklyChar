@@ -456,82 +456,92 @@ export default function TeamDetailPage() {
       <Navbar />
       <main className="min-h-screen bg-gray-950 text-gray-100 px-4 py-8 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <section className="rounded-2xl border border-gray-800 bg-gray-900/55 p-4 shadow-2xl">
-            <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,420px)_1fr] lg:items-stretch">
-              <div className="flex flex-col justify-between gap-4">
+          <section className="rounded-2xl border border-gray-800 bg-gray-900/55 p-3 shadow-2xl">
+            <div className="grid gap-3 lg:grid-cols-[260px_minmax(260px,1fr)_260px] lg:items-stretch">
+              <div className="flex flex-col justify-between gap-2">
                 <Link href="/teams" className="inline-flex w-fit items-center gap-2 rounded-xl border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-gray-300 transition hover:border-yellow-500/60 hover:text-yellow-300">
                   <span className="text-lg leading-none">←</span>
                   Volver a equipos
                 </Link>
-                <div ref={filterRef} className="relative flex w-fit items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFilterOpen(open => !open)}
-                    className="rounded-xl bg-yellow-500 px-4 py-2 text-xs font-black uppercase tracking-wide text-gray-950 shadow-lg shadow-yellow-500/10 transition hover:bg-yellow-400"
-                  >
-                    Filtrar{selectedDungeons.length > 0 || query ? ` (${visibleCount})` : ''}
-                  </button>
+                <div className="flex w-fit items-center gap-2">
+                  <div ref={filterRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setFilterOpen(open => !open)}
+                      className="h-9 rounded-xl bg-yellow-500 px-4 text-xs font-black uppercase tracking-wide text-gray-950 shadow-lg shadow-yellow-500/10 transition hover:bg-yellow-400"
+                    >
+                      Filtrar{selectedDungeons.length > 0 || query ? ` (${visibleCount})` : ''}
+                    </button>
+                    {filterOpen && (
+                      <div className="absolute left-0 top-full z-20 mt-2 w-80 rounded-2xl border border-yellow-500/30 bg-gray-950/95 p-4 shadow-2xl shadow-black/50 backdrop-blur">
+                        <input
+                          value={query}
+                          onChange={event => setQuery(event.target.value)}
+                          placeholder="Buscar personaje, dungeon o +nivel..."
+                          className="mb-3 w-full rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          {TEAM_DUNGEONS.map(dungeon => (
+                            <label key={dungeon.abbr} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-800 bg-gray-900/70 px-2 py-2 text-xs text-gray-300 transition hover:border-yellow-500/50 hover:text-white">
+                              <input
+                                type="checkbox"
+                                checked={selectedDungeons.includes(dungeon.abbr)}
+                                onChange={() => toggleDungeon(dungeon.abbr)}
+                                className="accent-yellow-500"
+                              />
+                              <span className="truncate">{dungeon.name}</span>
+                              <span className="ml-auto font-bold text-yellow-400">{dungeon.abbr}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500">
+                          <span>{visibleCount} de {allCharacters.length} visibles</span>
+                          <span>{selectedDungeons.length ? `${selectedDungeons.length} dungeons` : 'Todas las dungeons'}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {(query || selectedDungeons.length > 0) && (
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="rounded-xl border border-yellow-500/40 bg-gray-950 px-3 py-2 text-xs font-bold uppercase tracking-wide text-yellow-400 transition hover:bg-yellow-500 hover:text-gray-950"
+                      className="h-9 rounded-xl border border-yellow-500/40 bg-gray-950 px-3 text-xs font-bold uppercase tracking-wide text-yellow-400 transition hover:bg-yellow-500 hover:text-gray-950"
                     >
                       Limpiar
                     </button>
                   )}
-                  {filterOpen && (
-                    <div className="absolute left-0 top-full z-20 mt-2 w-80 rounded-2xl border border-yellow-500/30 bg-gray-950/95 p-4 shadow-2xl shadow-black/50 backdrop-blur">
-                      <input
-                        value={query}
-                        onChange={event => setQuery(event.target.value)}
-                        placeholder="Buscar personaje, dungeon o +nivel..."
-                        className="mb-3 w-full rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        {TEAM_DUNGEONS.map(dungeon => (
-                          <label key={dungeon.abbr} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-800 bg-gray-900/70 px-2 py-2 text-xs text-gray-300 transition hover:border-yellow-500/50 hover:text-white">
-                            <input
-                              type="checkbox"
-                              checked={selectedDungeons.includes(dungeon.abbr)}
-                              onChange={() => toggleDungeon(dungeon.abbr)}
-                              className="accent-yellow-500"
-                            />
-                            <span className="truncate">{dungeon.name}</span>
-                            <span className="ml-auto font-bold text-yellow-400">{dungeon.abbr}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500">
-                        <span>{visibleCount} de {allCharacters.length} visibles</span>
-                        <span>{selectedDungeons.length ? `${selectedDungeons.length} dungeons` : 'Todas las dungeons'}</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className="relative inline-flex h-9 w-20 rounded-xl border border-gray-800 bg-gray-950 p-1">
+                    <span className={`absolute top-1 h-7 w-9 rounded-lg bg-yellow-500 transition-transform ${viewMode === 'list' ? 'translate-x-9' : 'translate-x-0'}`} />
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('grid')}
+                      className={`relative z-10 flex h-7 w-9 items-center justify-center transition ${viewMode === 'grid' ? 'text-gray-950' : 'text-gray-500 hover:text-white'}`}
+                      title="Cuadricula"
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm8 0h6v6h-6v-6Z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      className={`relative z-10 flex h-7 w-9 items-center justify-center transition ${viewMode === 'list' ? 'text-gray-950' : 'text-gray-500 hover:text-white'}`}
+                      title="Lista de cuentas"
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M4 5h12v2H4V5Zm0 4h12v2H4V9Zm0 4h12v2H4v-2Z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-5 text-center">
-                <h1 className="text-3xl font-black text-yellow-400">{team.name}</h1>
+              <div className="flex items-center justify-center rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-3 text-center">
+                <h1 className="truncate text-2xl font-black text-yellow-400">{team.name}</h1>
               </div>
 
-              <div className="flex flex-col justify-between gap-4 lg:items-end">
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button
-                    onClick={copyInviteCode}
-                    className="inline-flex w-fit items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-950 px-4 py-3 text-left transition hover:border-yellow-500/60 hover:bg-gray-900"
-                    title="Copiar codigo de invitacion"
-                  >
-                    <span>
-                      <span className="block text-[11px] uppercase tracking-wide text-gray-500">Codigo</span>
-                      <code className="text-sm font-bold text-yellow-400">{team.inviteCode}</code>
-                    </span>
-                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h10v12H8z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    {copied && <span className="text-xs text-green-400">Copiado</span>}
-                  </button>
+              <div className="flex flex-col justify-between gap-2 lg:items-end">
+                <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
@@ -543,32 +553,16 @@ export default function TeamDetailPage() {
                   >
                     Invitar
                   </button>
-                  <button
-                    type="button"
-                    onClick={leaveTeam}
-                    disabled={leavingTeam}
-                    className="inline-flex items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300 transition hover:border-red-400 hover:bg-red-500/15 disabled:opacity-50"
-                  >
-                    {leavingTeam ? 'Saliendo...' : 'Salir del equipo'}
-                  </button>
                 </div>
 
-                <div className="inline-flex w-fit rounded-xl border border-gray-800 bg-gray-950 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('grid')}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'grid' ? 'bg-yellow-500 text-gray-950' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    Cuadrícula
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'list' ? 'bg-yellow-500 text-gray-950' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    Lista de cuentas
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={leaveTeam}
+                  disabled={leavingTeam}
+                  className="inline-flex w-fit items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300 transition hover:border-red-400 hover:bg-red-500/15 disabled:opacity-50"
+                >
+                  {leavingTeam ? 'Saliendo...' : 'Salir del equipo'}
+                </button>
               </div>
             </div>
           </section>
