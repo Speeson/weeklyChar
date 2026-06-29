@@ -317,8 +317,25 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 DATABASE_URL     →  ${{Postgres.DATABASE_URL}}
 SECRET_KEY       →  clave secreta larga
 ALLOWED_ORIGINS  →  https://keystonesync.esgarpe.dev,http://localhost:3000
+RESEND_API_KEY   →  API key de Resend con permiso de envío
+EMAIL_FROM       →  KeystoneSync <noreply@keystonesync.esgarpe.dev>
+WEB_BASE_URL     →  https://keystonesync.esgarpe.dev
 ```
 Root Directory: `keystone-api` · Target port: `8080`
+
+**Rate limits de email (API):**
+
+Para proteger la cuota de Resend, `/api/auth/forgot-password` y `/api/auth/resend-verification` aplican límites en memoria por IP y por email/usuario normalizado. Los valores por defecto son suficientes para producción con una sola instancia Railway:
+
+```env
+PASSWORD_RESET_IP_LIMIT=5
+PASSWORD_RESET_IP_WINDOW_SECONDS=900
+PASSWORD_RESET_IDENTITY_LIMIT=3
+PASSWORD_RESET_IDENTITY_WINDOW_SECONDS=3600
+PASSWORD_RESET_COOLDOWN_SECONDS=120
+```
+
+Si se escala la API a varias réplicas, estos límites deberían moverse a PostgreSQL o Redis para compartir estado entre instancias.
 
 **Variables Vercel:**
 ```env

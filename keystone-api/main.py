@@ -6,12 +6,14 @@ import re
 import secrets
 import urllib.error
 import urllib.request
+from collections import defaultdict, deque
 from datetime import date
 from datetime import datetime, timedelta, timezone
+from time import time
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -33,6 +35,11 @@ PASSWORD_RESET_EXPIRE_MINUTES = 60
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "KeystoneSync <noreply@keystonesync.esgarpe.dev>")
 WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://localhost:3000").rstrip("/")
+PASSWORD_RESET_IP_LIMIT = int(os.getenv("PASSWORD_RESET_IP_LIMIT", "5"))
+PASSWORD_RESET_IP_WINDOW_SECONDS = int(os.getenv("PASSWORD_RESET_IP_WINDOW_SECONDS", "900"))
+PASSWORD_RESET_IDENTITY_LIMIT = int(os.getenv("PASSWORD_RESET_IDENTITY_LIMIT", "3"))
+PASSWORD_RESET_IDENTITY_WINDOW_SECONDS = int(os.getenv("PASSWORD_RESET_IDENTITY_WINDOW_SECONDS", "3600"))
+PASSWORD_RESET_COOLDOWN_SECONDS = int(os.getenv("PASSWORD_RESET_COOLDOWN_SECONDS", "120"))
 
 Base.metadata.create_all(bind=engine)
 
@@ -85,6 +92,56 @@ _bearer_optional = HTTPBearer(auto_error=False)
 
 
 # --- Auth helpers ---
+
+_rate_limit_attempts: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit_key(scope: str, value: str) -> str:
+    return f"{scope}:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
+
+
+def _check_rate_limit(key: str, limit: int, window_seconds: int, now: Optional[float] = None):
+    current = now if now is not None else time()
+    attempts = _rate_limit_attempts[key]
+
+    while attempts and current - attempts[0] >= window_seconds:
+        attempts.popleft()
+
+    if len(attempts) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos. Espera unos minutos antes de volver a probar.",
+        )
+
+    attempts.append(current)
+
+
+def _check_email_rate_limits(request: Request, action: str, identity: str):
+    normalized_identity = identity.strip().lower()
+    client_ip = _get_client_ip(request)
+
+    _check_rate_limit(
+        _rate_limit_key(f"{action}:ip", client_ip),
+        PASSWORD_RESET_IP_LIMIT,
+        PASSWORD_RESET_IP_WINDOW_SECONDS,
+    )
+    _check_rate_limit(
+        _rate_limit_key(f"{action}:identity", normalized_identity),
+        PASSWORD_RESET_IDENTITY_LIMIT,
+        PASSWORD_RESET_IDENTITY_WINDOW_SECONDS,
+    )
+    _check_rate_limit(
+        _rate_limit_key(f"{action}:cooldown", normalized_identity),
+        1,
+        PASSWORD_RESET_COOLDOWN_SECONDS,
+    )
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -393,8 +450,13 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     return {"message": "Email verificado correctamente"}
 
 @app.post("/api/auth/resend-verification")
-def resend_verification(payload: ResendVerificationRequest, db: Session = Depends(get_db)):
+def resend_verification(
+    payload: ResendVerificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     value = payload.emailOrUsername.strip()
+    _check_email_rate_limits(request, "resend_verification", value)
     normalized = _normalize_email(value)
     user = db.query(User).filter_by(email=normalized).first()
     if not user:
@@ -410,8 +472,13 @@ def resend_verification(payload: ResendVerificationRequest, db: Session = Depend
     return {"message": "Si la cuenta existe y esta pendiente, recibiras un nuevo email de verificacion."}
 
 @app.post("/api/auth/forgot-password")
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     email = _normalize_email(payload.email)
+    _check_email_rate_limits(request, "forgot_password", email)
     user = db.query(User).filter_by(email=email).first()
     if user:
         token = _new_plain_token()
