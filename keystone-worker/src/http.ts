@@ -9,13 +9,19 @@ export function jsonError(c: Context<{ Bindings: Env }>, status: ErrorStatus, de
 
 export async function corsMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   const origin = c.req.header('Origin') ?? ''
-  const allowed = (c.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
+  const configuredOrigins = (c.env.ALLOWED_ORIGINS ?? '')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean)
+  const allowed = new Set([
+    'http://localhost:3000',
+    'https://keystonesync.esgarpe.dev',
+    ...configuredOrigins,
+  ])
 
-  if (allowed.includes(origin)) {
+  if (allowed.has(origin)) {
     c.header('Access-Control-Allow-Origin', origin)
+    c.header('Vary', 'Origin')
   }
 
   c.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
