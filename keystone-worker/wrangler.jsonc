@@ -7,7 +7,7 @@
     {
       "binding": "DB",
       "database_name": "keystone-sync",
-      "database_id": "replace-with-cloudflare-d1-database-id"
+      "database_id": "418e4d4f-47c3-4191-a90d-b95a442ed06d"
     }
   ]
 }
