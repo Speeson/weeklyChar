@@ -3,8 +3,7 @@
 Sistema completo para registrar y sincronizar la **piedra angular mítica+ actual** de personajes de **World of Warcraft Retail**, con soporte multi-usuario, equipos y sincronización automática desde una app de escritorio.
 
 **Web:** https://keystonesync.esgarpe.dev  
-**API:** https://weeklychar-production.up.railway.app  
-**Swagger:** https://weeklychar-production.up.railway.app/docs  
+**API:** https://api-keystonesync.esgarpe.dev  
 **Addon (repo independiente):** https://github.com/Speeson/KeystoneSync
 
 ---
@@ -31,7 +30,7 @@ El backend de Railway/FastAPI se está reemplazando por `keystone-worker/`, una 
 Cuando el Worker esté desplegado, la web debe apuntar a la nueva API con:
 
 ```env
-NEXT_PUBLIC_API_URL=https://<worker-domain>
+NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 ```
 
 La URL de API del cliente de escritorio solo debe cambiarse después de validar el Worker en local y producción.
@@ -304,7 +303,7 @@ npm run dev
 
 `.env.local`:
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 ```
 
 ---
@@ -330,19 +329,18 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 | Componente | Plataforma | URL |
 |------------|------------|-----|
 | keystone-web | Vercel | https://keystonesync.esgarpe.dev |
-| keystone-api | Railway | https://weeklychar-production.up.railway.app |
-| Base de datos | Railway (PostgreSQL) | Mismo proyecto que la API |
+| keystone-worker | Cloudflare Workers | https://api-keystonesync.esgarpe.dev |
+| Base de datos | Cloudflare D1 | `keystone-sync` |
 
-**Variables Railway (API):**
+**Secrets Cloudflare Worker (API):**
 ```env
-DATABASE_URL     →  ${{Postgres.DATABASE_URL}}
-SECRET_KEY       →  clave secreta larga
+JWT_SECRET       →  clave secreta larga
 ALLOWED_ORIGINS  →  https://keystonesync.esgarpe.dev,http://localhost:3000
 RESEND_API_KEY   →  API key de Resend con permiso de envío
 EMAIL_FROM       →  KeystoneSync <noreply@keystonesync.esgarpe.dev>
 WEB_BASE_URL     →  https://keystonesync.esgarpe.dev
 ```
-Root Directory: `keystone-api` · Target port: `8080`
+Root Directory: `keystone-worker`
 
 **Rate limits de email (API):**
 
@@ -360,7 +358,7 @@ Si se escala la API a varias réplicas, estos límites deberían moverse a Postg
 
 **Variables Vercel:**
 ```env
-NEXT_PUBLIC_API_URL  →  https://weeklychar-production.up.railway.app
+NEXT_PUBLIC_API_URL  →  https://api-keystonesync.esgarpe.dev
 ```
 
 ---

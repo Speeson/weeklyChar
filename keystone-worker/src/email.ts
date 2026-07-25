@@ -10,19 +10,22 @@ function escapeHtml(value: string): string {
 }
 
 async function sendEmail(env: Env, toEmail: string, subject: string, html: string, text: string): Promise<void> {
-  if (!env.RESEND_API_KEY) {
+  const apiKey = env.RESEND_API_KEY?.trim()
+  const from = env.EMAIL_FROM?.trim() || 'KeystoneSync <noreply@keystonesync.esgarpe.dev>'
+
+  if (!apiKey) {
     throw new Error('Servicio de email no configurado')
   }
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'User-Agent': 'KeystoneSync/1.0',
     },
     body: JSON.stringify({
-      from: env.EMAIL_FROM ?? 'KeystoneSync <noreply@keystonesync.esgarpe.dev>',
+      from,
       to: [toEmail],
       subject,
       html,
@@ -31,15 +34,29 @@ async function sendEmail(env: Env, toEmail: string, subject: string, html: strin
   })
 
   if (!response.ok) {
-    const detail = await response.text()
-    throw new Error(`No se pudo enviar el email: ${detail || response.statusText}`)
+    const rawDetail = await response.text()
+    let detail = rawDetail.trim()
+    if (detail) {
+      try {
+        const parsed = JSON.parse(detail) as { message?: string; name?: string; error?: string }
+        detail = parsed.message ?? parsed.error ?? detail
+      } catch {
+        // Keep Resend's raw response when it is not JSON.
+      }
+    }
+
+    throw new Error(`No se pudo enviar el email (${response.status}): ${detail || response.statusText}`)
   }
+}
+
+function getWebBaseUrl(env: Env): string {
+  return (env.WEB_BASE_URL?.trim() || 'https://keystonesync.esgarpe.dev').replace(/\/+$/, '')
 }
 
 export async function sendVerificationEmail(env: Env, user: UserRow, token: string): Promise<void> {
   if (!user.email) throw new Error('Email invalido')
 
-  const baseUrl = (env.WEB_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
+  const baseUrl = getWebBaseUrl(env)
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`
   const safeUsername = escapeHtml(user.username)
   const subject = 'Verifica tu cuenta de KeystoneSync'
@@ -68,7 +85,7 @@ export async function sendVerificationEmail(env: Env, user: UserRow, token: stri
 export async function sendPasswordResetEmail(env: Env, user: UserRow, token: string): Promise<void> {
   if (!user.email) throw new Error('Email invalido')
 
-  const baseUrl = (env.WEB_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
+  const baseUrl = getWebBaseUrl(env)
   const link = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`
   const safeUsername = escapeHtml(user.username)
   const subject = 'Recupera tu password de KeystoneSync'

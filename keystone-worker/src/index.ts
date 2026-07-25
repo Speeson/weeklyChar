@@ -16,4 +16,9 @@ app.route('/', keystoneRoutes)
 app.route('/', meRoutes)
 app.route('/', teamRoutes)
 
+app.onError((error, c) => {
+  console.error('Unhandled Worker error:', error)
+  return c.json({ detail: error instanceof Error ? error.message : 'Internal Server Error' }, 500)
+})
+
 export default app
