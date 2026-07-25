@@ -49,3 +49,41 @@ Apply remote migrations:
 ```powershell
 npm run d1:migrate:remote
 ```
+
+## Cloudflare Setup
+
+Login:
+
+```powershell
+npx wrangler login
+```
+
+Create D1:
+
+```powershell
+npx wrangler d1 create keystone-sync
+```
+
+Copy the returned `database_id` into `wrangler.jsonc`.
+
+Add secrets:
+
+```powershell
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put EMAIL_FROM
+npx wrangler secret put WEB_BASE_URL
+npx wrangler secret put ALLOWED_ORIGINS
+```
+
+Apply remote migrations:
+
+```powershell
+npm run d1:migrate:remote
+```
+
+Deploy:
+
+```powershell
+npm run deploy
+```

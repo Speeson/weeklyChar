@@ -24,6 +24,20 @@ keystone-web (panel web Next.js)
 
 ---
 
+## Migración Cloudflare Workers + D1
+
+El backend de Railway/FastAPI se está reemplazando por `keystone-worker/`, una API en Cloudflare Workers respaldada por D1. Esta migración arranca con base de datos vacía: los usuarios se registran de nuevo y los personajes se reconstruyen al sincronizar desde KeystoneClient.
+
+Cuando el Worker esté desplegado, la web debe apuntar a la nueva API con:
+
+```env
+NEXT_PUBLIC_API_URL=https://<worker-domain>
+```
+
+La URL de API del cliente de escritorio solo debe cambiarse después de validar el Worker en local y producción.
+
+---
+
 ## Componentes
 
 ### KeystoneSync — Addon de WoW
