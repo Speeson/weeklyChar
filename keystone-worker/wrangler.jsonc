@@ -3,6 +3,12 @@
   "name": "keystone-sync-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-25",
+  "routes": [
+    {
+      "pattern": "api-keystonesync.esgarpe.dev",
+      "custom_domain": true
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
