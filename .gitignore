@@ -27,6 +27,10 @@ env/
 .next/
 node_modules/
 
+# Cloudflare Wrangler local state
+.wrangler/
+keystone-worker/.wrangler/
+
 # Claude memory
 .claude/
 

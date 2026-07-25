@@ -7,8 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "d1:migrate:local": "wrangler d1 migrations apply KEYSTONE_DB --local",
-    "d1:migrate:remote": "wrangler d1 migrations apply KEYSTONE_DB --remote"
+    "d1:migrate:local": "wrangler d1 migrations apply DB --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

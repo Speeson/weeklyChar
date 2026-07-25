@@ -27,3 +27,25 @@ Health check:
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:8787/api/health"
 ```
+
+## D1
+
+Create the database:
+
+```powershell
+npx wrangler d1 create keystone-sync
+```
+
+Copy the returned `database_id` into `wrangler.jsonc`.
+
+Apply local migrations:
+
+```powershell
+npm run d1:migrate:local
+```
+
+Apply remote migrations:
+
+```powershell
+npm run d1:migrate:remote
+```
