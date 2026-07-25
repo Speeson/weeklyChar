@@ -1,0 +1,318 @@
+import { Hono } from 'hono'
+import { getCurrentUser } from '../auth'
+import { newInviteCode } from '../crypto'
+import { teamDetailResponse, teamInvitationResponse, teamResponse } from '../db'
+import { jsonError } from '../http'
+import type { Env, TeamInvitationRow, TeamRow, UserRow } from '../types'
+
+export const teamRoutes = new Hono<{ Bindings: Env }>()
+
+type CreateTeamRequest = {
+  name: string
+}
+
+type JoinTeamRequest = {
+  invite_code: string
+}
+
+type CreateTeamInviteRequest = {
+  username: string
+}
+
+function isResponse(value: unknown): value is Response {
+  return value instanceof Response
+}
+
+function addDays(days: number): string {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+}
+
+function isExpired(value: string | null): boolean {
+  if (!value) return true
+  return new Date(value).getTime() < Date.now()
+}
+
+async function findMembership(env: Env, teamId: number, userId: number): Promise<{ id: number } | null> {
+  return env.DB.prepare('SELECT id FROM team_members WHERE team_id = ? AND user_id = ?')
+    .bind(teamId, userId)
+    .first<{ id: number }>()
+}
+
+async function getTeam(env: Env, teamId: number): Promise<TeamRow | null> {
+  return env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(teamId).first<TeamRow>()
+}
+
+teamRoutes.get('/api/teams', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const { results } = await c.env.DB.prepare(`
+    SELECT t.*
+    FROM team_members tm
+    JOIN teams t ON t.id = tm.team_id
+    WHERE tm.user_id = ?
+    ORDER BY t.name
+  `).bind(currentUser.id).all<TeamRow>()
+
+  return c.json(await Promise.all(results.map(team => teamResponse(c.env, team, currentUser.id))))
+})
+
+teamRoutes.post('/api/teams', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const payload = await c.req.json<CreateTeamRequest>()
+  const name = payload.name?.trim()
+  if (!name) return jsonError(c, 400, 'El nombre del equipo es obligatorio')
+
+  const insert = await c.env.DB.prepare(`
+    INSERT INTO teams (name, invite_code, created_by)
+    VALUES (?, ?, ?)
+  `).bind(name, newInviteCode(), currentUser.id).run()
+
+  const teamId = Number(insert.meta.last_row_id)
+  await c.env.DB.prepare('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)')
+    .bind(teamId, currentUser.id)
+    .run()
+
+  const team = await getTeam(c.env, teamId)
+  if (!team) return jsonError(c, 500, 'No se pudo crear el equipo')
+
+  return c.json(await teamResponse(c.env, team, currentUser.id), 201)
+})
+
+teamRoutes.post('/api/teams/join', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const payload = await c.req.json<JoinTeamRequest>()
+  const team = await c.env.DB.prepare('SELECT * FROM teams WHERE invite_code = ?')
+    .bind(payload.invite_code)
+    .first<TeamRow>()
+  if (!team) return jsonError(c, 404, 'Codigo de invitacion no valido')
+
+  if (await findMembership(c.env, team.id, currentUser.id)) {
+    return jsonError(c, 400, 'Ya eres miembro de este team')
+  }
+
+  await c.env.DB.prepare('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)')
+    .bind(team.id, currentUser.id)
+    .run()
+
+  return c.json(await teamResponse(c.env, team, currentUser.id))
+})
+
+teamRoutes.get('/api/teams/:teamId', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 403, 'No perteneces a este team')
+  }
+
+  const team = await getTeam(c.env, teamId)
+  if (!team) return jsonError(c, 404, 'Equipo no encontrado')
+
+  return c.json(await teamDetailResponse(c.env, team, currentUser.id))
+})
+
+teamRoutes.post('/api/teams/:teamId/invites', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 403, 'No perteneces a este team')
+  }
+
+  const payload = await c.req.json<CreateTeamInviteRequest>()
+  const username = payload.username?.trim() ?? ''
+  if (username.length < 3) return jsonError(c, 400, 'Introduce un username valido')
+
+  const invitedUser = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<UserRow>()
+  if (!invitedUser) return jsonError(c, 404, 'Usuario no encontrado')
+  if (invitedUser.id === currentUser.id) return jsonError(c, 400, 'No puedes invitarte a ti mismo')
+
+  if (await findMembership(c.env, teamId, invitedUser.id)) {
+    return jsonError(c, 400, 'Ese usuario ya pertenece al equipo')
+  }
+
+  const pending = await c.env.DB.prepare(`
+    SELECT * FROM team_invitations
+    WHERE team_id = ? AND invited_user_id = ? AND status = 'pending'
+  `).bind(teamId, invitedUser.id).first<TeamInvitationRow>()
+
+  if (pending && !isExpired(pending.expires_at)) {
+    return jsonError(c, 400, 'Ese usuario ya tiene una invitacion pendiente')
+  }
+  if (pending && isExpired(pending.expires_at)) {
+    await c.env.DB.prepare(`
+      UPDATE team_invitations
+      SET status = 'declined',
+          responded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE id = ?
+    `).bind(pending.id).run()
+  }
+
+  const insert = await c.env.DB.prepare(`
+    INSERT INTO team_invitations (team_id, invited_user_id, invited_by_user_id, status, expires_at)
+    VALUES (?, ?, ?, 'pending', ?)
+  `).bind(teamId, invitedUser.id, currentUser.id, addDays(7)).run()
+
+  const invitation = await c.env.DB.prepare('SELECT * FROM team_invitations WHERE id = ?')
+    .bind(insert.meta.last_row_id)
+    .first<TeamInvitationRow>()
+  if (!invitation) return jsonError(c, 500, 'No se pudo crear la invitacion')
+
+  return c.json(await teamInvitationResponse(c.env, invitation), 201)
+})
+
+teamRoutes.delete('/api/teams/:teamId/members/:userId', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  const userId = Number(c.req.param('userId'))
+  const team = await getTeam(c.env, teamId)
+  if (!team) return jsonError(c, 404, 'Equipo no encontrado')
+  if (team.created_by !== currentUser.id) return jsonError(c, 403, 'Solo el creador del equipo puede eliminar miembros')
+  if (userId === currentUser.id) return jsonError(c, 400, 'No puedes eliminarte a ti mismo desde esta accion')
+
+  if (!(await findMembership(c.env, teamId, userId))) {
+    return jsonError(c, 404, 'Ese usuario no pertenece al equipo')
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      UPDATE team_invitations
+      SET status = 'declined',
+          responded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE team_id = ? AND invited_user_id = ? AND status = 'pending'
+    `).bind(teamId, userId),
+    c.env.DB.prepare('DELETE FROM team_members WHERE team_id = ? AND user_id = ?').bind(teamId, userId),
+  ])
+
+  return c.json({ message: 'Miembro eliminado del equipo' })
+})
+
+teamRoutes.post('/api/teams/:teamId/leave', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  const team = await getTeam(c.env, teamId)
+  if (!team) return jsonError(c, 404, 'Equipo no encontrado')
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 404, 'No perteneces a este equipo')
+  }
+
+  const count = await c.env.DB.prepare('SELECT COUNT(*) AS count FROM team_members WHERE team_id = ?')
+    .bind(teamId)
+    .first<{ count: number }>()
+  const memberCount = count?.count ?? 0
+
+  if (team.created_by === currentUser.id && memberCount > 1) {
+    return jsonError(c, 400, 'El creador no puede salir mientras haya otros miembros')
+  }
+
+  await c.env.DB.prepare('DELETE FROM team_members WHERE team_id = ? AND user_id = ?')
+    .bind(teamId, currentUser.id)
+    .run()
+
+  if (memberCount === 1) {
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM team_invitations WHERE team_id = ?').bind(teamId),
+      c.env.DB.prepare('DELETE FROM teams WHERE id = ?').bind(teamId),
+    ])
+  }
+
+  return c.json({ message: 'Has salido del equipo' })
+})
+
+teamRoutes.get('/api/me/team-invitations', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const { results } = await c.env.DB.prepare(`
+    SELECT * FROM team_invitations
+    WHERE invited_user_id = ? AND status = 'pending'
+    ORDER BY created_at DESC
+  `).bind(currentUser.id).all<TeamInvitationRow>()
+
+  const active: TeamInvitationRow[] = []
+  for (const invitation of results) {
+    if (isExpired(invitation.expires_at)) {
+      await c.env.DB.prepare(`
+        UPDATE team_invitations
+        SET status = 'declined',
+            responded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE id = ?
+      `).bind(invitation.id).run()
+    } else {
+      active.push(invitation)
+    }
+  }
+
+  return c.json(await Promise.all(active.map(invitation => teamInvitationResponse(c.env, invitation))))
+})
+
+teamRoutes.post('/api/team-invitations/:invitationId/accept', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const invitationId = Number(c.req.param('invitationId'))
+  const invitation = await c.env.DB.prepare(`
+    SELECT * FROM team_invitations
+    WHERE id = ? AND invited_user_id = ?
+  `).bind(invitationId, currentUser.id).first<TeamInvitationRow>()
+
+  if (!invitation || invitation.status !== 'pending') return jsonError(c, 404, 'Invitacion no encontrada')
+  if (isExpired(invitation.expires_at)) {
+    await c.env.DB.prepare(`
+      UPDATE team_invitations
+      SET status = 'declined',
+          responded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE id = ?
+    `).bind(invitation.id).run()
+    return jsonError(c, 400, 'La invitacion ha caducado')
+  }
+
+  if (!(await findMembership(c.env, invitation.team_id, currentUser.id))) {
+    await c.env.DB.prepare('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)')
+      .bind(invitation.team_id, currentUser.id)
+      .run()
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE team_invitations
+    SET status = 'accepted',
+        responded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id = ?
+  `).bind(invitation.id).run()
+
+  const team = await getTeam(c.env, invitation.team_id)
+  return c.json({ message: 'Invitacion aceptada', team: team ? await teamResponse(c.env, team, currentUser.id) : null })
+})
+
+teamRoutes.post('/api/team-invitations/:invitationId/decline', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const invitationId = Number(c.req.param('invitationId'))
+  const invitation = await c.env.DB.prepare(`
+    SELECT * FROM team_invitations
+    WHERE id = ? AND invited_user_id = ?
+  `).bind(invitationId, currentUser.id).first<TeamInvitationRow>()
+
+  if (!invitation || invitation.status !== 'pending') return jsonError(c, 404, 'Invitacion no encontrada')
+
+  await c.env.DB.prepare(`
+    UPDATE team_invitations
+    SET status = 'declined',
+        responded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id = ?
+  `).bind(invitation.id).run()
+
+  return c.json({ message: 'Invitacion rechazada' })
+})

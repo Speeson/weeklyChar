@@ -57,3 +57,22 @@ export type KeystoneRow = {
   updated_at: number | null
   created_at: string
 }
+
+export type TeamRow = {
+  id: number
+  name: string
+  invite_code: string
+  created_by: number
+  created_at: string
+}
+
+export type TeamInvitationRow = {
+  id: number
+  team_id: number
+  invited_user_id: number
+  invited_by_user_id: number
+  status: string
+  created_at: string
+  expires_at: string
+  responded_at: string | null
+}

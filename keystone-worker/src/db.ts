@@ -1,4 +1,4 @@
-import type { CharacterRow, Env, KeystoneRow, UserRow } from './types'
+import type { CharacterRow, Env, KeystoneRow, TeamInvitationRow, TeamRow, UserRow } from './types'
 
 export async function getUserById(env: Env, id: number): Promise<UserRow | null> {
   return env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>()
@@ -59,5 +59,76 @@ export function characterResponse(character: CharacterRow, latest: KeystoneRow |
     currencies: jsonLoad(character.currencies_json),
     money: jsonLoad(character.money_json),
     mythicPlusSeason: jsonLoad(character.mythic_plus_season_json),
+  }
+}
+
+export async function teamResponse(env: Env, team: TeamRow, currentUserId: number): Promise<Record<string, unknown>> {
+  const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM team_members WHERE team_id = ?')
+    .bind(team.id)
+    .first<{ count: number }>()
+
+  return {
+    id: team.id,
+    name: team.name,
+    inviteCode: team.invite_code,
+    isOwner: team.created_by === currentUserId,
+    ownerId: team.created_by,
+    currentUserId,
+    memberCount: count?.count ?? 0,
+  }
+}
+
+export async function charactersForUser(env: Env, userId: number): Promise<Array<Record<string, unknown>>> {
+  const { results } = await env.DB.prepare(`
+    SELECT * FROM characters
+    WHERE user_id = ?
+    ORDER BY name
+  `).bind(userId).all<CharacterRow>()
+
+  return Promise.all(results.map(async character => {
+    return characterResponse(character, await latestRealKeystone(env, character.id))
+  }))
+}
+
+export async function teamDetailResponse(env: Env, team: TeamRow, currentUserId: number): Promise<Record<string, unknown>> {
+  const { results } = await env.DB.prepare(`
+    SELECT u.id, u.username
+    FROM team_members tm
+    JOIN users u ON u.id = tm.user_id
+    WHERE tm.team_id = ?
+    ORDER BY u.username
+  `).bind(team.id).all<{ id: number, username: string }>()
+
+  const members = await Promise.all(results.map(async member => ({
+    userId: member.id,
+    username: member.username,
+    characters: await charactersForUser(env, member.id),
+  })))
+
+  return {
+    id: team.id,
+    name: team.name,
+    inviteCode: team.invite_code,
+    isOwner: team.created_by === currentUserId,
+    ownerId: team.created_by,
+    currentUserId,
+    members,
+  }
+}
+
+export async function teamInvitationResponse(env: Env, invitation: TeamInvitationRow): Promise<Record<string, unknown>> {
+  const team = await env.DB.prepare('SELECT name FROM teams WHERE id = ?').bind(invitation.team_id).first<{ name: string }>()
+  const invitedUser = await env.DB.prepare('SELECT username FROM users WHERE id = ?').bind(invitation.invited_user_id).first<{ username: string }>()
+  const invitedBy = await env.DB.prepare('SELECT username FROM users WHERE id = ?').bind(invitation.invited_by_user_id).first<{ username: string }>()
+
+  return {
+    id: invitation.id,
+    teamId: invitation.team_id,
+    teamName: team?.name ?? null,
+    invitedUsername: invitedUser?.username ?? null,
+    invitedBy: invitedBy?.username ?? null,
+    status: invitation.status,
+    createdAt: invitation.created_at,
+    expiresAt: invitation.expires_at,
   }
 }
