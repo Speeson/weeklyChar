@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "keystone-sync-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-25",
+  "routes": [
+    {
+      "pattern": "api-keystonesync.esgarpe.dev",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "keystone-sync",
+      "database_id": "418e4d4f-47c3-4191-a90d-b95a442ed06d"
+    }
+  ]
+}

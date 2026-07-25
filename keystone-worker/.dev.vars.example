@@ -1,0 +1,5 @@
+JWT_SECRET=change-this-local-secret
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx
+EMAIL_FROM=KeystoneSync <noreply@keystonesync.esgarpe.dev>
+WEB_BASE_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000,https://keystonesync.esgarpe.dev

@@ -3,7 +3,7 @@
 Panel web del sistema **WoW Keystone Tracker**. Muestra personajes, piedras angulares míticas+, afijos semanales y equipos.
 
 **Producción:** https://keystonesync.esgarpe.dev  
-**API:** https://weeklychar-production.up.railway.app
+**API:** https://api-keystonesync.esgarpe.dev
 
 ---
 
@@ -76,7 +76,7 @@ Abre http://localhost:3000.
 
 `.env.local`:
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 ```
 
 ---
@@ -87,7 +87,7 @@ El proyecto se despliega automáticamente desde la rama `main` del monorepo.
 
 **Variable de entorno en Vercel:**
 ```env
-NEXT_PUBLIC_API_URL=https://weeklychar-production.up.railway.app
+NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 ```
 
 ---
