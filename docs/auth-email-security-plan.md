@@ -22,7 +22,7 @@ Variables que necesitaremos en Railway para la API:
 
 ```env
 RESEND_API_KEY=re_xxxxx
-EMAIL_FROM=KeystoneSync <noreply@keystonesync.esgarpe.dev>
+EMAIL_FROM=KeystoneSync <no-reply@esgarpe.dev>
 WEB_BASE_URL=https://keystonesync.esgarpe.dev
 ```
 
@@ -114,7 +114,7 @@ En el servicio de la API en Railway:
 
 ```env
 RESEND_API_KEY=re_xxxxx
-EMAIL_FROM=KeystoneSync <noreply@keystonesync.esgarpe.dev>
+EMAIL_FROM=KeystoneSync <no-reply@esgarpe.dev>
 WEB_BASE_URL=https://keystonesync.esgarpe.dev
 ```
 
@@ -317,4 +317,3 @@ Cambios minimos:
 8. Crear paginas `/forgot-password` y `/reset-password`.
 9. Adaptar mensajes del cliente desktop.
 10. Probar en local y luego en produccion.
-

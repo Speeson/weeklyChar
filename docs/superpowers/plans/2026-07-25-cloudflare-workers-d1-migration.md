@@ -150,7 +150,7 @@ Start with a placeholder D1 database id. Replace it after creating the D1 DB wit
 ```env
 JWT_SECRET=change-this-local-secret
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx
-EMAIL_FROM=KeystoneSync <noreply@keystonesync.esgarpe.dev>
+EMAIL_FROM=KeystoneSync <no-reply@esgarpe.dev>
 WEB_BASE_URL=http://localhost:3000
 ALLOWED_ORIGINS=http://localhost:3000,https://keystonesync.esgarpe.dev
 ```

@@ -337,7 +337,7 @@ NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 JWT_SECRET       →  clave secreta larga
 ALLOWED_ORIGINS  →  https://keystonesync.esgarpe.dev,http://localhost:3000
 RESEND_API_KEY   →  API key de Resend con permiso de envío
-EMAIL_FROM       →  KeystoneSync <noreply@keystonesync.esgarpe.dev>
+EMAIL_FROM       →  KeystoneSync <no-reply@esgarpe.dev>
 WEB_BASE_URL     →  https://keystonesync.esgarpe.dev
 ```
 Root Directory: `keystone-worker`

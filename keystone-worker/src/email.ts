@@ -11,7 +11,7 @@ function escapeHtml(value: string): string {
 
 async function sendEmail(env: Env, toEmail: string, subject: string, html: string, text: string): Promise<void> {
   const apiKey = env.RESEND_API_KEY?.trim()
-  const from = env.EMAIL_FROM?.trim() || 'KeystoneSync <noreply@keystonesync.esgarpe.dev>'
+  const from = env.EMAIL_FROM?.trim() || 'KeystoneSync <no-reply@esgarpe.dev>'
 
   if (!apiKey) {
     throw new Error('Servicio de email no configurado')
