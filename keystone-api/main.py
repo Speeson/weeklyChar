@@ -41,6 +41,8 @@ PASSWORD_RESET_IP_WINDOW_SECONDS = int(os.getenv("PASSWORD_RESET_IP_WINDOW_SECON
 PASSWORD_RESET_IDENTITY_LIMIT = int(os.getenv("PASSWORD_RESET_IDENTITY_LIMIT", "3"))
 PASSWORD_RESET_IDENTITY_WINDOW_SECONDS = int(os.getenv("PASSWORD_RESET_IDENTITY_WINDOW_SECONDS", "3600"))
 PASSWORD_RESET_COOLDOWN_SECONDS = int(os.getenv("PASSWORD_RESET_COOLDOWN_SECONDS", "120"))
+EU_WEEKLY_RESET_UTC_DAY = 2  # datetime.weekday(): Monday=0, Wednesday=2
+EU_WEEKLY_RESET_UTC_HOUR = 4
 
 Base.metadata.create_all(bind=engine)
 
@@ -920,13 +922,22 @@ def _keystone_dict(k: Keystone):
     }
 
 def _latest_real_keystone(c: Character):
+    reset_unix = _current_eu_weekly_reset_unix()
     real_keystones = [
         k for k in c.keystones
-        if k.has_keystone and k.keystone_level is not None
+        if k.has_keystone and k.keystone_level is not None and k.updated_at is not None and k.updated_at >= reset_unix
     ]
     if not real_keystones:
         return None
     return max(real_keystones, key=lambda k: (k.updated_at or 0, k.id or 0))
+
+def _current_eu_weekly_reset_unix(now=None):
+    now = now or datetime.now(timezone.utc)
+    reset = now.replace(hour=EU_WEEKLY_RESET_UTC_HOUR, minute=0, second=0, microsecond=0)
+    reset -= timedelta(days=(reset.weekday() - EU_WEEKLY_RESET_UTC_DAY) % 7)
+    if reset > now:
+        reset -= timedelta(days=7)
+    return int(reset.timestamp())
 
 def _json_dump(value):
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))

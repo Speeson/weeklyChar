@@ -30,6 +30,7 @@ node_modules/
 # Cloudflare Wrangler local state
 .wrangler/
 keystone-worker/.wrangler/
+keystone-worker/.tmp-test/
 
 # Claude memory
 .claude/

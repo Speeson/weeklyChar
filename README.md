@@ -43,9 +43,10 @@ La URL de API del cliente de escritorio solo debe cambiarse después de validar 
 
 Addon de World of Warcraft Retail escrito en Lua. Repo propio con changelog: https://github.com/Speeson/KeystoneSync
 
-**Versión actual del addon empaquetado:** 0.1.15 — WoW Retail (Interface `120005`)
+**Versión actual del addon empaquetado:** 0.1.16 — WoW Retail (Interface `120005`)
 
 - Lee la piedra al iniciar sesión (`PLAYER_LOGIN`) y guarda el estado final al salir (`PLAYER_LOGOUT`).
+- Limpia piedras antiguas al comenzar la nueva semana de Mythic+ en EU (`miércoles 04:00 UTC`), aunque el personaje todavía no haya vuelto a iniciar sesión.
 - Captura información semanal adicional: Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada e item level.
 - Las mejores mazmorras de temporada (`mythicPlusSeason`) se capturan con una lectura diferida tras el login y validaciones anti-cache para evitar que WoW copie datos de otro personaje o borre runs buenos con lecturas vacías transitorias.
 - Las Prey Hunts se guardan por dificultad (`Normal`, `Hard`, `Nightmare`) con una clave de reset semanal. Esto evita perder progreso por lecturas transitorias vacías de WoW, pero permite limpiar correctamente los datos antiguos tras el reset del miércoles.
@@ -287,7 +288,7 @@ Panel web con **Next.js** y **Tailwind CSS**.
 
 - **Navbar sticky** — avatar con dropdown (Perfil, Ajustes, Cerrar sesión), campana de invitaciones pendientes, username desde localStorage.
 - **Afijos semanales** — API pública Raider.IO EU; íconos en fila, badges de nivel (`5+`/`7+`/`10+`/`12+`), tooltip al hover.
-- **Countdown de reset** — cuenta atrás hasta el miércoles 09:00 CEST en tiempo real.
+- **Countdown de reset** — cuenta atrás hasta el reset semanal EU del miércoles 04:00 UTC en tiempo real.
 - **Tabla de personajes ordenable** — clic en cabeceras, columna activa amarilla, ↑/↓.
 - **Visibilidad de personajes** — toggle individual, persistido en localStorage (`ks_hidden_chars`).
 - **Equipos** — crear, unirse por código, ver todos los personajes de todos los miembros, copiar código de invitación, invitar usuarios por username con aceptación/rechazo desde notificaciones, salir de un equipo y eliminar miembros si eres el creador.
@@ -375,7 +376,7 @@ Consulta [LICENSE](LICENSE) para los terminos completos.
 
 | Componente | Estado | Notas |
 |------------|--------|-------|
-| KeystoneSync (addon) | ✅ | v0.1.15, repo propio con CHANGELOG |
+| KeystoneSync (addon) | ✅ | v0.1.16, repo propio con CHANGELOG |
 | keystone-sync-client | ✅ | Polling cada 2 s, legacy |
 | keystone-api | ✅ | JWT, sync token, teams, PostgreSQL |
 | keystone-web | ✅ | Navbar, afijos, reset, tabla ordenable, equipos |

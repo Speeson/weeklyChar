@@ -1,4 +1,5 @@
 import type { CharacterRow, Env, KeystoneRow, TeamInvitationRow, TeamRow, UserRow } from './types'
+import { currentEuWeeklyResetUnix } from './weeklyReset'
 
 export async function getUserById(env: Env, id: number): Promise<UserRow | null> {
   return env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>()
@@ -22,12 +23,16 @@ export function jsonDump(value: unknown): string {
 }
 
 export async function latestRealKeystone(env: Env, characterId: number): Promise<KeystoneRow | null> {
+  const resetUnix = currentEuWeeklyResetUnix()
   return env.DB.prepare(`
     SELECT * FROM keystones
-    WHERE character_id = ? AND has_keystone = 1 AND keystone_level IS NOT NULL
+    WHERE character_id = ?
+      AND has_keystone = 1
+      AND keystone_level IS NOT NULL
+      AND updated_at >= ?
     ORDER BY COALESCE(updated_at, 0) DESC, id DESC
     LIMIT 1
-  `).bind(characterId).first<KeystoneRow>()
+  `).bind(characterId, resetUnix).first<KeystoneRow>()
 }
 
 function keystoneDict(keystone: KeystoneRow | null): Record<string, unknown> | null {
