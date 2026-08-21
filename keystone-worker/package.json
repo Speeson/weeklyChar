@@ -7,7 +7,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test tests/weeklyReset.test.js",
+    "test": "tsc -p tsconfig.test.json && node --import ./tests/registerExtensionResolver.mjs --test tests/*.test.js",
     "d1:migrate:local": "wrangler d1 migrations apply DB --local",
     "d1:migrate:remote": "wrangler d1 migrations apply DB --remote"
   },

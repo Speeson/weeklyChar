@@ -1,5 +1,7 @@
 ﻿# Team Invitations Implementation Plan
 
+> Historical document: this plan refers to the former FastAPI architecture and is retained for project history. The current production backend is `keystone-worker`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let team members share invite code and invite existing users by username with pending notifications.

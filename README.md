@@ -1,432 +1,310 @@
-# WoW Keystone Tracker
+# KeystoneSync
 
-Sistema completo para registrar y sincronizar la **piedra angular mítica+ actual** de personajes de **World of Warcraft Retail**, con soporte multi-usuario, equipos y sincronización automática desde una app de escritorio.
+KeystoneSync tracks World of Warcraft Retail Mythic+ character state, syncs it from local SavedVariables, stores it in a Cloudflare Worker/D1 backend, and displays it in a Next.js Web app.
 
-**Web:** https://keystonesync.esgarpe.dev  
-**API:** https://api-keystonesync.esgarpe.dev  
-**Addon (repo independiente):** https://github.com/Speeson/KeystoneSync
-
----
-
-## Descripción general
-
-```
-KeystoneSync (addon WoW)
-   ↓ guarda datos en SavedVariables (solo personajes nivel 90)
-KeystoneClient (app de escritorio Windows)
-   ↓ lee SavedVariables, consulta Raider.IO, sincroniza automáticamente
-keystone-api (backend FastAPI)
-   ↓ almacena datos por usuario (personajes, piedras, equipos)
-keystone-web (panel web Next.js)
-   ↑ consulta y muestra la información
-```
+- **Web:** https://keystonesync.esgarpe.dev
+- **API:** https://api-keystonesync.esgarpe.dev
+- **Addon source:** `Speeson/KeystoneSync` is the canonical manually edited addon repository. The client-bundled addon copy is generated from it.
 
 ---
 
-## Migración Cloudflare Workers + D1
+## Current Architecture
 
-El backend de Railway/FastAPI se está reemplazando por `keystone-worker/`, una API en Cloudflare Workers respaldada por D1. Esta migración arranca con base de datos vacía: los usuarios se registran de nuevo y los personajes se reconstruyen al sincronizar desde KeystoneClient.
-
-Cuando el Worker esté desplegado, la web debe apuntar a la nueva API con:
-
-```env
-NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
+```text
+World of Warcraft
+      |
+      v
+KeystoneSync addon
+      |
+      v
+KeystoneSyncDB SavedVariables
+      |
+      v
+KeystoneClient
+      |
+      v
+https://api-keystonesync.esgarpe.dev
+      |
+      v
+Cloudflare Worker / Hono
+      |
+      v
+Cloudflare D1: keystone-sync
+      |
+      v
+KeystoneSync Web / Next.js
 ```
 
-La URL de API del cliente de escritorio solo debe cambiarse después de validar el Worker en local y producción.
+Current production persistence is Cloudflare D1 database `keystone-sync`. PostgreSQL is part of the former FastAPI/Railway backend history only.
 
 ---
 
-## Componentes
+## Current Components
 
-### KeystoneSync — Addon de WoW
+### `Speeson/KeystoneSync` addon
 
-Addon de World of Warcraft Retail escrito en Lua. Repo propio con changelog: https://github.com/Speeson/KeystoneSync
+World of Warcraft Retail addon written in Lua. It writes character data to `KeystoneSyncDB` SavedVariables for external tools to read. The standalone `Speeson/KeystoneSync` repository is the only manually edited addon source.
 
-**Versión actual del addon empaquetado:** 0.1.16 — WoW Retail (Interface `120005`)
+Verified checked-out addon metadata:
 
-- Lee la piedra al iniciar sesión (`PLAYER_LOGIN`) y guarda el estado final al salir (`PLAYER_LOGOUT`).
-- Limpia piedras antiguas al comenzar la nueva semana de Mythic+ en EU (`miércoles 04:00 UTC`), aunque el personaje todavía no haya vuelto a iniciar sesión.
-- Captura información semanal adicional: Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada e item level.
-- Las mejores mazmorras de temporada (`mythicPlusSeason`) se capturan con una lectura diferida tras el login y validaciones anti-cache para evitar que WoW copie datos de otro personaje o borre runs buenos con lecturas vacías transitorias.
-- Las Prey Hunts se guardan por dificultad (`Normal`, `Hard`, `Nightmare`) con una clave de reset semanal. Esto evita perder progreso por lecturas transitorias vacías de WoW, pero permite limpiar correctamente los datos antiguos tras el reset del miércoles.
-- Captura oro/plata/cobre del personaje mediante `GetMoney()`, guardando total en cobre y desglose visible.
-- Actualiza al completar míticas+ (`CHALLENGE_MODE_COMPLETED`, lecturas diferidas 5/10/20 s).
-- **Ignora personajes por debajo del nivel máximo (90).**
-- Resuelve el nombre de la mazmorra via `C_ChallengeMode.GetMapUIInfo`.
-- Comando manual: `/ksync`.
+- Version: `0.1.16`
+- Interface: `120005`
+- SavedVariables: `KeystoneSyncDB`
 
-**Datos guardados por personaje:**
+The addon records current keystone data and weekly state such as Great Vault, Prey Hunts, currencies, money, item level, and Mythic+ season data. The SavedVariables file is written by WoW at:
 
-```lua
-KeystoneSyncDB["Realm-Personaje"] = {
-    character = "Personaje",
-    realm     = "Realm",
-    region    = "eu",
-    hasKeystone            = true,
-    keystoneLevel          = 13,
-    keystoneChallengeMapId = 558,
-    keystoneMapId          = 2290,
-    keystoneDungeon        = "Algeth'ar Academy",
-    ilvl                   = 287,
-    money                  = {
-        copper     = 123456789,
-        gold       = 12345,
-        silver     = 67,
-        copperOnly = 89,
-    },
-    greatVault             = { ... },
-    currencies             = { ... },
-    timedDungeons          = { ... },
-    updatedAt              = 1780000000,
-    updatedReason          = "PLAYER_LOGIN",
-}
+```text
+World of Warcraft/_retail_/WTF/Account/<ACCOUNT>/SavedVariables/KeystoneSync.lua
 ```
 
-**Ubicación del archivo:**
+This repository keeps one generated addon bundle for KeystoneClient packaging:
+
+- `keystone-client/addon/KeystoneSync/`
+
+Do not edit that bundled copy manually. Refresh it from a local checkout of `Speeson/KeystoneSync` with `python scripts/sync_addon.py --source <path-to-Speeson-KeystoneSync>` and verify it with `python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>`.
+
+### `keystone-client`
+
+Current Windows desktop client.
+
+Responsibilities:
+
+- discovers WoW installs and `KeystoneSync.lua` SavedVariables files;
+- supports selected WoW account folders;
+- parses `KeystoneSyncDB` with `slpp`;
+- enriches character data with Raider.IO where relevant;
+- builds the sync payload;
+- posts to `POST /api/keystones/update` on the Worker API;
+- installs/updates the bundled addon copy into the user's WoW AddOns folder;
+- runs as a packaged Windows application.
+
+Current version:
+
+```text
+0.2.1
 ```
-World of Warcraft/_retail_/WTF/Account/NOMBRE_CUENTA/SavedVariables/KeystoneSync.lua
+
+Default API URL:
+
+```text
+https://api-keystonesync.esgarpe.dev
 ```
 
----
+The client normalizes the old Railway API URL to the current API URL.
 
-### KeystoneClient — App de escritorio Windows
-
-Aplicación `.exe` de un solo archivo para usuarios no técnicos. Corre en segundo plano en la bandeja del sistema.
-
-**Tecnología:** Python + PyInstaller (`--onefile --windowed`), pystray, tkinter, Pillow
-
-#### UI
-
-La app usa una imagen de fondo (`bg.jpg`) sobre la que se superponen los paneles con efecto translúcido (frosted-glass via Pillow).
-
-**Vista de Login:**
-- Mismo tamaño de ventana que la vista principal (calculado desde el aspecto de `bg.jpg`).
-- Formulario centrado sobre fondo oscuro.
-- Campos usuario/contraseña con borde decorado; botón "Entrar" + botón "Registrarse" (abre la web).
-- Sesión válida 30 días (`login_at` en `config.json`).
-
-**Banner superior (permanente):**
-- Ícono + título "KeystoneClient" a la izquierda.
-- **Pestañas dentro del banner** ("Sincronización" / "Addon") con indicador activo (barra dorada en el borde inferior).
-- Avatar de perfil circular (inicial del username hasta que se descargue la imagen real) + botón de usuario con dropdown (idioma ES/EN, cerrar sesión).
-- El avatar se empieza a descargar desde `cfg["avatar_url"]` al arrancar; mientras, muestra la inicial del nombre.
-
-**Pestaña Sincronización (tabla ~75% + bloque de sync ~25%):**
-
-La tabla de personajes muestra, de izquierda a derecha:
-
-| Col | Contenido | Ancho |
-|-----|-----------|-------|
-| Avatar | Foto circular del personaje (Raider.IO) | 34 px |
-| Clase | Ícono de clase (zamimg.com CDN, caché en disco) | 22 px |
-| Nombre | Nombre con color de clase WoW | dinámico |
-| Reino | Nombre del reino | dinámico |
-| ilvl | Item level equipado (color verde→naranja) | 46 px |
-| Piedra Angular | `+N Nombre completo (ABBR)` — p.ej. `+15 Algeth'ar Academy (AA)` | máximo disponible |
-| Raider IO | Puntuación M+ (color verde→azul→morado→rosa→naranja) | ~82 px |
-
-- **Cabeceras clicables** para ordenar por nombre, reino, ilvl, piedra o RIO (ascendente/descendente).
-- **Fondo translúcido**: región de `bg.jpg` recortada, desenfocada (GaussianBlur 2) y mezclada al 65% oscuro.
-- **Filas alternas**: tinte azulado al 22% sobre el fondo translúcido (sin rectángulos opacos).
-- **Separadores de fila**: `#0f1e2d`, casi invisibles.
-- Los anchos de Nombre y Reino se miden con `tkfont.Font.measure()` sobre los datos reales y se recalculan al cargar personajes.
-- ~50 mazmorras mapeadas con nombre completo + abreviatura (`_DUNGEON_ABBR`), incluyendo TWW S1/S2, Dragonflight, Shadowlands, BfA, Legion y Timewalking.
-
-Gradientes de color:
-- **ilvl**: verde (0) → azul (180) → morado (220) → naranja (290+)
-- **RIO**: verde (0) → teal (1000) → azul (1500) → morado (2400) → rosa (3500) → naranja (4000)
-
-Bloque de sincronización (derecha):
-- Indicador WoW detectado (● verde/rojo).
-- Ícono ✓/✗ grande + fecha/hora de la última sync.
-- Si hay varias cuentas de WoW seleccionadas, muestra una tarjeta de estado por cuenta con su propia última sincronización.
-- Botón "Sincronizar".
-
-**Selección de cuentas WoW:**
-- KeystoneClient detecta cuentas en `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
-- Si solo existe una cuenta con datos de KeystoneSync, se selecciona automáticamente y no se muestra ningún selector.
-- Si hay varias cuentas con datos y todavía no hay selección guardada, aparece una ventana inicial con el mismo estilo visual del cliente para elegir qué cuentas sincronizar.
-- En `Ajustes > Seleccion de cuentas` se puede cambiar la ruta de instalación de WoW, activar o desactivar cuentas detectadas, ver la ruta concreta de cada `SavedVariables`, redetectar cuentas y seleccionar todas.
-- El sincronizador solo lee las cuentas seleccionadas. Si hay varias cuentas detectadas pero ninguna seleccionada, no fuerza la sincronización de la primera cuenta para evitar mezclar datos por error.
-
-**Pestaña Addon:**
-- Selector de carpeta AddOns + campo de texto con la ruta.
-- Botón "Instalar / Actualizar" con barra de progreso animada.
-
-**Footer (permanente):**
-- Botón "Acceder a la Web", checkbox "Arrancar con Windows" (winreg), botón "Minimizar a la bandeja".
-
-**System tray:**
-- Ícono con menú contextual: "Abrir" (deiconify) y "Salir".
-- X de cerrar muestra diálogo informativo en lugar de salir.
-
-**Integración Raider.IO:**
-
-Cada personaje enriquece su perfil consultando la API pública de Raider.IO:
-- Avatar (foto de perfil circular recortada).
-- Clase WoW (para color de nombre e ícono de clase).
-- Puntuación M+ de la temporada actual.
-- Item level.
-- Great Vault, Prey Hunts, currencies, mejores mazmorras de temporada y oro/plata/cobre.
-
-Los íconos de clase se descargan de `https://wow.zamimg.com/images/wow/icons/medium/classicon_{slug}.jpg` y se cachean en `%APPDATA%\KeystoneClient\class_icons\`.
-
-#### Build
+Build scripts:
 
 ```bat
 cd keystone-client
 build.bat
 ```
 
-Genera el ejecutable portable en `keystone-client\dist\KeystoneClient.exe`.
-
-#### Instalador Windows
-
-El instalador se genera con Inno Setup. Permite elegir ruta de instalacion, crear acceso directo en el menu Inicio y, opcionalmente, crear acceso directo en el escritorio.
-
-Ruta por defecto:
+Produces:
 
 ```text
-%ProgramFiles%\KeystoneSync
+keystone-client\dist\KeystoneClient.exe
 ```
 
-El instalador solicita permisos de administrador para poder instalar en Archivos de programa o en cualquier carpeta protegida del sistema.
-
-La configuracion de usuario se mantiene fuera de la carpeta de instalacion:
-
-```text
-%APPDATA%\KeystoneClient
-```
-
-Para generar el instalador:
+Installer build:
 
 ```bat
 cd keystone-client
 build_installer.bat
 ```
 
-Salida:
+Produces:
 
 ```text
 keystone-client\installer\output\KeystoneClientSetup.exe
 ```
 
-Requisito local: Inno Setup instalado y `iscc.exe` disponible en el `PATH`.
+The expected public GitHub Release asset name is:
 
-#### Archivos principales
-
-| Archivo | Descripción |
-|---------|-------------|
-| `main.py` | Punto de entrada, arranca `MainWindow` |
-| `main_window.py` | Toda la UI: login, main view, tabla, tabs, avatar |
-| `sync_worker.py` | Hilo de polling, parseo Lua, llamadas a Raider.IO y API |
-| `config.py` | Carga/guarda `%APPDATA%\KeystoneClient\config.json` |
-| `tray_app.py` | System tray con pystray |
-| `wow_path.py` | Auto-detección de la ruta WoW en el registro de Windows |
-| `addon_installer.py` | Copia el addon a la carpeta AddOns |
-| `bg.jpg` | Imagen de fondo de la ventana principal |
-| `icon.ico` | Ícono de la app |
-
----
-
-### keystone-api — Backend
-
-API REST con **FastAPI** y **SQLAlchemy** (SQLite local, PostgreSQL en producción).
-
-**Autenticación:**
-- Registro y login con usuario/contraseña (bcrypt + JWT de 30 días).
-- Cada usuario tiene un **sync token** único (hex 64 chars) para el sincronizador.
-- `get_current_user_flexible`: acepta JWT o sync token indistintamente.
-
-**Endpoints:**
-
-| Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| POST | `/api/auth/register` | — | Crear cuenta |
-| POST | `/api/auth/login` | — | Iniciar sesión → JWT |
-| GET | `/api/me` | JWT | Datos del usuario + syncToken |
-| GET | `/api/me/characters` | JWT/sync | Personajes con última piedra |
-| POST | `/api/me/characters/enrich` | JWT/sync | Actualizar avatar/RIO/clase/ilvl |
-| PATCH | `/api/me/avatar` | JWT/sync | Cambiar foto de perfil |
-| POST | `/api/keystones/update` | Sync token | Crear/actualizar piedra |
-| GET | `/api/teams` | JWT | Listar equipos del usuario |
-| POST | `/api/teams` | JWT | Crear equipo |
-| POST | `/api/teams/join` | JWT | Unirse por código |
-| GET | `/api/teams/{id}` | JWT | Detalle de equipo con miembros |
-| POST | `/api/teams/{id}/invites` | JWT | Invitar a un usuario existente por username |
-| DELETE | `/api/teams/{id}/members/{user_id}` | JWT | El creador del equipo elimina a un miembro |
-| POST | `/api/teams/{id}/leave` | JWT | Salir voluntariamente de un equipo |
-| GET | `/api/me/team-invitations` | JWT | Listar invitaciones pendientes del usuario |
-| POST | `/api/team-invitations/{id}/accept` | JWT | Aceptar una invitación de equipo |
-| POST | `/api/team-invitations/{id}/decline` | JWT | Rechazar una invitación de equipo |
-
-**Puesta en marcha:**
-
-```bash
-cd keystone-api
-pip install -r requirements.txt
-uvicorn main:app --reload
+```text
+KeystoneClientSetup.exe
 ```
 
-`.env`:
-```env
-DATABASE_URL=sqlite:///./keystones.db
-SECRET_KEY=cambia-esto-en-produccion
-ALLOWED_ORIGINS=http://localhost:3000
+GitHub Release publication is currently manual.
+
+### `keystone-worker`
+
+Current API backend.
+
+Responsibilities:
+
+- Cloudflare Worker runtime;
+- Hono HTTP API;
+- auth, profile, character, keystone sync, team, invitation, and health routes;
+- Cloudflare D1 persistence through binding `DB`;
+- JSON persistence for additive addon/client data blocks.
+
+Production API domain:
+
+```text
+https://api-keystonesync.esgarpe.dev
 ```
 
----
+D1 database:
 
-### keystone-web — Panel web
+```text
+keystone-sync
+```
 
-Panel web con **Next.js** y **Tailwind CSS**.
-
-**Páginas:** `/login`, `/` (dashboard), `/teams`, `/teams/[id]`
-
-**Funcionalidades:**
-
-- **Navbar sticky** — avatar con dropdown (Perfil, Ajustes, Cerrar sesión), campana de invitaciones pendientes, username desde localStorage.
-- **Afijos semanales** — API pública Raider.IO EU; íconos en fila, badges de nivel (`5+`/`7+`/`10+`/`12+`), tooltip al hover.
-- **Countdown de reset** — cuenta atrás hasta el reset semanal EU del miércoles 04:00 UTC en tiempo real.
-- **Tabla de personajes ordenable** — clic en cabeceras, columna activa amarilla, ↑/↓.
-- **Visibilidad de personajes** — toggle individual, persistido en localStorage (`ks_hidden_chars`).
-- **Equipos** — crear, unirse por código, ver todos los personajes de todos los miembros, copiar código de invitación, invitar usuarios por username con aceptación/rechazo desde notificaciones, salir de un equipo y eliminar miembros si eres el creador.
-- **Favicon** personalizado.
-
-**Puesta en marcha:**
+Useful scripts:
 
 ```bash
-cd keystone-web
-npm install
+cd keystone-worker
 npm run dev
+npm run typecheck
+npm test
+npm run d1:migrate:local
+npm run d1:migrate:remote
+npm run deploy
 ```
 
-`.env.local`:
+Remote D1 migrations and `npm run deploy` are operational actions. They require explicit authorization in the current task and are not normal validation defaults.
+
+### `keystone-web`
+
+Current Web application.
+
+Responsibilities:
+
+- Next.js Web UI;
+- login/register/profile flows;
+- character, dashboard, summary, team, invitation, and settings views;
+- consumes the Worker API through `NEXT_PUBLIC_API_URL`;
+- links users to the current client installer GitHub Release asset.
+
+Verified stack:
+
+- Next.js `16.2.6`
+- React `19.2.4`
+- Tailwind CSS
+
+API configuration:
+
 ```env
 NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 ```
 
----
+Build and validation:
 
-## Flujo completo
+```bash
+cd keystone-web
+npm run lint
+npm run build
+```
 
-```
-1. El usuario se registra en la web o en KeystoneClient ("Registrarse").
-2. Descarga e instala KeystoneClient.exe.
-3. Inicia sesión → KeystoneClient instala el addon KeystoneSync en WoW.
-4. El usuario entra en WoW con sus personajes de nivel 90.
-5. El addon guarda las piedras en SavedVariables al login/logout/bag change.
-6. Al minimizar a la bandeja, KeystoneClient empieza a vigilar el archivo.
-7. Detecta cambios → consulta Raider.IO (avatar, clase, RIO, ilvl) → envía a la API.
-8. La web muestra personajes con foto, clase, ilvl, piedra, puntuación RIO, afijos, countdown, resumen semanal, currencies y oro/plata/cobre si el usuario decide mostrarlo.
-9. Al completar una mítica+, el addon actualiza SavedVariables → KeystoneClient sincroniza.
-```
+The Web application is currently documented as deployed through Vercel. The exact external Git Integration configuration is not versioned in this repository, so this README does not claim a checked-in workflow controls deployment.
 
 ---
 
-## Despliegue en producción
+## Data Flow
 
-| Componente | Plataforma | URL |
-|------------|------------|-----|
-| keystone-web | Vercel | https://keystonesync.esgarpe.dev |
-| keystone-worker | Cloudflare Workers | https://api-keystonesync.esgarpe.dev |
-| Base de datos | Cloudflare D1 | `keystone-sync` |
+1. The user installs KeystoneClient and the bundled KeystoneSync addon.
+2. The user logs into World of Warcraft Retail with level-90 characters.
+3. The addon writes `KeystoneSyncDB` to WoW SavedVariables.
+4. KeystoneClient discovers selected SavedVariables files.
+5. KeystoneClient parses the Lua table, enriches with Raider.IO where relevant, and builds a JSON sync payload.
+6. KeystoneClient posts the payload to `POST /api/keystones/update`.
+7. `keystone-worker` persists character JSON blocks and current keystone snapshots in D1.
+8. `keystone-web` reads character/team data from the Worker API and renders the dashboard, characters, teams, and summary views.
 
-**Secrets Cloudflare Worker (API):**
-```env
-JWT_SECRET       →  clave secreta larga
-ALLOWED_ORIGINS  →  https://keystonesync.esgarpe.dev,http://localhost:3000
-RESEND_API_KEY   →  API key de Resend con permiso de envío
-EMAIL_FROM       →  KeystoneSync <no-reply@esgarpe.dev>
-WEB_BASE_URL     →  https://keystonesync.esgarpe.dev
-```
-Root Directory: `keystone-worker`
+Primary source files for this flow:
 
-**Rate limits de email (API):**
-
-Para proteger la cuota de Resend, `/api/auth/forgot-password` y `/api/auth/resend-verification` aplican límites en memoria por IP y por email/usuario normalizado. Los valores por defecto son suficientes para producción con una sola instancia Railway:
-
-```env
-PASSWORD_RESET_IP_LIMIT=5
-PASSWORD_RESET_IP_WINDOW_SECONDS=900
-PASSWORD_RESET_IDENTITY_LIMIT=3
-PASSWORD_RESET_IDENTITY_WINDOW_SECONDS=3600
-PASSWORD_RESET_COOLDOWN_SECONDS=120
-```
-
-Si se escala la API a varias réplicas, estos límites deberían moverse a PostgreSQL o Redis para compartir estado entre instancias.
-
-**Variables Vercel:**
-```env
-NEXT_PUBLIC_API_URL  →  https://api-keystonesync.esgarpe.dev
-```
+- Addon source: `Speeson/KeystoneSync` (`KeystoneSync.lua`, `KeystoneSync.toc`)
+- Generated client addon bundle: `keystone-client/addon/KeystoneSync/`
+- SavedVariables discovery: `keystone-client/wow_path.py`
+- Client parse/payload/sync: `keystone-client/sync_worker.py`
+- Sync endpoint: `keystone-worker/src/routes/keystones.ts`
+- D1 schema: `keystone-worker/migrations/0001_initial.sql`
+- Read responses: `keystone-worker/src/routes/me.ts`, `keystone-worker/src/db.ts`, `keystone-worker/src/routes/teams.ts`
+- Web API helper: `keystone-web/lib/auth.ts`
+- Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
 
 ---
 
-## Licencia
+## Deployment And Release Status
 
-Este proyecto es **propietario**. El codigo esta publicado para consulta y transparencia del desarrollo, pero **no se concede permiso** para copiar, modificar, redistribuir, revender, republicar, alojar, empaquetar ni crear trabajos derivados sin autorizacion previa por escrito.
+| Area | Status | Notes |
+| --- | --- | --- |
+| Web | Partial / external | Build and lint scripts are versioned. Deployment is documented as Vercel-based, but external Git Integration settings are not stored here. |
+| Worker | Manual | Wrangler scripts are versioned. Deploy and remote D1 migration require explicit authorization. |
+| Client | Build scripted, release manual | PyInstaller/Inno Setup build the app and installer. GitHub Release publication is manual. |
+| Addon | Manual | `Speeson/KeystoneSync` is the canonical addon source. The KeystoneClient bundle is refreshed with local sync/check scripts before client packaging when addon files change. |
+| Deployment Impact | Scripted | Run `python scripts/deploy_impact.py --files <changed-paths>` before deploy/release decisions. The script classifies impact only; it does not deploy or release. |
 
-Consulta [LICENSE](LICENSE) para los terminos completos.
+CI/CD workflow infrastructure is versioned under `.github/workflows/`:
 
----
+- `deploy.yml` calculates Deployment Impact and calls only relevant validation/build workflows.
+- `deploy-web.yml` validates the Web app; deployment remains documented as Vercel-managed externally.
+- `deploy-worker.yml` validates Worker changes and supports guarded manual Worker deploy / remote D1 migration.
+- `release-client.yml` builds the Windows installer artifact and can publish a Client release only when manually requested.
 
-## Estado del proyecto
-
-| Componente | Estado | Notas |
-|------------|--------|-------|
-| KeystoneSync (addon) | ✅ | v0.1.16, repo propio con CHANGELOG |
-| keystone-sync-client | ✅ | Polling cada 2 s, legacy |
-| keystone-api | ✅ | JWT, sync token, teams, PostgreSQL |
-| keystone-web | ✅ | Navbar, afijos, reset, tabla ordenable, equipos |
-| Despliegue producción | ✅ | Railway + Vercel |
-| KeystoneClient UI | ✅ | Tabla translúcida, íconos de clase, gradientes RIO/ilvl, dungeon abbrevs |
-| Integración Raider.IO | ✅ | Avatar, clase, RIO score, ilvl — cacheados en API y en disco |
-
-## Roadmap
-
-- **Actualizador de addon** — comprobar versión instalada vs. última release en GitHub y actualizar con un clic (lógica en `addon_installer.py` usando `/repos/Speeson/KeystoneSync/releases/latest`).
-- **Battle.net OAuth** — login con cuenta de Blizzard.
-- **Notificaciones** — alerta cuando un compañero actualiza su piedra.
-- **Páginas de Perfil y Ajustes** — enlazadas en el dropdown de la web, sin implementar.
+Standalone addon workflow files are prepared as handoff material under `docs/workflow-handoff/addon/` and must be copied to `Speeson/KeystoneSync` before they become active.
 
 ---
 
-## Estructura del repositorio
+## Historical Components
 
-```
+Previous implementations based on FastAPI / SQLAlchemy / PostgreSQL / Railway and the original script-only sync client were removed after migration to the current Worker/D1 and KeystoneClient architecture. Their implementation history remains available through Git.
+
+Historical references may still appear in migration plans and retained design notes. Do not treat those documents as current setup instructions.
+
+Removed paths:
+
+- `keystone-api/` - former FastAPI / SQLAlchemy / PostgreSQL / Railway backend.
+- `keystone-sync-client/` - former script-based synchronization client.
+
+---
+
+## Repository Structure
+
+```text
 weeklyChar/
-├── KeystoneSync/               # Addon WoW (Lua) — también en repo propio
-│   ├── KeystoneSync.toc
-│   ├── KeystoneSync.lua
-│   └── CHANGELOG.md
-├── keystone-sync-client/       # Sincronizador externo (Python, legacy)
-├── keystone-api/               # Backend REST (FastAPI + PostgreSQL)
-│   ├── main.py
-│   ├── models.py
-│   ├── database.py
-│   └── requirements.txt
-├── keystone-web/               # Panel web (Next.js + Tailwind)
-│   └── app/
-│       ├── page.tsx
-│       ├── login/page.tsx
-│       ├── teams/page.tsx
-│       ├── teams/[id]/page.tsx
-│       └── components/
-│           ├── Navbar.tsx
-│           ├── WeeklyAffixes.tsx
-│           └── WeeklyReset.tsx
-└── keystone-client/            # App de escritorio Windows (.exe)
-    ├── main.py
-    ├── main_window.py          # UI completa (login, main, tabla, banner)
-    ├── sync_worker.py          # Polling + Raider.IO + API sync
-    ├── config.py
-    ├── tray_app.py
-    ├── addon_installer.py
-    ├── wow_path.py
-    ├── bg.jpg                  # Imagen de fondo de la ventana
-    ├── icon.ico
-    └── addon/
-        └── KeystoneSync/       # Addon empaquetado con el .exe
+|-- .agents/                         # Project agent skills
+|-- docs/                            # Modernization plans and project context
+|-- scripts/                         # Addon bundle sync/check tooling
+|-- keystone-client/                 # Current Windows client
+|   |-- sync_worker.py               # SavedVariables parse/payload/API sync
+|   |-- wow_path.py                  # WoW install and SavedVariables discovery
+|   |-- addon_installer.py           # Bundled addon installer
+|   `-- addon/KeystoneSync/          # Generated bundled addon copy
+|-- keystone-worker/                 # Current Worker API and D1 integration
+|   |-- src/
+|   |-- migrations/
+|   `-- wrangler.jsonc
+|-- keystone-web/                    # Current Next.js Web app
+`-- RELEASE_WORKFLOW.md              # Manual release/push rules
 ```
+
+---
+
+## Modernization Notes
+
+Modernization work is governed by:
+
+- `AGENTS.md`
+- `docs/AGENT_CONTEXT.md`
+- `docs/KEYSTONESYNC_ACTION_PLAN.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DATA_CONTRACT.md`
+
+Do not edit the generated client addon bundle directly, create CI/CD workflows, deploy, release, tag, push, or run remote migrations unless the current task explicitly authorizes that work.
+
+Before deciding what to build, deploy, migrate, or release, run:
+
+```bash
+python scripts/deploy_impact.py --files <changed-paths>
+```
+
+Use `--addon-changed` when the external canonical `Speeson/KeystoneSync` addon repository changed.
+
+---
+
+## License
+
+This project is proprietary. The code is published for consultation and development transparency, but no permission is granted to copy, modify, redistribute, resell, republish, host, package, or create derivative works without prior written authorization.
+
+See [LICENSE](LICENSE) for the complete terms.

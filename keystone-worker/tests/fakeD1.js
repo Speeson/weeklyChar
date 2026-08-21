@@ -1,0 +1,196 @@
+export class FakeD1Database {
+  constructor() {
+    this.users = [
+      {
+        id: 1,
+        username: 'tester',
+        password_hash: '',
+        sync_token: 'sync-token',
+        avatar_url: null,
+        first_name: null,
+        last_name: null,
+        email: null,
+        date_of_birth: null,
+        email_verified: 0,
+        email_verification_token_hash: null,
+        email_verification_expires_at: null,
+        password_reset_token_hash: null,
+        password_reset_expires_at: null,
+        created_at: '2026-08-21T00:00:00.000Z',
+      },
+    ]
+    this.characters = []
+    this.keystones = []
+    this.nextCharacterId = 1
+    this.nextKeystoneId = 1
+  }
+
+  prepare(sql) {
+    return new FakeD1Statement(this, sql)
+  }
+}
+
+class FakeD1Statement {
+  constructor(db, sql) {
+    this.db = db
+    this.sql = sql.replace(/\s+/g, ' ').trim()
+    this.values = []
+  }
+
+  bind(...values) {
+    this.values = values
+    return this
+  }
+
+  async first() {
+    const sql = this.sql
+    const values = this.values
+
+    if (sql === 'SELECT * FROM users WHERE sync_token = ?') {
+      return this.db.users.find(user => user.sync_token === values[0]) ?? null
+    }
+
+    if (sql === 'SELECT * FROM users WHERE id = ?') {
+      return this.db.users.find(user => user.id === values[0]) ?? null
+    }
+
+    if (sql.includes('SELECT * FROM characters WHERE user_id = ? AND name = ? AND realm = ? AND region = ?')) {
+      const [userId, name, realm, region] = values
+      return this.db.characters.find(character =>
+        character.user_id === userId
+        && character.name === name
+        && character.realm === realm
+        && character.region === region
+      ) ?? null
+    }
+
+    if (sql === 'SELECT * FROM characters WHERE id = ?') {
+      return this.db.characters.find(character => character.id === values[0]) ?? null
+    }
+
+    if (sql.includes('SELECT * FROM keystones WHERE character_id = ?')) {
+      const [characterId, resetUnix] = values
+      const rows = this.db.keystones
+        .filter(keystone =>
+          keystone.character_id === characterId
+          && keystone.has_keystone === 1
+          && keystone.keystone_level !== null
+          && keystone.updated_at >= resetUnix
+        )
+        .sort((left, right) =>
+          ((right.updated_at ?? 0) - (left.updated_at ?? 0)) || (right.id - left.id)
+        )
+      return rows[0] ?? null
+    }
+
+    throw new Error(`Unhandled FakeD1 first query: ${sql}`)
+  }
+
+  async all() {
+    const sql = this.sql
+    const values = this.values
+
+    if (sql.includes('SELECT * FROM characters WHERE user_id = ? ORDER BY name')) {
+      const results = this.db.characters
+        .filter(character => character.user_id === values[0])
+        .sort((left, right) => left.name.localeCompare(right.name))
+      return { results }
+    }
+
+    throw new Error(`Unhandled FakeD1 all query: ${sql}`)
+  }
+
+  async run() {
+    const sql = this.sql
+    const values = this.values
+
+    if (sql === 'INSERT INTO characters (user_id, name, realm, region) VALUES (?, ?, ?, ?)') {
+      const [userId, name, realm, region] = values
+      const character = {
+        id: this.db.nextCharacterId++,
+        user_id: userId,
+        name,
+        realm,
+        region,
+        avatar_url: null,
+        wow_account: null,
+        rio_score: null,
+        wow_class: null,
+        ilvl: null,
+        vault_json: null,
+        prey_hunts_json: null,
+        currencies_json: null,
+        money_json: null,
+        mythic_plus_season_json: null,
+        created_at: '2026-08-21T00:00:00.000Z',
+        updated_at: '2026-08-21T00:00:00.000Z',
+      }
+      this.db.characters.push(character)
+      return { meta: { last_row_id: character.id } }
+    }
+
+    if (sql.includes('UPDATE characters SET wow_account = COALESCE')) {
+      const [
+        wowAccount,
+        avatarUrl,
+        rioScore,
+        wowClass,
+        ilvl,
+        vaultJson,
+        preyHuntsJson,
+        currenciesJson,
+        moneyJson,
+        mythicPlusSeasonJson,
+        characterId,
+      ] = values
+      const character = this.db.characters.find(row => row.id === characterId)
+      if (!character) throw new Error(`Missing character ${characterId}`)
+
+      assignIfPresent(character, 'wow_account', wowAccount)
+      assignIfPresent(character, 'avatar_url', avatarUrl)
+      assignIfPresent(character, 'rio_score', rioScore)
+      assignIfPresent(character, 'wow_class', wowClass)
+      assignIfPresent(character, 'ilvl', ilvl)
+      assignIfPresent(character, 'vault_json', vaultJson)
+      assignIfPresent(character, 'prey_hunts_json', preyHuntsJson)
+      assignIfPresent(character, 'currencies_json', currenciesJson)
+      assignIfPresent(character, 'money_json', moneyJson)
+      assignIfPresent(character, 'mythic_plus_season_json', mythicPlusSeasonJson)
+      character.updated_at = '2026-08-21T00:00:00.000Z'
+      return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('INSERT INTO keystones')) {
+      const [
+        characterId,
+        keystoneLevel,
+        keystoneChallengeMapId,
+        keystoneMapId,
+        keystoneDungeon,
+        updatedReason,
+        updatedAt,
+      ] = values
+      this.db.keystones.push({
+        id: this.db.nextKeystoneId++,
+        character_id: characterId,
+        has_keystone: 1,
+        keystone_level: keystoneLevel,
+        keystone_challenge_map_id: keystoneChallengeMapId,
+        keystone_map_id: keystoneMapId,
+        keystone_dungeon: keystoneDungeon,
+        updated_reason: updatedReason,
+        updated_at: updatedAt,
+        created_at: '2026-08-21T00:00:00.000Z',
+      })
+      return { meta: { changes: 1 } }
+    }
+
+    throw new Error(`Unhandled FakeD1 run query: ${sql}`)
+  }
+}
+
+function assignIfPresent(target, key, value) {
+  if (value !== null && value !== undefined) {
+    target[key] = value
+  }
+}

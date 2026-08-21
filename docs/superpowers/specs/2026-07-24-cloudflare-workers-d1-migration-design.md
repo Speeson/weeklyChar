@@ -1,5 +1,7 @@
 # Cloudflare Workers + D1 Migration Design
 
+> Historical migration document: this describes the pre-cutover FastAPI/Railway state and the planned Worker/D1 migration. The current production backend is `keystone-worker`.
+
 ## Goal
 
 Move the KeystoneSync backend away from Railway/FastAPI/PostgreSQL to a clean Cloudflare stack using Workers, D1, and Resend, with no production data import. Existing users will register again and character data will be rebuilt through the desktop client sync.

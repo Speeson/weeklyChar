@@ -1,6 +1,6 @@
 # Keystone Worker
 
-Cloudflare Worker replacement for the KeystoneSync FastAPI backend.
+Current KeystoneSync API implemented as a Cloudflare Worker with Hono and Cloudflare D1.
 
 ## Local Setup
 
@@ -51,6 +51,8 @@ npm run d1:migrate:remote
 ```
 
 ## Cloudflare Setup
+
+Remote Cloudflare operations require explicit authorization in the current task. Do not run remote migrations or deploy as routine validation.
 
 Login:
 

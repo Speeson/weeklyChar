@@ -1,0 +1,28 @@
+KeystoneSyncDB = {
+  ["Auralis-Everlight"] = {
+    ["character"] = "Auralis",
+    ["realm"] = "Everlight",
+    ["region"] = "eu",
+    ["ilvl"] = 642,
+    ["hasKeystone"] = true,
+    ["keystoneLevel"] = 10,
+    ["keystoneChallengeMapId"] = 503,
+    ["keystoneMapId"] = 2669,
+    ["keystoneDungeon"] = "Ara-Kara, City of Echoes",
+    ["updatedAt"] = 2000000000,
+    ["updatedReason"] = "PLAYER_LOGIN",
+  },
+  ["Bromm-Everlight"] = {
+    ["character"] = "Bromm",
+    ["realm"] = "Everlight",
+    ["region"] = "eu",
+    ["ilvl"] = 615,
+    ["hasKeystone"] = true,
+    ["keystoneLevel"] = 7,
+    ["keystoneChallengeMapId"] = 502,
+    ["keystoneMapId"] = 2649,
+    ["keystoneDungeon"] = "City of Threads",
+    ["updatedAt"] = 2000000100,
+    ["updatedReason"] = "CHALLENGE_MODE_COMPLETED",
+  },
+}

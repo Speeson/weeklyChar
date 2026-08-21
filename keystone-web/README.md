@@ -83,7 +83,7 @@ NEXT_PUBLIC_API_URL=https://api-keystonesync.esgarpe.dev
 
 ## Despliegue (Vercel)
 
-El proyecto se despliega automáticamente desde la rama `main` del monorepo.
+El proyecto esta documentado como desplegado mediante Vercel. La configuracion exacta de Git Integration vive fuera de este repositorio y no hay un workflow de despliegue versionado aqui.
 
 **Variable de entorno en Vercel:**
 ```env

@@ -1,5 +1,7 @@
 # KeystoneSync Auth + Email Security Plan
 
+> Historical document: this plan refers to the former FastAPI / Railway architecture and is retained for project history. The current production backend is `keystone-worker`.
+
 ## Objetivo
 
 Mejorar el registro y la seguridad de KeystoneSync añadiendo:

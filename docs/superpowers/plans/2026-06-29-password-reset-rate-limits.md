@@ -1,5 +1,7 @@
 ﻿# Password Reset Rate Limits Implementation Plan
 
+> Historical document: this plan refers to the former FastAPI / Railway architecture and is retained for project history. The current production backend is `keystone-worker`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Protect Resend quota by rate limiting password reset and verification resend email endpoints.

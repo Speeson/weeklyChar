@@ -3,9 +3,9 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": ".tmp-test",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src/weeklyReset.ts"]
+  "include": ["src/**/*.ts"]
 }

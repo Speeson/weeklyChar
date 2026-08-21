@@ -1,5 +1,7 @@
 # Cloudflare Workers D1 Migration Implementation Plan
 
+> Historical migration document: this describes implementation of the Worker/D1 migration. The current production backend is `keystone-worker`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the Railway FastAPI/PostgreSQL backend with a clean Cloudflare Worker + D1 API while preserving the current REST contract used by the web app and desktop client.
