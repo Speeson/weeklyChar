@@ -6,7 +6,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, including 
 
 ## Current modernization status
 
-`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, and 10 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, a generated client addon bundle, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, and selective GitHub Actions workflow infrastructure. The next planned milestone is Phase 11, decoupling addon releases from Client releases.
+`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, and 10 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, a generated client addon bundle, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, and selective GitHub Actions workflow infrastructure. Phase 10 workflows were pushed to GitHub and user-verified as passing after external Actions/environment configuration. The next planned milestone is Phase 11, decoupling addon releases from Client releases.
 
 ## Verified current architecture
 
@@ -85,6 +85,7 @@ Verified from checked-out files:
 - Client release workflow: `.github/workflows/release-client.yml` builds the Windows installer and publishes a GitHub Release only when manually run with `publish_release=true`.
 - Client release tag convention: `client-vX.Y.Z`, derived from `keystone-client/VERSION`.
 - Addon workflows: prepared as handoff files in `docs/workflow-handoff/addon/` because the canonical `Speeson/KeystoneSync` repository is external and was not modified in Phase 10.
+- GitHub Actions operational status: user confirmed the required GitHub-side configuration was added and validation workflows passed. Required external configuration includes `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and the GitHub `production` environment. Secret values and exact external settings are not versioned in this repository.
 
 ## Validation baseline
 

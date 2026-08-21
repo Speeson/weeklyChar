@@ -729,6 +729,8 @@ Once the script exists:
 
 **Priority: MEDIUM-HIGH**
 
+**Operational verification:** GitHub Actions workflows were pushed to `origin/main` and user-confirmed as passing after required GitHub-side secrets/environment configuration. No production deploy, remote D1 migration, tag, or release is implied by this status.
+
 ---
 
 ## Task 10.1 — Orchestrator
