@@ -1,0 +1,128 @@
+name: Worker Validation and Deploy
+
+on:
+  workflow_call:
+    inputs:
+      deploy:
+        description: Deploy the Worker after validation.
+        required: false
+        default: false
+        type: boolean
+      run_migrations:
+        description: Run remote D1 migrations before Worker deploy.
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: false
+      CLOUDFLARE_ACCOUNT_ID:
+        required: false
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the Worker after validation.
+        required: false
+        default: false
+        type: boolean
+      run_migrations:
+        description: Run remote D1 migrations before Worker deploy.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Typecheck and test Worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: keystone-worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: keystone-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  migrate:
+    name: Remote D1 migrations
+    needs: validate
+    if: inputs.run_migrations
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: keystonesync-production-worker
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: keystone-worker
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: keystone-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run remote D1 migrations
+        run: npm run d1:migrate:remote
+
+  deploy:
+    name: Deploy Worker
+    needs:
+      - validate
+      - migrate
+    if: inputs.deploy && always() && needs.validate.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: keystonesync-production-worker
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: keystone-worker
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: keystone-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy Worker
+        run: npm run deploy

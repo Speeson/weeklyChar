@@ -1,0 +1,125 @@
+name: Release KeystoneSync Addon
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag. Must equal v<KeystoneSync.toc Version>.
+        required: true
+        type: string
+      publish_release:
+        description: Publish the GitHub Release. Leave false for a dry-run package build.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Validate and package addon
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+      asset_name: ${{ steps.package.outputs.asset_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate and create ZIP
+        id: package
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+          import shutil
+          import sys
+          import zipfile
+
+          addon = Path(".")
+          toc = addon / "KeystoneSync.toc"
+          if not toc.is_file():
+              sys.exit("Missing KeystoneSync.toc")
+
+          metadata = {}
+          files = [Path("KeystoneSync.toc")]
+          for raw in toc.read_text(encoding="utf-8-sig").splitlines():
+              line = raw.strip()
+              if not line:
+                  continue
+              if line.startswith("##"):
+                  key, _, value = line[2:].partition(":")
+                  metadata[key.strip()] = value.strip()
+                  continue
+              if line.startswith("#"):
+                  continue
+              rel = Path(*line.replace("\\", "/").split("/"))
+              if rel.is_absolute() or ".." in rel.parts:
+                  sys.exit(f"Invalid .toc file entry: {line}")
+              if rel not in files:
+                  files.append(rel)
+
+          version = metadata.get("Version", "")
+          if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              sys.exit("Version metadata must use MAJOR.MINOR.PATCH")
+          expected_tag = f"v{version}"
+          if os.environ["RELEASE_TAG"] != expected_tag:
+              sys.exit(f"Tag must be {expected_tag}")
+          for rel in files:
+              if not (addon / rel).is_file():
+                  sys.exit(f"Missing package file: {rel.as_posix()}")
+
+          staging = Path("dist") / "KeystoneSync"
+          if staging.exists():
+              shutil.rmtree(staging)
+          staging.mkdir(parents=True)
+          for rel in files:
+              target = staging / rel
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(addon / rel, target)
+
+          asset_name = f"KeystoneSync-v{version}.zip"
+          zip_path = Path("dist") / asset_name
+          with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+              for path in sorted(staging.rglob("*")):
+                  if path.is_file():
+                      archive.write(path, path.relative_to("dist").as_posix())
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"version={version}\n")
+              output.write(f"asset_name={asset_name}\n")
+          PY
+
+      - name: Upload addon package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.asset_name }}
+          path: dist/${{ steps.package.outputs.asset_name }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish addon release
+    needs: package
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download addon package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package.outputs.asset_name }}
+          path: release-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: KeystoneSync ${{ needs.package.outputs.version }}
+          files: release-assets/${{ needs.package.outputs.asset_name }}
+          fail_on_unmatched_files: true

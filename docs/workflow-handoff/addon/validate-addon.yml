@@ -1,0 +1,64 @@
+name: Validate KeystoneSync Addon
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate addon package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate .toc and package structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          addon = Path(".")
+          toc = addon / "KeystoneSync.toc"
+          if not toc.is_file():
+              sys.exit("Missing KeystoneSync.toc")
+
+          metadata = {}
+          files = []
+          for raw in toc.read_text(encoding="utf-8-sig").splitlines():
+              line = raw.strip()
+              if not line:
+                  continue
+              if line.startswith("##"):
+                  key, _, value = line[2:].partition(":")
+                  metadata[key.strip()] = value.strip()
+                  continue
+              if line.startswith("#"):
+                  continue
+              path = Path(*line.replace("\\", "/").split("/"))
+              if path.is_absolute() or ".." in path.parts:
+                  sys.exit(f"Invalid .toc file entry: {line}")
+              files.append(path)
+
+          for key in ("Interface", "Title", "Version", "SavedVariables"):
+              if not metadata.get(key):
+                  sys.exit(f"Missing .toc metadata: {key}")
+          if not metadata["Interface"].isdigit():
+              sys.exit("Interface metadata must be numeric")
+          if not re.fullmatch(r"\d+\.\d+\.\d+", metadata["Version"]):
+              sys.exit("Version metadata must use MAJOR.MINOR.PATCH")
+          if "KeystoneSyncDB" not in [value.strip() for value in metadata["SavedVariables"].split(",")]:
+              sys.exit("SavedVariables metadata must include KeystoneSyncDB")
+          if not files:
+              sys.exit("KeystoneSync.toc does not list any addon files")
+          for rel in files:
+              if not (addon / rel).is_file():
+                  sys.exit(f"Missing .toc file entry: {rel.as_posix()}")
+          PY

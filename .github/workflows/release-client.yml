@@ -1,0 +1,126 @@
+name: Client Build and Release
+
+on:
+  workflow_call:
+    inputs:
+      publish_release:
+        description: Publish a GitHub Release after building the installer.
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: Optional release tag. Must equal client-v<VERSION> when provided.
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish a GitHub Release after building the installer.
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: Optional release tag. Must equal client-v<VERSION> when provided.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Client installer
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: keystone-client/requirements.txt
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: python -m pip install -r keystone-client/requirements.txt
+
+      - name: Validate version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content keystone-client/VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid keystone-client/VERSION: $version"
+          }
+          $tag = "client-v$version"
+          if ("${{ inputs.release_tag }}" -ne "" -and "${{ inputs.release_tag }}" -ne $tag) {
+            throw "release_tag must be $tag for VERSION $version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Compile Python
+        shell: pwsh
+        run: python -m compileall -q keystone-client scripts tests
+
+      - name: Run Client tests
+        shell: pwsh
+        run: python -m unittest discover -s tests/client
+
+      - name: Validate bundled addon
+        shell: pwsh
+        run: python scripts/validate_addon.py
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+      - name: Build installer
+        shell: cmd
+        working-directory: keystone-client
+        run: build_installer.bat
+
+      - name: Verify installer output
+        shell: pwsh
+        run: |
+          $installer = "keystone-client/installer/output/KeystoneClientSetup.exe"
+          if (!(Test-Path $installer)) {
+            throw "Expected installer not found: $installer"
+          }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeystoneClientSetup
+          path: keystone-client/installer/output/KeystoneClientSetup.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish Client release
+    needs: build
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: KeystoneClientSetup
+          path: release-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: KeystoneClient ${{ needs.build.outputs.version }}
+          files: release-assets/KeystoneClientSetup.exe
+          fail_on_unmatched_files: true
