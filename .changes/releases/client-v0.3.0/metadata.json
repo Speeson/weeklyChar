@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.2.1",
+  "version": "0.3.0",
+  "bump": "minor",
+  "tag": "client-v0.3.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-addon-updater.json"
+  ]
+}
