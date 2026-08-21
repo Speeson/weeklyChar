@@ -1,0 +1,80 @@
+name: Client Build
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Client installer
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: keystone-client/requirements.txt
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: python -m pip install -r keystone-client/requirements.txt
+
+      - name: Validate version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content keystone-client/VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid keystone-client/VERSION: $version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=client-v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Compile Python
+        shell: pwsh
+        run: python -m compileall -q keystone-client scripts tests
+
+      - name: Run Client tests
+        shell: pwsh
+        run: python -m unittest discover -s tests/client
+
+      - name: Validate bundled addon
+        shell: pwsh
+        run: python scripts/validate_addon.py
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+      - name: Build installer
+        shell: cmd
+        working-directory: keystone-client
+        run: build_installer.bat
+
+      - name: Verify installer output
+        shell: pwsh
+        run: |
+          $installer = "keystone-client/installer/output/KeystoneClientSetup.exe"
+          if (!(Test-Path $installer)) {
+            throw "Expected installer not found: $installer"
+          }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeystoneClientSetup
+          path: keystone-client/installer/output/KeystoneClientSetup.exe
+          if-no-files-found: error
+          retention-days: 14

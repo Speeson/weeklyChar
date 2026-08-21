@@ -152,6 +152,7 @@ Primary workflow files:
 - `.github/workflows/deploy.yml` - orchestrates impact calculation and selective workflow calls.
 - `.github/workflows/deploy-web.yml` - validates Web build/lint without duplicating Vercel deployment.
 - `.github/workflows/deploy-worker.yml` - validates Worker changes and supports guarded manual deploy/migrations.
+- `.github/workflows/build-client.yml` - builds Client installer artifacts for validation/orchestration with read-only permissions.
 - `.github/workflows/release-client.yml` - builds Client installer artifacts and supports explicit Client release publication.
 
 Standalone addon workflows are prepared as handoff files in `docs/workflow-handoff/addon/`; they are not active until copied to `Speeson/KeystoneSync`.

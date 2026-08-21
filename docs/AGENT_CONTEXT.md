@@ -81,7 +81,8 @@ Verified from checked-out files:
 - CI/CD orchestrator: `.github/workflows/deploy.yml` calculates Deployment Impact in strict mode and calls relevant reusable workflows.
 - Web workflow: `.github/workflows/deploy-web.yml` validates build and lint. Build is blocking; lint is temporarily non-blocking because of the documented Phase 8 baseline. Web production deployment remains documented as externally Vercel-managed.
 - Worker workflow: `.github/workflows/deploy-worker.yml` validates `npm run typecheck` and `npm test`; Worker deploy and remote D1 migrations are guarded behind manual inputs and `production` environment.
-- Client workflow: `.github/workflows/release-client.yml` builds the Windows installer on `windows-latest`, uploads `KeystoneClientSetup.exe` as a workflow artifact, and publishes a GitHub Release only when manually run with `publish_release=true`.
+- Client build workflow: `.github/workflows/build-client.yml` builds the Windows installer on `windows-latest` with read-only permissions and uploads `KeystoneClientSetup.exe` as a workflow artifact for validation/orchestration.
+- Client release workflow: `.github/workflows/release-client.yml` builds the Windows installer and publishes a GitHub Release only when manually run with `publish_release=true`.
 - Client release tag convention: `client-vX.Y.Z`, derived from `keystone-client/VERSION`.
 - Addon workflows: prepared as handoff files in `docs/workflow-handoff/addon/` because the canonical `Speeson/KeystoneSync` repository is external and was not modified in Phase 10.
 

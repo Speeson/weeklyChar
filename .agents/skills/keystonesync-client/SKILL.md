@@ -81,7 +81,8 @@ Public installer compatibility target:
 
 Versioned workflow:
 
-- `.github/workflows/release-client.yml` builds the Windows installer on `windows-latest`.
+- `.github/workflows/build-client.yml` builds the Windows installer on `windows-latest` for validation/orchestration with read-only permissions.
+- `.github/workflows/release-client.yml` builds the Windows installer and can publish a release when manually run with `publish_release=true`.
 - It uploads `KeystoneClientSetup.exe` as a workflow artifact.
 - It publishes a GitHub Release only when manually triggered with `publish_release=true`.
 - Client release tags use the existing `client-vX.Y.Z` convention from `keystone-client/VERSION`.

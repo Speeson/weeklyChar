@@ -8,6 +8,7 @@ Estado actual verificado:
 - El orquestador versionado esta en `.github/workflows/deploy.yml`.
 - El cliente se construye con PyInstaller/Inno Setup.
 - El instalador publico esperado es `KeystoneClientSetup.exe`.
+- El build del cliente para validacion/orquestacion usa `.github/workflows/build-client.yml` con permisos read-only.
 - La publicacion de GitHub Releases del cliente esta automatizada solo mediante ejecucion manual de `.github/workflows/release-client.yml` con `publish_release=true`.
 - El Worker se despliega con Wrangler y usa D1; despliegue y migraciones remotas estan disponibles solo por ejecucion manual/guardada de `.github/workflows/deploy-worker.yml`.
 - La web esta documentada como desplegada con Vercel, pero la configuracion externa de Git Integration no esta versionada en este repositorio.
@@ -30,7 +31,8 @@ Estado actual verificado:
 - Antes de generar el instalador, si el addon ha cambiado, verificar que `keystone-client/addon/KeystoneSync/` esta sincronizado con `python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>`.
 - Generar el instalador con `keystone-client/build_installer.bat`.
 - Si hay cambios de cliente, proporcionar los datos para que el usuario cree el release manualmente.
-- El workflow `.github/workflows/release-client.yml` puede generar el instalador como artifact.
+- El workflow `.github/workflows/build-client.yml` genera el instalador como artifact para validacion/orquestacion.
+- El workflow `.github/workflows/release-client.yml` genera el instalador y puede publicar el release cuando se ejecuta manualmente.
 - Para publicar el release, ejecutar manualmente `release-client.yml` con `publish_release=true`.
 - El tag del cliente debe seguir el formato existente `client-vX.Y.Z`, derivado de `keystone-client/VERSION`.
 - El release del cliente debe incluir el instalador generado como asset con el nombre `KeystoneClientSetup.exe`.

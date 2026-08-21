@@ -240,7 +240,8 @@ CI/CD workflow infrastructure is versioned under `.github/workflows/`:
 - `deploy.yml` calculates Deployment Impact and calls only relevant validation/build workflows.
 - `deploy-web.yml` validates the Web app; deployment remains documented as Vercel-managed externally.
 - `deploy-worker.yml` validates Worker changes and supports guarded manual Worker deploy / remote D1 migration.
-- `release-client.yml` builds the Windows installer artifact and can publish a Client release only when manually requested.
+- `build-client.yml` builds the Windows installer artifact with read-only permissions for normal validation/orchestration.
+- `release-client.yml` can publish a Client release only when manually requested.
 
 Standalone addon workflow files are prepared as handoff material under `docs/workflow-handoff/addon/` and must be copied to `Speeson/KeystoneSync` before they become active.
 

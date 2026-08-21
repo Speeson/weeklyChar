@@ -159,9 +159,7 @@ jobs:
     name: Client build
     needs: impact
     if: needs.impact.outputs.client_build == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build_client)
-    uses: ./.github/workflows/release-client.yml
-    with:
-      publish_release: false
+    uses: ./.github/workflows/build-client.yml
 
   addon-impact:
     name: Addon release handoff
