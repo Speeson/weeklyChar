@@ -6,7 +6,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, including 
 
 ## Current modernization status
 
-`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, and 10 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, a generated client addon bundle, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, and selective GitHub Actions workflow infrastructure. Phase 10 workflows were pushed to GitHub and user-verified as passing after external Actions/environment configuration. The next planned milestone is Phase 11, decoupling addon releases from Client releases.
+`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, selective GitHub Actions workflow infrastructure, and an independent remote-release KeystoneClient addon updater. The next planned milestone is Phase 12, the full WoW 12.1 / Midnight Season 2 update.
 
 ## Verified current architecture
 
@@ -25,7 +25,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, including 
 ## Still unresolved
 
 - Actual external deployment ownership for `keystone-web` cannot be fully proven from checked-in config alone. The Web docs identify Vercel as the documented deployment target, but no checked-in Vercel Git Integration configuration exists. The checked-in Web workflow validates build/lint only and does not deploy to Vercel.
-- Local availability of a `Speeson/KeystoneSync` checkout is not guaranteed for every task. Agents should use an explicit `--source` path or `KEYSTONESYNC_ADDON_SOURCE` for addon bundle synchronization when needed.
+- Local availability of a `Speeson/KeystoneSync` checkout is not guaranteed for every task. KeystoneClient consumes addon releases from GitHub Releases, not a checked-in client bundle.
 - WoW patch-sensitive facts, seasonal IDs, dungeon pools, and API compatibility remain pending the dedicated patch/season audit.
 
 ## Data flow
@@ -45,7 +45,7 @@ KeystoneSync addon
 Main implementation points:
 
 - Canonical addon source `Speeson/KeystoneSync`: `SaveCharacterData()` writes `KeystoneSyncDB`; `UpdateMythicPlusSeason()` writes the season block.
-- Generated bundled addon copy `keystone-client/addon/KeystoneSync/`: packaged by KeystoneClient and synchronized from the canonical addon source.
+- Addon distribution to users: `Speeson/KeystoneSync` GitHub Release -> `KeystoneSync-vX.Y.Z.zip` -> `keystone-client/addon_updater.py` -> validated local cache -> WoW AddOns folder.
 - `keystone-client/wow_path.py`: discovers `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
 - `keystone-client/sync_worker.py`: `SyncWorker._sync()` parses SavedVariables with `slpp`, fetches Raider.IO enrichment, builds the payload, and posts to `/api/keystones/update`.
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
@@ -60,7 +60,6 @@ Main implementation points:
 Verified from checked-out files:
 
 - Canonical addon repo `Speeson/KeystoneSync` at verified `main`/`v0.1.16`: `Version: 0.1.16`, `Interface: 120005`
-- Generated bundled client addon copy `keystone-client/addon/KeystoneSync/KeystoneSync.toc`: `Version: 0.1.16`, `Interface: 120005`
 - Windows client `keystone-client/VERSION`: `0.2.1`
 - Windows installer `keystone-client/installer/version.ini`: `AppVersion=0.2.1`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
@@ -72,11 +71,12 @@ Verified from checked-out files:
 - Web: build/lint scripts exist in `keystone-web/package.json`. Deployment is documented as Vercel-based, but checked-in deployment ownership is not fully provable.
 - Worker: `keystone-worker/package.json` defines local dev, deploy, typecheck, tests, and local/remote D1 migration scripts. Remote deploy/migration requires explicit authorization.
 - Client: PyInstaller and Inno Setup scripts produce `KeystoneClient.exe` and `installer/output/KeystoneClientSetup.exe`. Releases are manual through GitHub Releases.
-- Addon: changes go to canonical `Speeson/KeystoneSync` with version tags after explicit confirmation. The weeklyChar client bundle is refreshed with `scripts/sync_addon.py --source <path>` and verified with `scripts/check_addon_sync.py --source <path>` before client packaging when addon files change.
+- Addon: changes go to canonical `Speeson/KeystoneSync` with version tags after explicit confirmation. Standalone addon releases use tag `vX.Y.Z`, asset `KeystoneSync-vX.Y.Z.zip`, and ZIP root `KeystoneSync/`. KeystoneClient checks these releases automatically in the background and installs/updates only after explicit user action.
+- Client addon cache: `%APPDATA%\KeystoneClient\addon-cache\` stores the last successfully downloaded and validated addon ZIP for recovery. It is not canonical and must not cause automatic downgrade.
 - Deterministic deployment-impact script: `scripts/deploy_impact.py`.
 - Deployment Impact dimensions: `WEB`, `WORKER`, `DB`, `CLIENT_BUILD`, `CLIENT_RELEASE`, `ADDON`, `ADDON_RELEASE`.
 - External canonical addon changes are represented with `python scripts/deploy_impact.py --addon-changed` because `Speeson/KeystoneSync` is outside this repository.
-- Current addon/client coupling policy: addon source or generated bundle changes imply `ADDON`, `ADDON_RELEASE`, `CLIENT_BUILD`, and `CLIENT_RELEASE` because KeystoneClient still bundles the addon and Phase 11 has not implemented a remote addon updater.
+- Current addon/client coupling policy: external canonical addon changes imply `ADDON` and `ADDON_RELEASE` only. KeystoneClient updater/installer code changes imply `CLIENT_BUILD` and `CLIENT_RELEASE`, not `ADDON_RELEASE`.
 - Unknown or outside-repository paths are reported by the impact script; `--strict` exits non-zero for them.
 - CI/CD orchestrator: `.github/workflows/deploy.yml` calculates Deployment Impact in strict mode and calls relevant reusable workflows.
 - Web workflow: `.github/workflows/deploy-web.yml` validates build and lint. Build is blocking; lint is temporarily non-blocking because of the documented Phase 8 baseline. Web production deployment remains documented as externally Vercel-managed.
@@ -91,7 +91,7 @@ Verified from checked-out files:
 
 - Worker: `cd keystone-worker; npm run typecheck; npm test`. Worker tests cover weekly reset helpers plus route-level sync behavior using a local in-memory D1 test double.
 - Client: `python -m compileall -q keystone-client scripts` and `python -m unittest discover -s tests/client`. Client tests parse synthetic SavedVariables fixtures and validate the outbound Worker payload shape without live Raider.IO calls.
-- Addon bundle: `python scripts/validate_addon.py` validates generated bundle structure and `.toc` entries locally. Full canonical-source divergence validation requires `python scripts/validate_addon.py --source <path-to-Speeson-KeystoneSync>` or `python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>`.
+- Addon updater tests live in `tests/client/test_addon_updater.py` and cover release metadata, ZIP security, cache fallback, safe install, rollback, and candidate selection.
 - Web: `cd keystone-web; npm run build; npm run lint`. As of Phase 8, build passes and lint fails with a pre-existing baseline of 13 errors and 25 warnings under `keystone-web/app/**`.
 - Shared fixtures live under `tests/fixtures/`.
 - Deployment Impact: `python scripts/deploy_impact.py --files <changed-paths>` and `python -m unittest discover -s tests/deploy_impact`.
@@ -104,13 +104,13 @@ Verified from checked-out files:
 - The end-to-end tracked-data contract is documented in `docs/DATA_CONTRACT.md`.
 - Project skills live under `.agents/skills/` and were reviewed against the verified architecture/data contract in Phase 7.
 - The data contract spans addon SavedVariables, client parsing/payloads, Worker API, D1 persistence, and Web rendering.
-- The root `KeystoneSync/` duplicate was removed in Phase 5. The client addon bundle is generated content and must not be edited directly.
+- The root `KeystoneSync/` duplicate was removed in Phase 5. Phase 11 removed the remaining embedded Client addon bundle; do not recreate it without an explicit architecture change.
 - Deployment/release impact must be determined by `scripts/deploy_impact.py`, not by memory. Reporting remote impact does not authorize deployment, remote D1 migration, tag, release, or push.
 
 ## Known risks / ambiguities
 
 - Historical FastAPI/Railway docs are retained for project history and should not be used as current architecture instructions.
-- Addon bundle divergence is checked by `scripts/check_addon_sync.py` when a canonical source path is supplied. Structural bundle validation is available through `scripts/validate_addon.py`; CI enforcement is not present until later automation phases.
+- The canonical addon repository is external. This repository contains addon updater tests and handoff workflow files, but no active embedded addon source.
 - `KeystoneSyncDB.keystoneWeeklyResetKey` and `mythicPlusSeasonUpdatedAt` are written by the addon but are not currently included in the client sync payload.
 - Web API response types are duplicated in individual pages, and seasonal dungeon/currency metadata remains hardcoded pending the WoW patch/season phase.
 
@@ -120,4 +120,4 @@ The master plan records WoW 12.1 basic addon compatibility as manually verified.
 
 ## Next planned milestone
 
-Phase 11 - Decouple addon releases from Client releases.
+Phase 12 - Full WoW 12.1 / Midnight Season 2 update.

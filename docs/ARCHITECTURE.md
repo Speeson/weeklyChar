@@ -56,7 +56,7 @@ Does not own:
 - Web presentation.
 - KeystoneClient desktop UX.
 
-Current bundled source visible in this repository is generated content at `keystone-client/addon/KeystoneSync/`, synchronized from `Speeson/KeystoneSync`.
+KeystoneClient does not embed addon runtime files. Addon installation and updates are consumed from `Speeson/KeystoneSync` releases.
 
 ### `keystone-client`
 
@@ -69,7 +69,8 @@ Owns:
 - Raider.IO enrichment for avatar URL, score, class, and equipped item level fallback.
 - Sync payload construction and `POST /api/keystones/update`.
 - Windows desktop/tray UX, login, account selection, and local config.
-- Installing the bundled addon copy into the user's WoW AddOns folder.
+- Checking addon releases in the background without blocking startup.
+- Downloading, validating, caching, and installing standalone addon releases from `Speeson/KeystoneSync` after explicit user action.
 - PyInstaller/Inno Setup build path for `KeystoneClientSetup.exe`.
 
 Does not own:
@@ -205,44 +206,36 @@ Build path:
 
 Canonical addon source and release ownership live in `Speeson/KeystoneSync`.
 
-The checked bundled addon metadata is:
+KeystoneClient executable/installer output must not include addon runtime files such as `KeystoneSync.toc` or `KeystoneSync.lua`.
 
-- Version: `0.1.16`
-- Interface: `120005`
-- SavedVariables: `KeystoneSyncDB`
-
-Addon release automation is manual unless future phases add repository evidence to the contrary.
-
-## Addon Synchronization Model
+## Addon Distribution Model
 
 ```text
 Speeson/KeystoneSync
       |
       v
-scripts/sync_addon.py
+GitHub Release: vX.Y.Z
       |
       v
-keystone-client/addon/KeystoneSync/
+KeystoneSync-vX.Y.Z.zip
       |
       v
-KeystoneClient installer/package
-```
-
-Verification:
-
-```text
-scripts/check_addon_sync.py
+KeystoneClient addon updater
+      |
+      v
+%APPDATA%/KeystoneClient/addon-cache/
+      |
+      v
+WoW _retail_/Interface/AddOns/KeystoneSync
 ```
 
 Rules:
 
 - Edit addon source only in `Speeson/KeystoneSync`.
-- Treat `keystone-client/addon/KeystoneSync/` as generated packaging content.
-- Do not edit the generated bundle manually.
-- Use `python scripts/sync_addon.py --source <path-to-Speeson-KeystoneSync>` to refresh the bundle.
-- Use `python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>` to detect divergence.
-- CI enforcement does not exist yet.
-- Remote addon updating is planned for a later modernization phase.
+- Standalone addon releases use tag `vX.Y.Z`, asset `KeystoneSync-vX.Y.Z.zip`, and a `KeystoneSync/` ZIP root. The updater validates ZIP paths, `.toc` files, listed addon files, and version consistency before installing.
+- The updater checks releases automatically in the background, but install/update/reinstall is always user-triggered.
+- The local cache stores the last successfully downloaded and validated addon ZIP for recovery; it is not canonical and must not cause automatic downgrades.
+- Addon-only releases no longer require a KeystoneClient release.
 
 ## Current Data Flow Implementation Points
 

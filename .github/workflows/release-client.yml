@@ -72,10 +72,6 @@ jobs:
         shell: pwsh
         run: python -m unittest discover -s tests/client
 
-      - name: Validate bundled addon
-        shell: pwsh
-        run: python scripts/validate_addon.py
-
       - name: Install Inno Setup
         shell: pwsh
         run: |

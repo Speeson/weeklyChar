@@ -169,7 +169,7 @@ jobs:
     steps:
       - name: Report addon impact
         run: |
-          echo "::notice::Addon impact was detected. The canonical addon release must be handled from Speeson/KeystoneSync, not from the generated client bundle in weeklyChar."
+          echo "::notice::Standalone KeystoneSync addon release required. Publish from Speeson/KeystoneSync; weeklyChar does not publish addon releases or build KeystoneClient for addon-only changes."
           echo "ADDON=${{ needs.impact.outputs.addon }}"
           echo "ADDON_RELEASE=${{ needs.impact.outputs.addon_release }}"
           echo "CLIENT_BUILD=${{ needs.impact.outputs.client_build }}"

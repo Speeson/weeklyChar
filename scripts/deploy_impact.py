@@ -19,7 +19,7 @@ DIMENSIONS = (
     "addon_release",
 )
 
-ADDON_CLIENT_COUPLING = ("addon", "addon_release", "client_build", "client_release")
+EXTERNAL_ADDON_RELEASE = ("addon", "addon_release")
 
 
 @dataclass
@@ -88,7 +88,7 @@ def classify_paths(paths: Iterable[str], *, addon_changed: bool = False, repo_ro
     impact = Impact()
 
     if addon_changed:
-        impact.add(ADDON_CLIENT_COUPLING, "<external:addon>")
+        impact.add(EXTERNAL_ADDON_RELEASE, "<external:addon>")
 
     for raw_path in paths:
         path, outside = normalize_path(raw_path, repo_root)
@@ -126,10 +126,6 @@ def classify_path(path: str, impact: Impact) -> None:
             impact.unknown(path)
         return
 
-    if path.startswith("keystone-client/addon/KeystoneSync/"):
-        impact.add(ADDON_CLIENT_COUPLING, path)
-        return
-
     if path.startswith("keystone-client/"):
         if is_client_product_path(path):
             impact.add(("client_build", "client_release"), path)
@@ -153,6 +149,8 @@ def is_known_no_impact(path: str) -> bool:
         "keystone-web/README.md",
         "keystone-client/README.md",
         "keystone-client/addon/README.md",
+        "keystone-client/addon/KeystoneSync/KeystoneSync.lua",
+        "keystone-client/addon/KeystoneSync/KeystoneSync.toc",
         "scripts/check_addon_sync.py",
         "scripts/deploy_impact.py",
         "scripts/sync_addon.py",

@@ -67,6 +67,12 @@ Unknown or outside-repository paths must be surfaced. In `--strict` mode they ma
 
 Workflow files under `.github/` are classified as known no-product-impact by the script; they change automation behavior, not product deployment impact by themselves.
 
+Phase 11 decoupled standalone addon releases from KeystoneClient releases:
+
+- External canonical addon changes classify as `ADDON=true`, `ADDON_RELEASE=true`, `CLIENT_BUILD=false`, `CLIENT_RELEASE=false`.
+- KeystoneClient no longer embeds addon runtime files.
+- Changes to Client updater/installer code classify as Client build/release impact, not addon release impact.
+
 ## Report Format
 
 ```text

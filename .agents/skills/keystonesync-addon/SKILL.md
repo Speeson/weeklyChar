@@ -26,16 +26,7 @@ The canonical manually edited addon source is the external standalone repository
 
 `Speeson/KeystoneSync`
 
-The weeklyChar repository keeps generated client packaging content at:
-
-`keystone-client/addon/KeystoneSync/`
-
-Do not edit `keystone-client/addon/KeystoneSync/` directly. If addon work is required, work in `Speeson/KeystoneSync` or use/request a valid canonical source checkout and refresh the client bundle with:
-
-```text
-python scripts/sync_addon.py --source <path-to-Speeson-KeystoneSync>
-python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>
-```
+The weeklyChar repository must not contain embedded KeystoneSync addon runtime files. If addon work is required, work in `Speeson/KeystoneSync`; KeystoneClient consumes addon releases directly from that repository.
 
 Prepared addon-repository workflow handoff files live in:
 
@@ -45,6 +36,15 @@ docs/workflow-handoff/addon/release-addon.yml
 ```
 
 They are not active in `Speeson/KeystoneSync` until copied to that repository.
+
+Standalone addon releases are independently consumable by KeystoneClient's updater. Expected release contract:
+
+- Git tag: `vX.Y.Z`
+- Release asset: `KeystoneSync-vX.Y.Z.zip`
+- ZIP root: `KeystoneSync/`
+- `KeystoneSync.toc` `Version` must match the tag/asset version.
+
+Normal addon-only releases do not require a KeystoneClient release.
 
 ## Working rules
 
@@ -57,7 +57,7 @@ They are not active in `Speeson/KeystoneSync` until copied to that repository.
 7. Load `keystonesync-data-contract` for any tracked-data or SavedVariables contract change.
 8. Do not bump version or changelog unless the task is intended to produce a publishable addon change.
 9. Do not tag or release without explicit authorization.
-10. Keep `.toc` metadata, changelog, package layout, and bundled-copy synchronization coherent for release preparation.
+10. Keep `.toc` metadata, changelog, package layout, and release asset naming coherent for release preparation.
 
 ## Review checklist
 
@@ -69,8 +69,7 @@ When changing addon behavior, review whether the change affects:
 - D1 persistence
 - Web rendering
 - fixtures/tests
-- addon bundled in KeystoneClient
-- sync/check tooling
+- KeystoneClient release/updater compatibility
 - README/changelog
 - WoW patch compatibility
 
@@ -89,10 +88,8 @@ The `.toc` Interface value tracks WoW client compatibility and is independent fr
 
 At minimum:
 
-- Run `python scripts/validate_addon.py` for local generated-bundle structure.
-- Run `python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>` when a canonical source checkout is available and bundle freshness matters.
 - Lua loads without errors in WoW when manual testing is available.
 - Addon files required by `.toc` exist.
 - SavedVariables output remains structurally valid.
 - Package contains the expected `KeystoneSync/` folder layout.
-- Bundled client copy is synchronized when packaging or release work depends on it.
+- Release asset name, tag, ZIP root, and `.toc` Version satisfy the KeystoneClient updater contract.

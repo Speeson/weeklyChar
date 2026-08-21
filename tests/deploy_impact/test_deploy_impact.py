@@ -60,14 +60,11 @@ class DeployImpactTests(unittest.TestCase):
     def test_client_version_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/VERSION"], {"client_build", "client_release"})
 
-    def test_generated_addon_bundle_impacts_addon_and_client_distribution(self):
-        self.assertImpact(
-            ["keystone-client/addon/KeystoneSync/KeystoneSync.lua"],
-            {"addon", "addon_release", "client_build", "client_release"},
-        )
+    def test_external_addon_flag_impacts_addon_release_only(self):
+        self.assertImpact([], {"addon", "addon_release"}, addon_changed=True)
 
-    def test_external_addon_flag_impacts_addon_and_client_distribution(self):
-        self.assertImpact([], {"addon", "addon_release", "client_build", "client_release"}, addon_changed=True)
+    def test_addon_updater_code_impacts_client_distribution(self):
+        self.assertImpact(["keystone-client/addon_updater.py"], {"client_build", "client_release"})
 
     def test_client_tests_are_no_release_impact(self):
         self.assertImpact(["tests/client/test_sync_worker.py"], set())
@@ -79,8 +76,8 @@ class DeployImpactTests(unittest.TestCase):
         impact = self.assertImpact([".github/workflows/deploy.yml"], set())
         self.assertEqual(impact.known_no_impact_paths, [".github/workflows/deploy.yml"])
 
-    def test_addon_sync_tooling_is_no_product_impact(self):
-        self.assertImpact(["scripts/sync_addon.py", "scripts/check_addon_sync.py", "scripts/validate_addon.py"], set())
+    def test_deploy_impact_tooling_is_no_product_impact(self):
+        self.assertImpact(["scripts/deploy_impact.py"], set())
 
     def test_multiple_files_union_impacts_all_relevant_dimensions(self):
         self.assertImpact(

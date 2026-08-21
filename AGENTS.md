@@ -57,8 +57,10 @@ Removed historical components:
 Addon ownership rule:
 
 - `Speeson/KeystoneSync` is the only manually edited addon source.
-- `keystone-client/addon/KeystoneSync` is generated/synchronized client bundle content. Do not edit it directly.
-- If the canonical addon checkout is unavailable, do not fake addon changes in the generated bundle; use or request a valid source path and run the sync/check scripts.
+- KeystoneClient does not contain an embedded addon source or bundle.
+- Addon install/update is remote-release based through `Speeson/KeystoneSync` GitHub Releases and a local validated cache.
+- Standalone addon releases are independently consumable by KeystoneClient's updater and do not require a KeystoneClient release unless client code changes.
+- Do not recreate an embedded client addon bundle unless a future explicit architecture change says to do so.
 
 ## Project Skills
 

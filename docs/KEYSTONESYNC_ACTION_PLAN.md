@@ -372,6 +372,8 @@ weeklyChar/KeystoneSync
 weeklyChar/keystone-client/addon/KeystoneSync
 ```
 
+Historical note: Phase 11 later removed the remaining KeystoneClient addon bundle entirely.
+
 ---
 
 ## Task 5.1 — Verify canonical addon ownership
@@ -403,9 +405,9 @@ If `weeklyChar/KeystoneSync` has no required runtime/build role:
 
 **Status: COMPLETED**
 
-While KeystoneClient bundles the addon:
+Historical Phase 5 interim state, while KeystoneClient still bundled the addon:
 
-- keep the bundled addon only as generated/synchronized content;
+- kept the bundled addon only as generated/synchronized content;
 - create a synchronization mechanism;
 - create a divergence check;
 - document that the bundled copy must not be manually edited.
@@ -858,6 +860,8 @@ Validate:
 
 ## Task 11.1 — Design remote addon updater
 
+**Status: COMPLETED**
+
 KeystoneClient should query the latest `Speeson/KeystoneSync` GitHub Release.
 
 Compare:
@@ -871,6 +875,8 @@ latest version
 ---
 
 ## Task 11.2 — Implement safe addon update
+
+**Status: COMPLETED**
 
 Target flow:
 
@@ -896,15 +902,17 @@ Handle:
 
 ---
 
-## Task 11.3 — Reassess bundled addon
+## Task 11.3 — Remove bundled addon from KeystoneClient
 
-Prefer initially:
+**Status: COMPLETED**
+
+Final Phase 11 architecture:
 
 ```text
-bundled bootstrap addon + remote updater
+remote-only addon distribution + local validated cache
 ```
 
-Avoid forcing a new Client release for every addon change.
+KeystoneClient must not contain addon runtime files. Normal addon-only releases are published from `Speeson/KeystoneSync` and consumed by KeystoneClient without a new Client release.
 
 ---
 

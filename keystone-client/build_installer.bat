@@ -7,7 +7,7 @@ for /f "usebackq tokens=* delims=" %%v in ("VERSION") do set "APP_VERSION=%%v"
 if "%APP_VERSION%"=="" set "APP_VERSION=0.1.0"
 
 echo Building KeystoneClient %APP_VERSION%...
-pyinstaller --noconfirm --clean --onedir --windowed --name KeystoneClient --icon icon.ico --add-data "addon;addon" --add-data "icon.ico;." --add-data "bg.jpg;." --add-data "VERSION;." main.py
+pyinstaller --noconfirm --clean --onedir --windowed --name KeystoneClient --icon icon.ico --add-data "icon.ico;." --add-data "bg.jpg;." --add-data "VERSION;." main.py
 if errorlevel 1 exit /b 1
 
 if not exist installer mkdir installer

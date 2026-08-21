@@ -18,6 +18,7 @@ import requests
 
 import config as cfg_module
 import addon_installer
+import addon_updater
 import wow_path
 
 REGISTER_URL = "https://keystonesync.esgarpe.dev/login"
@@ -345,14 +346,26 @@ _TR = {
         "err_fields":    "Introduce usuario y contraseña.",
         "connecting":    "Conectando...",
         "conn_err":      "No se puede conectar con la API.",
-        "addon_desc":    "Instala o actualiza el addon de KeystoneClient\nen tu carpeta de World of Warcraft.",
+        "addon_desc":    "Instala o actualiza KeystoneSync desde sus releases\nen tu carpeta de World of Warcraft.",
         "addon_status_title": "Estado del addon",
         "addon_not_installed": "No instalado",
         "addon_installed": "Instalado",
         "addon_corrupt": "Instalación incompleta",
-        "addon_bundled": "Incluido",
         "addon_update_available": "Actualización disponible",
         "addon_up_to_date": "Al día",
+        "addon_remote_not_checked": "Ultima addon: sin comprobar",
+        "addon_check_update_btn": "Buscar update addon",
+        "addon_remote_checking": "Comprobando addon...",
+        "addon_remote_offline": "No se pudo comprobar el addon.",
+        "addon_remote_available": "Addon {version} disponible",
+        "addon_remote_up_to_date": "Addon al dia ({version})",
+        "addon_remote_not_installed": "Addon {version} disponible para instalar",
+        "addon_remote_newer_installed": "Instalado mas reciente que la ultima estable",
+        "addon_remote_invalid": "La instalacion puede repararse con {version}",
+        "addon_remote_updated": "Addon actualizado a {version}. Reinicia o usa /reload en WoW.",
+        "addon_remote_failed": "No se pudo actualizar el addon.",
+        "addon_remote_cached": "Usando cache validada {version}",
+        "addon_remote_no_candidate": "Sin release/cache valida disponible",
         "client_version": "Version del cliente",
         "update_title": "Actualizacion disponible",
         "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.\n\nSe descargara el instalador oficial desde GitHub Releases y se aplicara automaticamente.",
@@ -444,14 +457,26 @@ _TR = {
         "err_fields":    "Enter username and password.",
         "connecting":    "Connecting...",
         "conn_err":      "Cannot connect to API.",
-        "addon_desc":    "Install or update the KeystoneClient addon\nin your World of Warcraft folder.",
+        "addon_desc":    "Install or update KeystoneSync from its releases\nin your World of Warcraft folder.",
         "addon_status_title": "Addon status",
         "addon_not_installed": "Not installed",
         "addon_installed": "Installed",
         "addon_corrupt": "Incomplete install",
-        "addon_bundled": "Bundled",
         "addon_update_available": "Update available",
         "addon_up_to_date": "Up to date",
+        "addon_remote_not_checked": "Latest addon: not checked",
+        "addon_check_update_btn": "Check addon updates",
+        "addon_remote_checking": "Checking addon...",
+        "addon_remote_offline": "Could not check addon updates.",
+        "addon_remote_available": "Addon {version} available",
+        "addon_remote_up_to_date": "Addon is up to date ({version})",
+        "addon_remote_not_installed": "Addon {version} available to install",
+        "addon_remote_newer_installed": "Installed addon is newer than latest stable",
+        "addon_remote_invalid": "Current install can be repaired with {version}",
+        "addon_remote_updated": "Addon updated to {version}. Restart or /reload WoW.",
+        "addon_remote_failed": "Could not update addon.",
+        "addon_remote_cached": "Using validated cache {version}",
+        "addon_remote_no_candidate": "No valid release/cache available",
         "client_version": "Client version",
         "update_title": "Update available",
         "update_msg": "An update is available.\n\nYour client is using version {current} and the latest version is {latest}.\n\nThe official installer will be downloaded from GitHub Releases and applied automatically.",
@@ -568,6 +593,11 @@ class MainWindow:
         self._install_btn_w    = 0
         self._install_msg_id   = None
         self._addon_status_ids = {}
+        self._addon_check_button = None
+        self._addon_update_button = None
+        self._addon_update_check = None
+        self._addon_update_error = None
+        self._addon_update_busy = False
 
         self.addons_var = None
 
@@ -641,6 +671,7 @@ class MainWindow:
         self.root.eval("tk::PlaceWindow . center")
         self.root.after(1200, self._show_pending_update_changelog)
         self.root.after(2500, self._check_for_client_updates_async)
+        self.root.after(4200, self._auto_check_addon_update_async)
 
     def _calc_window_size(self):
         if self._bg_pil_orig:
@@ -1423,6 +1454,8 @@ class MainWindow:
         self._install_btn_w  = 0
         self._install_msg_id = None
         self._addon_status_ids = {}
+        self._addon_check_button = None
+        self._addon_update_button = None
 
         # Clear tab content and reset dynamic IDs
         cv.delete("tab_content")
@@ -1835,7 +1868,7 @@ class MainWindow:
         savedvars_found = bool(active_accounts or self._savedvars_path())
         wow_found = bool(savedvars_found or self._addons_folder() or self._wow_install_path())
         addon_info = addon_installer.installed_info(self._addons_folder())
-        addon_ready = bool(addon_info.get("installed") and not addon_info.get("corrupt"))
+        addon_ready = bool(addon_info.get("installed") and not addon_info.get("corrupt") and not addon_info.get("invalid_version"))
         setup_pending = bool(wow_found and not addon_ready and not savedvars_found)
         self._sync_account_item_ids = {}
 
@@ -1976,7 +2009,7 @@ class MainWindow:
         status_w = min(280, max(230, AW // 3))
         status_x = AX + AW - status_w - 18
         status_y = AY + TH + 12
-        status_h = 76
+        status_h = 144
         cv.create_rectangle(status_x, status_y, status_x + status_w, status_y + status_h,
                             outline=CARD_BDR, fill="#111827", tags="tab_content")
         cv.create_text(status_x + 12, status_y + 10, text=self._t("addon_status_title"),
@@ -1989,7 +2022,25 @@ class MainWindow:
             "detail": cv.create_text(status_x + 12, status_y + 52, text="",
                                      fill=MUTED, font=("Segoe UI", 8),
                                      anchor="nw", tags="tab_content"),
+            "remote_state": cv.create_text(status_x + 12, status_y + 76,
+                                           text=self._t("addon_remote_not_checked"),
+                                           fill=MUTED, font=("Segoe UI", 8, "bold"),
+                                           anchor="nw", tags="tab_content"),
+            "remote_detail": cv.create_text(status_x + 12, status_y + 96, text="",
+                                            fill=MUTED, font=("Segoe UI", 8),
+                                            anchor="nw", tags="tab_content"),
         }
+        check_btn = ttk.Button(cv, text=self._t("addon_check_update_btn"),
+                               style="Gray.TButton", command=self._check_addon_update_async)
+        update_btn = ttk.Button(cv, text=self._t("update_addon_btn"),
+                                style="Gold.TButton", command=self._start_remote_addon_update)
+        update_btn.configure(state="disabled")
+        self._addon_check_button = check_btn
+        self._addon_update_button = update_btn
+        self._cw(cv, check_btn, status_x + 12, status_y + status_h - 34,
+                 anchor="nw", width=status_w - 142, height=28, tags="tab_content")
+        self._cw(cv, update_btn, status_x + status_w - 122, status_y + status_h - 34,
+                 anchor="nw", width=110, height=28, tags="tab_content")
 
         desc_w = max(260, AW - status_w - 70)
         cv.create_text(AX + 22, AY + TH + 18, text=self._t("addon_desc"),
@@ -3022,39 +3073,37 @@ class MainWindow:
         info = addon_installer.installed_info(path)
         installed = info.get("installed")
         corrupt = info.get("corrupt")
+        invalid = info.get("invalid_version")
         installed_version = info.get("version")
-        bundled_version = info.get("bundled_version")
 
         if not installed:
             return (
                 self._t("addon_not_installed"),
-                f"{self._t('addon_bundled')}: v{bundled_version or '?'}",
+                self._latest_addon_detail(),
                 RED_COL,
                 self._t("install_addon_btn"),
             )
 
-        if corrupt:
+        if corrupt or invalid:
             return (
                 self._t("addon_corrupt"),
-                f"{self._t('addon_bundled')}: v{bundled_version or '?'}",
+                f"{self._t('addon_installed')}: v{installed_version or '?'}",
                 RED_COL,
                 self._t("reinstall_addon_btn"),
             )
 
-        if bundled_version and installed_version and installed_version != bundled_version:
-            return (
-                self._t("addon_update_available"),
-                f"v{installed_version} -> v{bundled_version}",
-                ACCENT,
-                self._t("update_addon_btn"),
-            )
-
         return (
             f"{self._t('addon_installed')}: v{installed_version or '?'}",
-            self._t("addon_up_to_date"),
+            self._latest_addon_detail(),
             GREEN,
             self._t("reinstall_addon_btn"),
         )
+
+    def _latest_addon_detail(self):
+        check = self._addon_update_check
+        if check and check.latest_version:
+            return f"Latest: v{check.latest_version}"
+        return self._t("addon_remote_not_checked")
 
     def _refresh_addon_status(self):
         cv = self._cv
@@ -3069,6 +3118,187 @@ class MainWindow:
             cv.itemconfigure(ids["detail"], text=detail, fill=MUTED)
         if self._install_btn and self._install_btn_text:
             self._install_btn.itemconfigure(self._install_btn_text, text=button_text)
+        self._apply_addon_update_check_to_ui()
+
+    def _set_addon_remote_status(self, state, detail="", color=MUTED, *, update_enabled=False, check_enabled=True):
+        cv = self._cv
+        if cv and cv.winfo_exists():
+            ids = getattr(self, "_addon_status_ids", {})
+            if ids.get("remote_state"):
+                cv.itemconfigure(ids["remote_state"], text=state, fill=color)
+            if ids.get("remote_detail"):
+                cv.itemconfigure(ids["remote_detail"], text=detail, fill=MUTED)
+        if self._addon_check_button:
+            try:
+                self._addon_check_button.configure(state="normal" if check_enabled else "disabled")
+            except Exception:
+                pass
+        if self._addon_update_button:
+            try:
+                self._addon_update_button.configure(state="normal" if update_enabled else "disabled")
+            except Exception:
+                pass
+
+    def _auto_check_addon_update_async(self):
+        self._check_addon_update_async(auto=True)
+
+    def _check_addon_update_async(self, auto=False):
+        if self._addon_update_busy:
+            return
+        path = (self.addons_var.get().strip() if self.addons_var else "") or self._addons_folder()
+        self._addon_update_busy = True
+        self._addon_update_check = None
+        self._addon_update_error = None
+        self._set_addon_remote_status(
+            self._t("addon_remote_checking"),
+            check_enabled=False,
+            update_enabled=False,
+        )
+        threading.Thread(target=self._check_addon_update_worker, args=(path,), daemon=True).start()
+
+    def _check_addon_update_worker(self, path):
+        try:
+            check = addon_updater.check_for_update(path, client_version=CLIENT_VERSION)
+        except Exception as exc:
+            self.root.after(0, lambda: self._finish_addon_update_check(None, str(exc)))
+            return
+        self.root.after(0, lambda: self._finish_addon_update_check(check, None))
+
+    def _finish_addon_update_check(self, check, error):
+        self._addon_update_busy = False
+        if error:
+            self._addon_update_error = error
+            self._set_addon_remote_status(
+                self._t("addon_remote_offline"),
+                error,
+                RED_COL,
+                check_enabled=True,
+                update_enabled=False,
+            )
+            return
+
+        self._addon_update_check = check
+        self._addon_update_error = None
+        self._apply_addon_update_check_to_ui()
+        self._refresh_addon_status()
+
+    def _apply_addon_update_check_to_ui(self):
+        check = self._addon_update_check
+        if not check:
+            if self._addon_update_error:
+                self._set_addon_remote_status(
+                    self._t("addon_remote_offline"),
+                    self._addon_update_error,
+                    RED_COL,
+                    check_enabled=True,
+                    update_enabled=False,
+                )
+            return
+
+        latest = check.latest_version or "?"
+        installed = check.installed_version or "?"
+        detail = f"Installed: v{installed} - Latest: v{latest}"
+        color = GREEN
+        state = self._t("addon_remote_up_to_date").format(version=latest)
+        if check.source == "cache":
+            color = ACCENT if check.install_available else MUTED
+            state = self._t("addon_remote_cached").format(version=latest)
+        if check.status in ("not_installed", "not_installed_cached"):
+            color = ACCENT
+            state = self._t("addon_remote_not_installed").format(version=latest)
+        elif check.status in ("installed_unknown", "installed_unknown_cached"):
+            color = ACCENT
+            state = self._t("addon_remote_invalid").format(version=latest)
+        elif check.status in ("update_available", "update_available_cached"):
+            color = ACCENT
+            state = self._t("addon_remote_available").format(version=latest)
+        elif check.status == "installed_newer":
+            state = self._t("addon_remote_newer_installed")
+        elif check.status == "offline_no_candidate":
+            color = RED_COL
+            state = self._t("addon_remote_no_candidate")
+
+        if self._addon_update_button:
+            try:
+                text_key = "reinstall_addon_btn"
+                if check.status in ("not_installed", "not_installed_cached"):
+                    text_key = "install_addon_btn"
+                elif check.status in ("update_available", "update_available_cached", "installed_unknown", "installed_unknown_cached"):
+                    text_key = "update_addon_btn"
+                self._addon_update_button.configure(text=self._t(text_key))
+                if self._install_btn and self._install_btn_text and check.install_available:
+                    self._install_btn.itemconfigure(self._install_btn_text, text=self._t(text_key))
+            except Exception:
+                pass
+
+        self._set_addon_remote_status(
+            state,
+            detail,
+            color,
+            check_enabled=True,
+            update_enabled=bool(check.install_available),
+        )
+
+    def _start_remote_addon_update(self):
+        if self._addon_update_busy:
+            return
+        path = self.addons_var.get().strip() if self.addons_var else ""
+        check = self._addon_update_check
+        if not path:
+            self._set_install_msg(self._t("sel_folder_err"))
+            return
+        if not check or not check.install_available:
+            self._check_addon_update_async()
+            return
+        self._addon_update_busy = True
+        self._set_install_msg("")
+        self._set_install_progress(15)
+        self._set_addon_remote_status(
+            self._t("downloading_update"),
+            check_enabled=False,
+            update_enabled=False,
+        )
+        threading.Thread(
+            target=self._remote_addon_update_worker,
+            args=(path, check),
+            daemon=True,
+        ).start()
+
+    def _remote_addon_update_worker(self, path, check):
+        try:
+            result = addon_updater.install_from_check(path, check, client_version=CLIENT_VERSION)
+        except Exception as exc:
+            self.root.after(0, lambda: self._finish_remote_addon_update(None, str(exc)))
+            return
+        self.root.after(0, lambda: self._finish_remote_addon_update(result.version, None))
+
+    def _finish_remote_addon_update(self, version, error):
+        self._addon_update_busy = False
+        if error:
+            self._set_install_progress(0)
+            self._set_install_msg(f"{self._t('addon_remote_failed')} {error}")
+            self._set_addon_remote_status(
+                self._t("addon_remote_failed"),
+                error,
+                RED_COL,
+                check_enabled=True,
+                update_enabled=bool(self._addon_update_check and self._addon_update_check.install_available),
+            )
+            return
+
+        self._set_install_progress(100)
+        msg = self._t("addon_remote_updated").format(version=version)
+        self._set_install_msg(msg, color=GREEN)
+        self._set_addon_remote_status(
+            self._t("addon_remote_up_to_date").format(version=version),
+            msg,
+            GREEN,
+            check_enabled=True,
+            update_enabled=False,
+        )
+        self._addon_update_check = None
+        self._refresh_addon_status()
+        self._check_addon_update_async()
 
     def _browse_addons(self):
         folder = filedialog.askdirectory(title="Selecciona la carpeta AddOns")
@@ -3105,23 +3335,7 @@ class MainWindow:
             cv.itemconfigure(self._install_msg_id, text=text, fill=color)
 
     def _do_install(self):
-        path = (self.addons_var.get().strip() if self.addons_var else "")
-        if not path:
-            self._set_install_msg(self._t("sel_folder_err"))
-            return
-        self._set_install_msg("")
-        self._set_install_progress(0)
-        self.root.update()
-        try:
-            self._set_install_progress(40)
-            self.root.update()
-            addon_installer.install(path)
-            self._set_install_progress(100)
-            self._set_install_msg(self._t("installed_ok"), color=GREEN)
-            self._refresh_addon_status()
-        except Exception as e:
-            self._set_install_progress(0)
-            self._set_install_msg(f"Error: {e}")
+        self._start_remote_addon_update()
 
     def _toggle_autostart(self):
         var = getattr(self, "settings_autostart_var", None)

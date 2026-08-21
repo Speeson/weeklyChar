@@ -41,9 +41,9 @@ payload
 Worker API
 ```
 
-Current implementation uses Python, `slpp` parsing, Raider.IO enrichment, Tkinter/tray UI, and the configured Worker API URL.
+Current implementation uses Python, `slpp` parsing, Raider.IO enrichment, Tkinter/tray UI, the configured Worker API URL, and a remote-release addon updater.
 
-The bundled addon directory `keystone-client/addon/KeystoneSync/` is generated packaging content synchronized from external `Speeson/KeystoneSync`. Do not edit it directly.
+KeystoneClient does not embed KeystoneSync addon runtime files. Addon installation/update is based on validated GitHub Release ZIP assets from `Speeson/KeystoneSync`.
 
 ## Rules
 
@@ -54,7 +54,7 @@ The bundled addon directory `keystone-client/addon/KeystoneSync/` is generated p
 5. Treat network failures as recoverable.
 6. Do not block the UI thread with long-running sync/update operations.
 7. Validate addon paths before installing/updating.
-8. Use `scripts/sync_addon.py` and `scripts/check_addon_sync.py` when client packaging depends on addon bundle freshness.
+8. Do not add addon source/runtime files to the Client package.
 9. Keep release asset compatibility with the Web download link.
 10. Do not release without explicit authorization.
 
@@ -71,7 +71,7 @@ When changing packaging, confirm:
 
 - generated executable location;
 - bundled resource paths;
-- addon resource inclusion;
+- absence of addon runtime files;
 - installer output name;
 - expected public GitHub release asset name.
 
@@ -89,16 +89,19 @@ Versioned workflow:
 
 ## Addon updater
 
-Remote addon updating is future Phase 11 work, not current behavior.
+Remote addon updating is implemented in `keystone-client/addon_updater.py`.
 
-When working on remote addon update support:
+KeystoneClient checks `Speeson/KeystoneSync` stable GitHub Releases in the background and updates the UI, but install/update/reinstall always requires a user click. Validated release ZIPs are cached under `%APPDATA%\KeystoneClient\addon-cache\` for recovery.
 
-- compare installed/latest versions;
-- validate downloaded archive layout;
-- use safe replacement;
-- avoid partial installation;
-- retain bootstrap behavior if the client installer includes an addon;
-- handle offline/network failure gracefully.
+When working on addon update support:
+
+- compare installed/latest versions with semantic version rules;
+- validate downloaded archive layout and `.toc` version consistency;
+- use safe replacement through `addon_installer.install_from_source`;
+- avoid partial installation and preserve rollback behavior;
+- keep anti-downgrade behavior for cached packages;
+- handle offline/network failure gracefully;
+- run updater tests in `tests/client/test_addon_updater.py`.
 
 ## Validation
 

@@ -4,7 +4,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, syncs it f
 
 - **Web:** https://keystonesync.esgarpe.dev
 - **API:** https://api-keystonesync.esgarpe.dev
-- **Addon source:** `Speeson/KeystoneSync` is the canonical manually edited addon repository. The client-bundled addon copy is generated from it.
+- **Addon source:** `Speeson/KeystoneSync` is the canonical manually edited addon repository.
 
 ---
 
@@ -57,11 +57,7 @@ The addon records current keystone data and weekly state such as Great Vault, Pr
 World of Warcraft/_retail_/WTF/Account/<ACCOUNT>/SavedVariables/KeystoneSync.lua
 ```
 
-This repository keeps one generated addon bundle for KeystoneClient packaging:
-
-- `keystone-client/addon/KeystoneSync/`
-
-Do not edit that bundled copy manually. Refresh it from a local checkout of `Speeson/KeystoneSync` with `python scripts/sync_addon.py --source <path-to-Speeson-KeystoneSync>` and verify it with `python scripts/check_addon_sync.py --source <path-to-Speeson-KeystoneSync>`.
+KeystoneClient does not embed or package addon runtime files. Addon installation and updates are consumed directly from `Speeson/KeystoneSync` GitHub Releases.
 
 ### `keystone-client`
 
@@ -75,7 +71,9 @@ Responsibilities:
 - enriches character data with Raider.IO where relevant;
 - builds the sync payload;
 - posts to `POST /api/keystones/update` on the Worker API;
-- installs/updates the bundled addon copy into the user's WoW AddOns folder;
+- checks `Speeson/KeystoneSync` releases for addon updates in the background;
+- installs, updates, or reinstalls the addon from validated release ZIPs when the user requests it;
+- keeps one validated local addon ZIP cache for recovery;
 - runs as a packaged Windows application.
 
 Current version:
@@ -202,19 +200,21 @@ The Web application is currently documented as deployed through Vercel. The exac
 
 ## Data Flow
 
-1. The user installs KeystoneClient and the bundled KeystoneSync addon.
-2. The user logs into World of Warcraft Retail with level-90 characters.
-3. The addon writes `KeystoneSyncDB` to WoW SavedVariables.
-4. KeystoneClient discovers selected SavedVariables files.
-5. KeystoneClient parses the Lua table, enriches with Raider.IO where relevant, and builds a JSON sync payload.
-6. KeystoneClient posts the payload to `POST /api/keystones/update`.
-7. `keystone-worker` persists character JSON blocks and current keystone snapshots in D1.
-8. `keystone-web` reads character/team data from the Worker API and renders the dashboard, characters, teams, and summary views.
+1. The user installs KeystoneClient.
+2. KeystoneClient checks the canonical addon GitHub Releases in the background.
+3. The user installs or updates the KeystoneSync addon from KeystoneClient.
+4. The user logs into World of Warcraft Retail with level-90 characters.
+5. The addon writes `KeystoneSyncDB` to WoW SavedVariables.
+6. KeystoneClient discovers selected SavedVariables files.
+7. KeystoneClient parses the Lua table, enriches with Raider.IO where relevant, and builds a JSON sync payload.
+8. KeystoneClient posts the payload to `POST /api/keystones/update`.
+9. `keystone-worker` persists character JSON blocks and current keystone snapshots in D1.
+10. `keystone-web` reads character/team data from the Worker API and renders the dashboard, characters, teams, and summary views.
 
 Primary source files for this flow:
 
-- Addon source: `Speeson/KeystoneSync` (`KeystoneSync.lua`, `KeystoneSync.toc`)
-- Generated client addon bundle: `keystone-client/addon/KeystoneSync/`
+- Addon source/releases: `Speeson/KeystoneSync`
+- Addon updater/cache/install code: `keystone-client/addon_updater.py`, `keystone-client/addon_installer.py`
 - SavedVariables discovery: `keystone-client/wow_path.py`
 - Client parse/payload/sync: `keystone-client/sync_worker.py`
 - Sync endpoint: `keystone-worker/src/routes/keystones.ts`
@@ -232,7 +232,7 @@ Primary source files for this flow:
 | Web | Partial / external | Build and lint scripts are versioned. Deployment is documented as Vercel-based, but external Git Integration settings are not stored here. |
 | Worker | Manual | Wrangler scripts are versioned. Deploy and remote D1 migration require explicit authorization. |
 | Client | Build scripted, release manual | PyInstaller/Inno Setup build the app and installer. GitHub Release publication is manual. |
-| Addon | Manual | `Speeson/KeystoneSync` is the canonical addon source. The KeystoneClient bundle is refreshed with local sync/check scripts before client packaging when addon files change. |
+| Addon | Independent manual release | `Speeson/KeystoneSync` is the canonical addon source. KeystoneClient can install standalone addon release ZIPs without a new Client release. |
 | Deployment Impact | Scripted | Run `python scripts/deploy_impact.py --files <changed-paths>` before deploy/release decisions. The script classifies impact only; it does not deploy or release. |
 
 CI/CD workflow infrastructure is versioned under `.github/workflows/`:
@@ -244,6 +244,18 @@ CI/CD workflow infrastructure is versioned under `.github/workflows/`:
 - `release-client.yml` can publish a Client release only when manually requested.
 
 Standalone addon workflow files are prepared as handoff material under `docs/workflow-handoff/addon/` and must be copied to `Speeson/KeystoneSync` before they become active.
+
+---
+
+## Addon Updates
+
+KeystoneClient does not bundle KeystoneSync addon files.
+
+After startup, the Client checks stable GitHub Releases from `Speeson/KeystoneSync` in the background. It never installs automatically. The user must click Install, Update, or Reinstall.
+
+The updater consumes only the dedicated `KeystoneSync-vX.Y.Z.zip` release asset, validates the package, stores the last validated ZIP under `%APPDATA%\KeystoneClient\addon-cache\`, and safely installs it into the selected WoW Retail AddOns folder.
+
+Client releases are not required for ordinary addon-only updates.
 
 ---
 
@@ -266,12 +278,12 @@ Removed paths:
 weeklyChar/
 |-- .agents/                         # Project agent skills
 |-- docs/                            # Modernization plans and project context
-|-- scripts/                         # Addon bundle sync/check tooling
+|-- scripts/                         # Repository validation and impact tooling
 |-- keystone-client/                 # Current Windows client
 |   |-- sync_worker.py               # SavedVariables parse/payload/API sync
 |   |-- wow_path.py                  # WoW install and SavedVariables discovery
-|   |-- addon_installer.py           # Bundled addon installer
-|   `-- addon/KeystoneSync/          # Generated bundled addon copy
+|   |-- addon_installer.py           # Local addon state/install/rollback
+|   `-- addon_updater.py             # GitHub release updater and cache
 |-- keystone-worker/                 # Current Worker API and D1 integration
 |   |-- src/
 |   |-- migrations/
@@ -292,7 +304,7 @@ Modernization work is governed by:
 - `docs/ARCHITECTURE.md`
 - `docs/DATA_CONTRACT.md`
 
-Do not edit the generated client addon bundle directly, create CI/CD workflows, deploy, release, tag, push, or run remote migrations unless the current task explicitly authorizes that work.
+Do not embed addon runtime files into KeystoneClient, create CI/CD workflows, deploy, release, tag, push, or run remote migrations unless the current task explicitly authorizes that work.
 
 Before deciding what to build, deploy, migrate, or release, run:
 

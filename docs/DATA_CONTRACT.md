@@ -28,7 +28,7 @@ This document describes the current contract implemented by the repository. It d
 
 Primary files:
 
-- Addon bundle used for inspection: `keystone-client/addon/KeystoneSync/KeystoneSync.lua`
+- Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
 - Client parser/payload: `keystone-client/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
 - D1 schema: `keystone-worker/migrations/0001_initial.sql`
