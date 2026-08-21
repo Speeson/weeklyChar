@@ -30,6 +30,26 @@ on:
         required: false
         default: true
         type: boolean
+      client_release_mode:
+        description: Client release behavior for manual runs.
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - build-only
+          - release-dry-run
+          - release
+      client_version_bump:
+        description: Client release bump for release planning.
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: read
@@ -155,11 +175,75 @@ jobs:
       run_migrations: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations }}
     secrets: inherit
 
-  client:
+  client-build:
     name: Client build
     needs: impact
-    if: needs.impact.outputs.client_build == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build_client)
+    if: >
+      (
+        needs.impact.outputs.client_build == 'true' &&
+        needs.impact.outputs.client_release != 'true' &&
+        (github.event_name != 'workflow_dispatch' || inputs.build_client)
+      ) ||
+      (github.event_name == 'workflow_dispatch' && inputs.client_release_mode == 'build-only')
     uses: ./.github/workflows/build-client.yml
+
+  client-release-pr:
+    name: Client release plan
+    needs: impact
+    if: github.event_name == 'pull_request' && needs.impact.outputs.client_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Client changeset and planned release
+        run: |
+          python scripts/release_changes.py plan --component client --version-file keystone-client/VERSION --bump auto --notes-out release-notes.md --json > release-plan.json
+          cat release-plan.json
+
+      - name: Summarize planned release
+        run: |
+          {
+            echo "## Planned KeystoneClient Release"
+            echo
+            echo '```json'
+            cat release-plan.json
+            echo '```'
+            echo
+            cat release-notes.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  client-release-pr-build:
+    name: Client release dry-run build
+    needs:
+      - impact
+      - client-release-pr
+    if: github.event_name == 'pull_request' && needs.impact.outputs.client_release == 'true'
+    uses: ./.github/workflows/build-client.yml
+
+  client-release:
+    name: Client release
+    needs: impact
+    if: >
+      (needs.impact.outputs.client_release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.client_release_mode == 'release')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-client.yml
+    with:
+      mode: release
+      version_bump: ${{ inputs.client_version_bump || 'auto' }}
+
+  client-release-dry-run:
+    name: Client release dry-run
+    needs: impact
+    if: github.event_name == 'workflow_dispatch' && inputs.client_release_mode == 'release-dry-run'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-client.yml
+    with:
+      mode: release-dry-run
+      version_bump: ${{ inputs.client_version_bump || 'auto' }}
 
   addon-impact:
     name: Addon release handoff
@@ -181,7 +265,11 @@ jobs:
       - impact
       - web
       - worker
-      - client
+      - client-build
+      - client-release-pr
+      - client-release-pr-build
+      - client-release
+      - client-release-dry-run
       - addon-impact
     if: always()
     runs-on: ubuntu-latest
@@ -191,7 +279,11 @@ jobs:
           echo "Impact job: ${{ needs.impact.result }}"
           echo "Web job: ${{ needs.web.result }}"
           echo "Worker job: ${{ needs.worker.result }}"
-          echo "Client job: ${{ needs.client.result }}"
+          echo "Client build job: ${{ needs.client-build.result }}"
+          echo "Client release plan job: ${{ needs.client-release-pr.result }}"
+          echo "Client release dry-run build job: ${{ needs.client-release-pr-build.result }}"
+          echo "Client release job: ${{ needs.client-release.result }}"
+          echo "Client manual dry-run job: ${{ needs.client-release-dry-run.result }}"
           echo "Addon handoff job: ${{ needs.addon-impact.result }}"
           echo "Changed files: ${{ needs.impact.outputs.changed_files }}"
           echo "Unknown paths: ${{ needs.impact.outputs.unknown_paths }}"

@@ -53,12 +53,16 @@ class DeployImpactTests(unittest.TestCase):
     def test_client_resource_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/bg.jpg"], {"client_build", "client_release"})
 
-    def test_client_installer_script_impacts_build_and_release(self):
-        self.assertImpact(["keystone-client/build_installer.bat"], {"client_build", "client_release"})
+    def test_client_build_scripts_are_build_only(self):
+        self.assertImpact(["keystone-client/build.bat"], {"client_build"})
+        self.assertImpact(["keystone-client/build_installer.bat"], {"client_build"})
+
+    def test_client_installer_behavior_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/installer/KeystoneClient.iss"], {"client_build", "client_release"})
 
-    def test_client_version_impacts_build_and_release(self):
-        self.assertImpact(["keystone-client/VERSION"], {"client_build", "client_release"})
+    def test_client_version_generated_bump_is_build_only(self):
+        self.assertImpact(["keystone-client/VERSION"], {"client_build"})
+        self.assertImpact(["keystone-client/installer/version.ini"], {"client_build"})
 
     def test_external_addon_flag_impacts_addon_release_only(self):
         self.assertImpact([], {"addon", "addon_release"}, addon_changed=True)
@@ -78,6 +82,18 @@ class DeployImpactTests(unittest.TestCase):
 
     def test_deploy_impact_tooling_is_no_product_impact(self):
         self.assertImpact(["scripts/deploy_impact.py"], set())
+
+    def test_changesets_and_release_tooling_are_no_product_impact(self):
+        impact = self.assertImpact(
+            [
+                ".changes/pending/client-addon-updater.json",
+                ".changes/releases/client-v0.3.0/release-notes.md",
+                "scripts/release_changes.py",
+                "scripts/release_state.py",
+            ],
+            set(),
+        )
+        self.assertEqual(impact.unknown_paths, [])
 
     def test_multiple_files_union_impacts_all_relevant_dimensions(self):
         self.assertImpact(

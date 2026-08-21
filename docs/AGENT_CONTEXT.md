@@ -6,7 +6,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, including 
 
 ## Current modernization status
 
-`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, selective GitHub Actions workflow infrastructure, and an independent remote-release KeystoneClient addon updater. The next planned milestone is Phase 12, the full WoW 12.1 / Midnight Season 2 update.
+`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, selective GitHub Actions workflow infrastructure, autonomous KeystoneClient releases, and an independent remote-release KeystoneClient addon updater. The next planned milestone is Phase 12, the full WoW 12.1 / Midnight Season 2 update.
 
 ## Verified current architecture
 
@@ -70,7 +70,7 @@ Verified from checked-out files:
 
 - Web: build/lint scripts exist in `keystone-web/package.json`. Deployment is documented as Vercel-based, but checked-in deployment ownership is not fully provable.
 - Worker: `keystone-worker/package.json` defines local dev, deploy, typecheck, tests, and local/remote D1 migration scripts. Remote deploy/migration requires explicit authorization.
-- Client: PyInstaller and Inno Setup scripts produce `KeystoneClient.exe` and `installer/output/KeystoneClientSetup.exe`. Releases are manual through GitHub Releases.
+- Client: PyInstaller and Inno Setup scripts produce `KeystoneClient.exe` and `installer/output/KeystoneClientSetup.exe`. Release-impacting Client changes require a valid pending `.changes/` changeset. On qualifying `main` pushes, `.github/workflows/deploy.yml` calls `.github/workflows/release-client.yml` in release mode, bumps `keystone-client/VERSION`, consumes changesets into `.changes/releases/`, atomically pushes the release commit plus `client-vX.Y.Z` tag, and publishes/verifies the GitHub Release asset `KeystoneClientSetup.exe`.
 - Addon: changes go to canonical `Speeson/KeystoneSync` with version tags after explicit confirmation. Standalone addon releases use tag `vX.Y.Z`, asset `KeystoneSync-vX.Y.Z.zip`, and ZIP root `KeystoneSync/`. KeystoneClient checks these releases automatically in the background and installs/updates only after explicit user action.
 - Client addon cache: `%APPDATA%\KeystoneClient\addon-cache\` stores the last successfully downloaded and validated addon ZIP for recovery. It is not canonical and must not cause automatic downgrade.
 - Deterministic deployment-impact script: `scripts/deploy_impact.py`.
@@ -82,9 +82,9 @@ Verified from checked-out files:
 - Web workflow: `.github/workflows/deploy-web.yml` validates build and lint. Build is blocking; lint is temporarily non-blocking because of the documented Phase 8 baseline. Web production deployment remains documented as externally Vercel-managed.
 - Worker workflow: `.github/workflows/deploy-worker.yml` validates `npm run typecheck` and `npm test`; Worker deploy and remote D1 migrations are guarded behind manual inputs and `production` environment.
 - Client build workflow: `.github/workflows/build-client.yml` builds the Windows installer on `windows-latest` with read-only permissions and uploads `KeystoneClientSetup.exe` as a workflow artifact for validation/orchestration.
-- Client release workflow: `.github/workflows/release-client.yml` builds the Windows installer and publishes a GitHub Release only when manually run with `publish_release=true`.
+- Client release workflow: `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run`, and `release`; PRs do not publish, while qualifying `main` pushes publish automatically after Deployment Impact reports `CLIENT_RELEASE=true`.
 - Client release tag convention: `client-vX.Y.Z`, derived from `keystone-client/VERSION`.
-- Addon workflows: prepared as handoff files in `docs/workflow-handoff/addon/` because the canonical `Speeson/KeystoneSync` repository is external and was not modified in Phase 10.
+- Addon workflows: authoritative addon CI/CD lives in the standalone `Speeson/KeystoneSync` repository. `weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML. weeklyChar must not publish addon releases.
 - GitHub Actions operational status: user confirmed the required GitHub-side configuration was added and validation workflows passed. Required external configuration includes `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and the GitHub `production` environment. Secret values and exact external settings are not versioned in this repository.
 
 ## Validation baseline
@@ -110,7 +110,7 @@ Verified from checked-out files:
 ## Known risks / ambiguities
 
 - Historical FastAPI/Railway docs are retained for project history and should not be used as current architecture instructions.
-- The canonical addon repository is external. This repository contains addon updater tests and handoff workflow files, but no active embedded addon source.
+- The canonical addon repository is external. This repository contains addon updater tests and a pointer to addon workflow ownership, but no active embedded addon source and no active addon release workflows.
 - `KeystoneSyncDB.keystoneWeeklyResetKey` and `mythicPlusSeasonUpdatedAt` are written by the addon but are not currently included in the client sync payload.
 - Web API response types are duplicated in individual pages, and seasonal dungeon/currency metadata remains hardcoded pending the WoW patch/season phase.
 

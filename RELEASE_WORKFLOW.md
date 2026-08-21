@@ -9,17 +9,17 @@ Estado actual verificado:
 - El cliente se construye con PyInstaller/Inno Setup.
 - El instalador publico esperado es `KeystoneClientSetup.exe`.
 - El build del cliente para validacion/orquestacion usa `.github/workflows/build-client.yml` con permisos read-only.
-- La publicacion de GitHub Releases del cliente esta automatizada solo mediante ejecucion manual de `.github/workflows/release-client.yml` con `publish_release=true`.
+- La publicacion de GitHub Releases del cliente esta automatizada para pushes a `main` cuando Deployment Impact marca `CLIENT_RELEASE=true` y existe un changeset valido de cliente.
 - El Worker se despliega con Wrangler y usa D1; despliegue y migraciones remotas estan disponibles solo por ejecucion manual/guardada de `.github/workflows/deploy-worker.yml`.
 - La web esta documentada como desplegada con Vercel, pero la configuracion externa de Git Integration no esta versionada en este repositorio.
-- Los workflows del addon canonico estan preparados como handoff en `docs/workflow-handoff/addon/`; no estan activos hasta copiarlos a `Speeson/KeystoneSync`.
+- Los workflows del addon canonico viven en `Speeson/KeystoneSync`. `docs/workflow-handoff/addon/` conserva solo un puntero para evitar una segunda copia autoritativa. Este repositorio no publica releases del addon.
 - KeystoneClient no contiene una copia embebida del addon. Instala releases standalone del addon desde `Speeson/KeystoneSync`; un cambio solo de addon no requiere release del cliente.
 
 ## Addon KeystoneSync
 
 - Si se modifica el addon, primero hay que pedir confirmacion antes de subir cambios.
 - Tras confirmacion, modificar el addon solo en el repositorio canonico `Speeson/KeystoneSync`.
-- Los workflows preparados para ese repositorio estan en `docs/workflow-handoff/addon/validate-addon.yml` y `docs/workflow-handoff/addon/release-addon.yml`.
+- Los workflows reales del addon estan en `Speeson/KeystoneSync/.github/workflows/`.
 - El release del addon debe usar tag `vX.Y.Z` y asset dedicado `KeystoneSync-vX.Y.Z.zip` con carpeta raiz `KeystoneSync/`.
 - Una release solo de addon se publica en `Speeson/KeystoneSync` y los usuarios pueden actualizar desde KeystoneClient; no hace falta nuevo `KeystoneClientSetup.exe`.
 - No recrear un bundle de addon dentro de `keystone-client`; el cliente consume releases remotas y una cache local validada.
@@ -28,15 +28,16 @@ Estado actual verificado:
 
 ## Cliente KeystoneClient
 
-- Si se modifica el cliente, primero hay que pedir confirmacion antes de subir cambios.
-- Tras confirmacion, subir los cambios al repositorio principal del proyecto: `Speeson/weeklyChar`.
+- Si se modifica comportamiento visible del cliente, incluir un changeset JSON en `.changes/pending/` con `components: ["client"]`.
+- Tras confirmacion explicita, subir los cambios al repositorio principal del proyecto: `Speeson/weeklyChar`.
 - El build del cliente no descarga ni empaqueta el addon.
 - El instalador del cliente no debe contener `KeystoneSync.toc`, `KeystoneSync.lua` ni otros archivos runtime del addon.
 - Generar el instalador con `keystone-client/build_installer.bat`.
-- Si hay cambios de cliente, proporcionar los datos para que el usuario cree el release manualmente.
 - El workflow `.github/workflows/build-client.yml` genera el instalador como artifact para validacion/orquestacion.
-- El workflow `.github/workflows/release-client.yml` genera el instalador y puede publicar el release cuando se ejecuta manualmente.
-- Para publicar el release, ejecutar manualmente `release-client.yml` con `publish_release=true`.
+- El workflow `.github/workflows/release-client.yml` soporta `build-only`, `release-dry-run` y `release`.
+- En Pull Requests, los cambios con `CLIENT_RELEASE=true` validan el changeset, calculan version/notas y buildan sin publicar.
+- En push a `main`, los cambios con `CLIENT_RELEASE=true` publican automaticamente usando `auto` para seleccionar `patch`, `minor` o `major`.
+- El release commit y el tag se suben con `git push --atomic`; no hay fallback secuencial.
 - El tag del cliente debe seguir el formato existente `client-vX.Y.Z`, derivado de `keystone-client/VERSION`.
 - El release del cliente debe incluir el instalador generado como asset con el nombre `KeystoneClientSetup.exe`.
 
@@ -62,7 +63,7 @@ Estado actual verificado:
 - Antes de decidir que construir, desplegar, migrar o publicar, ejecutar Deployment Impact. Para cambios del addon canonico externo usar `python scripts/deploy_impact.py --addon-changed`.
 - Tras Phase 11, `--addon-changed` implica release standalone del addon, no build/release del cliente.
 - En Pull Requests, el orquestador solo valida/builda segun impacto; no publica releases, despliega Worker ni ejecuta migraciones remotas.
-- En `main`, el orquestador valida/builda segun impacto; las operaciones productivas siguen siendo manuales/guardadas.
+- En `main`, el orquestador valida/builda segun impacto. Los releases de cliente son automaticos cuando `CLIENT_RELEASE=true`; Worker deploy y migraciones remotas siguen siendo manuales/guardadas.
 - Nunca hacer push sin confirmacion explicita del usuario.
 - Antes de cualquier push, revisar el estado de Git y confirmar que los cambios pertenecen al alcance esperado.
 - Si hay cambios mezclados de addon, cliente y web, separar mentalmente el impacto:

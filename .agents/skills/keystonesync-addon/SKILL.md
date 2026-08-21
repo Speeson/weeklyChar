@@ -28,14 +28,23 @@ The canonical manually edited addon source is the external standalone repository
 
 The weeklyChar repository must not contain embedded KeystoneSync addon runtime files. If addon work is required, work in `Speeson/KeystoneSync`; KeystoneClient consumes addon releases directly from that repository.
 
-Prepared addon-repository workflow handoff files live in:
+Authoritative addon workflows live in the standalone repository:
 
 ```text
-docs/workflow-handoff/addon/validate-addon.yml
-docs/workflow-handoff/addon/release-addon.yml
+Speeson/KeystoneSync/.github/workflows/
 ```
 
-They are not active in `Speeson/KeystoneSync` until copied to that repository.
+`weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML.
+
+Addon release-impacting changes in the standalone repository should use the same changeset model:
+
+- `.changes/pending/*.json`;
+- `components` includes `addon`;
+- `type` is `patch`, `minor`, or `major`;
+- `category` is `added`, `changed`, `fixed`, `removed`, or `security`;
+- Spanish user-facing `summary` and `details`.
+
+The weeklyChar repository must not publish addon releases or require a KeystoneClient release for normal addon-only changes.
 
 Standalone addon releases are independently consumable by KeystoneClient's updater. Expected release contract:
 

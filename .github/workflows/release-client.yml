@@ -3,40 +3,72 @@ name: Client Build and Release
 on:
   workflow_call:
     inputs:
-      publish_release:
-        description: Publish a GitHub Release after building the installer.
+      mode:
+        description: build-only, release-dry-run, or release.
         required: false
-        default: false
-        type: boolean
-      release_tag:
-        description: Optional release tag. Must equal client-v<VERSION> when provided.
+        default: build-only
+        type: string
+      version_bump:
+        description: auto, patch, minor, or major.
         required: false
+        default: auto
         type: string
   workflow_dispatch:
     inputs:
-      publish_release:
-        description: Publish a GitHub Release after building the installer.
-        required: false
-        default: false
-        type: boolean
-      release_tag:
-        description: Optional release tag. Must equal client-v<VERSION> when provided.
-        required: false
-        type: string
+      mode:
+        description: build-only, release-dry-run, or release.
+        required: true
+        default: release-dry-run
+        type: choice
+        options:
+          - build-only
+          - release-dry-run
+          - release
+      version_bump:
+        description: auto, patch, minor, or major.
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Client installer
+  client:
+    name: Client ${{ inputs.mode }}
     runs-on: windows-latest
+    permissions:
+      contents: write
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.release-meta.outputs.version || steps.version.outputs.version }}
+      tag: ${{ steps.release-meta.outputs.tag || steps.version.outputs.tag }}
+      release_state: ${{ steps.release-state.outputs.state }}
     steps:
+      - name: Validate inputs
+        shell: pwsh
+        run: |
+          $validModes = @("build-only", "release-dry-run", "release")
+          $validBumps = @("auto", "patch", "minor", "major")
+          if ($validModes -notcontains "${{ inputs.mode }}") {
+            throw "Invalid mode: ${{ inputs.mode }}"
+          }
+          if ($validBumps -notcontains "${{ inputs.version_bump }}") {
+            throw "Invalid version_bump: ${{ inputs.version_bump }}"
+          }
+          if ("${{ github.event_name }}" -eq "pull_request" -and "${{ inputs.mode }}" -eq "release") {
+            throw "Pull requests must never publish releases."
+          }
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -49,7 +81,7 @@ jobs:
         shell: pwsh
         run: python -m pip install -r keystone-client/requirements.txt
 
-      - name: Validate version
+      - name: Current version
         id: version
         shell: pwsh
         run: |
@@ -57,12 +89,118 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+$') {
             throw "Invalid keystone-client/VERSION: $version"
           }
-          $tag = "client-v$version"
-          if ("${{ inputs.release_tag }}" -ne "" -and "${{ inputs.release_tag }}" -ne $tag) {
-            throw "release_tag must be $tag for VERSION $version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=client-v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Detect pending Client changesets
+        id: pending
+        shell: pwsh
+        run: |
+          $count = python -c "from pathlib import Path; import sys; sys.path.insert(0, 'scripts'); from release_changes import load_changesets; print(len(load_changesets(Path.cwd(), 'client')))"
+          "count=$count" >> $env:GITHUB_OUTPUT
+
+      - name: Plan Client release
+        id: plan
+        if: inputs.mode == 'release-dry-run' || (inputs.mode == 'release' && steps.pending.outputs.count != '0')
+        shell: pwsh
+        run: |
+          python scripts/release_changes.py plan --component client --version-file keystone-client/VERSION --bump "${{ inputs.version_bump }}" --notes-out release-notes.md --json > release-plan.json
+          $plan = Get-Content release-plan.json -Raw | ConvertFrom-Json
+          "version=$($plan.next_version)" >> $env:GITHUB_OUTPUT
+          "tag=$($plan.tag)" >> $env:GITHUB_OUTPUT
+          "asset=$($plan.asset)" >> $env:GITHUB_OUTPUT
+
+      - name: Set resume metadata
+        id: resume-meta
+        if: inputs.mode == 'release' && steps.pending.outputs.count == '0'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "asset=KeystoneClientSetup.exe" >> $env:GITHUB_OUTPUT
+          $notes = ".changes/releases/$tag/release-notes.md"
+          if (Test-Path $notes) {
+            Copy-Item $notes release-notes.md
+          } else {
+            "# KeystoneClient $version`n`nRelease retomada para completar la publicacion del instalador.`n" | Out-File -Encoding utf8 release-notes.md
+          }
+
+      - name: Release metadata
+        id: release-meta
+        if: inputs.mode != 'build-only'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.plan.outputs.version }}${{ steps.resume-meta.outputs.version }}"
+          $tag = "${{ steps.plan.outputs.tag }}${{ steps.resume-meta.outputs.tag }}"
+          $asset = "${{ steps.plan.outputs.asset }}${{ steps.resume-meta.outputs.asset }}"
+          if ($version -eq "" -or $tag -eq "" -or $asset -eq "") {
+            throw "Missing release metadata"
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
+          "asset=$asset" >> $env:GITHUB_OUTPUT
+
+      - name: Check GitHub release state
+        id: release-state
+        if: inputs.mode == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.release-meta.outputs.tag }}"
+          $asset = "${{ steps.release-meta.outputs.asset }}"
+          $tagExists = $false
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
+          if ($LASTEXITCODE -eq 0) { $tagExists = $true }
+
+          $releaseExists = $false
+          $assetExists = $false
+          $releaseJson = gh release view $tag --json assets 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            $releaseExists = $true
+            $release = $releaseJson | ConvertFrom-Json
+            $assetExists = @($release.assets | Where-Object { $_.name -eq $asset }).Count -gt 0
+          }
+
+          $pending = "${{ steps.pending.outputs.count }}" -ne "0"
+          $pendingPy = if ($pending) { "True" } else { "False" }
+          $tagPy = if ($tagExists) { "True" } else { "False" }
+          $releasePy = if ($releaseExists) { "True" } else { "False" }
+          $assetPy = if ($assetExists) { "True" } else { "False" }
+          $stateJson = python -c "import json, sys; sys.path.insert(0, 'scripts'); from release_state import determine_release_state; s=determine_release_state(pending_changesets=$pendingPy, tag_exists=$tagPy, release_exists=$releasePy, asset_exists=$assetPy); print(json.dumps(s.__dict__))"
+          $state = $stateJson | ConvertFrom-Json
+          "state=$($state.name)" >> $env:GITHUB_OUTPUT
+          "should_prepare=$($state.should_prepare.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "should_publish=$($state.should_publish.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "reason=$($state.reason)" >> $env:GITHUB_OUTPUT
+          if ($state.name -eq "inconsistent") {
+            throw $state.reason
+          }
+
+      - name: Prepare Client release files
+        id: prepare
+        if: inputs.mode == 'release' && steps.release-state.outputs.should_prepare == 'true'
+        shell: pwsh
+        run: |
+          python scripts/release_changes.py prepare --component client --version-file keystone-client/VERSION --bump "${{ inputs.version_bump }}" --json > release-plan.json
+          $plan = Get-Content release-plan.json -Raw | ConvertFrom-Json
+          "prepared=true" >> $env:GITHUB_OUTPUT
+          "version=$($plan.next_version)" >> $env:GITHUB_OUTPUT
+          "tag=$($plan.tag)" >> $env:GITHUB_OUTPUT
+
+      - name: Apply dry-run Client version
+        if: inputs.mode == 'release-dry-run'
+        shell: pwsh
+        run: |
+          Set-Content -Path keystone-client/VERSION -Value "${{ steps.release-meta.outputs.version }}" -Encoding utf8
+
+      - name: Apply resumed Client version
+        if: inputs.mode == 'release' && steps.pending.outputs.count != '0' && steps.release-state.outputs.should_prepare != 'true'
+        shell: pwsh
+        run: |
+          Set-Content -Path keystone-client/VERSION -Value "${{ steps.release-meta.outputs.version }}" -Encoding utf8
 
       - name: Compile Python
         shell: pwsh
@@ -71,6 +209,10 @@ jobs:
       - name: Run Client tests
         shell: pwsh
         run: python -m unittest discover -s tests/client
+
+      - name: Run release helper tests
+        shell: pwsh
+        run: python -m unittest discover -s tests/release
 
       - name: Install Inno Setup
         shell: pwsh
@@ -99,24 +241,68 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  release:
-    name: Publish Client release
-    needs: build
-    if: inputs.publish_release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download installer artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: KeystoneClientSetup
-          path: release-assets
+      - name: Atomic push release commit and tag
+        if: inputs.mode == 'release' && steps.release-state.outputs.should_prepare == 'true'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.release-meta.outputs.version }}"
+          $tag = "${{ steps.release-meta.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keystone-client/VERSION .changes
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            throw "Release preparation produced no commit changes."
+          }
+          git commit -m "Release KeystoneClient $version"
+          git tag $tag
+          git push --atomic origin "HEAD:${{ github.ref_name }}" "refs/tags/$tag"
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.build.outputs.tag }}
-          name: KeystoneClient ${{ needs.build.outputs.version }}
-          files: release-assets/KeystoneClientSetup.exe
-          fail_on_unmatched_files: true
+      - name: Publish or verify GitHub Release
+        if: inputs.mode == 'release' && steps.release-state.outputs.should_publish == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.release-meta.outputs.tag }}"
+          $version = "${{ steps.release-meta.outputs.version }}"
+          $asset = "${{ steps.release-meta.outputs.asset }}"
+          $path = "keystone-client/installer/output/$asset"
+          $delays = @(2, 5, 10, 20)
+
+          function Invoke-GhRelease {
+            param([scriptblock]$Command)
+            for ($attempt = 0; $attempt -le $delays.Count; $attempt++) {
+              $output = & $Command 2>&1
+              $code = $LASTEXITCODE
+              if ($code -eq 0) {
+                return
+              }
+              $text = ($output | Out-String)
+              if ($text -notmatch "(500|502|503|504)" -or $attempt -eq $delays.Count) {
+                throw $text
+              }
+              Start-Sleep -Seconds $delays[$attempt]
+            }
+          }
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Invoke-GhRelease { gh release upload $tag $path --clobber }
+          } else {
+            Invoke-GhRelease { gh release create $tag $path --title "KeystoneClient $version" --notes-file release-notes.md }
+          }
+
+      - name: Job summary
+        if: always()
+        shell: pwsh
+        run: |
+          "## KeystoneClient ${{ inputs.mode }}" >> $env:GITHUB_STEP_SUMMARY
+          "" >> $env:GITHUB_STEP_SUMMARY
+          "- Version: ${{ steps.release-meta.outputs.version || steps.version.outputs.version }}" >> $env:GITHUB_STEP_SUMMARY
+          "- Tag: ${{ steps.release-meta.outputs.tag || steps.version.outputs.tag }}" >> $env:GITHUB_STEP_SUMMARY
+          "- Release state: ${{ steps.release-state.outputs.state }}" >> $env:GITHUB_STEP_SUMMARY
+          if (Test-Path release-notes.md) {
+            "" >> $env:GITHUB_STEP_SUMMARY
+            Get-Content release-notes.md >> $env:GITHUB_STEP_SUMMARY
+          }

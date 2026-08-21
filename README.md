@@ -122,7 +122,7 @@ The expected public GitHub Release asset name is:
 KeystoneClientSetup.exe
 ```
 
-GitHub Release publication is currently manual.
+Client releases are automated from `main` when Deployment Impact reports `CLIENT_RELEASE=true` and a valid pending Client changeset exists. The release workflow bumps `keystone-client/VERSION`, builds `KeystoneClientSetup.exe`, pushes the release commit plus `client-vX.Y.Z` tag atomically, and publishes the GitHub Release.
 
 ### `keystone-worker`
 
@@ -231,8 +231,8 @@ Primary source files for this flow:
 | --- | --- | --- |
 | Web | Partial / external | Build and lint scripts are versioned. Deployment is documented as Vercel-based, but external Git Integration settings are not stored here. |
 | Worker | Manual | Wrangler scripts are versioned. Deploy and remote D1 migration require explicit authorization. |
-| Client | Build scripted, release manual | PyInstaller/Inno Setup build the app and installer. GitHub Release publication is manual. |
-| Addon | Independent manual release | `Speeson/KeystoneSync` is the canonical addon source. KeystoneClient can install standalone addon release ZIPs without a new Client release. |
+| Client | Automated release on qualifying `main` push | PyInstaller/Inno Setup build the app and installer. Release-impacting Client changes require a pending `.changes/` changeset and publish `KeystoneClientSetup.exe` under `client-vX.Y.Z`. |
+| Addon | Independent external release | `Speeson/KeystoneSync` is the canonical addon source. KeystoneClient can install standalone addon release ZIPs without a new Client release. This repository does not publish addon releases. |
 | Deployment Impact | Scripted | Run `python scripts/deploy_impact.py --files <changed-paths>` before deploy/release decisions. The script classifies impact only; it does not deploy or release. |
 
 CI/CD workflow infrastructure is versioned under `.github/workflows/`:
@@ -240,10 +240,10 @@ CI/CD workflow infrastructure is versioned under `.github/workflows/`:
 - `deploy.yml` calculates Deployment Impact and calls only relevant validation/build workflows.
 - `deploy-web.yml` validates the Web app; deployment remains documented as Vercel-managed externally.
 - `deploy-worker.yml` validates Worker changes and supports guarded manual Worker deploy / remote D1 migration.
-- `build-client.yml` builds the Windows installer artifact with read-only permissions for normal validation/orchestration.
-- `release-client.yml` can publish a Client release only when manually requested.
+- `build-client.yml` builds the Windows installer artifact with read-only permissions for build-only validation/orchestration.
+- `release-client.yml` supports `build-only`, `release-dry-run`, and `release`; `deploy.yml` calls release mode automatically for qualifying `main` pushes.
 
-Standalone addon workflow files are prepared as handoff material under `docs/workflow-handoff/addon/` and must be copied to `Speeson/KeystoneSync` before they become active.
+Standalone addon workflows are now owned by `Speeson/KeystoneSync`. This repository keeps only a pointer under `docs/workflow-handoff/addon/` and must not publish addon releases. No cross-repository token is used; each repository publishes only its own releases.
 
 ---
 

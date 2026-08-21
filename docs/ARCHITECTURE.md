@@ -153,10 +153,10 @@ Primary workflow files:
 - `.github/workflows/deploy.yml` - orchestrates impact calculation and selective workflow calls.
 - `.github/workflows/deploy-web.yml` - validates Web build/lint without duplicating Vercel deployment.
 - `.github/workflows/deploy-worker.yml` - validates Worker changes and supports guarded manual deploy/migrations.
-- `.github/workflows/build-client.yml` - builds Client installer artifacts for validation/orchestration with read-only permissions.
-- `.github/workflows/release-client.yml` - builds Client installer artifacts and supports explicit Client release publication.
+- `.github/workflows/build-client.yml` - builds Client installer artifacts for build-only validation/orchestration with read-only permissions.
+- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and `release` modes; `deploy.yml` calls release mode automatically on qualifying `main` pushes.
 
-Standalone addon workflows are prepared as handoff files in `docs/workflow-handoff/addon/`; they are not active until copied to `Speeson/KeystoneSync`.
+Standalone addon workflows are owned by `Speeson/KeystoneSync`. `weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML.
 
 ### API
 
@@ -200,7 +200,8 @@ Build path:
 - `keystone-client/build.bat` builds the executable with PyInstaller.
 - `keystone-client/build_installer.bat` builds the installer with Inno Setup.
 - Public installer asset convention: `KeystoneClientSetup.exe`.
-- GitHub Release publication is manual.
+- Release-impacting Client changes require a valid pending `.changes/` changeset.
+- On qualifying `main` pushes, the release workflow selects `patch`, `minor`, or `major`, updates `keystone-client/VERSION`, consumes changesets into `.changes/releases/`, builds `KeystoneClientSetup.exe`, atomically pushes the release commit plus `client-vX.Y.Z` tag, and publishes/verifies the GitHub Release.
 
 ### Addon
 

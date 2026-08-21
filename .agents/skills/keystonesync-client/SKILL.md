@@ -67,6 +67,13 @@ Current release tooling may include:
 - `VERSION`
 - installer scripts
 
+When changing user-visible Client behavior, add a valid pending Client changeset under `.changes/pending/`:
+
+- `components` includes `client`;
+- `type` is `patch`, `minor`, or `major`;
+- `category` is `added`, `changed`, `fixed`, `removed`, or `security`;
+- `summary` and `details` are user-facing Spanish release-note text.
+
 When changing packaging, confirm:
 
 - generated executable location;
@@ -82,10 +89,12 @@ Public installer compatibility target:
 Versioned workflow:
 
 - `.github/workflows/build-client.yml` builds the Windows installer on `windows-latest` for validation/orchestration with read-only permissions.
-- `.github/workflows/release-client.yml` builds the Windows installer and can publish a release when manually run with `publish_release=true`.
-- It uploads `KeystoneClientSetup.exe` as a workflow artifact.
-- It publishes a GitHub Release only when manually triggered with `publish_release=true`.
+- `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run`, and `release`.
+- Pull requests with Client release impact validate the changeset, calculate planned version/notes, and build without publishing.
+- Pushes to `main` with `CLIENT_RELEASE=true` publish automatically after a valid changeset is present.
+- The release workflow uploads `KeystoneClientSetup.exe` as a workflow artifact and publishes it as the release asset in release mode.
 - Client release tags use the existing `client-vX.Y.Z` convention from `keystone-client/VERSION`.
+- Release notes are generated in Spanish from `.changes/pending/` and consumed into `.changes/releases/`.
 
 ## Addon updater
 

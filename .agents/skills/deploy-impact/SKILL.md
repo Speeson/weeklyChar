@@ -72,6 +72,9 @@ Phase 11 decoupled standalone addon releases from KeystoneClient releases:
 - External canonical addon changes classify as `ADDON=true`, `ADDON_RELEASE=true`, `CLIENT_BUILD=false`, `CLIENT_RELEASE=false`.
 - KeystoneClient no longer embeds addon runtime files.
 - Changes to Client updater/installer code classify as Client build/release impact, not addon release impact.
+- `.changes/**`, generated release metadata, and release helper tooling are known no-product-impact.
+- `keystone-client/VERSION` and generated `keystone-client/installer/version.ini` are build-only so release-generated commits do not recursively trigger another Client release.
+- Client build scripts are build-only; Client runtime `.py`, runtime dependencies, user-visible assets, and installer behavior that changes the installed app are build+release.
 
 ## Report Format
 

@@ -127,8 +127,10 @@ def classify_path(path: str, impact: Impact) -> None:
         return
 
     if path.startswith("keystone-client/"):
-        if is_client_product_path(path):
+        if is_client_release_path(path):
             impact.add(("client_build", "client_release"), path)
+        elif is_client_build_only_path(path):
+            impact.add(("client_build",), path)
         else:
             impact.unknown(path)
         return
@@ -153,12 +155,15 @@ def is_known_no_impact(path: str) -> bool:
         "keystone-client/addon/KeystoneSync/KeystoneSync.toc",
         "scripts/check_addon_sync.py",
         "scripts/deploy_impact.py",
+        "scripts/release_changes.py",
+        "scripts/release_state.py",
         "scripts/sync_addon.py",
         "scripts/validate_addon.py",
     }
     prefixes = (
         ".github/",
         ".agents/",
+        ".changes/",
         "docs/",
         "tests/",
         "keystone-worker/tests/",
@@ -201,19 +206,25 @@ def is_web_product_path(path: str) -> bool:
     return path in exact or any(path.startswith(prefix) for prefix in prefixes)
 
 
-def is_client_product_path(path: str) -> bool:
+def is_client_release_path(path: str) -> bool:
     exact = {
-        "keystone-client/VERSION",
         "keystone-client/bg.jpg",
-        "keystone-client/build.bat",
-        "keystone-client/build_installer.bat",
         "keystone-client/icon.ico",
         "keystone-client/KeystoneClient.exe",
         "keystone-client/requirements.txt",
         "keystone-client/installer/KeystoneClient.iss",
-        "keystone-client/installer/version.ini",
     }
     return path in exact or (path.startswith("keystone-client/") and path.endswith(".py"))
+
+
+def is_client_build_only_path(path: str) -> bool:
+    exact = {
+        "keystone-client/build.bat",
+        "keystone-client/build_installer.bat",
+        "keystone-client/VERSION",
+        "keystone-client/installer/version.ini",
+    }
+    return path in exact
 
 
 def build_parser() -> argparse.ArgumentParser:

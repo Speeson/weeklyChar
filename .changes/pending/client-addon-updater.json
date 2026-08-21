@@ -1,0 +1,9 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Añade actualización independiente del addon.",
+  "details": [
+    "KeystoneClient puede instalar y actualizar KeystoneSync desde GitHub Releases sin requerir un nuevo instalador del cliente para cambios solo del addon."
+  ]
+}
