@@ -126,8 +126,18 @@ def classify_path(path: str, impact: Impact) -> None:
             impact.unknown(path)
         return
 
+    if path.startswith("keystone-client-next/"):
+        impact.add(("client_build",), path)
+        return
+
+    if path == "scripts/build_client_sidecar.py":
+        impact.add(("client_build",), path)
+        return
+
     if path.startswith("keystone-client/"):
-        if is_client_release_path(path):
+        if is_client_bridge_migration_path(path):
+            impact.add(("client_build",), path)
+        elif is_client_release_path(path):
             impact.add(("client_build", "client_release"), path)
         elif is_client_build_only_path(path):
             impact.add(("client_build",), path)
@@ -215,6 +225,19 @@ def is_client_release_path(path: str) -> bool:
         "keystone-client/installer/KeystoneClient.iss",
     }
     return path in exact or (path.startswith("keystone-client/") and path.endswith(".py"))
+
+
+def is_client_bridge_migration_path(path: str) -> bool:
+    exact = {
+        "keystone-client/auth_service.py",
+        "keystone-client/addon_service.py",
+        "keystone-client/bridge_main.py",
+        "keystone-client/bridge_protocol.py",
+        "keystone-client/settings_service.py",
+        "keystone-client/sync_service.py",
+        "keystone-client/wow_service.py",
+    }
+    return path in exact
 
 
 def is_client_build_only_path(path: str) -> bool:

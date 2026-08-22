@@ -8,6 +8,7 @@ build/
 dist/
 *.spec
 keystone-client/installer/output/
+.tmp/
 
 # Python
 __pycache__/

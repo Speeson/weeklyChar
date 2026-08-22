@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import sys
 import tempfile
+import time
 import unittest
 import zipfile
 from pathlib import Path
@@ -15,6 +16,7 @@ CLIENT_ROOT = REPO_ROOT / "keystone-client"
 sys.path.insert(0, str(CLIENT_ROOT))
 
 import addon_installer  # noqa: E402
+import addon_service  # noqa: E402
 import addon_updater  # noqa: E402
 
 
@@ -398,6 +400,139 @@ class AddonUpdaterTests(unittest.TestCase):
             addons.mkdir()
             addon_updater.update_addon(addons, release, session=session, cache_root=Path(tmp) / "cache")
             self.assertEqual(addon_installer.read_addon_version(addons / "KeystoneSync" / "KeystoneSync.toc"), "0.1.17")
+
+
+class AddonServiceTests(unittest.TestCase):
+    def _cfg_for(self, wow_root: Path) -> dict:
+        retail = wow_root / "_retail_"
+        (retail / "Interface" / "AddOns").mkdir(parents=True, exist_ok=True)
+        (retail / "Wow.exe").write_text("", encoding="utf-8")
+        return {"wow_install_path": str(wow_root)}
+
+    def test_status_dto_maps_not_installed_current_update_local_newer_and_offline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = self._cfg_for(root / "World of Warcraft")
+            addons = root / "World of Warcraft" / "_retail_" / "Interface" / "AddOns"
+            service = addon_service.AddonService(
+                session=FakeSession([FakeJsonResponse(release_payload("0.1.17"))]),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+
+            not_installed = service.check(cfg)
+            self.assertEqual(not_installed["state"], "not-installed")
+            self.assertEqual(not_installed["latestVersion"], "0.1.17")
+
+            write_addon(addons, "0.1.17")
+            service = addon_service.AddonService(
+                session=FakeSession([FakeJsonResponse(release_payload("0.1.17"))]),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+            self.assertEqual(service.check(cfg)["state"], "current")
+
+            service = addon_service.AddonService(
+                session=FakeSession([FakeJsonResponse(release_payload("0.1.18"))]),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+            self.assertEqual(service.check(cfg)["state"], "update-available")
+
+            write_addon(addons, "0.1.19")
+            service = addon_service.AddonService(
+                session=FakeSession([FakeJsonResponse(release_payload("0.1.18"))]),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+            self.assertEqual(service.check(cfg)["state"], "local-newer")
+
+            service = addon_service.AddonService(
+                session=FakeSession(error=requests.ConnectionError("offline")),
+                cache_root=root / "empty-cache",
+                client_version="0.2.1",
+            )
+            self.assertEqual(service.check(cfg)["state"], "unavailable")
+
+    def test_offline_cache_install_and_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = self._cfg_for(root / "World of Warcraft")
+            addons = root / "World of Warcraft" / "_retail_" / "Interface" / "AddOns"
+            cache_zip = root / "cached.zip"
+            cache_zip.write_bytes(addon_zip_bytes("0.1.17"))
+            addon_updater.store_validated_cache(cache_zip, "0.1.17", root / "cache")
+            events = []
+            service = addon_service.AddonService(
+                session=FakeSession(error=requests.Timeout("offline")),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+            service.set_emit(lambda event, data: events.append((event, data)))
+
+            status = service.install(cfg)
+            self.assertIsNotNone(status["operation"])
+            for _ in range(100):
+                if any(event == "addon.install.completed" for event, _ in events):
+                    break
+                time.sleep(0.01)
+
+            self.assertEqual(addon_installer.read_addon_version(addons / "KeystoneSync" / "KeystoneSync.toc"), "0.1.17")
+            self.assertIn("addon.install.started", [event for event, _ in events])
+            self.assertIn("addon.install.progress", [event for event, _ in events])
+            self.assertIn("addon.install.completed", [event for event, _ in events])
+
+    def test_operation_serialization_rejects_concurrent_mutation(self):
+        class SlowSession(FakeSession):
+            def get(self, *args, **kwargs):
+                time.sleep(0.2)
+                return super().get(*args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = self._cfg_for(root / "World of Warcraft")
+            service = addon_service.AddonService(
+                session=SlowSession(
+                    [
+                        FakeJsonResponse(release_payload("0.1.17")),
+                        FakeDownloadResponse(addon_zip_bytes("0.1.17")),
+                    ]
+                ),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+            service.install(cfg)
+            with self.assertRaises(addon_service.AddonServiceError) as caught:
+                service.update(cfg)
+            self.assertEqual(caught.exception.code, addon_service.ADDON_OPERATION_RUNNING)
+
+    def test_install_failure_preserves_existing_addon_through_rollback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = self._cfg_for(root / "World of Warcraft")
+            addons = root / "World of Warcraft" / "_retail_" / "Interface" / "AddOns"
+            write_addon(addons, "0.1.16")
+            events = []
+            service = addon_service.AddonService(
+                session=FakeSession(
+                    [
+                        FakeJsonResponse(release_payload("0.1.17")),
+                        FakeDownloadResponse(addon_zip_bytes("0.1.17", missing_listed_file=True)),
+                    ]
+                ),
+                cache_root=root / "cache",
+                client_version="0.2.1",
+            )
+            service.set_emit(lambda event, data: events.append((event, data)))
+
+            service.update(cfg)
+            for _ in range(100):
+                if any(event == "addon.install.failed" for event, _ in events):
+                    break
+                time.sleep(0.01)
+
+            self.assertEqual(addon_installer.read_addon_version(addons / "KeystoneSync" / "KeystoneSync.toc"), "0.1.16")
+            self.assertIn("addon.install.failed", [event for event, _ in events])
 
 
 if __name__ == "__main__":

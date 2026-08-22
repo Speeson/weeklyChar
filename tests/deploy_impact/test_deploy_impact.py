@@ -50,6 +50,40 @@ class DeployImpactTests(unittest.TestCase):
     def test_client_source_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/sync_worker.py"], {"client_build", "client_release"})
 
+    def test_client_bridge_migration_files_are_build_only(self):
+        paths = [
+            "keystone-client/auth_service.py",
+            "keystone-client/addon_service.py",
+            "keystone-client/bridge_main.py",
+            "keystone-client/bridge_protocol.py",
+            "keystone-client/settings_service.py",
+            "keystone-client/sync_service.py",
+            "keystone-client/wow_service.py",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                impact = self.assertImpact([path], {"client_build"})
+                self.assertEqual(impact.reasons["client_release"], [])
+
+    def test_client_next_migration_paths_are_build_only(self):
+        paths = [
+            "keystone-client-next/src/App.tsx",
+            "keystone-client-next/src/components/example.tsx",
+            "keystone-client-next/src-tauri/src/lib.rs",
+            "keystone-client-next/src-tauri/tauri.conf.json",
+            "keystone-client-next/package.json",
+            "keystone-client-next/package-lock.json",
+            "keystone-client-next/src/App.test.tsx",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                impact = self.assertImpact([path], {"client_build"})
+                self.assertEqual(impact.reasons["client_release"], [])
+
+    def test_client_sidecar_build_helper_is_build_only(self):
+        impact = self.assertImpact(["scripts/build_client_sidecar.py"], {"client_build"})
+        self.assertEqual(impact.reasons["client_release"], [])
+
     def test_client_resource_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/bg.jpg"], {"client_build", "client_release"})
 

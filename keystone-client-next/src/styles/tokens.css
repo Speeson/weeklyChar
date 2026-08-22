@@ -1,0 +1,46 @@
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+}
+
+:root {
+  --background: #020713;
+  --foreground: #f7f5ed;
+  --muted: #aeb9cc;
+  --muted-foreground: #d6d9e3;
+  --surface: rgb(4 18 42 / 76%);
+  --surface-elevated: rgb(5 18 38 / 88%);
+  --surface-accent: rgb(8 44 82 / 72%);
+  --surface-control: rgb(7 26 52 / 84%);
+  --primary: #f4b72a;
+  --primary-foreground: #151007;
+  --border: rgb(57 152 255 / 42%);
+  --border-strong: rgb(112 188 255 / 72%);
+  --success: #21f38d;
+  --warning: #f4b72a;
+  --danger: #f2a09a;
+  --danger-surface: rgb(73 20 31 / 72%);
+  --danger-border: rgb(255 107 121 / 68%);
+  --blue-glow: 0 0 24px rgb(50 158 255 / 34%);
+  --gold-glow: 0 0 24px rgb(244 183 42 / 36%);
+  --panel-shadow: 0 20px 60px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 8%);
+  --shadow-elevated: var(--panel-shadow);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+}

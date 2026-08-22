@@ -1,0 +1,18 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Ajusta la escala, el pie y los controles de KeystoneClient.",
+  "details": [
+    "La interfaz conserva el lienzo 1672x941 y ahora se escala uniformemente al redimensionar la ventana.",
+    "El pie mantiene solo sus dos acciones alineadas, el selector de usuario evita recursos solapados y los controles de ventana tienen el mismo tamano visible.",
+    "El modal de ajustes recupera la seleccion de cuentas y las preferencias del cliente anterior con el estilo actual.",
+    "El panel de estado representa de forma coherente la espera, monitorizacion, sincronizacion, exito y error con sus iconos y detalles correspondientes.",
+    "El resumen muestra el estado del Addon, diferenciando la ausencia como error y las actualizaciones pendientes como advertencia.",
+    "La tarjeta de personajes utiliza una etiqueta de deteccion mas breve para evitar recortes.",
+    "El encabezado utiliza los marcos de usuario, avatar, ajustes y hero suministrados.",
+    "La pestana Addon adopta el diseno aprobado con ruta, acciones y estado detallado sin alterar el encabezado ni el pie.",
+    "El titulo KeystoneSync gana presencia y el selector de usuario deja vacio el avatar hasta disponer de su imagen real.",
+    "Los controles superiores ajustan su espaciado y centran el nombre de usuario entre el avatar y el desplegable."
+  ]
+}
