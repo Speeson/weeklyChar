@@ -13,6 +13,7 @@
     "El encabezado utiliza los marcos de usuario, avatar, ajustes y hero suministrados.",
     "La pestana Addon adopta el diseno aprobado con ruta, acciones y estado detallado sin alterar el encabezado ni el pie.",
     "El titulo KeystoneSync gana presencia y el selector de usuario deja vacio el avatar hasta disponer de su imagen real.",
-    "Los controles superiores ajustan su espaciado y centran el nombre de usuario entre el avatar y el desplegable."
+    "Los controles superiores ajustan su espaciado y centran el nombre de usuario entre el avatar y el desplegable.",
+    "El menu de usuario gana tamano, animacion e icono de cierre de sesion y se muestra siempre sobre el contenido."
   ]
 }

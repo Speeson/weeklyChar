@@ -61,6 +61,28 @@ test.describe("preview states", () => {
     await expect(page).toHaveScreenshot("settings.png", { fullPage: true });
   });
 
+  test("renders the user menu above the current view", async ({ page }) => {
+    await page.goto("/?preview=sync-success");
+    await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+
+    const menu = page.getByRole("menu");
+    const logoutButton = page.getByRole("menuitem", { name: "Cerrar sesion" });
+    await expect(menu).toBeVisible();
+    await expect(logoutButton.locator("svg")).toBeVisible();
+
+    const menuBox = await menu.boundingBox();
+    expect(menuBox).not.toBeNull();
+    const menuIsTopLayer = await page.evaluate(({ x, y }) => {
+      return document.elementFromPoint(x, y)?.closest(".ks-user-dropdown") !== null;
+    }, {
+      x: menuBox!.x + menuBox!.width / 2,
+      y: menuBox!.y + menuBox!.height / 2,
+    });
+    expect(menuIsTopLayer).toBe(true);
+
+    await expect(page).toHaveScreenshot("user-menu.png", { fullPage: true });
+  });
+
   test("renders current addon status in the summary", async ({ page }) => {
     await page.goto("/?preview=addon-current");
     await expect(page.getByLabel("Addon: Actualizado")).toBeVisible();

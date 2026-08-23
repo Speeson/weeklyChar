@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download, LogOut } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { AuthState } from "../core/types";
 import appIcon from "../assets/keystone-ui/app-icon.png";
@@ -165,6 +165,7 @@ function KeystoneHeader({
                 role="menuitem"
                 type="button"
               >
+                <LogOut aria-hidden="true" />
                 Cerrar sesion
               </button>
             </div>

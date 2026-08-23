@@ -261,7 +261,9 @@ describe("App", () => {
     await screen.findByText("player");
 
     await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
-    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+    const logoutButton = screen.getByRole("menuitem", { name: "Cerrar sesion" });
+    expect(logoutButton.querySelector("svg")).toBeInTheDocument();
+    await user.click(logoutButton);
 
     expect(logoutMock).toHaveBeenCalledWith();
     expect(await screen.findByRole("heading", { name: "Iniciar sesion" })).toBeInTheDocument();
