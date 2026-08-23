@@ -48,6 +48,34 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertEqual(updater["windows"]["installMode"], "passive")
         self.assertFalse(config["bundle"]["createUpdaterArtifacts"])
 
+    def test_nsis_installer_replaces_the_machine_wide_legacy_install(self):
+        config = json.loads(
+            (REPO_ROOT / "keystone-client-next" / "src-tauri" / "tauri.conf.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        nsis = config["bundle"]["windows"]["nsis"]
+        self.assertEqual(nsis["installMode"], "perMachine")
+        self.assertEqual(nsis["installerHooks"], "windows/installer-hooks.nsh")
+
+    def test_nsis_legacy_migration_fails_closed_without_removing_user_data(self):
+        hooks = (
+            REPO_ROOT
+            / "keystone-client-next"
+            / "src-tauri"
+            / "windows"
+            / "installer-hooks.nsh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("{B5D12F8B-FC43-4E22-A3E1-4B2D84A4C910}_is1", hooks)
+        self.assertIn("ExecWait", hooks)
+        self.assertIn("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART", hooks)
+        self.assertIn("Abort", hooks)
+        self.assertNotIn("APPDATA", hooks.upper())
+        self.assertNotIn("RMDir", hooks)
+        self.assertNotIn("Delete", hooks)
+
     def test_build_workflow_packages_tauri_instead_of_legacy_inno(self):
         workflow = (REPO_ROOT / ".github" / "workflows" / "build-client.yml").read_text(
             encoding="utf-8"
