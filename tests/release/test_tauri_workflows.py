@@ -104,6 +104,21 @@ class TauriWorkflowContractTests(unittest.TestCase):
                     workflow.index("- name: Validate Rust"),
                 )
 
+    def test_release_builds_sidecar_before_version_lock_refresh_and_fails_closed(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "release-client.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertLess(
+            workflow.index("- name: Build clean Python sidecar"),
+            workflow.index("- name: Synchronize Tauri release metadata"),
+        )
+        self.assertIn(
+            "cargo check --manifest-path keystone-client-next/src-tauri/Cargo.toml\n"
+            "          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+            workflow,
+        )
+
     def test_deploy_passes_signing_secrets_only_to_release_workflow(self):
         workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
             encoding="utf-8"

@@ -215,12 +215,17 @@ jobs:
         shell: pwsh
         run: git checkout "${{ steps.release-meta.outputs.tag }}"
 
+      - name: Build clean Python sidecar
+        shell: pwsh
+        run: python scripts/build_client_sidecar.py --clean
+
       - name: Synchronize Tauri release metadata
         if: inputs.mode != 'build-only'
         shell: pwsh
         run: |
           python scripts/tauri_release.py sync-versions --version "${{ steps.release-meta.outputs.version }}" --notes-file release-notes.md
           cargo check --manifest-path keystone-client-next/src-tauri/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/tauri_release.py validate-versions --expected "${{ steps.release-meta.outputs.version }}"
 
       - name: Require updater signing material
@@ -245,10 +250,6 @@ jobs:
         run: |
           npm test
           npm run build
-
-      - name: Build clean Python sidecar
-        shell: pwsh
-        run: python scripts/build_client_sidecar.py --clean
 
       - name: Validate Rust
         shell: pwsh
