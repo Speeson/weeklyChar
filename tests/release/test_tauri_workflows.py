@@ -72,6 +72,18 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertIn("ExecWait", hooks)
         self.assertIn("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART", hooks)
         self.assertIn("Abort", hooks)
+        self.assertIn(
+            'ReadRegStr $KeystoneLegacyAutostart HKCU '
+            '"Software\\Microsoft\\Windows\\CurrentVersion\\Run" "KeystoneClient"',
+            hooks,
+        )
+        self.assertIn("!macro NSIS_HOOK_POSTINSTALL", hooks)
+        self.assertIn(
+            'WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" '
+            '"KeystoneClient"',
+            hooks,
+        )
+        self.assertIn('"$INSTDIR\\KeystoneClient.exe" --autostart', hooks)
         self.assertNotIn("APPDATA", hooks.upper())
         self.assertNotIn("RMDir", hooks)
         self.assertNotIn("Delete", hooks)
