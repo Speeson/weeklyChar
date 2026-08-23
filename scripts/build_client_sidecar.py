@@ -74,7 +74,7 @@ def pyinstaller_command(
     repo_root: Path,
     temp_dir: Path,
 ) -> list[str]:
-    client_dir = repo_root / "keystone-client"
+    sidecar_dir = repo_root / "keystone-client" / "sidecar"
     return [
         python_executable,
         "-m",
@@ -88,14 +88,16 @@ def pyinstaller_command(
         "--name",
         LOGICAL_SIDECAR_NAME,
         "--paths",
-        str(client_dir),
+        str(sidecar_dir),
+        "--add-data",
+        f"{repo_root / 'keystone-client' / 'VERSION'}{os.pathsep}.",
         "--distpath",
         str(temp_dir / "dist"),
         "--workpath",
         str(temp_dir / "build"),
         "--specpath",
         str(temp_dir / "spec"),
-        str(client_dir / "bridge_main.py"),
+        str(sidecar_dir / "bridge_main.py"),
     ]
 
 
@@ -107,18 +109,11 @@ def copy_sidecar_output(source: Path, destination: Path) -> None:
 
 
 def sidecar_sources(repo_root: Path) -> list[Path]:
+    sidecar_dir = repo_root / "keystone-client" / "sidecar"
     return [
-        repo_root / "keystone-client" / "auth_service.py",
-        repo_root / "keystone-client" / "addon_service.py",
-        repo_root / "keystone-client" / "bridge_main.py",
-        repo_root / "keystone-client" / "bridge_protocol.py",
-        repo_root / "keystone-client" / "character_service.py",
-        repo_root / "keystone-client" / "profile_service.py",
-        repo_root / "keystone-client" / "settings_service.py",
-        repo_root / "keystone-client" / "sync_service.py",
-        repo_root / "keystone-client" / "sync_worker.py",
-        repo_root / "keystone-client" / "wow_path.py",
-        repo_root / "keystone-client" / "wow_service.py",
+        *sorted(sidecar_dir.glob("*.py")),
+        sidecar_dir / "requirements.txt",
+        repo_root / "keystone-client" / "VERSION",
         repo_root / "scripts" / "build_client_sidecar.py",
     ]
 

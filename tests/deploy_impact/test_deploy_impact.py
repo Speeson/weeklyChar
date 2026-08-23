@@ -50,6 +50,12 @@ class DeployImpactTests(unittest.TestCase):
     def test_client_source_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/sync_worker.py"], {"client_build", "client_release"})
 
+    def test_client_sidecar_requirements_impacts_build_and_release(self):
+        self.assertImpact(
+            ["keystone-client/sidecar/requirements.txt"],
+            {"client_build", "client_release"},
+        )
+
     def test_client_sidecar_files_impact_tauri_distribution(self):
         paths = [
             "keystone-client/auth_service.py",

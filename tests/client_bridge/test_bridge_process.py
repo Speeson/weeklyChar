@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BRIDGE_MAIN = REPO_ROOT / "keystone-client" / "bridge_main.py"
+BRIDGE_MAIN = REPO_ROOT / "keystone-client" / "sidecar" / "bridge_main.py"
 
 
 def make_wow_tree(root: Path) -> Path:

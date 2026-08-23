@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,10 +31,16 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _client_version_path() -> Path:
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        return Path(bundle_root) / "VERSION"
+    return Path(__file__).resolve().parents[1] / "VERSION"
+
+
 def _client_version() -> str | None:
-    version_path = Path(__file__).with_name("VERSION")
     try:
-        return version_path.read_text(encoding="utf-8").strip()
+        return _client_version_path().read_text(encoding="utf-8").strip()
     except Exception:
         return None
 

@@ -228,6 +228,7 @@ def is_client_release_path(path: str) -> bool:
         "keystone-client/icon.ico",
         "keystone-client/KeystoneClient.exe",
         "keystone-client/requirements.txt",
+        "keystone-client/sidecar/requirements.txt",
         "keystone-client/installer/KeystoneClient.iss",
     }
     return path in exact or (path.startswith("keystone-client/") and path.endswith(".py"))

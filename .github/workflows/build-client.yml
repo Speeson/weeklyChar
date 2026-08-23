@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: keystone-client/requirements.txt
+          cache-dependency-path: keystone-client/sidecar/requirements.txt
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install -r keystone-client/requirements.txt
+          python -m pip install -r keystone-client/sidecar/requirements.txt
           npm ci --prefix keystone-client-next
 
       - name: Validate version contract

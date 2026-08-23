@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 
-CLIENT_ROOT = Path(__file__).resolve().parents[2] / "keystone-client"
+CLIENT_ROOT = Path(__file__).resolve().parents[2] / "keystone-client" / "sidecar"
 sys.path.insert(0, str(CLIENT_ROOT))
 
 from profile_service import (  # noqa: E402

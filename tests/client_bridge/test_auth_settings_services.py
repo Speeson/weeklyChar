@@ -12,7 +12,7 @@ import requests
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLIENT_ROOT = REPO_ROOT / "keystone-client"
+CLIENT_ROOT = REPO_ROOT / "keystone-client" / "sidecar"
 sys.path.insert(0, str(CLIENT_ROOT))
 
 import auth_service  # noqa: E402
