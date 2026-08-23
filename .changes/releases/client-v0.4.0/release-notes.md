@@ -1,0 +1,43 @@
+# KeystoneClient 0.4.0
+
+## Novedades
+
+- Completa la experiencia de escritorio del cliente Tauri.
+  - La ventana Tauri es frameless, se puede arrastrar desde la cabecera y diferencia minimizar, ocultar en bandeja y salida confirmada.
+  - El login incluye un formulario de registro interno conectado al endpoint real y el primer inicio guía la detección de World of Warcraft y la selección de cuentas.
+  - El logout vuelve inmediatamente al acceso, las peticiones bloqueantes no congelan la interfaz y cerrar u ocultar en bandeja usan comandos Tauri funcionales.
+  - El perfil permite elegir un avatar entre los personajes reales mediante el endpoint autenticado existente.
+  - Arrancar con Windows usa la integración nativa de Tauri y la bandeja refleja sesión y sincronización con acciones reales.
+  - Toda la interfaz propia del cliente dispone de traducciones centralizadas en español e inglés.
+  - La tabla de personajes conserva su tamaño y desplaza internamente las listas de más de ocho filas.
+  - Sincronizar ahora mantiene la interfaz animada y procesa la respuesta sin quedar bloqueado por la actualización de la bandeja.
+  - El icono de KeystoneClient aparece en el ejecutable, la barra de tareas de Windows y la bandeja del sistema.
+  - Las pestañas superiores responden con iluminación azul al pasar el cursor y conservan una selección dorada suave con esquinas redondeadas.
+- Conecta la pantalla de sincronizacion de Tauri con personajes reales.
+  - La tabla muestra personajes reales con avatar, color de clase, nivel de objeto, piedra angular y puntuacion de Raider.IO.
+  - Los personajes se cargan primero desde la cache y se actualizan en segundo plano sin exponer credenciales a React.
+  - La tabla permite ordenar sus cinco columnas y abrir cada perfil mediante una accion nativa limitada a Raider.IO.
+  - El monitor de SavedVariables se inicia y reconcilia automaticamente cuando la autenticacion, instalacion y cuentas son validas.
+  - Cada sincronizacion correcta refresca los personajes y el estado del Addon se comprueba automaticamente sin instalar actualizaciones.
+  - Las selecciones de cuentas compatibles se conservan al confirmar o cambiar la ruta de World of Warcraft.
+- Migra la distribucion publica de KeystoneClient a Tauri.
+  - El instalador NSIS de Tauri sustituye al build publico de Tkinter y conserva la configuracion existente del cliente.
+  - KeystoneClient comprueba actualizaciones firmadas, muestra las notas de version y permite instalar y reiniciar de forma explicita.
+  - El pipeline publica el instalador canonico, su firma y el manifiesto latest.json mediante un release reanudable.
+
+## Cambios
+
+- Mejora la pestaña Addon de KeystoneClient.
+  - La pestaña Addon ahora muestra la ruta de AddOns, acciones de instalación/actualización y el estado del addon en un diseño de dos columnas más claro.
+- Ajusta la escala, el pie y los controles de KeystoneClient.
+  - La interfaz conserva el lienzo 1672x941 y ahora se escala uniformemente al redimensionar la ventana.
+  - El pie mantiene solo sus dos acciones alineadas, el selector de usuario evita recursos solapados y los controles de ventana tienen el mismo tamano visible.
+  - El modal de ajustes recupera la seleccion de cuentas y las preferencias del cliente anterior con el estilo actual.
+  - El panel de estado representa de forma coherente la espera, monitorizacion, sincronizacion, exito y error con sus iconos y detalles correspondientes.
+  - El resumen muestra el estado del Addon, diferenciando la ausencia como error y las actualizaciones pendientes como advertencia.
+  - La tarjeta de personajes utiliza una etiqueta de deteccion mas breve para evitar recortes.
+  - El encabezado utiliza los marcos de usuario, avatar, ajustes y hero suministrados.
+  - La pestana Addon adopta el diseno aprobado con ruta, acciones y estado detallado sin alterar el encabezado ni el pie.
+  - El titulo KeystoneSync gana presencia y el selector de usuario deja vacio el avatar hasta disponer de su imagen real.
+  - Los controles superiores ajustan su espaciado y centran el nombre de usuario entre el avatar y el desplegable.
+  - El menu de usuario gana tamano, animacion e icono de cierre de sesion y se muestra siempre sobre el contenido.
