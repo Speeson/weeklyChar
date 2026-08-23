@@ -3,6 +3,7 @@ import { ExternalLink, FolderOpen, RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
 import type { AddonStatus, CoreError, WowState } from "../core/types";
+import { useI18n, type TranslationKey } from "../core/i18n";
 
 type WowPageProps = {
   addonStatus?: AddonStatus;
@@ -11,39 +12,44 @@ type WowPageProps = {
   onWowChanged: (wow: WowState) => void;
 };
 
-function formatWowError(error: unknown): string {
+type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
+
+function formatWowError(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as CoreError).message);
   }
 
-  return "No se pudo actualizar la configuracion de World of Warcraft.";
+  return fallback;
 }
 
-function formatModifiedAt(value: number | null): string {
+function formatModifiedAt(value: number | null, language: "es" | "en", t: Translate): string {
   if (value === null) {
-    return "Sin archivo";
+    return t("wow.noFile");
   }
 
-  return new Date(value * 1000).toLocaleString();
+  return new Date(value * 1000).toLocaleString(language === "en" ? "en-US" : "es-ES");
 }
 
-function formatAddonStatus(addonStatus?: AddonStatus): string {
+function formatAddonStatus(addonStatus: AddonStatus | undefined, t: Translate): string {
   if (!addonStatus?.installed) {
-    return "Addon no instalado";
+    return t("wow.addonNotInstalled");
   }
+
+  const version = addonStatus.installedVersion ?? t("wow.unknownVersion");
 
   if (addonStatus.state === "current") {
-    return `Instalado: v${addonStatus.installedVersion ?? "desconocida"} - Ultimo addon: actualizado`;
+    return t("wow.addonCurrent", { version });
   }
 
   if (addonStatus.state === "update-available") {
-    return `Instalado: v${addonStatus.installedVersion ?? "desconocida"} - Actualizacion disponible`;
+    return t("wow.addonUpdate", { version });
   }
 
-  return `Instalado: v${addonStatus.installedVersion ?? "desconocida"} - ${addonStatus.message || addonStatus.state}`;
+  return t("wow.addonInstalled", { version, status: addonStatus.message || addonStatus.state });
 }
 
 export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: WowPageProps) {
+  const { language, t } = useI18n();
   const [wow, setWow] = useState<WowState>(initialWow);
   const [selected, setSelected] = useState<string[]>(initialWow.selectedAccounts);
   const [loading, setLoading] = useState(false);
@@ -76,7 +82,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
       applyWow(nextWow);
       setMessage(success);
     } catch (caught) {
-      setError(formatWowError(caught));
+      setError(formatWowError(caught, t("wow.error")));
     } finally {
       setLoading(false);
     }
@@ -92,7 +98,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
     const selectedPath = await open({
       directory: true,
       multiple: false,
-      title: "Selecciona World of Warcraft",
+      title: t("onboarding.folderDialog"),
     });
     if (typeof selectedPath !== "string") {
       return;
@@ -100,7 +106,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
 
     await runAction(
       () => selectWowInstall({ path: selectedPath }),
-      "Carpeta de World of Warcraft guardada.",
+      t("wow.folderSaved"),
     );
   }
 
@@ -112,7 +118,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
 
     await runAction(
       () => selectWowInstall({ path: installPath }),
-      "Carpeta de World of Warcraft guardada.",
+      t("wow.folderSaved"),
     );
   }
 
@@ -127,35 +133,35 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
 
   return (
     <section className="wow-panel settings-block" aria-labelledby="wow-title">
-      <h3 id="wow-title">Seleccion de cuentas</h3>
+      <h3 id="wow-title">{t("wow.title")}</h3>
 
       <div className="wow-path-label">
-        <label htmlFor="wow-install-path">Ruta de carpeta de instalacion</label>
+        <label htmlFor="wow-install-path">{t("wow.installPath")}</label>
         <span className="wow-path-row">
           <input id="wow-install-path" readOnly title={wow.install.installPath ?? undefined} value={wow.install.installPath ?? ""} />
           <button type="button" onClick={chooseFolder} disabled={loading}>
             <FolderOpen size={18} aria-hidden="true" />
-            Cambiar
+            {t("onboarding.change")}
           </button>
           <button type="button" className="settings-gold-action" onClick={() => void saveFolder()} disabled={loading || !wow.install.installPath}>
             <Save size={18} aria-hidden="true" />
-            Guardar
+            {t("common.save")}
           </button>
         </span>
       </div>
 
-      <p className="settings-field-label">Cuentas detectadas</p>
-      <div className="account-list" aria-label="Cuentas de World of Warcraft">
+      <p className="settings-field-label">{t("wow.detectedAccounts")}</p>
+      <div className="account-list" aria-label={t("wow.accountsLabel")}>
         {wow.accounts.length === 0 ? (
-          <p className="muted">No hay cuentas detectadas.</p>
+          <p className="muted">{t("wow.noAccounts")}</p>
         ) : (
           wow.accounts.map((account) => (
             <label className="account-row" key={account.name}>
               <input
                 aria-label={`${account.name} ${
                   account.savedVariablesExists
-                    ? "KeystoneSync.lua presente"
-                    : "KeystoneSync.lua ausente"
+                    ? t("wow.present")
+                    : t("wow.absent")
                 }`}
                 checked={selectedSet.has(account.name)}
                 type="checkbox"
@@ -165,27 +171,27 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
                 <strong>{account.name}</strong>
                 <small title={account.savedVariablesPath}>{account.savedVariablesPath}</small>
               </span>
-              <time>{formatModifiedAt(account.modifiedAt)}</time>
+              <time>{formatModifiedAt(account.modifiedAt, language, t)}</time>
             </label>
           ))
         )}
       </div>
 
       <p className={`wow-addon-status ${addonStatus?.installed ? "success" : "muted"}`}>
-        {formatAddonStatus(addonStatus)}
+        {formatAddonStatus(addonStatus, t)}
       </p>
 
       <div className="actions settings-account-actions">
-        <button type="button" onClick={() => runAction(detectWow, "Deteccion actualizada.")} disabled={loading}>
+        <button type="button" onClick={() => runAction(detectWow, t("wow.detectionUpdated"))} disabled={loading}>
           <RefreshCw size={18} aria-hidden="true" />
-          Redetectar
+          {t("wow.redetect")}
         </button>
         <button type="button" onClick={() => setSelected(wow.accounts.map((account) => account.name))} disabled={loading || wow.accounts.length === 0}>
-          Seleccionar todas
+          {t("wow.selectAll")}
         </button>
         <button type="button" onClick={onGoAddon} disabled={!onGoAddon}>
           <ExternalLink size={18} aria-hidden="true" />
-          Ir a Addon
+          {t("wow.goAddon")}
         </button>
       </div>
 
@@ -195,13 +201,13 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
       <button
         type="button"
         onClick={() =>
-          runAction(() => selectWowAccounts({ accounts: selected }), "Cuentas guardadas.")
+          runAction(() => selectWowAccounts({ accounts: selected }), t("wow.accountsSaved"))
         }
         disabled={loading || selected.length === 0 || wow.accounts.length === 0}
         className="settings-gold-action settings-save-accounts"
       >
         <Save size={18} aria-hidden="true" />
-        Guardar cuentas
+        {t("wow.saveAccounts")}
       </button>
     </section>
   );

@@ -1,6 +1,14 @@
-import { Download, LogOut } from "lucide-react";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { Download, LogOut, UserRoundPen } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import type { AuthState } from "../core/types";
+import { useI18n } from "../core/i18n";
 import appIcon from "../assets/keystone-ui/app-icon.png";
 import activeTabIndicator from "../assets/keystone-ui/02-active-tab-indicator.png.png";
 import footerWebButton from "../assets/keystone-ui/05-footer-web-button.png.png";
@@ -30,12 +38,14 @@ type KeystoneShellProps = {
   children: ReactNode;
   currentView: KeystoneView;
   onCloseWindow: () => void;
+  onChangeAvatar: () => void;
   onLogout: () => void;
   onMinimizeToTray: () => void;
   onMinimizeWindow: () => void;
   onNavigate: (view: KeystoneView) => void;
   onOpenSettings: () => void;
   onOpenWeb: () => void;
+  onStartWindowDrag: () => void;
 };
 
 export function KeystoneShell({
@@ -44,12 +54,14 @@ export function KeystoneShell({
   children,
   currentView,
   onCloseWindow,
+  onChangeAvatar,
   onLogout,
   onMinimizeToTray,
   onMinimizeWindow,
   onNavigate,
   onOpenSettings,
   onOpenWeb,
+  onStartWindowDrag,
 }: KeystoneShellProps) {
   const [clientScale, setClientScale] = useState(getClientScale);
 
@@ -69,10 +81,12 @@ export function KeystoneShell({
         busyLogout={busyLogout}
         currentView={currentView}
         onCloseWindow={onCloseWindow}
+        onChangeAvatar={onChangeAvatar}
         onLogout={onLogout}
         onMinimizeWindow={onMinimizeWindow}
         onNavigate={onNavigate}
         onOpenSettings={onOpenSettings}
+        onStartWindowDrag={onStartWindowDrag}
       />
       <div className="ks-view">{children}</div>
       <KeystoneFooter onMinimizeToTray={onMinimizeToTray} onOpenWeb={onOpenWeb} />
@@ -85,40 +99,85 @@ type KeystoneHeaderProps = {
   busyLogout: boolean;
   currentView: KeystoneView;
   onCloseWindow: () => void;
+  onChangeAvatar: () => void;
   onLogout: () => void;
   onMinimizeWindow: () => void;
   onNavigate: (view: KeystoneView) => void;
   onOpenSettings: () => void;
+  onStartWindowDrag: () => void;
 };
+
+const HEADER_INTERACTIVE_SELECTOR = "button, a, input, select, textarea, [role='button'], [data-no-window-drag]";
 
 function KeystoneHeader({
   auth,
   busyLogout,
   currentView,
   onCloseWindow,
+  onChangeAvatar,
   onLogout,
   onMinimizeWindow,
   onNavigate,
   onOpenSettings,
+  onStartWindowDrag,
 }: KeystoneHeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const username = auth.username ?? "Usuario";
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const { t } = useI18n();
+  const username = auth.username ?? t("shell.user");
+
+  useEffect(() => {
+    setUserMenuOpen(false);
+  }, [currentView]);
+
+  useEffect(() => {
+    if (!userMenuOpen) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userMenuOpen]);
+
+  const handleHeaderPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof Element && target.closest(HEADER_INTERACTIVE_SELECTOR)) {
+      return;
+    }
+    onStartWindowDrag();
+  };
 
   return (
-    <header className="ks-header">
+    <header className="ks-header" onPointerDown={handleHeaderPointerDown}>
       <div className="ks-brand">
         <img alt="" className="ks-brand__icon" src={appIcon} />
         <span className="ks-brand__name">KeystoneClient</span>
       </div>
 
-      <nav aria-label="Principal" className="ks-tabs">
+      <nav aria-label={t("shell.mainNavigation")} className="ks-tabs">
         <button
           aria-current={currentView === "sync" ? "page" : undefined}
           className="ks-tab"
           onClick={() => onNavigate("sync")}
           type="button"
         >
-          Sincronizacion
+          {t("shell.sync")}
           {currentView === "sync" ? <img alt="" className="ks-tab__indicator" src={activeTabIndicator} /> : null}
         </button>
         <button
@@ -133,15 +192,18 @@ function KeystoneHeader({
       </nav>
 
       <div className="ks-header-actions">
-        <button aria-label="Configuracion" className="ks-icon-control ks-settings-control" onClick={onOpenSettings} type="button">
+        <button aria-label={t("shell.settings")} className="ks-icon-control ks-settings-control" onClick={() => {
+          setUserMenuOpen(false);
+          onOpenSettings();
+        }} type="button">
           <img alt="" src={settingsButton} />
         </button>
-        <div className="ks-user-menu">
+        <div className="ks-user-menu" ref={userMenuRef}>
           <button
             aria-controls="ks-user-dropdown"
             aria-expanded={userMenuOpen}
             aria-haspopup="menu"
-            aria-label={`Menu de usuario de ${username}`}
+            aria-label={t("shell.userMenu", { name: username })}
             className="ks-user-menu__trigger"
             onClick={() => setUserMenuOpen((open) => !open)}
             type="button"
@@ -157,6 +219,17 @@ function KeystoneHeader({
           {userMenuOpen ? (
             <div className="ks-user-dropdown" id="ks-user-dropdown" role="menu">
               <button
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onChangeAvatar();
+                }}
+                role="menuitem"
+                type="button"
+              >
+                <UserRoundPen aria-hidden="true" />
+                {t("shell.changeAvatar")}
+              </button>
+              <button
                 disabled={busyLogout}
                 onClick={() => {
                   setUserMenuOpen(false);
@@ -166,16 +239,16 @@ function KeystoneHeader({
                 type="button"
               >
                 <LogOut aria-hidden="true" />
-                Cerrar sesion
+                {t("shell.logout")}
               </button>
             </div>
           ) : null}
         </div>
-        <div className="ks-window-controls" aria-label="Controles de ventana">
-          <button aria-label="Minimizar" className="ks-window-button ks-window-button--minimize" onClick={onMinimizeWindow} type="button">
+        <div className="ks-window-controls" aria-label={t("shell.windowControls")}>
+          <button aria-label={t("shell.minimize")} className="ks-window-button ks-window-button--minimize" onClick={onMinimizeWindow} type="button">
             <img alt="" src={windowMinimizeButton} />
           </button>
-          <button aria-label="Cerrar" className="ks-window-button ks-window-button--close" onClick={onCloseWindow} type="button">
+          <button aria-label={t("shell.close")} className="ks-window-button ks-window-button--close" onClick={onCloseWindow} type="button">
             <img alt="" src={windowCloseButton} />
           </button>
         </div>
@@ -190,15 +263,16 @@ type KeystoneFooterProps = {
 };
 
 function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
+  const { t } = useI18n();
   return (
     <footer className="ks-footer">
       <button className="ks-footer-action ks-footer-action--web" onClick={onOpenWeb} type="button">
         <img alt="" className="ks-footer-action__asset" src={footerWebButton} />
-        <span>Acceder a la Web</span>
+        <span>{t("shell.openWeb")}</span>
       </button>
       <button className="ks-footer-action ks-footer-action--tray" onClick={onMinimizeToTray} type="button">
         <Download aria-hidden="true" size={28} />
-        Minimizar a la bandeja
+        {t("shell.minimizeTray")}
       </button>
     </footer>
   );

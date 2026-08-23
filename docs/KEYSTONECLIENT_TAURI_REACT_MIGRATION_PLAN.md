@@ -1172,6 +1172,21 @@ Use Playwright with a fixed viewport and screenshot baselines.
 
 This is where React/Tauri should save time.
 
+## Implementation status (2026-08-23)
+
+- [x] The approved global shell, Synchronization view, Addon view, settings modal and user menu have deterministic visual coverage.
+- [x] Block 1 connects Synchronization to sanitized real character data with cache-first/background refresh behavior.
+- [x] The character table supports Raider.IO avatars with fallback, class colors, continuous ilvl/Raider.IO gradients, keystone display, sorting and scoped native profile opening.
+- [x] The Python sidecar automatically reconciles the single SavedVariables monitor and refreshes characters after successful sync.
+- [x] Addon status is checked once per installation in the background without automatic install/update, and matching WoW account selections survive path reconfirmation.
+- [x] Block 2 completes the frameless native window, safe drag/minimize/controlled-close behavior, profile dropdown and authenticated character-avatar selection.
+- [x] Block 2 completes real login and internal account registration, plus first-run WoW installation/account onboarding over the existing Python services and Block 1 lifecycle.
+- [x] Post-Block 2 regression hardening keeps logout responsive, persists anonymous state before monitor shutdown, moves blocking bridge requests off the UI thread and routes tray hiding through a scoped Rust command.
+- [x] Block 2 completes native Windows autostart, the localized dynamic tray and application-wide ES/EN first-party UI.
+- [x] The old `minimize_on_close` config key is preserved for compatibility but is no longer shown or used to bypass the explicit close-choice dialog.
+- [x] Block 3 adds the local Tauri host updater, Settings controls, update modal and one-time post-version changelog without changing Blocks 1 and 2 visuals.
+- [ ] Release cutover remains blocked on its later explicit phases and human approval.
+
 Recommended screen order:
 
 ```text
@@ -1293,6 +1308,23 @@ Preserve the product intent:
 - install/relaunch in an explicit, safe flow.
 
 Test using staged/local releases before production.
+
+## Implementation status (2026-08-23)
+
+- [x] Uses official Tauri v2 updater/process plugins with scoped permissions and explicit install/relaunch.
+- [x] Implements typed idle/checking/current/available/downloading/installing/error state, startup/manual checks, safe text notes, progress, controlled failures and a once-per-version changelog.
+- [x] Keeps `keystone-client/VERSION` canonical and plans the pending Client changesets as `0.4.0` / `client-v0.4.0`.
+- [x] Generates a tested static `latest.json` contract for `windows-x86_64` and requires a non-empty detached signature.
+- [x] Converts local build/release workflow definitions to the Tauri sidecar + React + Rust + NSIS path while preserving dry-run, resume and atomic release behavior.
+- [x] Gates automatic `main` publication behind `TAURI_CLIENT_RELEASE_ENABLED=true` during first-cutover validation.
+- [x] Resolve the new Rust updater/process dependencies and regenerate `Cargo.lock` through Cargo.
+- [x] Build and smoke an unsigned local `0.4.0` release executable and NSIS installer through the canonical Tauri build command.
+- [x] Prove production updater public/private signing configuration without exposing private material.
+- [x] Build and inspect real signed local `0.4.0` NSIS/updater artifacts, including positive, tamper and wrong-key verification.
+- [ ] Run and inspect the signed remote `release-dry-run` without publishing.
+- [x] Complete clean install, shortcut, launch, sidecar and uninstall smoke tests for the unsigned local NSIS package.
+- [ ] Complete the legacy Inno upgrade, config preservation and autostart migration smoke tests on Windows.
+- [ ] Obtain the final explicit approval before any public Tauri Client tag or release.
 
 ---
 

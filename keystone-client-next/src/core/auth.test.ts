@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { coreRequest } from "./client";
-import { login, logout } from "./auth";
+import { login, logout, register } from "./auth";
 
 vi.mock("./client", () => ({
   coreRequest: vi.fn(),
@@ -41,5 +41,27 @@ describe("auth wrappers", () => {
     await logout();
 
     expect(coreRequestMock).toHaveBeenCalledWith("auth.logout");
+  });
+
+  it("forwards registration through the allowlisted bridge command", async () => {
+    const payload = {
+      firstName: "New",
+      lastName: "Player",
+      email: "new@example.com",
+      username: "newplayer",
+      password: "secret1",
+      confirmPassword: "secret1",
+      dateOfBirth: "1990-05-14",
+    };
+    coreRequestMock.mockResolvedValueOnce({
+      username: "newplayer",
+      email: "new@example.com",
+      emailVerified: false,
+      message: "Cuenta creada.",
+    });
+
+    await register(payload);
+
+    expect(coreRequestMock).toHaveBeenCalledWith("auth.register", payload);
   });
 });

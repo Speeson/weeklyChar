@@ -84,7 +84,8 @@ class BridgeProcess:
         return self.read_message()
 
     def send(self, request: dict) -> dict:
-        return self.send_raw(json.dumps(request, separators=(",", ":")) + "\n")
+        response, _events = self.send_collect(request)
+        return response
 
     def send_collect(self, request: dict) -> tuple[dict, list[dict]]:
         assert self.process.stdin is not None
@@ -140,7 +141,9 @@ class BridgeProcessTests(unittest.TestCase):
                 "system.ping",
                 "system.get_state",
                 "auth.login",
+                "auth.register",
                 "auth.logout",
+                "profile.set_avatar",
                 "settings.get",
                 "settings.update",
                 "wow.detect",
@@ -151,6 +154,8 @@ class BridgeProcessTests(unittest.TestCase):
                 "sync.start",
                 "sync.stop",
                 "sync.force",
+                "characters.get",
+                "characters.refresh",
                 "addon.get_status",
                 "addon.check",
                 "addon.install",
@@ -194,6 +199,7 @@ class BridgeProcessTests(unittest.TestCase):
                     },
                     "accounts": [],
                     "selectedAccounts": [],
+                    "configurationComplete": False,
                 },
                 "sync": {
                     "running": False,
@@ -202,6 +208,13 @@ class BridgeProcessTests(unittest.TestCase):
                     "lastSuccessAt": None,
                     "lastError": None,
                     "selectedAccounts": 0,
+                },
+                "characters": {
+                    "characters": [],
+                    "refreshing": False,
+                    "source": "none",
+                    "lastRefreshAt": None,
+                    "lastError": None,
                 },
                 "addon": {
                     "installed": False,
@@ -274,6 +287,20 @@ class BridgeProcessTests(unittest.TestCase):
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], "INVALID_REQUEST")
         self.assertNotIn("password", json.dumps(response))
+
+    def test_auth_register_requires_the_complete_payload(self):
+        response = self.bridge.send(
+            {
+                "protocolVersion": 1,
+                "id": "register-bad",
+                "command": "auth.register",
+                "payload": {"username": "newplayer"},
+            }
+        )
+
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], "INVALID_REQUEST")
+        self.assertNotIn("newplayer", json.dumps(response["error"]))
 
     def test_settings_get_and_update_use_safe_whitelist(self):
         initial = self.bridge.send(
@@ -437,6 +464,68 @@ class BridgeProcessTests(unittest.TestCase):
 
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], "SYNC_NOT_AUTHENTICATED")
+
+    def test_startup_automatically_monitors_and_serves_cached_characters(self):
+        self.bridge.kill()
+        wow = make_wow_tree(Path(self.temp_dir.name))
+        config_dir = Path(self.temp_dir.name) / "KeystoneClient"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "config.json").write_text(
+            json.dumps(
+                {
+                    "api_url": "http://127.0.0.1:9",
+                    "sync_token": "secret-sync-token",
+                    "login_at": time.time(),
+                    "wow_install_path": str(wow),
+                    "wow_accounts_selected": ["ACCOUNT_A"],
+                    "cached_characters": [
+                        {
+                            "id": "cached-1",
+                            "name": "Auralis",
+                            "realm": "Zul'jin",
+                            "region": "eu",
+                            "wowClass": "Mage",
+                            "avatarUrl": None,
+                            "ilvl": 300,
+                            "rioScore": 0,
+                            "currentKeystone": None,
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        self.bridge = BridgeProcess(self.temp_dir.name)
+        self.ready = self.bridge.read_message()
+
+        state = self.bridge.send(
+            {"protocolVersion": 1, "id": "auto-state", "command": "system.get_state", "payload": {}}
+        )
+
+        self.assertTrue(state["ok"])
+        self.assertTrue(state["data"]["sync"]["running"])
+        self.assertIn(state["data"]["sync"]["state"], {"watching", "syncing"})
+        self.assertEqual(state["data"]["characters"]["characters"][0]["name"], "Auralis")
+        self.assertNotIn("secret-sync-token", json.dumps(state))
+
+    def test_character_commands_return_safe_state_and_require_auth_for_refresh(self):
+        state = self.bridge.send(
+            {"protocolVersion": 1, "id": "characters-get", "command": "characters.get", "payload": {}}
+        )
+        self.assertTrue(state["ok"])
+        self.assertEqual(state["data"]["characters"], [])
+        self.assertNotIn("sync_token", json.dumps(state))
+
+        refresh = self.bridge.send(
+            {
+                "protocolVersion": 1,
+                "id": "characters-refresh",
+                "command": "characters.refresh",
+                "payload": {},
+            }
+        )
+        self.assertFalse(refresh["ok"])
+        self.assertEqual(refresh["error"]["code"], "CHARACTER_NOT_AUTHENTICATED")
 
     def test_addon_commands_return_safe_status_and_use_cache_fixture(self):
         wow = make_wow_tree(Path(self.temp_dir.name))

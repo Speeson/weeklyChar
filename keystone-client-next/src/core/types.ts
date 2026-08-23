@@ -2,7 +2,9 @@ export type CoreCommand =
   | "system.ping"
   | "system.get_state"
   | "auth.login"
+  | "auth.register"
   | "auth.logout"
+  | "profile.set_avatar"
   | "settings.get"
   | "settings.update"
   | "wow.detect"
@@ -13,6 +15,8 @@ export type CoreCommand =
   | "sync.start"
   | "sync.stop"
   | "sync.force"
+  | "characters.get"
+  | "characters.refresh"
   | "addon.get_status"
   | "addon.check"
   | "addon.install"
@@ -37,6 +41,23 @@ export type AuthState = {
 export type LoginPayload = {
   username: string;
   password: string;
+};
+
+export type RegisterPayload = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  username: string;
+  password: string;
+  confirmPassword: string;
+  dateOfBirth: string;
+};
+
+export type RegisterResult = {
+  username: string;
+  email: string;
+  emailVerified: boolean;
+  message: string;
 };
 
 export type ClientSettings = {
@@ -66,6 +87,7 @@ export type WowState = {
   install: WowInstallState;
   accounts: WowAccount[];
   selectedAccounts: string[];
+  configurationComplete?: boolean;
 };
 
 export type SelectWowInstallPayload = {
@@ -83,7 +105,41 @@ export type SystemState = {
   settings: ClientSettings;
   wow: WowState;
   sync: SyncStatus;
+  characters: CharacterState;
   addon: AddonStatus;
+};
+
+export type SetAvatarPayload = {
+  avatarUrl: string;
+};
+
+export type CharacterKeystone = {
+  level: number;
+  dungeon: string | null;
+  challengeMapId: number | null;
+  mapId: number | null;
+};
+
+export type Character = {
+  id: string;
+  name: string;
+  realm: string;
+  region: string;
+  wowAccount: string | null;
+  wowClass: string | null;
+  avatarUrl: string | null;
+  ilvl: number | null;
+  rioScore: number | null;
+  currentKeystone: CharacterKeystone | null;
+  keystoneDisplay: string;
+};
+
+export type CharacterState = {
+  characters: Character[];
+  refreshing: boolean;
+  source: "none" | "cache" | "remote";
+  lastRefreshAt: string | null;
+  lastError: string | null;
 };
 
 export type SyncState = "idle" | "watching" | "syncing" | "success" | "error";
@@ -132,6 +188,8 @@ export type CoreEventName =
   | "sync.status"
   | "sync.completed"
   | "sync.error"
+  | "characters.updated"
+  | "addon.check.failed"
   | "addon.check.started"
   | "addon.check.completed"
   | "addon.install.started"
@@ -179,6 +237,16 @@ export type CoreEvent =
       protocolVersion: 1;
       event: "sync.error";
       data: SyncErrorEventData;
+    }
+  | {
+      protocolVersion: 1;
+      event: "characters.updated";
+      data: CharacterState;
+    }
+  | {
+      protocolVersion: 1;
+      event: "addon.check.failed";
+      data: CoreError;
     }
   | {
       protocolVersion: 1;

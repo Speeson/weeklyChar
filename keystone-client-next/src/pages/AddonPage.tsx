@@ -30,6 +30,7 @@ import {
 } from "../core/addon";
 import type { AddonStatus, CoreError, WowState } from "../core/types";
 import { selectWowInstall } from "../core/wow";
+import { useI18n, type TranslationKey } from "../core/i18n";
 
 type AddonPageProps = {
   initialAddon: AddonStatus;
@@ -41,29 +42,31 @@ type AddonPageProps = {
 type AddonAction = "check" | "install" | "update" | "reinstall";
 type StatusTone = "default" | "good" | "bad" | "notice";
 
-function formatError(error: unknown): string {
+function formatError(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as CoreError).message);
   }
-  return "No se pudo gestionar el addon.";
+  return fallback;
 }
 
-function stateLabel(status: AddonStatus): string {
+type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
+
+function stateLabel(status: AddonStatus, t: Translate): string {
   switch (status.state) {
     case "current":
-      return "Actualizado";
+      return t("addon.current");
     case "update-available":
-      return "Actualización disponible";
+      return t("addon.updateAvailable");
     case "local-newer":
-      return "Versión local más reciente";
+      return t("addon.localNewer");
     case "offline-cache":
-      return "Instalación disponible desde caché";
+      return t("addon.offlineCache");
     case "unavailable":
-      return "No disponible";
+      return t("common.notAvailable");
     case "error":
-      return "Error";
+      return t("common.error");
     default:
-      return "Instalación disponible";
+      return t("addon.installAvailable");
   }
 }
 
@@ -89,34 +92,34 @@ function formatVersion(version: string | null): string {
   return version.startsWith("v") ? version : `v${version}`;
 }
 
-function formatLastCheck(value: string | null, preview: boolean): string {
+function formatLastCheck(value: string | null, preview: boolean, language: "es" | "en", t: Translate): string {
   if (preview) {
-    return "hace 2 min";
+    return t("addon.minutesAgo", { count: 2 });
   }
   if (!value) {
-    return "Sin comprobar";
+    return t("addon.notChecked");
   }
 
   const checkedAt = new Date(value);
   if (!Number.isFinite(checkedAt.getTime())) {
-    return "Sin comprobar";
+    return t("addon.notChecked");
   }
   const elapsedMs = Date.now() - checkedAt.getTime();
   if (Number.isFinite(elapsedMs) && elapsedMs >= 0) {
     const elapsedMinutes = Math.floor(elapsedMs / 60_000);
     if (elapsedMinutes < 1) {
-      return "ahora";
+      return t("addon.now");
     }
     if (elapsedMinutes < 60) {
-      return `hace ${elapsedMinutes} min`;
+      return t("addon.minutesAgo", { count: elapsedMinutes });
     }
     const elapsedHours = Math.floor(elapsedMinutes / 60);
     if (elapsedHours < 24) {
-      return `hace ${elapsedHours} h`;
+      return t("addon.hoursAgo", { count: elapsedHours });
     }
   }
 
-  return checkedAt.toLocaleString("es-ES", {
+  return checkedAt.toLocaleString(language === "en" ? "en-US" : "es-ES", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -125,14 +128,14 @@ function formatLastCheck(value: string | null, preview: boolean): string {
   });
 }
 
-function sourceLabel(source: AddonStatus["source"]): string {
+function sourceLabel(source: AddonStatus["source"], t: Translate): string {
   if (source === "remote") {
     return "KeystoneSync releases";
   }
   if (source === "cache") {
-    return "Caché local";
+    return t("addon.localCache");
   }
-  return "No disponible";
+  return t("common.notAvailable");
 }
 
 function addonFolderPath(addonsPath: string): string {
@@ -146,6 +149,7 @@ export function AddonPage({
   onWowChanged,
   preview = false,
 }: AddonPageProps) {
+  const { language, t } = useI18n();
   const [addon, setAddon] = useState<AddonStatus>(initialAddon);
   const [wow, setWow] = useState<WowState>(initialWow);
   const [busyAction, setBusyAction] = useState<AddonAction | null>(null);
@@ -202,7 +206,7 @@ export function AddonPage({
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(formatError(caught));
+          setError(formatError(caught, t("addon.errorGeneric")));
         }
       });
 
@@ -210,7 +214,7 @@ export function AddonPage({
       cancelled = true;
       unlisten.then((dispose) => dispose());
     };
-  }, [preview]);
+  }, [language, preview]);
 
   async function runAction(action: AddonAction, request: () => Promise<AddonStatus>, success: string) {
     if (busyAction !== null || addon.operation || folderBusy) {
@@ -227,7 +231,7 @@ export function AddonPage({
         setBusyAction(null);
       }
     } catch (caught) {
-      setError(formatError(caught));
+      setError(formatError(caught, t("addon.errorGeneric")));
       setBusyAction(null);
     }
   }
@@ -245,7 +249,7 @@ export function AddonPage({
         defaultPath: wow.install.addonsPath ?? wow.install.installPath ?? undefined,
         directory: true,
         multiple: false,
-        title: "Selecciona la carpeta de AddOns",
+        title: t("addon.folderDialog"),
       });
       if (typeof selectedPath !== "string") {
         return;
@@ -254,9 +258,9 @@ export function AddonPage({
       const nextWow = await selectWowInstall({ path: selectedPath });
       setWow(nextWow);
       onWowChanged(nextWow);
-      setMessage("Carpeta de AddOns actualizada.");
+      setMessage(t("addon.folderUpdated"));
     } catch (caught) {
-      setError(formatError(caught));
+      setError(formatError(caught, t("addon.errorGeneric")));
     } finally {
       setFolderBusy(false);
     }
@@ -265,7 +269,7 @@ export function AddonPage({
   async function openAddonDirectory() {
     const addonsPath = wow.install.addonsPath;
     if (!addonsPath) {
-      setError("Selecciona primero una carpeta de AddOns válida.");
+      setError(t("addon.selectValidFolder"));
       return;
     }
 
@@ -281,7 +285,7 @@ export function AddonPage({
           // Report the original opener error below.
         }
       }
-      setError(formatError(caught));
+      setError(formatError(caught, t("addon.errorGeneric")));
     }
   }
 
@@ -297,7 +301,7 @@ export function AddonPage({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch (caught) {
-      setError(formatError(caught));
+      setError(formatError(caught, t("addon.errorGeneric")));
     }
   }
 
@@ -305,7 +309,7 @@ export function AddonPage({
   const canInstall = addon.state === "not-installed" || addon.state === "offline-cache";
   const canUpdate = addon.state === "update-available";
   const canReinstall = addon.installed;
-  const statusText = addon.operation?.message || stateLabel(addon);
+  const statusText = addon.operation?.message || stateLabel(addon, t);
   const statusTextTone: StatusTone = addon.operation ? "notice" : stateTone(addon);
   const addonsPath = wow.install.addonsPath;
 
@@ -321,21 +325,21 @@ export function AddonPage({
         </header>
 
         <p className="addon-description">
-          Instala o actualiza KeystoneSync desde las releases oficiales en tu carpeta de World of Warcraft.
+          {t("addon.description")}
         </p>
 
         <section className="addon-path-card" aria-labelledby="addon-path-title">
           <div className="addon-section-heading">
             <FolderOpen aria-hidden="true" />
-            <h2 id="addon-path-title">Ruta de AddOns</h2>
+            <h2 id="addon-path-title">{t("addon.path")}</h2>
           </div>
 
           <div className="addon-path-field">
-            <span title={addonsPath ?? undefined}>{addonsPath ?? "No se ha detectado una carpeta de AddOns"}</span>
+            <span title={addonsPath ?? undefined}>{addonsPath ?? t("addon.noPath")}</span>
             <button
               type="button"
               className="addon-copy-button"
-              aria-label={copied ? "Ruta copiada" : "Copiar ruta de AddOns"}
+              aria-label={copied ? t("addon.pathCopied") : t("addon.copyPath")}
               onClick={() => void copyAddonPath()}
               disabled={!addonsPath}
             >
@@ -346,11 +350,11 @@ export function AddonPage({
           <div className="addon-folder-actions">
             <button type="button" onClick={() => void chooseAddonFolder()} disabled={busy}>
               <FolderOpen aria-hidden="true" />
-              Seleccionar carpeta de AddOns
+              {t("addon.selectFolder")}
             </button>
             <button type="button" onClick={() => void openAddonDirectory()} disabled={!addonsPath || busy}>
               <ExternalLink aria-hidden="true" />
-              Abrir carpeta del addon
+              {t("addon.openFolder")}
             </button>
           </div>
         </section>
@@ -359,11 +363,11 @@ export function AddonPage({
           <button
             type="button"
             className="addon-primary-action"
-            onClick={() => void runAction("install", installAddon, "Instalación iniciada.")}
+            onClick={() => void runAction("install", installAddon, t("addon.installStarted"))}
             disabled={busy}
           >
             <Download aria-hidden="true" />
-            Instalar KeystoneSync
+            {t("addon.install")}
           </button>
         ) : (
           <div className={`addon-primary-actions${canUpdate && canReinstall ? "" : " addon-primary-actions--single"}`}>
@@ -371,22 +375,22 @@ export function AddonPage({
               <button
                 type="button"
                 className="addon-primary-action"
-                onClick={() => void runAction("update", updateAddon, "Actualización iniciada.")}
+                onClick={() => void runAction("update", updateAddon, t("addon.updateStarted"))}
                 disabled={busy}
               >
                 <RefreshCw aria-hidden="true" />
-                Actualizar KeystoneSync
+                {t("addon.update")}
               </button>
             ) : null}
             {canReinstall ? (
               <button
                 type="button"
                 className="addon-primary-action"
-                onClick={() => void runAction("reinstall", reinstallAddon, "Reinstalación iniciada.")}
+                onClick={() => void runAction("reinstall", reinstallAddon, t("addon.reinstallStarted"))}
                 disabled={busy}
               >
                 <RotateCcw aria-hidden="true" />
-                Reinstalar KeystoneSync
+                {t("addon.reinstall")}
               </button>
             ) : null}
           </div>
@@ -402,41 +406,41 @@ export function AddonPage({
         <section className="addon-status-card" aria-labelledby="addon-status-title">
           <div className="addon-status-heading">
             <ShieldCheck aria-hidden="true" />
-            <h2 id="addon-status-title">Estado del addon</h2>
+            <h2 id="addon-status-title">{t("addon.statusTitle")}</h2>
           </div>
 
-          <dl className="addon-status-list" aria-label="Estado del addon">
+          <dl className="addon-status-list" aria-label={t("addon.statusTitle")}>
             <AddonStatusRow
               icon={Download}
-              label="Instalado"
-              value={addon.installed ? "Sí" : "No"}
+              label={t("addon.installed")}
+              value={addon.installed ? t("addon.yes") : t("addon.no")}
               tone={addon.installed ? "good" : "bad"}
               badge
             />
-            <AddonStatusRow icon={Tag} label="Última versión" value={formatVersion(addon.latestVersion)} />
-            <AddonStatusRow icon={Activity} label="Estado" value={statusText} tone={statusTextTone} />
-            <AddonStatusRow icon={Globe} label="Origen" value={sourceLabel(addon.source)} />
+            <AddonStatusRow icon={Tag} label={t("addon.latest")} value={formatVersion(addon.latestVersion)} />
+            <AddonStatusRow icon={Activity} label={t("addon.state")} value={statusText} tone={statusTextTone} />
+            <AddonStatusRow icon={Globe} label={t("addon.source")} value={sourceLabel(addon.source, t)} />
             <AddonStatusRow
               icon={Database}
-              label="Caché local"
-              value={addon.cacheAvailable ? "disponible" : "no disponible"}
+              label={t("addon.cache")}
+              value={addon.cacheAvailable ? t("addon.available") : t("addon.unavailable")}
               tone={addon.cacheAvailable ? "good" : "default"}
             />
             <AddonStatusRow
               icon={Clock3}
-              label="Última comprobación"
-              value={formatLastCheck(addon.lastCheckAt, preview)}
+              label={t("addon.lastCheck")}
+              value={formatLastCheck(addon.lastCheckAt, preview, language, t)}
             />
           </dl>
 
           <button
             type="button"
             className="addon-check-action"
-            onClick={() => void runAction("check", checkAddon, "Estado del addon actualizado.")}
+            onClick={() => void runAction("check", checkAddon, t("addon.statusUpdated"))}
             disabled={busy}
           >
             {busyAction === "check" ? <LoaderCircle className="addon-spin" aria-hidden="true" /> : <Search aria-hidden="true" />}
-            {busyAction === "check" ? "Comprobando..." : "Buscar actualizaciones"}
+            {busyAction === "check" ? t("addon.checking") : t("addon.check")}
           </button>
         </section>
       </aside>

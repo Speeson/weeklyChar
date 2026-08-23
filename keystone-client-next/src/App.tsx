@@ -1,21 +1,39 @@
 import "./App.css";
-import { X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+import { Check, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import packageJson from "../package.json";
 import appIcon from "./assets/keystone-ui/app-icon.png";
 import bgImage from "./assets/keystone-ui/bg.jpg";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
+import { ChangelogModal } from "./components/ChangelogModal";
+import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
+import { findPostUpdateChangelog, markChangelogSeen, type PostUpdateChangelog } from "./core/changelog";
 import { coreRequest } from "./core/client";
+import { classColor } from "./core/characterDisplay";
 import { listenCoreEvents } from "./core/events";
-import { closeWindow, minimizeToTray, minimizeWindow, openWeb } from "./core/native";
+import {
+  exitApplication,
+  listenWindowCloseRequested,
+  minimizeToTray,
+  minimizeWindow,
+  openReleases,
+  openWeb,
+  startWindowDragging,
+} from "./core/native";
 import { getPreviewState } from "./core/preview";
+import { setProfileAvatar } from "./core/profile";
+import { tauriUpdaterAdapter } from "./core/tauriUpdater";
+import { UpdateController, type UpdaterSnapshot } from "./core/updater";
+import { I18nProvider, translate } from "./core/i18n";
+import { bundledRelease } from "./generated/release";
 import type {
   AddonStatus,
   AuthState,
   ClientSettings,
+  CharacterState,
   CoreError,
-  CoreEvent,
   PingResult,
   SyncStatus,
   SystemState,
@@ -23,6 +41,7 @@ import type {
 } from "./core/types";
 import { AddonPage } from "./pages/AddonPage";
 import { LoginPage } from "./pages/LoginPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SyncPage } from "./pages/SyncPage";
 import { WowPage } from "./pages/WowPage";
@@ -30,28 +49,78 @@ import { WowPage } from "./pages/WowPage";
 type BridgeStatus = "loading" | "ready" | "error";
 type ActionName = "startup" | "logout";
 
-function formatError(error: unknown): string {
+const initialUpdater: UpdaterSnapshot = {
+  status: "idle",
+  currentVersion: packageJson.version,
+  availableVersion: null,
+  notes: "",
+  releaseDate: null,
+  downloadedBytes: 0,
+  totalBytes: null,
+  lastCheckedAt: null,
+  error: null,
+};
+
+function AvatarChoice({
+  avatarUrl,
+  name,
+  selected,
+  wowClass,
+}: {
+  avatarUrl: string | null;
+  name: string;
+  selected: boolean;
+  wowClass: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="ks-avatar-choice__portrait" style={{ backgroundColor: classColor(wowClass) }}>
+      <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
+      {avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={avatarUrl} /> : null}
+      {selected ? <Check aria-hidden="true" className="ks-avatar-choice__check" /> : null}
+    </span>
+  );
+}
+
+function formatError(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as CoreError).message);
   }
 
-  return "The Python bridge returned a controlled error.";
+  return fallback;
 }
 
 function App() {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>("loading");
   const [busyAction, setBusyAction] = useState<ActionName | null>("startup");
-  const [lastEvent, setLastEvent] = useState<CoreEvent | null>(null);
-  const [coreState, setCoreState] = useState<SystemState | null>(null);
   const [auth, setAuth] = useState<AuthState | null>(null);
   const [settings, setSettings] = useState<ClientSettings | null>(null);
   const [wow, setWow] = useState<WowState | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
+  const [characters, setCharacters] = useState<CharacterState | null>(null);
   const [addon, setAddon] = useState<AddonStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [currentView, setCurrentView] = useState<KeystoneView>("sync");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [onboardingSkipped, setOnboardingSkipped] = useState(false);
+  const [updater, setUpdater] = useState<UpdaterSnapshot>(initialUpdater);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [postUpdateChangelog, setPostUpdateChangelog] = useState<PostUpdateChangelog | null>(null);
+  const updaterController = useRef<UpdateController | null>(null);
+
+  const applySystemState = useCallback((state: SystemState) => {
+    setAuth(state.auth);
+    setSettings(state.settings);
+    setWow(state.wow);
+    setSync(state.sync);
+    setCharacters(state.characters);
+    setAddon(state.addon);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,12 +128,14 @@ function App() {
       if (cancelled) {
         return;
       }
-      setLastEvent(event);
       if (event.event === "system.ready") {
         setBridgeStatus("ready");
       }
       if (event.event === "addon.check.completed" || event.event === "addon.status.changed") {
         setAddon(event.data);
+      }
+      if (event.event === "characters.updated") {
+        setCharacters(event.data);
       }
       if (event.event === "addon.install.completed") {
         setAddon(event.data.status);
@@ -91,23 +162,18 @@ function App() {
           return;
         }
 
-        setCoreState(state);
-        setAuth(state.auth);
-        setSettings(state.settings);
-        setWow(state.wow);
-        setSync(state.sync);
-        setAddon(state.addon);
+        applySystemState(state);
         setPreviewMode(previewState !== null);
         setBridgeStatus(firstPing.pong ? "ready" : "error");
         setError(null);
-        document.title = `KeystoneClient Next - ${state.bridge}`;
+        document.title = `KeystoneClient - ${state.bridge}`;
       } catch (caught: unknown) {
         if (cancelled) {
           return;
         }
         setBridgeStatus("error");
-        setError(formatError(caught));
-        document.title = "KeystoneClient Next - Error";
+        setError(formatError(caught, translate("es", "common.bridgeError")));
+        document.title = "KeystoneClient - Error";
       } finally {
         if (!cancelled) {
           setBusyAction(null);
@@ -121,7 +187,80 @@ function App() {
       cancelled = true;
       unlisten.then((dispose) => dispose());
     };
+  }, [applySystemState]);
+
+  useEffect(() => {
+    if (!isTauri()) {
+      if (import.meta.env.DEV && new URLSearchParams(window.location.search).get("updater") === "available") {
+        setUpdater({
+          ...initialUpdater,
+          status: "available",
+          availableVersion: "0.4.0",
+          notes: "Nuevo instalador Tauri con actualizaciones firmadas.\nMejoras de estabilidad y rendimiento.",
+          releaseDate: "2026-08-23T12:00:00Z",
+          lastCheckedAt: "2026-08-23T12:00:00Z",
+        });
+        setUpdateModalOpen(true);
+      }
+      return;
+    }
+    const controller = new UpdateController(packageJson.version, tauriUpdaterAdapter);
+    updaterController.current = controller;
+    const unsubscribe = controller.subscribe((snapshot) => {
+      setUpdater(snapshot);
+      if (snapshot.status === "available") {
+        setUpdateModalOpen(true);
+      } else if (snapshot.status === "current") {
+        setUpdateModalOpen(false);
+      }
+    });
+    void controller.check();
+    return () => {
+      unsubscribe();
+      updaterController.current = null;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isTauri()) {
+      return;
+    }
+    try {
+      setPostUpdateChangelog(
+        findPostUpdateChangelog(localStorage, bundledRelease.version, bundledRelease.notes),
+      );
+    } catch {
+      // A blocked WebView storage backend must not prevent client startup.
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unlisten = listenWindowCloseRequested(() => {
+      if (!cancelled) {
+        setSettingsOpen(false);
+        setAvatarPickerOpen(false);
+        setCloseDialogOpen(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+      unlisten.then((dispose) => dispose());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!closeDialogOpen) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCloseDialogOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [closeDialogOpen]);
 
   const handleSettingsChanged = useCallback((nextSettings: ClientSettings) => {
     setSettings(nextSettings);
@@ -129,20 +268,58 @@ function App() {
 
   const handleWowChanged = useCallback((nextWow: WowState) => {
     setWow(nextWow);
-    setCoreState((current) => (current ? { ...current, wow: nextWow } : current));
   }, []);
 
   async function handleLogout() {
+    const previousAuth = auth;
     setBusyAction("logout");
     setError(null);
+    setAuth({ authenticated: false, username: null, avatarUrl: null });
+    setCharacters((current) => current ? { ...current, characters: [], source: "none", lastRefreshAt: null, lastError: null } : current);
+    setSettingsOpen(false);
+    setAvatarPickerOpen(false);
+    setOnboardingSkipped(false);
     try {
       const nextAuth = await logout();
-      setAuth(nextAuth);
-      setSettingsOpen(false);
+      setAuth((current) => current?.authenticated ? current : nextAuth);
     } catch (caught) {
-      setError(formatError(caught));
+      setAuth((current) => current?.authenticated ? current : previousAuth);
+      setError(formatError(caught, t("common.bridgeError")));
     } finally {
       setBusyAction(null);
+    }
+  }
+
+  async function handleAuthenticated(nextAuth: AuthState) {
+    setAuth(nextAuth);
+    setBusyAction("startup");
+    setError(null);
+    try {
+      const state = await coreRequest<SystemState>("system.get_state");
+      applySystemState(state);
+    } catch (caught) {
+      setError(formatError(caught, t("common.bridgeError")));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleAvatarSelect(avatarUrl: string) {
+    if (avatarSaving) {
+      return;
+    }
+    setAvatarSaving(true);
+    setAvatarError(null);
+    try {
+      const nextAuth = previewMode
+        ? { ...auth!, avatarUrl }
+        : await setProfileAvatar({ avatarUrl });
+      setAuth(nextAuth);
+      setAvatarPickerOpen(false);
+    } catch (caught) {
+      setAvatarError(formatError(caught, t("common.bridgeError")));
+    } finally {
+      setAvatarSaving(false);
     }
   }
 
@@ -151,30 +328,63 @@ function App() {
     try {
       await action();
     } catch (caught) {
-      setError(formatError(caught));
+      setError(formatError(caught, t("common.bridgeError")));
     }
   }
 
+  function checkForUpdates() {
+    void updaterController.current?.check();
+  }
+
+  function closePostUpdateChangelog() {
+    try {
+      markChangelogSeen(localStorage, bundledRelease.version);
+    } catch {
+      // The changelog can still be dismissed for this process when storage is unavailable.
+    }
+    setPostUpdateChangelog(null);
+  }
+
+  const usableSelectedAccounts = wow?.accounts.filter(
+    (account) => account.savedVariablesExists && wow.selectedAccounts.includes(account.name),
+  ).length ?? 0;
+  const needsOnboarding = Boolean(
+    auth?.authenticated
+      && wow
+      && (!wow.install.detected
+        || wow.configurationComplete === false
+        || usableSelectedAccounts === 0),
+  );
+  const language = settings?.lang ?? "es";
+  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(language, key, values);
+
   return (
+    <I18nProvider language={language}>
     <main className="shell" style={{ "--ks-bg-image": `url(${bgImage})` } as React.CSSProperties}>
-      {auth?.authenticated && settings && wow && sync && addon ? (
+      {auth?.authenticated && settings && wow && sync && characters && addon && (!needsOnboarding || onboardingSkipped) ? (
         <KeystoneShell
           auth={auth}
           busyLogout={busyAction === "logout"}
           currentView={currentView}
-          onCloseWindow={() => void runNativeAction(closeWindow)}
+          onCloseWindow={() => setCloseDialogOpen(true)}
+          onChangeAvatar={() => {
+            setAvatarError(null);
+            setAvatarPickerOpen(true);
+          }}
           onLogout={() => void handleLogout()}
           onMinimizeToTray={() => void runNativeAction(minimizeToTray)}
           onMinimizeWindow={() => void runNativeAction(minimizeWindow)}
           onNavigate={setCurrentView}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenWeb={() => void runNativeAction(openWeb)}
+          onStartWindowDrag={() => void runNativeAction(startWindowDragging)}
         >
           {error ? <p className="error ks-global-error" role="alert">{error}</p> : null}
           {currentView === "sync" ? (
             <SyncPage
               appVersion={packageJson.version}
               initialAddon={addon}
+              initialCharacters={characters}
               initialSync={sync}
               initialWow={wow}
               preview={previewMode}
@@ -193,10 +403,10 @@ function App() {
                 <div className="ks-modal__header">
                   <div>
                     <p className="shell__eyebrow">KeystoneClient</p>
-                    <h2 id="settings-modal-title">Ajustes</h2>
+                    <h2 id="settings-modal-title">{t("settings.title")}</h2>
                   </div>
                   <button
-                    aria-label="Cerrar configuracion"
+                    aria-label={t("settings.close")}
                     className="ks-modal__close"
                     onClick={() => setSettingsOpen(false)}
                     type="button"
@@ -208,8 +418,12 @@ function App() {
                   <SettingsPage
                     appVersion={packageJson.version}
                     initialSettings={settings}
+                    onCheckUpdates={checkForUpdates}
+                    onOpenReleases={() => void runNativeAction(openReleases)}
+                    onOpenUpdate={() => setUpdateModalOpen(true)}
                     onSettingsChanged={handleSettingsChanged}
                     preview={previewMode}
+                    updater={updater}
                   />
                   <WowPage
                     addonStatus={addon}
@@ -221,29 +435,120 @@ function App() {
                     onWowChanged={handleWowChanged}
                   />
                   <div className="ks-modal__footer">
-                    <button onClick={() => setSettingsOpen(false)} type="button">Cerrar</button>
+                    <button onClick={() => setSettingsOpen(false)} type="button">{t("common.close")}</button>
                   </div>
                 </div>
               </div>
             </div>
           ) : null}
+          {avatarPickerOpen ? (
+            <div aria-labelledby="avatar-picker-title" aria-modal="true" className="ks-modal ks-avatar-picker" role="dialog">
+              <div className="ks-modal__panel ks-avatar-picker__panel">
+                <div className="ks-modal__header">
+                  <div>
+                    <p className="shell__eyebrow">{t("avatar.profile")}</p>
+                    <h2 id="avatar-picker-title">{t("avatar.title")}</h2>
+                  </div>
+                  <button aria-label={t("avatar.close")} className="ks-modal__close" onClick={() => setAvatarPickerOpen(false)} type="button">
+                    <X aria-hidden="true" size={20} />
+                  </button>
+                </div>
+                <div className="ks-avatar-picker__content">
+                  {characters.characters.length === 0 ? <p className="muted">{t("avatar.empty")}</p> : (
+                    <div className="ks-avatar-picker__grid">
+                      {characters.characters.map((character) => (
+                        <button
+                          aria-pressed={Boolean(character.avatarUrl && auth.avatarUrl === character.avatarUrl)}
+                          className="ks-avatar-choice"
+                          disabled={avatarSaving || !character.avatarUrl}
+                          key={character.id}
+                          onClick={() => character.avatarUrl && void handleAvatarSelect(character.avatarUrl)}
+                          type="button"
+                        >
+                          <AvatarChoice
+                            avatarUrl={character.avatarUrl}
+                            name={character.name}
+                            selected={Boolean(character.avatarUrl && auth.avatarUrl === character.avatarUrl)}
+                            wowClass={character.wowClass}
+                          />
+                          <span><strong>{character.name}</strong><small>{character.realm}</small></span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {avatarError ? <p className="error" role="alert">{avatarError}</p> : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </KeystoneShell>
+      ) : auth?.authenticated && wow && settings && sync && characters && addon ? (
+        <OnboardingPage
+          initialWow={wow}
+          onComplete={(nextWow) => {
+            handleWowChanged(nextWow);
+            setOnboardingSkipped(false);
+          }}
+          onOpenAddon={() => {
+            setCurrentView("addon");
+            setOnboardingSkipped(true);
+          }}
+          onWowChanged={handleWowChanged}
+          preview={previewMode}
+        />
       ) : (
         <section className="ks-login-shell" aria-label="KeystoneClient">
           <img alt="" className="ks-login-shell__icon" src={appIcon} />
           <div>
             <p className="shell__eyebrow">
-              {bridgeStatus === "loading" ? "Conectando" : bridgeStatus === "ready" ? "KeystoneClient" : "Error"}
+              {bridgeStatus === "loading" ? t("login.connecting") : bridgeStatus === "ready" ? "KeystoneClient" : t("common.error")}
             </p>
             <h1>KeystoneClient</h1>
           </div>
           {error ? <p className="error" role="alert">{error}</p> : null}
-          <LoginPage onAuthenticated={setAuth} />
-          {lastEvent ? <p className="muted">Core: {lastEvent.event}</p> : null}
-          {coreState ? <p className="muted">Bridge: {coreState.bridge}</p> : null}
+          <LoginPage onAuthenticated={(nextAuth) => void handleAuthenticated(nextAuth)} />
         </section>
       )}
+      {closeDialogOpen ? (
+        <div aria-labelledby="close-dialog-title" aria-modal="true" className="ks-modal ks-choice-modal" role="dialog">
+          <div className="ks-modal__panel ks-choice-modal__panel">
+            <div className="ks-modal__header">
+              <div>
+                <p className="shell__eyebrow">KeystoneClient</p>
+                <h2 id="close-dialog-title">{t("close.title")}</h2>
+              </div>
+              <button aria-label={t("close.cancelLabel")} className="ks-modal__close" onClick={() => setCloseDialogOpen(false)} type="button">
+                <X aria-hidden="true" size={20} />
+              </button>
+            </div>
+            <div className="ks-choice-modal__actions">
+              <button autoFocus onClick={() => {
+                setCloseDialogOpen(false);
+                void runNativeAction(minimizeToTray);
+              }} type="button">{t("shell.minimizeTray")}</button>
+              <button className="ks-choice-modal__exit" onClick={() => void runNativeAction(exitApplication)} type="button">{t("close.exit")}</button>
+              <button className="ks-choice-modal__cancel" onClick={() => setCloseDialogOpen(false)} type="button">{t("common.cancel")}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {updateModalOpen && ["available", "checking", "downloading", "installing", "error"].includes(updater.status) ? (
+        <UpdateModal
+          onClose={() => setUpdateModalOpen(false)}
+          onInstall={() => void updaterController.current?.installAndRelaunch()}
+          onRetry={checkForUpdates}
+          snapshot={updater}
+        />
+      ) : null}
+      {postUpdateChangelog ? (
+        <ChangelogModal
+          notes={postUpdateChangelog.notes}
+          onClose={closePostUpdateChangelog}
+          version={postUpdateChangelog.version}
+        />
+      ) : null}
     </main>
+    </I18nProvider>
   );
 }
 

@@ -1,0 +1,11 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Migra la distribucion publica de KeystoneClient a Tauri.",
+  "details": [
+    "El instalador NSIS de Tauri sustituye al build publico de Tkinter y conserva la configuracion existente del cliente.",
+    "KeystoneClient comprueba actualizaciones firmadas, muestra las notas de version y permite instalar y reiniciar de forma explicita.",
+    "El pipeline publica el instalador canonico, su firma y el manifiesto latest.json mediante un release reanudable."
+  ]
+}

@@ -42,6 +42,10 @@ def _addons_path(cfg: dict[str, Any]) -> str | None:
     return wow_path.addons_folder_for(cfg.get("wow_install_path"))
 
 
+def _path_key(path: str | Path | None) -> str | None:
+    return str(Path(path).resolve()).casefold() if path else None
+
+
 def _cache_available(cache_root: str | Path | None = None) -> bool:
     return addon_updater.get_cached_release(cache_root) is not None
 
@@ -126,6 +130,10 @@ class AddonService:
         self._operation: dict[str, Any] | None = None
         self._last_check: addon_updater.UpdateCheck | None = None
         self._last_check_at: str | None = None
+        self._last_check_error: str | None = None
+        self._last_check_path: str | None = None
+        self._auto_checked_paths: set[str] = set()
+        self._check_thread: threading.Thread | None = None
 
     def set_emit(self, emit: Emit) -> None:
         self._emit = emit
@@ -135,8 +143,23 @@ class AddonService:
             operation = dict(self._operation) if self._operation else None
             last_check = self._last_check
             last_check_at = self._last_check_at
+            last_check_error = self._last_check_error
+            last_check_path = self._last_check_path
+        addons_path = _addons_path(cfg)
+        current_path = _path_key(addons_path)
 
-        if last_check:
+        if last_check_error and last_check_path == current_path:
+            status = _status_from_installed(
+                addons_path,
+                cache_root=self._cache_root,
+                last_check_at=last_check_at,
+                message=last_check_error,
+                operation=operation,
+            )
+            status["state"] = "error"
+            return status
+
+        if last_check and last_check_path == current_path:
             return _status_from_check(
                 last_check,
                 cache_root=self._cache_root,
@@ -145,7 +168,7 @@ class AddonService:
             )
 
         return _status_from_installed(
-            _addons_path(cfg),
+            addons_path,
             cache_root=self._cache_root,
             last_check_at=last_check_at,
             operation=operation,
@@ -162,12 +185,15 @@ class AddonService:
                 client_version=self._client_version,
             )
         except addon_updater.AddonUpdateError as exc:
+            self._record_check_error(cfg, str(exc))
             raise AddonServiceError("ADDON_CHECK_FAILED", str(exc)) from exc
 
         checked_at = _now_iso()
         with self._lock:
             self._last_check = check
             self._last_check_at = checked_at
+            self._last_check_error = None
+            self._last_check_path = _path_key(addons_path)
             operation = dict(self._operation) if self._operation else None
 
         status = _status_from_check(
@@ -179,6 +205,44 @@ class AddonService:
         self._emit("addon.check.completed", status)
         self._emit("addon.status.changed", status)
         return status
+
+    def check_async(self, cfg: dict[str, Any]) -> bool:
+        addons_path = _addons_path(cfg)
+        if not addons_path:
+            return False
+        path_key = _path_key(addons_path)
+        with self._lock:
+            if path_key in self._auto_checked_paths:
+                return False
+            self._auto_checked_paths.add(path_key)
+            thread = threading.Timer(
+                0.05,
+                self._check_background,
+                args=(dict(cfg),),
+            )
+            thread.daemon = True
+            self._check_thread = thread
+            thread.start()
+        return True
+
+    def wait_for_idle(self, timeout: float = 5) -> bool:
+        thread = self._check_thread
+        if thread is not None:
+            thread.join(timeout=timeout)
+        return thread is None or not thread.is_alive()
+
+    def _check_background(self, cfg: dict[str, Any]) -> None:
+        try:
+            self.check(cfg)
+        except AddonServiceError as exc:
+            self._emit("addon.check.failed", {"code": exc.code, "message": exc.message})
+
+    def _record_check_error(self, cfg: dict[str, Any], message: str) -> None:
+        with self._lock:
+            self._last_check_at = _now_iso()
+            self._last_check_error = message
+            self._last_check_path = _path_key(_addons_path(cfg))
+        self._emit("addon.status.changed", self.get_status(cfg))
 
     def install(self, cfg: dict[str, Any]) -> dict[str, Any]:
         return self._start_operation("install", cfg, require_update=False, require_installed=False)

@@ -13,6 +13,11 @@ on:
         required: false
         default: auto
         type: string
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY:
+        required: false
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
+        required: false
   workflow_dispatch:
     inputs:
       mode:
@@ -40,7 +45,7 @@ permissions:
 
 jobs:
   client:
-    name: Client ${{ inputs.mode }}
+    name: Tauri Client ${{ inputs.mode }}
     runs-on: windows-latest
     permissions:
       contents: write
@@ -48,20 +53,29 @@ jobs:
       version: ${{ steps.release-meta.outputs.version || steps.version.outputs.version }}
       tag: ${{ steps.release-meta.outputs.tag || steps.version.outputs.tag }}
       release_state: ${{ steps.release-state.outputs.state }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - name: Validate inputs
         shell: pwsh
         run: |
-          $validModes = @("build-only", "release-dry-run", "release")
-          $validBumps = @("auto", "patch", "minor", "major")
-          if ($validModes -notcontains "${{ inputs.mode }}") {
+          if (@("build-only", "release-dry-run", "release") -notcontains "${{ inputs.mode }}") {
             throw "Invalid mode: ${{ inputs.mode }}"
           }
-          if ($validBumps -notcontains "${{ inputs.version_bump }}") {
+          if (@("auto", "patch", "minor", "major") -notcontains "${{ inputs.version_bump }}") {
             throw "Invalid version_bump: ${{ inputs.version_bump }}"
           }
           if ("${{ github.event_name }}" -eq "pull_request" -and "${{ inputs.mode }}" -eq "release") {
             throw "Pull requests must never publish releases."
+          }
+          if ("${{ inputs.mode }}" -ne "build-only") {
+            if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+              throw "Missing TAURI_SIGNING_PRIVATE_KEY secret."
+            }
+            if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)) {
+              throw "Missing TAURI_SIGNING_PRIVATE_KEY_PASSWORD secret."
+            }
           }
 
       - name: Checkout
@@ -77,18 +91,35 @@ jobs:
           cache: pip
           cache-dependency-path: keystone-client/requirements.txt
 
-      - name: Install Python dependencies
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: keystone-client-next/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: keystone-client-next/src-tauri
+
+      - name: Install dependencies
         shell: pwsh
-        run: python -m pip install -r keystone-client/requirements.txt
+        run: |
+          python -m pip install -r keystone-client/requirements.txt
+          npm ci --prefix keystone-client-next
 
       - name: Current version
         id: version
         shell: pwsh
         run: |
-          $version = (Get-Content keystone-client/VERSION -Raw).Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Invalid keystone-client/VERSION: $version"
-          }
+          $version = python scripts/tauri_release.py validate-versions
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=client-v$version" >> $env:GITHUB_OUTPUT
 
@@ -124,7 +155,7 @@ jobs:
           if (Test-Path $notes) {
             Copy-Item $notes release-notes.md
           } else {
-            "# KeystoneClient $version`n`nRelease retomada para completar la publicacion del instalador.`n" | Out-File -Encoding utf8 release-notes.md
+            "# KeystoneClient $version`n`nRelease retomada para completar la publicacion del instalador Tauri.`n" | Out-File -Encoding utf8 release-notes.md
           }
 
       - name: Release metadata
@@ -135,9 +166,7 @@ jobs:
           $version = "${{ steps.plan.outputs.version }}${{ steps.resume-meta.outputs.version }}"
           $tag = "${{ steps.plan.outputs.tag }}${{ steps.resume-meta.outputs.tag }}"
           $asset = "${{ steps.plan.outputs.asset }}${{ steps.resume-meta.outputs.asset }}"
-          if ($version -eq "" -or $tag -eq "" -or $asset -eq "") {
-            throw "Missing release metadata"
-          }
+          if ($version -eq "" -or $tag -eq "" -or $asset -eq "") { throw "Missing release metadata" }
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "asset=$asset" >> $env:GITHUB_OUTPUT
@@ -150,7 +179,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ steps.release-meta.outputs.tag }}"
-          $asset = "${{ steps.release-meta.outputs.asset }}"
+          $expectedAssets = @("KeystoneClientSetup.exe", "KeystoneClientSetup.exe.sig", "latest.json")
           $tagExists = $false
           git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
           if ($LASTEXITCODE -eq 0) { $tagExists = $true }
@@ -160,12 +189,11 @@ jobs:
           $releaseJson = gh release view $tag --json assets 2>$null
           if ($LASTEXITCODE -eq 0) {
             $releaseExists = $true
-            $release = $releaseJson | ConvertFrom-Json
-            $assetExists = @($release.assets | Where-Object { $_.name -eq $asset }).Count -gt 0
+            $names = @((($releaseJson | ConvertFrom-Json).assets).name)
+            $assetExists = @($expectedAssets | Where-Object { $_ -notin $names }).Count -eq 0
           }
 
-          $pending = "${{ steps.pending.outputs.count }}" -ne "0"
-          $pendingPy = if ($pending) { "True" } else { "False" }
+          $pendingPy = if ("${{ steps.pending.outputs.count }}" -ne "0") { "True" } else { "False" }
           $tagPy = if ($tagExists) { "True" } else { "False" }
           $releasePy = if ($releaseExists) { "True" } else { "False" }
           $assetPy = if ($assetExists) { "True" } else { "False" }
@@ -175,69 +203,127 @@ jobs:
           "should_prepare=$($state.should_prepare.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
           "should_publish=$($state.should_publish.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
           "reason=$($state.reason)" >> $env:GITHUB_OUTPUT
-          if ($state.name -eq "inconsistent") {
-            throw $state.reason
-          }
+          if ($state.name -eq "inconsistent") { throw $state.reason }
 
       - name: Prepare Client release files
-        id: prepare
         if: inputs.mode == 'release' && steps.release-state.outputs.should_prepare == 'true'
         shell: pwsh
-        run: |
-          python scripts/release_changes.py prepare --component client --version-file keystone-client/VERSION --bump "${{ inputs.version_bump }}" --json > release-plan.json
-          $plan = Get-Content release-plan.json -Raw | ConvertFrom-Json
-          "prepared=true" >> $env:GITHUB_OUTPUT
-          "version=$($plan.next_version)" >> $env:GITHUB_OUTPUT
-          "tag=$($plan.tag)" >> $env:GITHUB_OUTPUT
+        run: python scripts/release_changes.py prepare --component client --version-file keystone-client/VERSION --bump "${{ inputs.version_bump }}" --json > release-plan.json
 
-      - name: Apply dry-run Client version
-        if: inputs.mode == 'release-dry-run'
+      - name: Checkout release tag for resume
+        if: inputs.mode == 'release' && (steps.release-state.outputs.state == 'resume' || steps.release-state.outputs.state == 'complete')
+        shell: pwsh
+        run: git checkout "${{ steps.release-meta.outputs.tag }}"
+
+      - name: Synchronize Tauri release metadata
+        if: inputs.mode != 'build-only'
         shell: pwsh
         run: |
-          Set-Content -Path keystone-client/VERSION -Value "${{ steps.release-meta.outputs.version }}" -Encoding utf8
+          python scripts/tauri_release.py sync-versions --version "${{ steps.release-meta.outputs.version }}" --notes-file release-notes.md
+          cargo check --manifest-path keystone-client-next/src-tauri/Cargo.toml
+          python scripts/tauri_release.py validate-versions --expected "${{ steps.release-meta.outputs.version }}"
 
-      - name: Apply resumed Client version
-        if: inputs.mode == 'release' && steps.pending.outputs.count != '0' && steps.release-state.outputs.should_prepare != 'true'
+      - name: Require updater signing material
+        if: inputs.mode != 'build-only'
         shell: pwsh
         run: |
-          Set-Content -Path keystone-client/VERSION -Value "${{ steps.release-meta.outputs.version }}" -Encoding utf8
+          $config = Join-Path $env:RUNNER_TEMP "tauri.release.conf.json"
+          python scripts/tauri_release.py write-release-config --version "${{ steps.release-meta.outputs.version }}" --output $config
+          "TAURI_RELEASE_CONFIG=$config" >> $env:GITHUB_ENV
 
-      - name: Compile Python
-        shell: pwsh
-        run: python -m compileall -q keystone-client scripts tests
-
-      - name: Run Client tests
-        shell: pwsh
-        run: python -m unittest discover -s tests/client
-
-      - name: Run release helper tests
-        shell: pwsh
-        run: python -m unittest discover -s tests/release
-
-      - name: Install Inno Setup
+      - name: Validate Python services and release tooling
         shell: pwsh
         run: |
-          choco install innosetup --no-progress --yes
-          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+          python -m compileall -q keystone-client scripts tests
+          python -m unittest discover -s tests/client
+          python -m unittest discover -s tests/client_bridge
+          python -m unittest discover -s tests/release
 
-      - name: Build installer
-        shell: cmd
-        working-directory: keystone-client
-        run: build_installer.bat
-
-      - name: Verify installer output
+      - name: Validate React
         shell: pwsh
+        working-directory: keystone-client-next
         run: |
-          $installer = "keystone-client/installer/output/KeystoneClientSetup.exe"
-          if (!(Test-Path $installer)) {
-            throw "Expected installer not found: $installer"
+          npm test
+          npm run build
+
+      - name: Validate Rust
+        shell: pwsh
+        working-directory: keystone-client-next/src-tauri
+        run: |
+          cargo fmt --all -- --check
+          cargo check --locked
+          cargo test --locked
+
+      - name: Build clean Python sidecar
+        shell: pwsh
+        run: python scripts/build_client_sidecar.py --clean
+
+      - name: Build Tauri NSIS
+        shell: pwsh
+        working-directory: keystone-client-next
+        run: |
+          if ("${{ inputs.mode }}" -eq "build-only") {
+            npm run tauri:build -- --bundles nsis
+          } else {
+            npm run tauri:build -- --config "$env:TAURI_RELEASE_CONFIG" --bundles nsis
           }
 
-      - name: Upload installer artifact
+      - name: Stage release artifacts
+        shell: pwsh
+        run: |
+          $version = if ("${{ inputs.mode }}" -eq "build-only") { "${{ steps.version.outputs.version }}" } else { "${{ steps.release-meta.outputs.version }}" }
+          $expectedInstaller = "KeystoneClient_$($version)_x64-setup.exe"
+          $sourcePath = "keystone-client-next/src-tauri/target/release/bundle/nsis/$expectedInstaller"
+          if (!(Test-Path $sourcePath)) { throw "Expected Tauri NSIS installer was not generated: $expectedInstaller" }
+          $source = Get-Item $sourcePath
+          "TAURI_SOURCE_INSTALLER=$($source.FullName)" >> $env:GITHUB_ENV
+          New-Item -ItemType Directory -Force -Path dist-client | Out-Null
+          Copy-Item $source.FullName dist-client/KeystoneClientSetup.exe
+          if ("${{ inputs.mode }}" -ne "build-only") {
+            $sourceSignature = "$($source.FullName).sig"
+            if (!(Test-Path $sourceSignature)) { throw "Tauri updater signature was not generated." }
+            Copy-Item $sourceSignature dist-client/KeystoneClientSetup.exe.sig
+            $tag = "${{ steps.release-meta.outputs.tag }}"
+            $version = "${{ steps.release-meta.outputs.version }}"
+            $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $url = "https://github.com/Speeson/weeklyChar/releases/download/$tag/KeystoneClientSetup.exe"
+            python scripts/tauri_release.py write-manifest --version $version --notes-file release-notes.md --pub-date $pubDate --installer-url $url --signature-file dist-client/KeystoneClientSetup.exe.sig --output dist-client/latest.json
+          }
+
+      - name: Upload build-only installer
+        if: inputs.mode == 'build-only'
         uses: actions/upload-artifact@v4
         with:
           name: KeystoneClientSetup
-          path: keystone-client/installer/output/KeystoneClientSetup.exe
+          path: dist-client/KeystoneClientSetup.exe
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify release artifacts
+        if: inputs.mode != 'build-only'
+        shell: pwsh
+        run: |
+          python scripts/tauri_release.py preflight-release `
+            --expected-version "${{ steps.release-meta.outputs.version }}" `
+            --source-installer "$env:TAURI_SOURCE_INSTALLER" `
+            --installer dist-client/KeystoneClientSetup.exe `
+            --signature-file dist-client/KeystoneClientSetup.exe.sig `
+            --manifest-file dist-client/latest.json
+          cargo run --locked --manifest-path keystone-client-next/src-tauri/Cargo.toml `
+            --example verify_updater_signature -- `
+            dist-client/KeystoneClientSetup.exe `
+            dist-client/KeystoneClientSetup.exe.sig `
+            keystone-client-next/src-tauri/tauri.conf.json
+
+      - name: Upload Tauri release artifact
+        if: inputs.mode != 'build-only'
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeystoneClient-${{ steps.release-meta.outputs.version }}-release
+          path: |
+            dist-client/KeystoneClientSetup.exe
+            dist-client/KeystoneClientSetup.exe.sig
+            dist-client/latest.json
           if-no-files-found: error
           retention-days: 14
 
@@ -249,16 +335,14 @@ jobs:
           $tag = "${{ steps.release-meta.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add keystone-client/VERSION .changes
+          git add keystone-client/VERSION keystone-client-next/package.json keystone-client-next/package-lock.json keystone-client-next/src/generated/release.ts keystone-client-next/src-tauri/Cargo.toml keystone-client-next/src-tauri/Cargo.lock keystone-client-next/src-tauri/tauri.conf.json .changes
           git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) {
-            throw "Release preparation produced no commit changes."
-          }
+          if ($LASTEXITCODE -eq 0) { throw "Release preparation produced no commit changes." }
           git commit -m "Release KeystoneClient $version"
           git tag $tag
           git push --atomic origin "HEAD:${{ github.ref_name }}" "refs/tags/$tag"
 
-      - name: Publish or verify GitHub Release
+      - name: Publish or repair GitHub Release
         if: inputs.mode == 'release' && steps.release-state.outputs.should_publish == 'true'
         shell: pwsh
         env:
@@ -266,42 +350,39 @@ jobs:
         run: |
           $tag = "${{ steps.release-meta.outputs.tag }}"
           $version = "${{ steps.release-meta.outputs.version }}"
-          $asset = "${{ steps.release-meta.outputs.asset }}"
-          $path = "keystone-client/installer/output/$asset"
+          $paths = @(
+            "dist-client/KeystoneClientSetup.exe",
+            "dist-client/KeystoneClientSetup.exe.sig",
+            "dist-client/latest.json"
+          )
           $delays = @(2, 5, 10, 20)
-
           function Invoke-GhRelease {
             param([scriptblock]$Command)
             for ($attempt = 0; $attempt -le $delays.Count; $attempt++) {
               $output = & $Command 2>&1
-              $code = $LASTEXITCODE
-              if ($code -eq 0) {
-                return
-              }
+              if ($LASTEXITCODE -eq 0) { return }
               $text = ($output | Out-String)
-              if ($text -notmatch "(500|502|503|504)" -or $attempt -eq $delays.Count) {
-                throw $text
-              }
+              if ($text -notmatch "(500|502|503|504)" -or $attempt -eq $delays.Count) { throw $text }
               Start-Sleep -Seconds $delays[$attempt]
             }
           }
-
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
-            Invoke-GhRelease { gh release upload $tag $path --clobber }
+            Invoke-GhRelease { gh release upload $tag @paths --clobber }
           } else {
-            Invoke-GhRelease { gh release create $tag $path --title "KeystoneClient $version" --notes-file release-notes.md }
+            Invoke-GhRelease { gh release create $tag @paths --title "KeystoneClient $version" --notes-file release-notes.md }
           }
 
       - name: Job summary
         if: always()
         shell: pwsh
         run: |
-          "## KeystoneClient ${{ inputs.mode }}" >> $env:GITHUB_STEP_SUMMARY
+          "## KeystoneClient Tauri ${{ inputs.mode }}" >> $env:GITHUB_STEP_SUMMARY
           "" >> $env:GITHUB_STEP_SUMMARY
           "- Version: ${{ steps.release-meta.outputs.version || steps.version.outputs.version }}" >> $env:GITHUB_STEP_SUMMARY
           "- Tag: ${{ steps.release-meta.outputs.tag || steps.version.outputs.tag }}" >> $env:GITHUB_STEP_SUMMARY
           "- Release state: ${{ steps.release-state.outputs.state }}" >> $env:GITHUB_STEP_SUMMARY
+          "- Public release performed: ${{ inputs.mode == 'release' }}" >> $env:GITHUB_STEP_SUMMARY
           if (Test-Path release-notes.md) {
             "" >> $env:GITHUB_STEP_SUMMARY
             Get-Content release-notes.md >> $env:GITHUB_STEP_SUMMARY

@@ -77,12 +77,14 @@ class SidecarBuildTests(unittest.TestCase):
             os.utime(source, (output.stat().st_mtime + 10, output.stat().st_mtime + 10))
             self.assertTrue(sidecar_needs_rebuild(output, [source]))
 
-    def test_sidecar_sources_include_auth_settings_wow_and_sync_services(self) -> None:
+    def test_sidecar_sources_include_all_bridge_domain_services(self) -> None:
         sources = {path.name for path in sidecar_sources(REPO_ROOT)}
 
         self.assertIn("auth_service.py", sources)
         self.assertIn("settings_service.py", sources)
         self.assertIn("sync_service.py", sources)
+        self.assertIn("character_service.py", sources)
+        self.assertIn("profile_service.py", sources)
         self.assertIn("sync_worker.py", sources)
         self.assertIn("wow_path.py", sources)
         self.assertIn("wow_service.py", sources)

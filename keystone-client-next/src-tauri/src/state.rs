@@ -4,6 +4,7 @@ use tauri::AppHandle;
 
 use crate::bridge::{CoreBridge, CoreBridgeError, TauriCoreEventSink};
 
+#[derive(Clone)]
 pub struct CoreBridgeState {
     bridge: Arc<CoreBridge>,
 }

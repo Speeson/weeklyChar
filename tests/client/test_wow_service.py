@@ -73,6 +73,38 @@ class WowServiceTests(unittest.TestCase):
         self.assertEqual(cfg["wow_install_path"], "keep")
         self.assertFalse(self.config_file.exists())
 
+    def test_select_install_preserves_valid_selection_for_same_install(self) -> None:
+        wow = make_wow_tree(self.root)
+        savedvars = wow / "_retail_" / "WTF" / "Account" / "ACCOUNT_A" / "SavedVariables" / "KeystoneSync.lua"
+        cfg = {
+            "wow_install_path": str(wow),
+            "wow_accounts_selected": ["ACCOUNT_A"],
+            "wow_accounts_prompted": True,
+            "wow_path": str(savedvars),
+        }
+
+        state = wow_service.select_install(cfg, str(wow / "_retail_"))
+
+        self.assertEqual(cfg["wow_accounts_selected"], ["ACCOUNT_A"])
+        self.assertTrue(cfg["wow_accounts_prompted"])
+        self.assertEqual(cfg["wow_path"], str(savedvars))
+        self.assertEqual(state["selectedAccounts"], ["ACCOUNT_A"])
+
+    def test_select_install_keeps_only_valid_selections_after_install_change(self) -> None:
+        first = make_wow_tree(self.root / "first")
+        second = make_wow_tree(self.root / "second")
+        cfg = {
+            "wow_install_path": str(first),
+            "wow_accounts_selected": ["ACCOUNT_A", "MISSING"],
+            "wow_accounts_prompted": True,
+        }
+
+        wow_service.select_install(cfg, str(second))
+
+        self.assertEqual(cfg["wow_accounts_selected"], ["ACCOUNT_A"])
+        self.assertTrue(cfg["wow_accounts_prompted"])
+        self.assertIn("ACCOUNT_A", cfg["wow_path"])
+
     def test_select_accounts_dedupes_persists_mapping_and_preserves_config(self) -> None:
         wow = make_wow_tree(self.root)
         cfg = {"wow_install_path": str(wow), "unrelated": "preserved"}

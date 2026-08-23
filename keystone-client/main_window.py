@@ -286,10 +286,10 @@ _TR = {
         "last_sync_lbl": "Última sync",
         "never":         "Sin sincronizar",
         "sync_btn":      "Sincronizar",
-        "install_btn":   "Instalar / Actualizar",
-        "install_addon_btn": "Instalar addon",
-        "update_addon_btn": "Actualizar addon",
-        "reinstall_addon_btn": "Reinstalar addon",
+        "install_btn":   "Instalar KeystoneSync",
+        "install_addon_btn": "Instalar KeystoneSync",
+        "update_addon_btn": "Actualizar KeystoneSync",
+        "reinstall_addon_btn": "Reinstalar KeystoneSync",
         "sel_folder_btn":"Seleccionar carpeta de AddOns",
         "open_addon_folder_btn": "Abrir carpeta del addon",
         "open_web":      "Acceder a la Web",
@@ -346,15 +346,32 @@ _TR = {
         "err_fields":    "Introduce usuario y contraseña.",
         "connecting":    "Conectando...",
         "conn_err":      "No se puede conectar con la API.",
-        "addon_desc":    "Instala o actualiza KeystoneSync desde sus releases\nen tu carpeta de World of Warcraft.",
+        "addon_desc":    "Instala o actualiza KeystoneSync desde las releases oficiales en tu carpeta de World of Warcraft.",
         "addon_status_title": "Estado del addon",
+        "addon_path_title": "Ruta de AddOns",
+        "addon_status_installed": "Instalado",
+        "addon_status_latest": "Última versión",
+        "addon_status_state": "Estado",
+        "addon_status_origin": "Origen",
+        "addon_status_cache": "Caché local",
+        "addon_status_last_check": "Última comprobación",
+        "addon_status_yes": "Sí",
+        "addon_status_no": "No",
+        "addon_status_origin_value": "KeystoneSync releases",
+        "addon_cache_available": "disponible",
+        "addon_cache_missing": "no disponible",
+        "addon_last_check_now": "ahora",
+        "addon_last_check_minutes": "hace {minutes} min",
+        "addon_last_check_hour": "hace 1 h",
+        "addon_not_checked": "sin comprobar",
         "addon_not_installed": "No instalado",
         "addon_installed": "Instalado",
-        "addon_corrupt": "Instalación incompleta",
+        "addon_corrupt": "Addon dañado",
         "addon_update_available": "Actualización disponible",
-        "addon_up_to_date": "Al día",
-        "addon_remote_not_checked": "Ultima addon: sin comprobar",
-        "addon_check_update_btn": "Buscar update addon",
+        "addon_install_available": "Instalación disponible",
+        "addon_up_to_date": "Actualizado",
+        "addon_remote_not_checked": "sin comprobar",
+        "addon_check_update_btn": "Buscar actualizaciones",
         "addon_remote_checking": "Comprobando addon...",
         "addon_remote_offline": "No se pudo comprobar el addon.",
         "addon_remote_available": "Addon {version} disponible",
@@ -365,7 +382,7 @@ _TR = {
         "addon_remote_updated": "Addon actualizado a {version}. Reinicia o usa /reload en WoW.",
         "addon_remote_failed": "No se pudo actualizar el addon.",
         "addon_remote_cached": "Usando cache validada {version}",
-        "addon_remote_no_candidate": "Sin release/cache valida disponible",
+        "addon_remote_no_candidate": "Sin release/caché válida disponible",
         "client_version": "Version del cliente",
         "update_title": "Actualizacion disponible",
         "update_msg": "Hay una actualizacion disponible.\n\nTu cliente usa la version {current} y la ultima version es {latest}.\n\nSe descargara el instalador oficial desde GitHub Releases y se aplicara automaticamente.",
@@ -397,10 +414,10 @@ _TR = {
         "last_sync_lbl": "Last sync",
         "never":         "Never synced",
         "sync_btn":      "Sync",
-        "install_btn":   "Install / Update",
-        "install_addon_btn": "Install addon",
-        "update_addon_btn": "Update addon",
-        "reinstall_addon_btn": "Reinstall addon",
+        "install_btn":   "Install KeystoneSync",
+        "install_addon_btn": "Install KeystoneSync",
+        "update_addon_btn": "Update KeystoneSync",
+        "reinstall_addon_btn": "Reinstall KeystoneSync",
         "sel_folder_btn":"Select AddOns folder",
         "open_addon_folder_btn": "Open addon folder",
         "open_web":      "Open Web",
@@ -457,15 +474,32 @@ _TR = {
         "err_fields":    "Enter username and password.",
         "connecting":    "Connecting...",
         "conn_err":      "Cannot connect to API.",
-        "addon_desc":    "Install or update KeystoneSync from its releases\nin your World of Warcraft folder.",
+        "addon_desc":    "Install or update KeystoneSync from the official releases in your World of Warcraft folder.",
         "addon_status_title": "Addon status",
+        "addon_path_title": "AddOns path",
+        "addon_status_installed": "Installed",
+        "addon_status_latest": "Latest version",
+        "addon_status_state": "Status",
+        "addon_status_origin": "Origin",
+        "addon_status_cache": "Local cache",
+        "addon_status_last_check": "Last check",
+        "addon_status_yes": "Yes",
+        "addon_status_no": "No",
+        "addon_status_origin_value": "KeystoneSync releases",
+        "addon_cache_available": "available",
+        "addon_cache_missing": "not available",
+        "addon_last_check_now": "now",
+        "addon_last_check_minutes": "{minutes} min ago",
+        "addon_last_check_hour": "1 h ago",
+        "addon_not_checked": "not checked",
         "addon_not_installed": "Not installed",
         "addon_installed": "Installed",
-        "addon_corrupt": "Incomplete install",
+        "addon_corrupt": "Addon damaged",
         "addon_update_available": "Update available",
-        "addon_up_to_date": "Up to date",
-        "addon_remote_not_checked": "Latest addon: not checked",
-        "addon_check_update_btn": "Check addon updates",
+        "addon_install_available": "Install available",
+        "addon_up_to_date": "Updated",
+        "addon_remote_not_checked": "not checked",
+        "addon_check_update_btn": "Check for updates",
         "addon_remote_checking": "Checking addon...",
         "addon_remote_offline": "Could not check addon updates.",
         "addon_remote_available": "Addon {version} available",
@@ -595,9 +629,14 @@ class MainWindow:
         self._addon_status_ids = {}
         self._addon_check_button = None
         self._addon_update_button = None
+        self._addon_action_widgets = []
+        self._addon_path_text_id = None
+        self._addon_action_mode = None
+        self._addon_last_check_at = None
         self._addon_update_check = None
         self._addon_update_error = None
         self._addon_update_busy = False
+        self._addon_icon_photo = None
 
         self.addons_var = None
 
@@ -755,6 +794,10 @@ class MainWindow:
         self._install_btn_w     = 0
         self._install_msg_id    = None
         self._addon_status_ids  = {}
+        self._addon_action_widgets = []
+        self._addon_path_text_id = None
+        self._addon_action_mode = None
+        self._addon_icon_photo = None
         self._login_update_status_var = None
         self._login_update_status_label = None
         self._login_banner_update_id = None
@@ -805,6 +848,164 @@ class MainWindow:
         if height is not None: kw["height"] = height
         if tags   is not None: kw["tags"]   = tags
         cv.create_window(x, y, anchor=anchor, window=widget, **kw)
+
+    def _rounded_rect(self, cv, x1, y1, x2, y2, radius=8, fill="", outline="", width=1, tags=None):
+        points = [
+            x1 + radius, y1,
+            x2 - radius, y1,
+            x2, y1,
+            x2, y1 + radius,
+            x2, y2 - radius,
+            x2, y2,
+            x2 - radius, y2,
+            x1 + radius, y2,
+            x1, y2,
+            x1, y2 - radius,
+            x1, y1 + radius,
+            x1, y1,
+        ]
+        return cv.create_polygon(
+            points, smooth=True, splinesteps=12, fill=fill,
+            outline=outline, width=width, tags=tags)
+
+    def _draw_ui_icon(self, cv, kind, x, y, color=TEXT, scale=1.0, tags=None):
+        tag_kw = {"tags": tags} if tags else {}
+        s = scale
+        if kind == "folder":
+            cv.create_line(x - 10*s, y + 8*s, x - 10*s, y - 4*s,
+                           x - 3*s, y - 4*s, x, y - 8*s, x + 10*s, y - 8*s,
+                           x + 10*s, y + 8*s, x - 10*s, y + 8*s,
+                           fill=color, width=max(1, int(2*s)), **tag_kw)
+        elif kind == "external":
+            cv.create_rectangle(x - 8*s, y - 4*s, x + 4*s, y + 8*s,
+                                outline=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x - 1*s, y + 1*s, x + 8*s, y - 8*s,
+                           fill=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x + 2*s, y - 8*s, x + 8*s, y - 8*s,
+                           x + 8*s, y - 2*s, fill=color,
+                           width=max(1, int(2*s)), **tag_kw)
+        elif kind == "copy":
+            cv.create_rectangle(x - 5*s, y - 9*s, x + 7*s, y + 5*s,
+                                outline=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_rectangle(x - 8*s, y - 5*s, x + 4*s, y + 9*s,
+                                outline=color, width=max(1, int(2*s)), **tag_kw)
+        elif kind == "download":
+            cv.create_line(x, y - 10*s, x, y + 5*s, fill=color,
+                           width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x - 7*s, y - 2*s, x, y + 6*s, x + 7*s, y - 2*s,
+                           fill=color, width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x - 9*s, y + 10*s, x + 9*s, y + 10*s,
+                           fill=color, width=max(1, int(3*s)), **tag_kw)
+        elif kind == "reinstall":
+            cv.create_arc(x - 12*s, y - 12*s, x + 12*s, y + 12*s,
+                          start=35, extent=245, style=tk.ARC, outline=color,
+                          width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x + 7*s, y - 11*s, x + 12*s, y - 10*s,
+                           x + 10*s, y - 5*s, fill=color,
+                           width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x, y - 7*s, x, y + 4*s, fill=color,
+                           width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x - 6*s, y - 1*s, x, y + 5*s, x + 6*s, y - 1*s,
+                           fill=color, width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x - 8*s, y + 10*s, x + 8*s, y + 10*s,
+                           fill=color, width=max(1, int(3*s)), **tag_kw)
+        elif kind == "refresh":
+            cv.create_arc(x - 10*s, y - 10*s, x + 10*s, y + 10*s,
+                          start=35, extent=280, style=tk.ARC, outline=color,
+                          width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x + 7*s, y - 10*s, x + 12*s, y - 9*s,
+                           x + 10*s, y - 4*s, fill=color,
+                           width=max(1, int(3*s)), **tag_kw)
+        elif kind == "cloud":
+            cv.create_arc(x - 13*s, y - 1*s, x - 3*s, y + 9*s,
+                          start=90, extent=180, style=tk.ARC,
+                          outline=color, width=max(1, int(3*s)), **tag_kw)
+            cv.create_arc(x - 8*s, y - 9*s, x + 7*s, y + 7*s,
+                          start=40, extent=210, style=tk.ARC,
+                          outline=color, width=max(1, int(3*s)), **tag_kw)
+            cv.create_arc(x + 1*s, y - 5*s, x + 13*s, y + 9*s,
+                          start=-65, extent=200, style=tk.ARC,
+                          outline=color, width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x - 10*s, y + 9*s, x + 12*s, y + 9*s,
+                           fill=color, width=max(1, int(3*s)), **tag_kw)
+            self._draw_ui_icon(cv, "download", x, y + 8*s, color, 0.55*s, tags)
+        elif kind == "search":
+            cv.create_oval(x - 8*s, y - 8*s, x + 5*s, y + 5*s,
+                           outline=color, width=max(1, int(3*s)), **tag_kw)
+            cv.create_line(x + 4*s, y + 4*s, x + 11*s, y + 11*s,
+                           fill=color, width=max(1, int(3*s)), **tag_kw)
+        elif kind == "shield":
+            cv.create_polygon(x, y - 12*s, x + 10*s, y - 7*s,
+                              x + 8*s, y + 7*s, x, y + 13*s,
+                              x - 8*s, y + 7*s, x - 10*s, y - 7*s,
+                              fill="", outline=color,
+                              width=max(1, int(2*s)), **tag_kw)
+        elif kind == "tag":
+            cv.create_polygon(x - 10*s, y - 5*s, x - 3*s, y - 12*s,
+                              x + 10*s, y + 1*s, x + 1*s, y + 10*s,
+                              fill="", outline=color,
+                              width=max(1, int(2*s)), **tag_kw)
+            cv.create_oval(x - 4*s, y - 7*s, x - 1*s, y - 4*s,
+                           outline=color, width=max(1, int(2*s)), **tag_kw)
+        elif kind == "pulse":
+            cv.create_line(x - 12*s, y, x - 6*s, y, x - 3*s, y - 8*s,
+                           x + 2*s, y + 8*s, x + 6*s, y, x + 12*s, y,
+                           fill=color, width=max(1, int(2*s)), **tag_kw)
+        elif kind == "globe":
+            cv.create_oval(x - 10*s, y - 10*s, x + 10*s, y + 10*s,
+                           outline=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x - 10*s, y, x + 10*s, y, fill=color,
+                           width=max(1, int(2*s)), **tag_kw)
+            cv.create_arc(x - 5*s, y - 10*s, x + 5*s, y + 10*s,
+                          start=90, extent=180, style=tk.ARC, outline=color,
+                          width=max(1, int(2*s)), **tag_kw)
+            cv.create_arc(x - 5*s, y - 10*s, x + 5*s, y + 10*s,
+                          start=-90, extent=180, style=tk.ARC, outline=color,
+                          width=max(1, int(2*s)), **tag_kw)
+        elif kind == "database":
+            cv.create_oval(x - 9*s, y - 10*s, x + 9*s, y - 2*s,
+                           outline=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x - 9*s, y - 6*s, x - 9*s, y + 8*s,
+                           fill=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x + 9*s, y - 6*s, x + 9*s, y + 8*s,
+                           fill=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_oval(x - 9*s, y + 4*s, x + 9*s, y + 12*s,
+                           outline=color, width=max(1, int(2*s)), **tag_kw)
+        elif kind == "clock":
+            cv.create_oval(x - 10*s, y - 10*s, x + 10*s, y + 10*s,
+                           outline=color, width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x, y, x, y - 6*s, fill=color,
+                           width=max(1, int(2*s)), **tag_kw)
+            cv.create_line(x, y, x + 6*s, y + 3*s, fill=color,
+                           width=max(1, int(2*s)), **tag_kw)
+
+    def _make_canvas_button(self, width, height, text, icon, command, *,
+                            fill="#13243a", outline="#8a7a76",
+                            text_color=TEXT, icon_color=TEXT,
+                            font=("Segoe UI", 10), bold=False):
+        bg = CARD_BG
+        btn = tk.Canvas(width=width, height=height, bg=bg,
+                        highlightthickness=0, cursor="hand2")
+        normal = fill
+        hover = "#18334f" if fill != ACCENT else "#fbbf24"
+        self._rounded_rect(btn, 1, 1, width - 2, height - 2, radius=7,
+                           fill=normal, outline=outline, width=1)
+        icon_x = 24
+        self._draw_ui_icon(btn, icon, icon_x, height // 2,
+                           icon_color, 0.9 if height < 48 else 1.15)
+        weight = "bold" if bold else "normal"
+        btn.create_text(width // 2 + 12, height // 2, text=text,
+                        fill=text_color, font=(font[0], font[1], weight),
+                        anchor="center")
+
+        def _set(active):
+            btn.itemconfigure(1, fill=hover if active else normal,
+                              outline=ACCENT if active else outline)
+
+        btn.bind("<Button-1>", lambda _e: command())
+        btn.bind("<Enter>", lambda _e: _set(True))
+        btn.bind("<Leave>", lambda _e: _set(False))
+        return btn
 
     def _ensure_taskbar_icon(self, refresh=False):
         if os.name != "nt":
@@ -1444,8 +1645,8 @@ class MainWindow:
                 try: w.destroy()
                 except Exception: pass
                 setattr(self, attr, None)
-        if self._install_btn:
-            try: self._install_btn.destroy()
+        for widget in getattr(self, "_addon_action_widgets", []):
+            try: widget.destroy()
             except Exception: pass
         self.addons_var      = None
         self._install_btn    = None
@@ -1456,6 +1657,9 @@ class MainWindow:
         self._addon_status_ids = {}
         self._addon_check_button = None
         self._addon_update_button = None
+        self._addon_action_widgets = []
+        self._addon_path_text_id = None
+        self._addon_action_mode = None
 
         # Clear tab content and reset dynamic IDs
         cv.delete("tab_content")
@@ -1995,112 +2199,157 @@ class MainWindow:
         AY  = BH + P
         AW  = W - 2 * P
         AH  = H - FH - AY - P
-        ACX = AX + AW // 2
+        LEFT_W = int(AW * 0.62)
+        GAP = 24
+        RIGHT_X = AX + LEFT_W + GAP
+        RIGHT_W = AW - LEFT_W - GAP
+        MID_X = AX + LEFT_W + GAP // 2
 
-        self._overlay(cv, AX, AY, AW, AH, CARD_BG, 0.70, tags="tab_content")
+        self._overlay(cv, AX, AY, AW, AH, CARD_BG, 0.68, tags="tab_content")
         cv.create_rectangle(AX, AY, AX + AW, AY + AH,
                             outline=CARD_BDR, fill="", tags="tab_content")
+        cv.create_line(MID_X, AY + 18, MID_X, AY + AH - 18,
+                       fill=CARD_BDR, tags="tab_content")
 
-        cv.create_text(AX + 16, AY + TH // 2, text=self._t("addon_title"),
-                       fill=ACCENT, font=("Segoe UI", 11, "bold"), anchor="w",
+        icon_x = AX + 44
+        title_y = AY + 56
+        try:
+            from PIL import Image, ImageTk
+            icon_path = os.path.join(self._base, "icon.ico")
+            img = Image.open(icon_path).resize((38, 38), Image.LANCZOS)
+            self._addon_icon_photo = ImageTk.PhotoImage(img)
+            self._photos.append(self._addon_icon_photo)
+            cv.create_image(icon_x, title_y, image=self._addon_icon_photo,
+                            anchor="center", tags="tab_content")
+        except Exception:
+            cv.create_oval(icon_x - 18, title_y - 18, icon_x + 18, title_y + 18,
+                           outline=ACCENT, fill="#102033", width=2,
+                           tags="tab_content")
+        cv.create_text(icon_x + 42, title_y - 7, text=self._t("addon_title"),
+                       fill=TEXT, font=("Segoe UI", 26, "bold"), anchor="w",
                        tags="tab_content")
-        cv.create_line(AX, AY + TH, AX + AW, AY + TH, fill=CARD_BDR, tags="tab_content")
+        cv.create_text(AX + 36, title_y + 48, text=self._t("addon_desc"),
+                       fill=TEXT, font=("Segoe UI", 12), justify="left",
+                       width=LEFT_W - 96, anchor="nw", tags="tab_content")
 
-        status_w = min(280, max(230, AW // 3))
-        status_x = AX + AW - status_w - 18
-        status_y = AY + TH + 12
-        status_h = 144
-        cv.create_rectangle(status_x, status_y, status_x + status_w, status_y + status_h,
-                            outline=CARD_BDR, fill="#111827", tags="tab_content")
-        cv.create_text(status_x + 12, status_y + 10, text=self._t("addon_status_title"),
-                       fill=ACCENT, font=("Segoe UI", 9, "bold"), anchor="nw",
-                       tags="tab_content")
-        self._addon_status_ids = {
-            "state": cv.create_text(status_x + 12, status_y + 32, text="",
-                                    fill=MUTED, font=("Segoe UI", 9, "bold"),
-                                    anchor="nw", tags="tab_content"),
-            "detail": cv.create_text(status_x + 12, status_y + 52, text="",
-                                     fill=MUTED, font=("Segoe UI", 8),
-                                     anchor="nw", tags="tab_content"),
-            "remote_state": cv.create_text(status_x + 12, status_y + 76,
-                                           text=self._t("addon_remote_not_checked"),
-                                           fill=MUTED, font=("Segoe UI", 8, "bold"),
-                                           anchor="nw", tags="tab_content"),
-            "remote_detail": cv.create_text(status_x + 12, status_y + 96, text="",
-                                            fill=MUTED, font=("Segoe UI", 8),
-                                            anchor="nw", tags="tab_content"),
-        }
-        check_btn = ttk.Button(cv, text=self._t("addon_check_update_btn"),
-                               style="Gray.TButton", command=self._check_addon_update_async)
-        update_btn = ttk.Button(cv, text=self._t("update_addon_btn"),
-                                style="Gold.TButton", command=self._start_remote_addon_update)
-        update_btn.configure(state="disabled")
-        self._addon_check_button = check_btn
-        self._addon_update_button = update_btn
-        self._cw(cv, check_btn, status_x + 12, status_y + status_h - 34,
-                 anchor="nw", width=status_w - 142, height=28, tags="tab_content")
-        self._cw(cv, update_btn, status_x + status_w - 122, status_y + status_h - 34,
-                 anchor="nw", width=110, height=28, tags="tab_content")
-
-        desc_w = max(260, AW - status_w - 70)
-        cv.create_text(AX + 22, AY + TH + 18, text=self._t("addon_desc"),
-                       fill=MUTED, font=("Segoe UI", 9), justify="left",
-                       width=desc_w, anchor="nw", tags="tab_content")
-
-        content_start = AY + TH + 56
-        avail  = AH - TH - 56 - 56
-        block  = 32 + 10 + 28
-        top_off = max(10, (avail - block) // 2)
-
-        sel_y   = content_start + top_off
-        entry_y = sel_y + 32 + 10
-        msg_y   = entry_y + 28 + 10
-
-        sel_btn_w = min(AW - 40, 340)
-        open_btn_w = 190
-        buttons_total_w = sel_btn_w + 10 + open_btn_w
-        buttons_x = ACX - buttons_total_w // 2
-        self._cw(cv, ttk.Button(cv, text=self._t("sel_folder_btn"),
-                                style="Gray.TButton",
-                                command=self._browse_addons),
-                 buttons_x, sel_y, anchor="nw", width=sel_btn_w, height=32,
-                 tags="tab_content")
-        self._cw(cv, ttk.Button(cv, text=self._t("open_addon_folder_btn"),
-                                style="Gray.TButton",
-                                command=self._open_addon_folder),
-                 buttons_x + sel_btn_w + 10, sel_y, anchor="nw",
-                 width=open_btn_w, height=32,
-                 tags="tab_content")
+        path_x = AX + 28
+        path_y = AY + 148
+        path_w = LEFT_W - 56
+        path_h = 166
+        self._overlay(cv, path_x, path_y, path_w, path_h, "#081423", 0.58,
+                      tags="tab_content")
+        self._rounded_rect(cv, path_x, path_y, path_x + path_w, path_y + path_h,
+                           radius=8, outline="#8a7a76", fill="",
+                           tags="tab_content")
+        self._draw_ui_icon(cv, "folder", path_x + 28, path_y + 32,
+                           ACCENT, 1.35, tags="tab_content")
+        cv.create_text(path_x + 58, path_y + 31, text=self._t("addon_path_title"),
+                       fill=TEXT, font=("Segoe UI", 13, "bold"),
+                       anchor="w", tags="tab_content")
 
         self.addons_var = tk.StringVar(value=self._addons_folder())
         self.addons_var.trace_add("write", lambda *_: self._refresh_addon_status())
-        self._cw(cv, tk.Entry(cv, textvariable=self.addons_var,
-                              bg="#1f2937", fg="white", insertbackground=ACCENT,
-                              font=("Segoe UI", 9), relief="flat", bd=1),
-                 AX + 20, entry_y, anchor="nw", width=AW - 40, height=28,
+        field_x = path_x + 18
+        field_y = path_y + 64
+        field_w = path_w - 36
+        field_h = 34
+        self._rounded_rect(cv, field_x, field_y, field_x + field_w,
+                           field_y + field_h, radius=5, outline="#33465c",
+                           fill="#081423", tags="tab_content")
+        self._addon_path_text_id = cv.create_text(
+            field_x + 16, field_y + field_h // 2,
+            text=self.addons_var.get(), fill=TEXT, font=("Segoe UI", 10),
+            width=field_w - 52, anchor="w", tags="tab_content")
+        copy_tag = "addon_copy_path"
+        self._draw_ui_icon(cv, "copy", field_x + field_w - 24,
+                           field_y + field_h // 2, TEXT, 0.78,
+                           tags=("tab_content", copy_tag))
+        cv.tag_bind(copy_tag, "<Button-1>", lambda _e: self._copy_addons_path())
+        cv.tag_bind(copy_tag, "<Enter>", lambda _e: cv.configure(cursor="hand2"))
+        cv.tag_bind(copy_tag, "<Leave>", lambda _e: cv.configure(cursor=""))
+
+        small_y = field_y + 48
+        small_gap = 10
+        small_h = 36
+        small_w = (field_w - small_gap) // 2
+        select_btn = self._make_canvas_button(
+            small_w, small_h, self._t("sel_folder_btn"), "folder",
+            self._browse_addons, fill="#13243a", outline="#8a7a76",
+            font=("Segoe UI", 9))
+        open_btn = self._make_canvas_button(
+            small_w, small_h, self._t("open_addon_folder_btn"), "external",
+            self._open_addon_folder, fill="#13243a", outline="#8a7a76",
+            font=("Segoe UI", 9))
+        self._cw(cv, select_btn, field_x, small_y, anchor="nw",
+                 width=small_w, height=small_h, tags="tab_content")
+        self._cw(cv, open_btn, field_x + small_w + small_gap, small_y,
+                 anchor="nw", width=small_w, height=small_h,
                  tags="tab_content")
 
+        action_y = path_y + path_h + 16
+        self._addon_layout = {
+            "action_x": path_x,
+            "action_y": action_y,
+            "action_w": path_w,
+            "action_h": 58,
+        }
         self._install_msg_id = cv.create_text(
-            ACX, msg_y, text="", fill=RED_COL, font=("Segoe UI", 9),
-            width=AW - 40, justify=tk.CENTER, anchor="n", tags="tab_content")
+            path_x + path_w // 2, action_y + 74, text="", fill=RED_COL,
+            font=("Segoe UI", 9), width=path_w, justify=tk.CENTER,
+            anchor="n", tags="tab_content")
 
-        ibw = AW - 40
-        ibh = 38
-        ib  = tk.Canvas(cv, width=ibw, height=ibh,
-                        bg=ACCENT, highlightthickness=0, cursor="hand2")
-        self._install_fill     = ib.create_rectangle(0, 0, 0, ibh, fill=GREEN, outline="")
-        self._install_btn_text = ib.create_text(ibw // 2, ibh // 2,
-                                                text=self._t("install_btn"),
-                                                fill=BG_DARK, font=("Segoe UI", 10, "bold"))
-        ib.tag_raise(self._install_btn_text)
-        ib.bind("<Button-1>", lambda e: self._do_install())
-        ib.bind("<Enter>", lambda e: ib.configure(bg="#fbbf24"))
-        ib.bind("<Leave>", lambda e: ib.configure(bg=ACCENT))
-        self._install_btn   = ib
-        self._install_btn_w = ibw
-        install_y = AY + AH - ibh - 14
-        self._cw(cv, ib, AX + 20, install_y, anchor="nw",
-                 width=ibw, height=ibh, tags="tab_content")
+        status_y = AY + 30
+        status_h = AH - 52
+        self._overlay(cv, RIGHT_X + 14, status_y, RIGHT_W - 28, status_h,
+                      "#07111d", 0.72, tags="tab_content")
+        self._rounded_rect(cv, RIGHT_X + 14, status_y, RIGHT_X + RIGHT_W - 14,
+                           status_y + status_h, radius=8,
+                           outline="#8a7a76", fill="", tags="tab_content")
+        self._draw_ui_icon(cv, "shield", RIGHT_X + 42, status_y + 34,
+                           ACCENT, 1.0, tags="tab_content")
+        cv.create_text(RIGHT_X + 64, status_y + 34,
+                       text=self._t("addon_status_title"),
+                       fill=ACCENT, font=("Segoe UI", 14, "bold"),
+                       anchor="w", tags="tab_content")
+        cv.create_line(RIGHT_X + 30, status_y + 62, RIGHT_X + RIGHT_W - 30,
+                       status_y + 62, fill=CARD_BDR, tags="tab_content")
+
+        rows = [
+            ("installed", "download", self._t("addon_status_installed")),
+            ("latest", "tag", self._t("addon_status_latest")),
+            ("state", "pulse", self._t("addon_status_state")),
+            ("origin", "globe", self._t("addon_status_origin")),
+            ("cache", "database", self._t("addon_status_cache")),
+            ("last_check", "clock", self._t("addon_status_last_check")),
+        ]
+        self._addon_status_ids = {}
+        row_y = status_y + 78
+        row_gap = 37
+        for key, icon_kind, label in rows:
+            self._draw_ui_icon(cv, icon_kind, RIGHT_X + 42, row_y,
+                               TEXT, 0.95, tags="tab_content")
+            cv.create_text(RIGHT_X + 66, row_y, text=label, fill=TEXT,
+                           font=("Segoe UI", 11), anchor="w",
+                           tags="tab_content")
+            value_id = cv.create_text(RIGHT_X + RIGHT_W - 34, row_y,
+                                      text="", fill=TEXT,
+                                      font=("Segoe UI", 10, "bold"),
+                                      anchor="e", tags="tab_content")
+            self._addon_status_ids[key] = value_id
+            if key != rows[-1][0]:
+                cv.create_line(RIGHT_X + 30, row_y + 21,
+                               RIGHT_X + RIGHT_W - 30, row_y + 21,
+                               fill=CARD_BDR, tags="tab_content")
+            row_y += row_gap
+
+        check_btn = self._make_canvas_button(
+            RIGHT_W - 60, 36, self._t("addon_check_update_btn"), "search",
+            self._check_addon_update_async, fill="#0d2844",
+            outline="#8a7a76", font=("Segoe UI", 10))
+        self._addon_check_button = check_btn
+        self._cw(cv, check_btn, RIGHT_X + 30, status_y + status_h - 42,
+                 anchor="nw", width=RIGHT_W - 60, height=36,
+                 tags="tab_content")
         self._refresh_addon_status()
 
     # ── User dropdown ──────────────────────────────────────────────────────────
@@ -3068,66 +3317,194 @@ class MainWindow:
 
     # ── Addon ──────────────────────────────────────────────────────────────────
 
-    def _addon_status(self):
+    def _copy_addons_path(self):
         path = self.addons_var.get().strip() if self.addons_var else ""
-        info = addon_installer.installed_info(path)
-        installed = info.get("installed")
-        corrupt = info.get("corrupt")
-        invalid = info.get("invalid_version")
-        installed_version = info.get("version")
+        if not path:
+            self._set_install_msg(self._t("sel_folder_err"))
+            return
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(path)
+            self._set_install_msg("")
+        except Exception as exc:
+            self._set_install_msg(f"Error: {exc}")
 
-        if not installed:
-            return (
-                self._t("addon_not_installed"),
-                self._latest_addon_detail(),
-                RED_COL,
-                self._t("install_addon_btn"),
-            )
+    def _make_addon_action_button(self, width, height, text, icon, command):
+        btn = tk.Canvas(width=width, height=height, bg=CARD_BG,
+                        highlightthickness=0,
+                        cursor="hand2")
+        bg_id = self._rounded_rect(btn, 2, 2, width - 2, height - 2,
+                                   radius=8, fill=ACCENT,
+                                   outline="#facc15", width=2)
+        fill = btn.create_rectangle(4, 4, 4, height - 4, fill=GREEN,
+                                    outline="")
+        icon_x = 42 if width < 330 else width // 2 - 104
+        label_x = width // 2 + (18 if width >= 330 else 28)
+        self._draw_ui_icon(btn, icon, icon_x, height // 2,
+                           BG_DARK, 1.08)
+        label = btn.create_text(label_x, height // 2,
+                                text=text, fill=BG_DARK,
+                                font=("Segoe UI", 12, "bold"),
+                                anchor="center")
+        btn.tag_raise(label)
+        btn.bind("<Button-1>", lambda _e: command())
+        btn.bind("<Enter>", lambda _e: btn.itemconfigure(bg_id, fill="#fbbf24"))
+        btn.bind("<Leave>", lambda _e: btn.itemconfigure(bg_id, fill=ACCENT))
+        return btn, fill, label
 
-        if corrupt or invalid:
-            return (
-                self._t("addon_corrupt"),
-                f"{self._t('addon_installed')}: v{installed_version or '?'}",
-                RED_COL,
-                self._t("reinstall_addon_btn"),
-            )
+    def _clear_addon_action_buttons(self):
+        for widget in getattr(self, "_addon_action_widgets", []):
+            try:
+                widget.destroy()
+            except Exception:
+                pass
+        self._addon_action_widgets = []
+        if self._cv and self._cv.winfo_exists():
+            self._cv.delete("addon_actions")
+        self._install_btn = None
+        self._install_fill = None
+        self._install_btn_text = None
+        self._install_btn_w = 0
+        self._addon_update_button = None
 
+    def _render_addon_actions(self, installed):
+        cv = self._cv
+        layout = getattr(self, "_addon_layout", None)
+        if not (cv and cv.winfo_exists() and layout):
+            return
+
+        current_mode = "installed" if installed else "not_installed"
+        if getattr(self, "_addon_action_mode", None) == current_mode and self._install_btn:
+            return
+
+        self._clear_addon_action_buttons()
+        x = layout["action_x"]
+        y = layout["action_y"]
+        w = layout["action_w"]
+        h = layout["action_h"]
+
+        if installed:
+            gap = 12
+            btn_w = (w - gap) // 2
+            update_btn, fill, label = self._make_addon_action_button(
+                btn_w, h, self._t("update_addon_btn"), "refresh",
+                self._start_remote_addon_update)
+            reinstall_btn, _fill2, _label2 = self._make_addon_action_button(
+                btn_w, h, self._t("reinstall_addon_btn"), "reinstall",
+                self._start_remote_addon_update)
+            self._cw(cv, update_btn, x, y, anchor="nw", width=btn_w, height=h,
+                     tags=("tab_content", "addon_actions"))
+            self._cw(cv, reinstall_btn, x + btn_w + gap, y, anchor="nw",
+                     width=btn_w, height=h, tags=("tab_content", "addon_actions"))
+            self._addon_action_widgets = [update_btn, reinstall_btn]
+            self._install_btn = update_btn
+            self._install_fill = fill
+            self._install_btn_text = label
+            self._install_btn_w = btn_w
+            self._addon_update_button = update_btn
+        else:
+            install_btn, fill, label = self._make_addon_action_button(
+                w, h, self._t("install_addon_btn"), "download",
+                self._start_remote_addon_update)
+            self._cw(cv, install_btn, x, y, anchor="nw", width=w, height=h,
+                     tags=("tab_content", "addon_actions"))
+            self._addon_action_widgets = [install_btn]
+            self._install_btn = install_btn
+            self._install_fill = fill
+            self._install_btn_text = label
+            self._install_btn_w = w
+            self._addon_update_button = install_btn
+        self._addon_action_mode = current_mode
+
+    def _update_addon_status_value(self, key, text, color=TEXT):
+        cv = self._cv
+        item_id = getattr(self, "_addon_status_ids", {}).get(key)
+        if cv and cv.winfo_exists() and item_id:
+            cv.itemconfigure(item_id, text=text, fill=color)
+
+    def _addon_cache_text(self):
+        try:
+            cached = addon_updater.get_cached_release()
+        except Exception:
+            cached = None
         return (
-            f"{self._t('addon_installed')}: v{installed_version or '?'}",
-            self._latest_addon_detail(),
-            GREEN,
-            self._t("reinstall_addon_btn"),
-        )
+            self._t("addon_cache_available") if cached
+            else self._t("addon_cache_missing")
+        ), bool(cached)
 
-    def _latest_addon_detail(self):
+    def _addon_last_check_text(self):
+        checked_at = self._addon_last_check_at
+        if not checked_at:
+            return self._t("addon_not_checked")
+        elapsed = max(0, int(time.time()) - int(checked_at))
+        if elapsed < 60:
+            return self._t("addon_last_check_now")
+        minutes = elapsed // 60
+        if minutes < 60:
+            return self._t("addon_last_check_minutes").format(minutes=minutes)
+        return self._t("addon_last_check_hour")
+
+    def _addon_status_text_from_check(self):
         check = self._addon_update_check
-        if check and check.latest_version:
-            return f"Latest: v{check.latest_version}"
-        return self._t("addon_remote_not_checked")
+        if self._addon_update_busy:
+            return self._t("addon_remote_checking"), MUTED
+        if self._addon_update_error:
+            return self._t("addon_remote_offline"), RED_COL
+        if not check:
+            return self._t("addon_remote_not_checked"), MUTED
+        if check.status in ("not_installed", "not_installed_cached"):
+            return self._t("addon_install_available"), ACCENT
+        if check.status in ("update_available", "update_available_cached"):
+            return self._t("addon_update_available"), ACCENT
+        if check.status in ("installed_unknown", "installed_unknown_cached"):
+            return self._t("addon_corrupt"), RED_COL
+        if check.status == "offline_no_candidate":
+            return self._t("addon_remote_no_candidate"), RED_COL
+        if check.status == "installed_newer":
+            return self._t("addon_remote_newer_installed"), TEXT
+        return self._t("addon_up_to_date"), GREEN
 
     def _refresh_addon_status(self):
         cv = self._cv
         if not (cv and cv.winfo_exists()):
             return
 
-        state, detail, color, button_text = self._addon_status()
-        ids = getattr(self, "_addon_status_ids", {})
-        if ids.get("state"):
-            cv.itemconfigure(ids["state"], text=state, fill=color)
-        if ids.get("detail"):
-            cv.itemconfigure(ids["detail"], text=detail, fill=MUTED)
-        if self._install_btn and self._install_btn_text:
-            self._install_btn.itemconfigure(self._install_btn_text, text=button_text)
+        path = self.addons_var.get().strip() if self.addons_var else ""
+        info = addon_installer.installed_info(path)
+        installed = bool(info.get("installed"))
+        corrupt = bool(info.get("corrupt") or info.get("invalid_version"))
+        latest = self._addon_update_check.latest_version if self._addon_update_check else None
+        cache_text, cache_available = self._addon_cache_text()
+
+        if self._addon_path_text_id:
+            cv.itemconfigure(self._addon_path_text_id, text=path)
+
+        self._render_addon_actions(installed)
+        self._update_addon_status_value(
+            "installed",
+            self._t("addon_status_yes") if installed else self._t("addon_status_no"),
+            GREEN if installed and not corrupt else RED_COL,
+        )
+        self._update_addon_status_value(
+            "latest",
+            f"v{latest}" if latest else self._t("addon_not_checked"),
+            TEXT if latest else MUTED,
+        )
+        state_text, state_color = self._addon_status_text_from_check()
+        if corrupt and not self._addon_update_check:
+            state_text, state_color = self._t("addon_corrupt"), RED_COL
+        self._update_addon_status_value("state", state_text, state_color)
+        self._update_addon_status_value("origin", self._t("addon_status_origin_value"), TEXT)
+        self._update_addon_status_value(
+            "cache", cache_text, GREEN if cache_available else MUTED)
+        self._update_addon_status_value("last_check", self._addon_last_check_text(), TEXT)
         self._apply_addon_update_check_to_ui()
 
     def _set_addon_remote_status(self, state, detail="", color=MUTED, *, update_enabled=False, check_enabled=True):
         cv = self._cv
         if cv and cv.winfo_exists():
-            ids = getattr(self, "_addon_status_ids", {})
-            if ids.get("remote_state"):
-                cv.itemconfigure(ids["remote_state"], text=state, fill=color)
-            if ids.get("remote_detail"):
-                cv.itemconfigure(ids["remote_detail"], text=detail, fill=MUTED)
+            self._update_addon_status_value("state", state, color)
+            self._update_addon_status_value("last_check", self._addon_last_check_text(), TEXT)
         if self._addon_check_button:
             try:
                 self._addon_check_button.configure(state="normal" if check_enabled else "disabled")
@@ -3166,6 +3543,7 @@ class MainWindow:
 
     def _finish_addon_update_check(self, check, error):
         self._addon_update_busy = False
+        self._addon_last_check_at = int(time.time())
         if error:
             self._addon_update_error = error
             self._set_addon_remote_status(
@@ -3179,7 +3557,6 @@ class MainWindow:
 
         self._addon_update_check = check
         self._addon_update_error = None
-        self._apply_addon_update_check_to_ui()
         self._refresh_addon_status()
 
     def _apply_addon_update_check_to_ui(self):
@@ -3196,28 +3573,6 @@ class MainWindow:
             return
 
         latest = check.latest_version or "?"
-        installed = check.installed_version or "?"
-        detail = f"Installed: v{installed} - Latest: v{latest}"
-        color = GREEN
-        state = self._t("addon_remote_up_to_date").format(version=latest)
-        if check.source == "cache":
-            color = ACCENT if check.install_available else MUTED
-            state = self._t("addon_remote_cached").format(version=latest)
-        if check.status in ("not_installed", "not_installed_cached"):
-            color = ACCENT
-            state = self._t("addon_remote_not_installed").format(version=latest)
-        elif check.status in ("installed_unknown", "installed_unknown_cached"):
-            color = ACCENT
-            state = self._t("addon_remote_invalid").format(version=latest)
-        elif check.status in ("update_available", "update_available_cached"):
-            color = ACCENT
-            state = self._t("addon_remote_available").format(version=latest)
-        elif check.status == "installed_newer":
-            state = self._t("addon_remote_newer_installed")
-        elif check.status == "offline_no_candidate":
-            color = RED_COL
-            state = self._t("addon_remote_no_candidate")
-
         if self._addon_update_button:
             try:
                 text_key = "reinstall_addon_btn"
@@ -3225,19 +3580,29 @@ class MainWindow:
                     text_key = "install_addon_btn"
                 elif check.status in ("update_available", "update_available_cached", "installed_unknown", "installed_unknown_cached"):
                     text_key = "update_addon_btn"
-                self._addon_update_button.configure(text=self._t(text_key))
                 if self._install_btn and self._install_btn_text and check.install_available:
-                    self._install_btn.itemconfigure(self._install_btn_text, text=self._t(text_key))
+                    self._install_btn.itemconfigure(
+                        self._install_btn_text,
+                        text=self._t(text_key),
+                    )
             except Exception:
                 pass
 
-        self._set_addon_remote_status(
-            state,
-            detail,
-            color,
-            check_enabled=True,
-            update_enabled=bool(check.install_available),
-        )
+        status_text, status_color = self._addon_status_text_from_check()
+        self._update_addon_status_value("state", status_text, status_color)
+        self._update_addon_status_value("latest", f"v{latest}", TEXT)
+        self._update_addon_status_value("last_check", self._addon_last_check_text(), TEXT)
+        if self._addon_check_button:
+            try:
+                self._addon_check_button.configure(state="normal")
+            except Exception:
+                pass
+        if self._addon_update_button:
+            try:
+                self._addon_update_button.configure(
+                    state="normal" if check.install_available else "disabled")
+            except Exception:
+                pass
 
     def _start_remote_addon_update(self):
         if self._addon_update_busy:
@@ -3327,7 +3692,8 @@ class MainWindow:
         if not (ib and ib.winfo_exists()):
             return
         fill_w = max(0, int(self._install_btn_w * val / 100))
-        ib.coords(self._install_fill, 0, 0, fill_w, 38)
+        fill_h = max(38, ib.winfo_height() or 38)
+        ib.coords(self._install_fill, 0, 0, fill_w, fill_h)
 
     def _set_install_msg(self, text, color=RED_COL):
         cv = self._cv

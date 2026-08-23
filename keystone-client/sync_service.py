@@ -69,10 +69,12 @@ class SyncService:
         config_loader: ConfigLoader = config_module.load,
         worker_factory: WorkerFactory | None = None,
         emit: SyncEventEmitter | None = None,
+        on_completed: Callable[[], None] | None = None,
     ):
         self._config_loader = config_loader
         self._worker_factory = worker_factory
         self._emit = emit or (lambda _event, _data: None)
+        self._on_completed_callback = on_completed or (lambda: None)
         self._lock = threading.RLock()
         self._sync_lock = threading.Lock()
         self._worker: SyncWorkerProtocol | None = None
@@ -98,7 +100,7 @@ class SyncService:
             self._selected_accounts = self._selected_accounts_count(cfg)
             return self._status_locked()
 
-    def start(self) -> dict[str, Any]:
+    def start(self, *, emit_events: bool = True) -> dict[str, Any]:
         cfg, accounts = self._require_ready()
         emit_started = False
         with self._lock:
@@ -114,17 +116,27 @@ class SyncService:
                 emit_started = True
             status = self._status_locked()
 
-        if emit_started:
+        if emit_started and emit_events:
             self._emit_event("sync.started", status)
             self._emit_event("sync.status", status)
         return status
+
+    def reconcile(self, *, restart: bool = False, emit_events: bool = True) -> dict[str, Any]:
+        try:
+            self._require_ready()
+        except SyncServiceError:
+            return self.stop(emit_status=emit_events)
+
+        if restart:
+            self.stop(emit_status=False)
+        return self.start(emit_events=emit_events)
 
     def stop(self, *, emit_status: bool = True) -> dict[str, Any]:
         with self._lock:
             worker = self._worker
             self._worker = None
             self._running = False
-            if self._state == "watching":
+            if self._state != "syncing":
                 self._state = "idle"
             status = self._status_locked()
 
@@ -255,6 +267,10 @@ class SyncService:
             )
         else:
             self._emit_event("sync.completed", {"status": status, "syncedCharacters": synced})
+            try:
+                self._on_completed_callback()
+            except Exception:
+                pass
         self._emit_event("sync.status", status)
         return not failed
 

@@ -79,6 +79,23 @@ Does not own:
 - D1 schema ownership.
 - Web display semantics.
 
+### `keystone-client-next`
+
+Tauri 2 + React migration client, developed beside the current released Windows client until the explicit cutover phase.
+
+Owns:
+
+- The approved React presentation, deterministic preview states and Playwright visual baselines.
+- Tauri-native window/tray lifecycle and scoped external navigation.
+- A persistent private JSONL sidecar connection to the Python domain services.
+- Typed, allowlisted UI capabilities for login, internal registration, logout, settings, WoW discovery, synchronization, characters and addon management.
+
+The Python sidecar remains authoritative for tokens, `%APPDATA%\KeystoneClient\config.json`, SavedVariables monitoring, character cache/API/Raider.IO enrichment, authenticated avatar updates and addon release operations. The synchronization view receives sanitized rendering DTOs only; React does not call Raider.IO or the Worker directly. A valid authenticated WoW configuration starts one monitor automatically, and successful synchronization schedules a coalesced character refresh.
+
+The Tauri host owns frameless window behavior, controlled native close requests, explicit clean exit, OS autostart, the persistent dynamic tray and scoped browser navigation. Blocking Python requests run on Tauri's blocking executor so monitor shutdown cannot freeze the desktop event loop; tray hiding uses a scoped Rust command, and exit terminates the sidecar directly. React owns the localized ES/EN interface, internal login/registration and first-run WoW/account routing, Settings, profile dropdown and character-derived avatar picker. `auth.register` forwards the existing Worker registration contract without persisting credentials, while `profile.set_avatar` validates the requested URL against sanitized character state before Python calls `/api/me/avatar`. The historical `minimize_on_close` key remains in the private config contract for compatibility but does not silently override the Tauri close-choice flow.
+
+This migration does not yet replace the released PyInstaller/Inno client or its release pipeline.
+
 ### `keystone-worker`
 
 Current API backend, implemented as a Cloudflare Worker with Hono.
@@ -195,13 +212,30 @@ The Web application is documented as deployed through Vercel. The exact external
 
 The Windows client defaults to `https://api-keystonesync.esgarpe.dev` in `keystone-client/config.py` and normalizes the old Railway URL to the current API domain.
 
-Build path:
+Released legacy build path, retained until the Tauri production gate passes:
 
 - `keystone-client/build.bat` builds the executable with PyInstaller.
 - `keystone-client/build_installer.bat` builds the installer with Inno Setup.
-- Public installer asset convention: `KeystoneClientSetup.exe`.
-- Release-impacting Client changes require a valid pending `.changes/` changeset.
-- On qualifying `main` pushes, the release workflow selects `patch`, `minor`, or `major`, updates `keystone-client/VERSION`, consumes changesets into `.changes/releases/`, builds `KeystoneClientSetup.exe`, atomically pushes the release commit plus `client-vX.Y.Z` tag, and publishes/verifies the GitHub Release.
+
+Pending Tauri cutover path in the local working tree:
+
+```text
+Python domain services
+  -> packaged JSONL sidecar
+  -> Tauri/Rust host + React UI
+  -> NSIS KeystoneClientSetup.exe
+  -> detached Tauri signature
+  -> latest.json
+  -> GitHub Releases static updater endpoint
+```
+
+- `keystone-client/VERSION` remains the canonical Client version. `scripts/tauri_release.py` synchronizes Tauri, Cargo and npm metadata and embeds changeset-derived notes.
+- The stable Tauri identity is product/binary `KeystoneClient` with identifier `dev.esgarpe.keystoneclient`.
+- React owns update state and presentation through a typed controller; the official Tauri updater plugin owns signed download and installation, and the process plugin owns relaunch. The Python sidecar is not an application updater.
+- Release signing material is injected only in CI. `TAURI_SIGNING_PRIVATE_KEY` and its optional password remain secret; the public verification key is written only to a temporary release overlay.
+- The canonical release assets are `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig`, and `latest.json`. The manifest uses platform key `windows-x86_64` and endpoint `https://github.com/Speeson/weeklyChar/releases/latest/download/latest.json`.
+- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` is gated by `TAURI_CLIENT_RELEASE_ENABLED=true` so the initial integration cannot publish before the signed dry-run and approval.
+- `%APPDATA%\KeystoneClient` remains owned by the existing Python configuration/services and is not removed by the Tauri application. Clean install, Inno-to-NSIS upgrade, shortcut/uninstall behavior and duplicate-autostart prevention remain mandatory native smoke gates before public cutover.
 
 ### Addon
 

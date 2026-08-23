@@ -1,0 +1,9 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Mejora la pestaña Addon de KeystoneClient.",
+  "details": [
+    "La pestaña Addon ahora muestra la ruta de AddOns, acciones de instalación/actualización y el estado del addon en un diseño de dos columnas más claro."
+  ]
+}

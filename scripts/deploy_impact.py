@@ -127,17 +127,22 @@ def classify_path(path: str, impact: Impact) -> None:
         return
 
     if path.startswith("keystone-client-next/"):
-        impact.add(("client_build",), path)
+        if is_tauri_test_or_output(path):
+            impact.no_impact(path)
+        else:
+            impact.add(("client_build", "client_release"), path)
         return
 
     if path == "scripts/build_client_sidecar.py":
-        impact.add(("client_build",), path)
+        impact.add(("client_build", "client_release"), path)
+        return
+
+    if path == "scripts/tauri_release.py":
+        impact.no_impact(path)
         return
 
     if path.startswith("keystone-client/"):
-        if is_client_bridge_migration_path(path):
-            impact.add(("client_build",), path)
-        elif is_client_release_path(path):
+        if is_client_release_path(path):
             impact.add(("client_build", "client_release"), path)
         elif is_client_build_only_path(path):
             impact.add(("client_build",), path)
@@ -238,6 +243,22 @@ def is_client_bridge_migration_path(path: str) -> bool:
         "keystone-client/wow_service.py",
     }
     return path in exact
+
+
+def is_tauri_test_or_output(path: str) -> bool:
+    output_prefixes = (
+        "keystone-client-next/dist/",
+        "keystone-client-next/node_modules/",
+        "keystone-client-next/src-tauri/target/",
+        "keystone-client-next/tests/",
+    )
+    name = posixpath.basename(path)
+    return (
+        path.startswith(output_prefixes)
+        or ".test." in name
+        or "/test/" in path
+        or path == "keystone-client-next/README.md"
+    )
 
 
 def is_client_build_only_path(path: str) -> bool:

@@ -8,6 +8,47 @@ const synchronizationStates = [
 ] as const;
 
 test.describe("preview states", () => {
+  test("renders the polished login flow", async ({ page }) => {
+    await page.goto("/?preview=login");
+    await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Registrarse" })).toBeVisible();
+    await expect(page).toHaveScreenshot("login.png", { fullPage: true });
+  });
+
+  test("renders registration inside the client", async ({ page }) => {
+    await page.goto("/?preview=login");
+    await page.getByRole("button", { name: "Registrarse" }).click();
+    await expect(page.getByRole("heading", { name: "Crear cuenta" })).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page).toHaveScreenshot("registration.png", { fullPage: true });
+  });
+
+  test("keeps registration contained at the minimum client size", async ({ page }) => {
+    await page.setViewportSize({ width: 940, height: 529 });
+    await page.goto("/?preview=login");
+    await page.getByRole("button", { name: "Registrarse" }).click();
+
+    const panel = await page.locator(".ks-login-shell").boundingBox();
+    expect(panel).not.toBeNull();
+    expect(panel!.y).toBeGreaterThanOrEqual(0);
+    expect(panel!.y + panel!.height).toBeLessThanOrEqual(529);
+  });
+
+  test("renders the first-run WoW install step", async ({ page }) => {
+    await page.goto("/?preview=wow-onboarding");
+    await expect(page.getByRole("heading", { name: "Ubicación de World of Warcraft" })).toBeVisible();
+    await expect(page.getByPlaceholder("World of Warcraft no detectado")).toBeVisible();
+    await expect(page).toHaveScreenshot("wow-onboarding.png", { fullPage: true });
+  });
+
+  test("renders the first-run account selector", async ({ page }) => {
+    await page.goto("/?preview=account-selector");
+    await expect(page.getByRole("heading", { name: "Cuentas de World of Warcraft" })).toBeVisible();
+    await expect(page.getByText("WOW_ACCOUNT_1")).toBeVisible();
+    await expect(page.getByText("WOW_ACCOUNT_2")).toBeVisible();
+    await expect(page).toHaveScreenshot("account-selector.png", { fullPage: true });
+  });
+
   test("renders synchronization success preview", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await expect(page.getByText("Makabe")).toBeVisible();
@@ -28,6 +69,35 @@ test.describe("preview states", () => {
       scrollWidth: 1672,
     });
     await expect(page).toHaveScreenshot("sync-success.png", { fullPage: true });
+  });
+
+  test("keeps navigation hover blue and the selected tab softly gold", async ({ page }) => {
+    await page.goto("/?preview=sync-success");
+    const syncTab = page.getByRole("button", { name: "Sincronizacion", exact: true });
+    const addonTab = page.getByRole("button", { name: "Addon", exact: true });
+
+    await expect(syncTab).toHaveAttribute("aria-current", "page");
+    await expect(syncTab.locator(".ks-tab__indicator")).toBeVisible();
+    await expect(syncTab).toHaveCSS("border-radius", "8px");
+    await expect(addonTab).toHaveCSS("border-radius", "8px");
+    expect(await syncTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      "rgba(244, 183, 42, 0.04)",
+    );
+
+    await addonTab.hover();
+    await page.waitForTimeout(220);
+    expect(await addonTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      "rgba(37, 125, 224, 0.12)",
+    );
+
+    await addonTab.click();
+    await page.mouse.move(800, 400);
+    await page.waitForTimeout(220);
+    await expect(addonTab).toHaveAttribute("aria-current", "page");
+    await expect(addonTab.locator(".ks-tab__indicator")).toBeVisible();
+    expect(await addonTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      "rgba(244, 183, 42, 0.04)",
+    );
   });
 
   test("keeps the full composition at a reduced scale", async ({ page }) => {
@@ -61,6 +131,16 @@ test.describe("preview states", () => {
     await expect(page).toHaveScreenshot("settings.png", { fullPage: true });
   });
 
+  test("renders the signed update confirmation above the client", async ({ page }) => {
+    await page.goto("/?preview=sync-success&updater=available");
+
+    const modal = page.getByRole("dialog", { name: "Actualizacion 0.4.0" });
+    await expect(modal).toBeVisible();
+    await expect(modal.getByText("Nuevo instalador Tauri con actualizaciones firmadas.")).toBeVisible();
+    await expect(modal.getByRole("button", { name: "Instalar y reiniciar" })).toBeVisible();
+    await expect(page).toHaveScreenshot("update-available.png", { fullPage: true });
+  });
+
   test("renders the user menu above the current view", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
@@ -81,6 +161,26 @@ test.describe("preview states", () => {
     expect(menuIsTopLayer).toBe(true);
 
     await expect(page).toHaveScreenshot("user-menu.png", { fullPage: true });
+  });
+
+  test("renders the avatar picker above the current view", async ({ page }) => {
+    await page.goto("/?preview=sync-success");
+    await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+    await page.getByRole("menuitem", { name: "Cambiar avatar" }).click();
+
+    await expect(page.getByRole("dialog", { name: "Cambiar avatar" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Makabe/ })).toBeDisabled();
+    await expect(page.locator('.ks-avatar-choice[aria-pressed="true"]')).toHaveCount(0);
+    await expect(page).toHaveScreenshot("avatar-picker.png", { fullPage: true });
+  });
+
+  test("renders the controlled close choices", async ({ page }) => {
+    await page.goto("/?preview=sync-success");
+    await page.getByRole("button", { name: "Cerrar" }).click();
+
+    await expect(page.getByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cerrar KeystoneClient" })).toBeVisible();
+    await expect(page).toHaveScreenshot("close-choices.png", { fullPage: true });
   });
 
   test("renders current addon status in the summary", async ({ page }) => {

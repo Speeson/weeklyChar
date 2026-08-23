@@ -160,6 +160,41 @@ class AuthServiceTests(unittest.TestCase):
 
         self.assertEqual(caught.exception.code, auth_service.AUTH_INVALID_RESPONSE)
 
+    def test_registration_posts_complete_contract_without_persisting_credentials(self) -> None:
+        cfg = self.base_config()
+        http = FakeHttp(
+            post_result=FakeResponse(
+                status_code=201,
+                payload={
+                    "username": "newplayer",
+                    "email": "new@example.com",
+                    "emailVerified": False,
+                    "message": "Cuenta creada. Revisa tu email para verificarla.",
+                },
+            )
+        )
+        payload = {
+            "firstName": "New",
+            "lastName": "Player",
+            "email": "new@example.com",
+            "username": "newplayer",
+            "password": "secret1",
+            "confirmPassword": "secret1",
+            "dateOfBirth": "1990-05-14",
+        }
+
+        with mock.patch("auth_service._http_client", return_value=http):
+            result = auth_service.register(cfg, payload)
+
+        self.assertEqual(result["username"], "newplayer")
+        self.assertFalse(result["emailVerified"])
+        self.assertIsNone(self.saved_cfg)
+        http.post.assert_called_once_with(
+            "https://api-keystonesync.esgarpe.dev/api/auth/register",
+            json=payload,
+            timeout=10,
+        )
+
     def test_logout_clears_session_only_and_preserves_settings(self) -> None:
         cfg = self.base_config()
         cfg.update(

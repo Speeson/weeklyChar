@@ -1,11 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { logout } from "./core/auth";
+import { login, logout } from "./core/auth";
 import { coreRequest } from "./core/client";
 import { listenCoreEvents } from "./core/events";
 import { getSettings } from "./core/settings";
+import { setProfileAvatar } from "./core/profile";
+import {
+  exitApplication,
+  listenWindowCloseRequested,
+  minimizeToTray,
+  minimizeWindow,
+} from "./core/native";
 import type { CoreEvent, SystemState } from "./core/types";
 
 vi.mock("./core/client", () => ({
@@ -17,6 +24,7 @@ vi.mock("./core/events", () => ({
 }));
 
 vi.mock("./core/auth", () => ({
+  login: vi.fn(),
   logout: vi.fn(),
 }));
 
@@ -25,8 +33,18 @@ vi.mock("./core/settings", () => ({
   updateSettings: vi.fn(),
 }));
 
+vi.mock("./core/autostart", () => ({
+  getAutostartEnabled: vi.fn(() => Promise.resolve(false)),
+  setAutostartEnabled: vi.fn((enabled: boolean) => Promise.resolve(enabled)),
+}));
+
+vi.mock("./core/profile", () => ({
+  setProfileAvatar: vi.fn(),
+}));
+
 vi.mock("./core/native", () => ({
-  closeWindow: vi.fn(() => Promise.resolve()),
+  exitApplication: vi.fn(() => Promise.resolve()),
+  listenWindowCloseRequested: vi.fn(() => Promise.resolve(() => undefined)),
   minimizeToTray: vi.fn(() => Promise.resolve()),
   minimizeWindow: vi.fn(() => Promise.resolve()),
   openWeb: vi.fn(() => Promise.resolve()),
@@ -78,6 +96,8 @@ const emptyWow = {
   selectedAccounts: [],
 };
 
+const incompleteWow = { ...emptyWow, configurationComplete: false };
+
 const detectedWow = {
   install: {
     detected: true,
@@ -118,10 +138,24 @@ const addonStatus = {
   operation: null,
 };
 
+const emptyCharacters = {
+  characters: [],
+  refreshing: false,
+  source: "none" as const,
+  lastRefreshAt: null,
+  lastError: null,
+};
+
 const coreRequestMock = vi.mocked(coreRequest);
 const listenCoreEventsMock = vi.mocked(listenCoreEvents);
+const loginMock = vi.mocked(login);
 const logoutMock = vi.mocked(logout);
 const getSettingsMock = vi.mocked(getSettings);
+const exitApplicationMock = vi.mocked(exitApplication);
+const listenWindowCloseRequestedMock = vi.mocked(listenWindowCloseRequested);
+const minimizeToTrayMock = vi.mocked(minimizeToTray);
+const minimizeWindowMock = vi.mocked(minimizeWindow);
+const setProfileAvatarMock = vi.mocked(setProfileAvatar);
 
 const anonymousState: SystemState = {
   protocolVersion: 1,
@@ -130,6 +164,7 @@ const anonymousState: SystemState = {
   settings: { startMinimized: false, minimizeOnClose: false, lang: "es" },
   wow: emptyWow,
   sync: idleSync,
+  characters: emptyCharacters,
   addon: addonStatus,
 };
 
@@ -140,6 +175,23 @@ const authenticatedState: SystemState = {
   settings: { startMinimized: false, minimizeOnClose: false, lang: "es" },
   wow: detectedWow,
   sync: { ...idleSync, state: "success", selectedAccounts: 1 },
+  characters: {
+    ...emptyCharacters,
+    source: "remote",
+    characters: [{
+      id: "eu:zuljin:auralis",
+      name: "Auralis",
+      realm: "Zul'jin",
+      region: "eu",
+      wowAccount: "ACCOUNT_A",
+      wowClass: "Mage",
+      avatarUrl: null,
+      ilvl: 297,
+      rioScore: 2250,
+      currentKeystone: null,
+      keystoneDisplay: "\u2014",
+    }],
+  },
   addon: addonStatus,
 };
 
@@ -152,8 +204,15 @@ describe("App", () => {
     window.history.pushState({}, "", "/");
     coreRequestMock.mockReset();
     listenCoreEventsMock.mockReset();
+    loginMock.mockReset();
     logoutMock.mockReset();
     getSettingsMock.mockReset();
+    exitApplicationMock.mockClear();
+    listenWindowCloseRequestedMock.mockReset();
+    listenWindowCloseRequestedMock.mockResolvedValue(() => undefined);
+    minimizeToTrayMock.mockClear();
+    minimizeWindowMock.mockClear();
+    setProfileAvatarMock.mockReset();
     listenCoreEventsMock.mockResolvedValue(vi.fn());
   });
 
@@ -163,8 +222,8 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "KeystoneClient" })).toBeInTheDocument();
-    expect(await screen.findByText("Bridge: ready")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Iniciar sesion" })).toBeInTheDocument();
+    expect(await screen.findByLabelText("Usuario")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     expect(coreRequestMock).toHaveBeenNthCalledWith(1, "system.get_state");
     expect(coreRequestMock).toHaveBeenNthCalledWith(2, "system.ping");
   });
@@ -176,7 +235,7 @@ describe("App", () => {
 
     expect(await screen.findByText("player")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sincronizacion" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByText("ACCOUNT_A")).toBeInTheDocument();
+    expect(screen.getByText("Auralis")).toBeInTheDocument();
     expect(screen.getByText("Version de la aplicacion")).toBeInTheDocument();
     expect(document.querySelector(".ks-user-menu__avatar-image")).not.toBeInTheDocument();
     expect(document.querySelector(".ks-user-menu__avatar-frame")).toBeInTheDocument();
@@ -236,6 +295,179 @@ describe("App", () => {
     expect(await screen.findByLabelText("Addon: Actualizado")).toBeInTheDocument();
   });
 
+  it("routes an authenticated user with incomplete WoW setup to onboarding", async () => {
+    mockStartup({
+      ...authenticatedState,
+      wow: incompleteWow,
+    });
+    coreRequestMock.mockResolvedValue(incompleteWow);
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Ubicación de World of Warcraft" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sincronizacion" })).not.toBeInTheDocument();
+  });
+
+  it("refreshes state after login and routes into first-run onboarding", async () => {
+    const user = userEvent.setup();
+    mockStartup();
+    loginMock.mockResolvedValueOnce({ authenticated: true, username: "player", avatarUrl: null });
+    coreRequestMock.mockResolvedValueOnce({
+      ...authenticatedState,
+      wow: incompleteWow,
+    });
+    coreRequestMock.mockResolvedValue(incompleteWow);
+
+    render(<App />);
+    await user.type(await screen.findByLabelText("Usuario"), "player");
+    await user.type(screen.getByLabelText("Contraseña"), "secret");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("heading", { name: "Ubicación de World of Warcraft" })).toBeInTheDocument();
+    expect(coreRequestMock).toHaveBeenCalledWith("system.get_state");
+  });
+
+  it("uses native minimize and opens a controlled close-choice modal", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Minimizar" }));
+    expect(minimizeWindowMock).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    const dialog = screen.getByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" });
+    expect(dialog).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Minimizar a la bandeja" }));
+    expect(minimizeToTrayMock).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).not.toBeInTheDocument();
+  });
+
+  it("routes native close requests to one modal and exits only after confirmation", async () => {
+    const user = userEvent.setup();
+    let closeHandler: () => void = () => undefined;
+    listenWindowCloseRequestedMock.mockImplementationOnce(async (handler) => {
+      closeHandler = handler;
+      return () => undefined;
+    });
+    mockStartup(authenticatedState);
+
+    render(<App />);
+    await screen.findByText("player");
+    closeHandler();
+    closeHandler();
+
+    expect(await screen.findAllByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toHaveLength(1);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).not.toBeInTheDocument();
+
+    closeHandler();
+    await user.click(await screen.findByRole("button", { name: "Cerrar KeystoneClient" }));
+    expect(exitApplicationMock).toHaveBeenCalledOnce();
+  });
+
+  it("shows the same native close dialog while the login view is active", async () => {
+    let closeHandler: () => void = () => undefined;
+    listenWindowCloseRequestedMock.mockImplementationOnce(async (handler) => {
+      closeHandler = handler;
+      return () => undefined;
+    });
+    mockStartup();
+
+    render(<App />);
+    await screen.findByRole("heading", { name: "Iniciar sesión" });
+    closeHandler();
+
+    expect(await screen.findByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toBeInTheDocument();
+  });
+
+  it("selects a real character avatar and updates the header after success", async () => {
+    const user = userEvent.setup();
+    const state = {
+      ...authenticatedState,
+      characters: {
+        ...authenticatedState.characters,
+        characters: [{
+          ...authenticatedState.characters.characters[0],
+          avatarUrl: "https://img.test/auralis.jpg",
+        }],
+      },
+    };
+    setProfileAvatarMock.mockResolvedValueOnce({
+      authenticated: true,
+      username: "player",
+      avatarUrl: "https://img.test/auralis.jpg",
+    });
+    mockStartup(state);
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
+    await user.click(screen.getByRole("button", { name: /Auralis/ }));
+
+    expect(setProfileAvatarMock).toHaveBeenCalledWith({ avatarUrl: "https://img.test/auralis.jpg" });
+    expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/auralis.jpg"]')).toBeInTheDocument();
+  });
+
+  it("preserves the previous avatar when the mutation fails", async () => {
+    const user = userEvent.setup();
+    const state = {
+      ...authenticatedState,
+      auth: { ...authenticatedState.auth, avatarUrl: "https://img.test/old.jpg" },
+      characters: {
+        ...authenticatedState.characters,
+        characters: [{
+          ...authenticatedState.characters.characters[0],
+          avatarUrl: "https://img.test/new.jpg",
+        }],
+      },
+    };
+    setProfileAvatarMock.mockRejectedValueOnce({ code: "PROFILE_UPDATE_FAILED", message: "No guardado." });
+    mockStartup(state);
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
+    await user.click(screen.getByRole("button", { name: /Auralis/ }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No guardado.");
+    expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/old.jpg"]')).toBeInTheDocument();
+  });
+
+  it("updates character rows and count from core events", async () => {
+    let eventHandler: (event: CoreEvent) => void = () => undefined;
+    listenCoreEventsMock.mockImplementationOnce(async (handler) => {
+      eventHandler = handler;
+      return () => undefined;
+    });
+    mockStartup(authenticatedState);
+
+    render(<App />);
+    await screen.findByText("Auralis");
+
+    eventHandler({
+      protocolVersion: 1,
+      event: "characters.updated",
+      data: {
+        ...authenticatedState.characters,
+        characters: [
+          ...authenticatedState.characters.characters,
+          {
+            ...authenticatedState.characters.characters[0],
+            id: "eu:zuljin:second",
+            name: "Second",
+          },
+        ],
+      },
+    });
+
+    expect(await screen.findByText("Second")).toBeInTheDocument();
+    expect(screen.getByLabelText("Personajes: 2")).toBeInTheDocument();
+  });
+
   it("opens settings and keeps WoW account controls reachable", async () => {
     const user = userEvent.setup();
     mockStartup(authenticatedState);
@@ -252,6 +484,21 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Aplicacion" })).toBeInTheDocument();
   });
 
+  it("switches the whole shell language immediately from Settings", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+    getSettingsMock.mockResolvedValueOnce(authenticatedState.settings);
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Configuracion" }));
+    await user.click(await screen.findByRole("button", { name: "English" }));
+
+    expect(screen.getByRole("button", { name: "Synchronization" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Web" })).toBeInTheDocument();
+  });
+
   it("logs out without exposing secrets", async () => {
     const user = userEvent.setup();
     mockStartup(authenticatedState);
@@ -266,7 +513,44 @@ describe("App", () => {
     await user.click(logoutButton);
 
     expect(logoutMock).toHaveBeenCalledWith();
-    expect(await screen.findByRole("heading", { name: "Iniciar sesion" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
+  });
+
+  it("returns to login before the backend finishes stopping synchronization", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+    logoutMock.mockReturnValueOnce(new Promise(() => undefined));
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+
+    expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
+  });
+
+  it("does not let a delayed logout overwrite a newer login", async () => {
+    const user = userEvent.setup();
+    let finishLogout: (auth: typeof anonymousState.auth) => void = () => undefined;
+    const nextAuth = { authenticated: true, username: "next-player", avatarUrl: null };
+    mockStartup(authenticatedState);
+    coreRequestMock.mockResolvedValueOnce({ ...authenticatedState, auth: nextAuth });
+    logoutMock.mockReturnValueOnce(new Promise((resolve) => {
+      finishLogout = resolve;
+    }));
+    loginMock.mockResolvedValueOnce(nextAuth);
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+    await user.type(await screen.findByLabelText("Usuario"), "next-player");
+    await user.type(screen.getByLabelText("Contraseña"), "secret-password");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByText("next-player")).toBeInTheDocument();
+    finishLogout(anonymousState.auth);
+    await waitFor(() => expect(screen.getByText("next-player")).toBeInTheDocument());
   });
 
   it("shows controlled startup failures", async () => {

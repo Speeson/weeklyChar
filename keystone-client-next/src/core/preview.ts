@@ -1,4 +1,23 @@
-import type { AddonStatus, SyncStatus, SystemState } from "./types";
+import type { AddonStatus, Character, CharacterState, SyncStatus, SystemState } from "./types";
+
+const previewCharacters: Character[] = [
+  { id: "makabe", name: "Makabe", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Warrior", avatarUrl: null, ilvl: 344, rioScore: 4500, currentKeystone: { level: 10, dungeon: "King's Rest", challengeMapId: null, mapId: null }, keystoneDisplay: "+10 King's Rest (KR)" },
+  { id: "bakuhatsu", name: "Bakuhatsu", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Paladin", avatarUrl: null, ilvl: 321, rioScore: 3375, currentKeystone: { level: 2, dungeon: "Temple of Sethraliss", challengeMapId: null, mapId: null }, keystoneDisplay: "+2 Temple of Sethraliss (ToS)" },
+  { id: "dkimio", name: "Dkimio", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Death Knight", avatarUrl: null, ilvl: 297, rioScore: 2250, currentKeystone: null, keystoneDisplay: "\u2014" },
+  { id: "nakada", name: "Nakada", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Demon Hunter", avatarUrl: null, ilvl: 274, rioScore: 1125, currentKeystone: null, keystoneDisplay: "\u2014" },
+  { id: "spee", name: "Spee", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Monk", avatarUrl: null, ilvl: 250, rioScore: 0, currentKeystone: { level: 2, dungeon: "The Blinding Vale", challengeMapId: null, mapId: null }, keystoneDisplay: "+2 The Blinding Vale" },
+  { id: "speen", name: "Speen", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Mage", avatarUrl: null, ilvl: 288, rioScore: null, currentKeystone: null, keystoneDisplay: "\u2014" },
+  { id: "speeral-a", name: "Speeral", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Druid", avatarUrl: null, ilvl: 305, rioScore: null, currentKeystone: { level: 2, dungeon: "Murder Row", challengeMapId: null, mapId: null }, keystoneDisplay: "+2 Murder Row" },
+  { id: "speeral-b", name: "Speeral", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Shaman", avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: null, keystoneDisplay: "\u2014" },
+];
+
+const previewCharacterState: CharacterState = {
+  characters: previewCharacters,
+  refreshing: false,
+  source: "remote",
+  lastRefreshAt: "2026-08-22T15:34:00+02:00",
+  lastError: null,
+};
 
 const baseSync: SyncStatus = {
   running: false,
@@ -53,13 +72,57 @@ function baseState(sync: SyncStatus = baseSync, addon: AddonStatus = baseAddon):
         },
       ],
       selectedAccounts: ["PREVIEW"],
+      configurationComplete: true,
     },
     sync,
+    characters: previewCharacterState,
     addon,
   };
 }
 
 const previews: Record<string, SystemState> = {
+  "login": {
+    ...baseState(),
+    auth: { authenticated: false, username: null, avatarUrl: null },
+  },
+  "wow-onboarding": {
+    ...baseState(),
+    wow: {
+      install: { detected: false, installPath: null, retailPath: null, addonsPath: null },
+      accounts: [],
+      selectedAccounts: [],
+      configurationComplete: false,
+    },
+  },
+  "account-selector": {
+    ...baseState(),
+    wow: {
+      install: {
+        detected: true,
+        installPath: "C:\\Games\\World of Warcraft",
+        retailPath: "C:\\Games\\World of Warcraft\\_retail_",
+        addonsPath: "C:\\Games\\World of Warcraft\\_retail_\\Interface\\AddOns",
+      },
+      accounts: [
+        {
+          name: "WOW_ACCOUNT_1",
+          savedVariablesPath: "C:\\Games\\World of Warcraft\\_retail_\\WTF\\Account\\WOW_ACCOUNT_1\\SavedVariables\\KeystoneSync.lua",
+          savedVariablesExists: true,
+          selected: false,
+          modifiedAt: 1787390400,
+        },
+        {
+          name: "WOW_ACCOUNT_2",
+          savedVariablesPath: "C:\\Games\\World of Warcraft\\_retail_\\WTF\\Account\\WOW_ACCOUNT_2\\SavedVariables\\KeystoneSync.lua",
+          savedVariablesExists: true,
+          selected: false,
+          modifiedAt: 1787390300,
+        },
+      ],
+      selectedAccounts: [],
+      configurationComplete: false,
+    },
+  },
   "addon-installed": baseState(baseSync, {
     ...baseAddon,
     installed: true,

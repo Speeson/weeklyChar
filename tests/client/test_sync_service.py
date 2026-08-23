@@ -129,6 +129,35 @@ class SyncServiceTests(unittest.TestCase):
         self.assertEqual(FakeWorker.created, 1)
         self.assertEqual([event["event"] for event in self.events], ["sync.started", "sync.status"])
 
+    def test_reconcile_starts_when_prerequisites_are_ready_without_duplicates(self):
+        service = self.make_service()
+
+        first = service.reconcile()
+        second = service.reconcile()
+
+        self.assertTrue(first["running"])
+        self.assertTrue(second["running"])
+        self.assertEqual(FakeWorker.created, 1)
+
+    def test_reconcile_stops_when_authentication_is_removed(self):
+        service = self.make_service()
+        service.reconcile()
+        self.config["sync_token"] = None
+
+        status = service.reconcile()
+
+        self.assertFalse(status["running"])
+        self.assertEqual(status["state"], "idle")
+
+    def test_reconcile_restart_replaces_active_monitor(self):
+        service = self.make_service()
+        service.reconcile()
+
+        status = service.reconcile(restart=True)
+
+        self.assertTrue(status["running"])
+        self.assertEqual(FakeWorker.created, 2)
+
     def test_stop_and_second_stop_are_idempotent(self):
         service = self.make_service()
         service.start()
@@ -161,6 +190,20 @@ class SyncServiceTests(unittest.TestCase):
         self.assertEqual(FakeWorker.created, 1)
         self.assertFalse(service.get_status()["running"])
         self.assertEqual(service.get_status()["state"], "success")
+
+    def test_successful_sync_invokes_completion_callback(self):
+        completed = []
+        service = SyncService(
+            config_loader=lambda: dict(self.config),
+            worker_factory=lambda cfg, on_sync, on_error: FakeWorker(cfg, on_sync, on_error),
+            emit=lambda event, data: self.events.append({"event": event, "data": data}),
+            on_completed=lambda: completed.append(True),
+        )
+
+        service.force()
+        self.assertTrue(service.wait_for_idle())
+
+        self.assertEqual(completed, [True])
 
     def test_force_while_already_syncing_does_not_duplicate_post_path(self):
         FakeWorker.sync_started = __import__("threading").Event()

@@ -11,6 +11,7 @@ AUTH_INVALID_CREDENTIALS = "AUTH_INVALID_CREDENTIALS"
 AUTH_CONNECTION_ERROR = "AUTH_CONNECTION_ERROR"
 AUTH_SERVER_ERROR = "AUTH_SERVER_ERROR"
 AUTH_INVALID_RESPONSE = "AUTH_INVALID_RESPONSE"
+AUTH_REGISTRATION_FAILED = "AUTH_REGISTRATION_FAILED"
 
 
 @dataclass(frozen=True)
@@ -101,6 +102,44 @@ def login(cfg: dict[str, Any], username: str, password: str) -> dict[str, Any]:
     config_module.save(cfg)
 
     return get_public_auth_state(cfg)
+
+
+def register(cfg: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    api_url = config_module._normalize_api_url(cfg.get("api_url"))
+    requests_module = _http_client()
+
+    try:
+        response = requests_module.post(
+            f"{api_url}/api/auth/register",
+            json=payload,
+            timeout=10,
+        )
+    except requests_module.exceptions.ConnectionError as exc:
+        raise AuthError(AUTH_CONNECTION_ERROR, "No se puede conectar con la API.") from exc
+    except requests_module.exceptions.RequestException as exc:
+        raise AuthError(AUTH_CONNECTION_ERROR, "No se puede conectar con la API.") from exc
+
+    if not response.ok:
+        message = _safe_detail(response) or "No se pudo crear la cuenta."
+        raise AuthError(AUTH_REGISTRATION_FAILED, message)
+
+    try:
+        result = response.json()
+    except ValueError as exc:
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de registro no válida.") from exc
+
+    username = result.get("username")
+    email = result.get("email")
+    message = result.get("message")
+    if not isinstance(username, str) or not isinstance(email, str) or not isinstance(message, str):
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de registro no válida.")
+
+    return {
+        "username": username,
+        "email": email,
+        "emailVerified": bool(result.get("emailVerified")),
+        "message": message,
+    }
 
 
 def logout(cfg: dict[str, Any]) -> dict[str, Any]:

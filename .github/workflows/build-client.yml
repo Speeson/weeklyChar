@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Client installer
+    name: Build Tauri Client installer
     runs-on: windows-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -25,52 +25,81 @@ jobs:
           cache: pip
           cache-dependency-path: keystone-client/requirements.txt
 
-      - name: Install Python dependencies
-        shell: pwsh
-        run: python -m pip install -r keystone-client/requirements.txt
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: keystone-client-next/package-lock.json
 
-      - name: Validate version
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: keystone-client-next/src-tauri
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r keystone-client/requirements.txt
+          npm ci --prefix keystone-client-next
+
+      - name: Validate version contract
         id: version
         shell: pwsh
         run: |
-          $version = (Get-Content keystone-client/VERSION -Raw).Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Invalid keystone-client/VERSION: $version"
-          }
+          $version = python scripts/tauri_release.py validate-versions
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=client-v$version" >> $env:GITHUB_OUTPUT
 
-      - name: Compile Python
-        shell: pwsh
-        run: python -m compileall -q keystone-client scripts tests
-
-      - name: Run Client tests
-        shell: pwsh
-        run: python -m unittest discover -s tests/client
-
-      - name: Install Inno Setup
+      - name: Validate Python services and release tooling
         shell: pwsh
         run: |
-          choco install innosetup --no-progress --yes
-          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+          python -m compileall -q keystone-client scripts tests
+          python -m unittest discover -s tests/client
+          python -m unittest discover -s tests/release
 
-      - name: Build installer
-        shell: cmd
-        working-directory: keystone-client
-        run: build_installer.bat
+      - name: Validate React
+        shell: pwsh
+        working-directory: keystone-client-next
+        run: |
+          npm test
+          npm run build
 
-      - name: Verify installer output
+      - name: Validate Rust
+        shell: pwsh
+        working-directory: keystone-client-next/src-tauri
+        run: |
+          cargo fmt --all -- --check
+          cargo check
+          cargo test
+
+      - name: Build clean Python sidecar
+        shell: pwsh
+        run: python scripts/build_client_sidecar.py --clean
+
+      - name: Build Tauri NSIS installer
+        shell: pwsh
+        working-directory: keystone-client-next
+        run: npm run tauri:build -- --bundles nsis
+
+      - name: Stage canonical installer
         shell: pwsh
         run: |
-          $installer = "keystone-client/installer/output/KeystoneClientSetup.exe"
-          if (!(Test-Path $installer)) {
-            throw "Expected installer not found: $installer"
-          }
+          $source = Get-ChildItem "keystone-client-next/src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
+          if (!$source) { throw "Tauri NSIS installer was not generated." }
+          New-Item -ItemType Directory -Force -Path dist-client | Out-Null
+          Copy-Item $source.FullName dist-client/KeystoneClientSetup.exe
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: KeystoneClientSetup
-          path: keystone-client/installer/output/KeystoneClientSetup.exe
+          path: dist-client/KeystoneClientSetup.exe
           if-no-files-found: error
           retention-days: 14

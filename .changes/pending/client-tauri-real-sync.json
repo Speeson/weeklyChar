@@ -1,0 +1,14 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Conecta la pantalla de sincronizacion de Tauri con personajes reales.",
+  "details": [
+    "La tabla muestra personajes reales con avatar, color de clase, nivel de objeto, piedra angular y puntuacion de Raider.IO.",
+    "Los personajes se cargan primero desde la cache y se actualizan en segundo plano sin exponer credenciales a React.",
+    "La tabla permite ordenar sus cinco columnas y abrir cada perfil mediante una accion nativa limitada a Raider.IO.",
+    "El monitor de SavedVariables se inicia y reconcilia automaticamente cuando la autenticacion, instalacion y cuentas son validas.",
+    "Cada sincronizacion correcta refresca los personajes y el estado del Addon se comprueba automaticamente sin instalar actualizaciones.",
+    "Las selecciones de cuentas compatibles se conservan al confirmar o cambiar la ruta de World of Warcraft."
+  ]
+}

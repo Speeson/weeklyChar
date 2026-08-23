@@ -1,0 +1,18 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Completa la experiencia de escritorio del cliente Tauri.",
+  "details": [
+    "La ventana Tauri es frameless, se puede arrastrar desde la cabecera y diferencia minimizar, ocultar en bandeja y salida confirmada.",
+    "El login incluye un formulario de registro interno conectado al endpoint real y el primer inicio guía la detección de World of Warcraft y la selección de cuentas.",
+    "El logout vuelve inmediatamente al acceso, las peticiones bloqueantes no congelan la interfaz y cerrar u ocultar en bandeja usan comandos Tauri funcionales.",
+    "El perfil permite elegir un avatar entre los personajes reales mediante el endpoint autenticado existente.",
+    "Arrancar con Windows usa la integración nativa de Tauri y la bandeja refleja sesión y sincronización con acciones reales.",
+    "Toda la interfaz propia del cliente dispone de traducciones centralizadas en español e inglés.",
+    "La tabla de personajes conserva su tamaño y desplaza internamente las listas de más de ocho filas.",
+    "Sincronizar ahora mantiene la interfaz animada y procesa la respuesta sin quedar bloqueado por la actualización de la bandeja.",
+    "El icono de KeystoneClient aparece en el ejecutable, la barra de tareas de Windows y la bandeja del sistema.",
+    "Las pestañas superiores responden con iluminación azul al pasar el cursor y conservan una selección dorada suave con esquinas redondeadas."
+  ]
+}

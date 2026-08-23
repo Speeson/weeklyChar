@@ -112,6 +112,8 @@ def sidecar_sources(repo_root: Path) -> list[Path]:
         repo_root / "keystone-client" / "addon_service.py",
         repo_root / "keystone-client" / "bridge_main.py",
         repo_root / "keystone-client" / "bridge_protocol.py",
+        repo_root / "keystone-client" / "character_service.py",
+        repo_root / "keystone-client" / "profile_service.py",
         repo_root / "keystone-client" / "settings_service.py",
         repo_root / "keystone-client" / "sync_service.py",
         repo_root / "keystone-client" / "sync_worker.py",
@@ -228,6 +230,7 @@ def smoke_sidecar(binary_path: Path) -> dict[str, Any]:
                 },
                 "accounts": [],
                 "selectedAccounts": [],
+                "configurationComplete": False,
             },
             "sync": {
                 "running": False,
@@ -236,6 +239,13 @@ def smoke_sidecar(binary_path: Path) -> dict[str, Any]:
                 "lastSuccessAt": None,
                 "lastError": None,
                 "selectedAccounts": 0,
+            },
+            "characters": {
+                "characters": [],
+                "refreshing": False,
+                "source": "none",
+                "lastRefreshAt": None,
+                "lastError": None,
             },
             "addon": {
                 "installed": False,

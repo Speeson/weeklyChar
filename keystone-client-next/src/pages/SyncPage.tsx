@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import accountsIcon from "../assets/keystone-ui/18-accounts-icon.png.png";
 import charactersIcon from "../assets/keystone-ui/20-characters-icon.png.png";
@@ -11,12 +11,26 @@ import rightHeroPanelFrame from "../assets/keystone-ui/09-right-hero-panel-frame
 import lastSyncIcon from "../assets/keystone-ui/19-last-sync-icon.png.png";
 import statusIcon from "../assets/keystone-ui/17-status-icon-success.png.png";
 import versionIcon from "../assets/keystone-ui/22-version-icon.png";
+import {
+  MISSING_CHARACTER_VALUE,
+  MISSING_VALUE_COLOR,
+  classColor,
+  displayNumber,
+  itemLevelColor,
+  raiderIoColor,
+  sortCharacters,
+  type CharacterSortKey,
+  type SortDirection,
+} from "../core/characterDisplay";
+import { openRaiderIoCharacter } from "../core/native";
+import { useI18n, type TranslationKey } from "../core/i18n";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
-import type { AddonStatus, CoreError, SyncState, SyncStatus, WowState } from "../core/types";
+import type { AddonStatus, Character, CharacterState, CoreError, SyncState, SyncStatus, WowState } from "../core/types";
 
 type SyncPageProps = {
   appVersion: string;
   initialAddon: AddonStatus;
+  initialCharacters?: CharacterState;
   initialSync: SyncStatus;
   initialWow?: WowState;
   preview?: boolean;
@@ -24,58 +38,37 @@ type SyncPageProps = {
 
 type SyncAction = "refresh" | "force";
 
-type CharacterRow = {
-  id: string;
-  name: string;
-  realm: string;
-  itemLevel: string;
-  keystone: string;
-  raiderIo: string;
-  tone: string;
-};
-
-const previewRows: CharacterRow[] = [
-  { id: "makabe", name: "Makabe", realm: "Zul'jin", itemLevel: "293", keystone: "+10 Kings' Rest", raiderIo: "2145", tone: "gold" },
-  { id: "bakuhatsu", name: "Bakuhatsu", realm: "Zul'jin", itemLevel: "295", keystone: "+2 Temple of Sethraliss (ToS)", raiderIo: "-", tone: "pink" },
-  { id: "dkimio", name: "Dkimio", realm: "Zul'jin", itemLevel: "289", keystone: "-", raiderIo: "-", tone: "red" },
-  { id: "nakada", name: "Nakada", realm: "Zul'jin", itemLevel: "282", keystone: "-", raiderIo: "-", tone: "violet" },
-  { id: "spee", name: "Spee", realm: "Zul'jin", itemLevel: "292", keystone: "+2 The Blinding Vale", raiderIo: "-", tone: "green" },
-  { id: "speen", name: "Speen", realm: "Zul'jin", itemLevel: "288", keystone: "-", raiderIo: "-", tone: "cyan" },
-  { id: "speeral-a", name: "Speeral", realm: "Zul'jin", itemLevel: "291", keystone: "+2 Murder Row", raiderIo: "-", tone: "orange" },
-  { id: "speeral-b", name: "Speeral", realm: "Zul'jin", itemLevel: "291", keystone: "-", raiderIo: "-", tone: "blue" },
-];
-
 const emptyWow: WowState = {
   install: { detected: false, installPath: null, retailPath: null, addonsPath: null },
   accounts: [],
   selectedAccounts: [],
 };
 
-function formatError(error: unknown): string {
+function formatError(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as CoreError).message);
   }
 
-  return "No se pudo actualizar la sincronizacion.";
+  return fallback;
 }
 
-function formatTime(value: string | null): string {
+function formatTime(value: string | null, language: "es" | "en" = "es"): string {
   if (!value) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(language === "en" ? "en-US" : "es-ES", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, language: "es" | "en" = "es", noSyncs = "Sin sincronizaciones"): string {
   if (!value) {
-    return "Sin sincronizaciones";
+    return noSyncs;
   }
 
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(language === "en" ? "en-US" : "es-ES", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -96,31 +89,33 @@ type AddonPresentation = {
   tone: "error" | "idle" | "info" | "success" | "warning";
 };
 
-function stateMeta(state: SyncState): SyncPresentation {
+type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
+
+function stateMeta(state: SyncState, t: Translate): SyncPresentation {
   switch (state) {
     case "watching":
-      return { state, label: "Listo para sincronizar", detail: "Monitor activo", icon: infoIcon };
+      return { state, label: t("sync.watchingLabel"), detail: t("sync.watchingDetail"), icon: infoIcon };
     case "syncing":
-      return { state, label: "Sincronizando", detail: "Leyendo SavedVariables", icon: syncIcon };
+      return { state, label: t("sync.syncingLabel"), detail: t("sync.syncingDetail"), icon: syncIcon };
     case "success":
-      return { state, label: "Sincronizacion completada", detail: "Ultimo resultado: correcto", icon: statusIcon };
+      return { state, label: t("sync.successLabel"), detail: t("sync.successDetail"), icon: statusIcon };
     case "error":
-      return { state, label: "Error de sincronizacion", detail: "Revisa el ultimo resultado", icon: errorIcon };
+      return { state, label: t("sync.errorLabel"), detail: t("sync.errorDetail"), icon: errorIcon };
     default:
-      return { state, label: "Esperando sincronizacion", detail: "Monitor detenido", icon: warningIcon };
+      return { state, label: t("sync.idleLabel"), detail: t("sync.idleDetail"), icon: warningIcon };
   }
 }
 
-function addonMeta(addon: AddonStatus): AddonPresentation {
+function addonMeta(addon: AddonStatus, t: Translate): AddonPresentation {
   if (addon.operation && addon.operation.state !== "failed") {
     const operationLabel = {
-      install: "Instalando Addon",
-      reinstall: "Reinstalando Addon",
-      update: "Actualizando Addon",
+      install: t("addon.installing"),
+      reinstall: t("addon.reinstalling"),
+      update: t("addon.updating"),
     }[addon.operation.action];
     return {
       label: operationLabel,
-      detail: addon.operation.message || "Operacion en curso",
+      detail: addon.operation.message || t("addon.operation"),
       icon: syncIcon,
       tone: "info",
     };
@@ -129,49 +124,38 @@ function addonMeta(addon: AddonStatus): AddonPresentation {
   switch (addon.state) {
     case "current":
       return {
-        label: "Actualizado",
-        detail: addon.installedVersion ? `Version ${addon.installedVersion} instalada` : "Ultima version instalada",
+        label: t("addon.current"),
+        detail: addon.installedVersion ? t("addon.installedVersion", { version: addon.installedVersion }) : t("addon.latestInstalled"),
         icon: statusIcon,
         tone: "success",
       };
     case "update-available":
       return {
-        label: "Actualizacion disponible",
-        detail: addon.latestVersion ? `Version ${addon.latestVersion} disponible` : "Nueva version disponible",
+        label: t("addon.updateAvailable"),
+        detail: addon.latestVersion ? t("addon.versionAvailable", { version: addon.latestVersion }) : t("addon.newVersion"),
         icon: warningIcon,
         tone: "warning",
       };
     case "local-newer":
       return {
-        label: "Version local superior",
-        detail: addon.installedVersion ? `Version ${addon.installedVersion} instalada` : "Version local detectada",
+        label: t("addon.localVersion"),
+        detail: addon.installedVersion ? t("addon.installedVersion", { version: addon.installedVersion }) : t("addon.localDetected"),
         icon: infoIcon,
         tone: "info",
       };
     case "offline-cache":
-      return { label: "Sin conexion", detail: "Cache del Addon disponible", icon: infoIcon, tone: "info" };
+      return { label: t("addon.offline"), detail: t("addon.cacheAvailable"), icon: infoIcon, tone: "info" };
     case "unavailable":
-      return { label: "No disponible", detail: addon.message || "No se encontro una version valida", icon: errorIcon, tone: "error" };
+      return { label: t("common.notAvailable"), detail: addon.message || t("addon.notFound"), icon: errorIcon, tone: "error" };
     case "error":
-      return { label: "Error del Addon", detail: addon.message || "Revisa la instalacion", icon: errorIcon, tone: "error" };
+      return { label: t("addon.errorTitle"), detail: addon.message || t("addon.reviewInstall"), icon: errorIcon, tone: "error" };
     default:
-      return { label: "No instalado", detail: "Instalacion disponible", icon: errorIcon, tone: "error" };
+      return { label: t("addon.notInstalled"), detail: t("addon.installAvailable"), icon: errorIcon, tone: "error" };
   }
 }
 
-function rowsFromWow(wow: WowState): CharacterRow[] {
-  return wow.accounts.map((account, index) => ({
-    id: account.name,
-    name: account.name,
-    realm: "-",
-    itemLevel: "-",
-    keystone: account.savedVariablesExists ? "-" : "KeystoneSync.lua no encontrado",
-    raiderIo: "-",
-    tone: ["gold", "pink", "cyan", "green", "blue"][index % 5],
-  }));
-}
-
-export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, preview = false }: SyncPageProps) {
+export function SyncPage({ appVersion, initialAddon, initialCharacters, initialSync, initialWow, preview = false }: SyncPageProps) {
+  const { language, t } = useI18n();
   const [sync, setSync] = useState<SyncStatus>(initialSync);
   const [busyAction, setBusyAction] = useState<SyncAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -196,7 +180,7 @@ export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, pr
       }
       if (event.event === "sync.completed") {
         setSync(event.data.status);
-        setMessage(`${event.data.syncedCharacters} personajes sincronizados.`);
+        setMessage(t("sync.syncedCount", { count: event.data.syncedCharacters }));
         setError(null);
       }
       if (event.event === "sync.error") {
@@ -212,7 +196,7 @@ export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, pr
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(formatError(caught));
+          setError(formatError(caught, t("sync.errorGeneric")));
         }
       });
 
@@ -220,7 +204,7 @@ export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, pr
       cancelled = true;
       unlisten.then((dispose) => dispose());
     };
-  }, [preview]);
+  }, [language, preview]);
 
   async function runAction(action: SyncAction, request: () => Promise<SyncStatus>, success: string) {
     if (busyAction !== null) {
@@ -235,19 +219,25 @@ export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, pr
       setSync(status);
       setMessage(success);
     } catch (caught) {
-      setError(formatError(caught));
+      setError(formatError(caught, t("sync.errorGeneric")));
     } finally {
       setBusyAction(null);
     }
   }
 
-  const status = stateMeta(sync.state);
-  const addonStatus = addonMeta(initialAddon);
+  const status = stateMeta(sync.state, t);
+  const addonStatus = addonMeta(initialAddon, t);
   const wow = initialWow ?? emptyWow;
-  const rows = useMemo(() => (preview ? previewRows : rowsFromWow(wow)), [wow, preview]);
+  const characterState = initialCharacters ?? {
+    characters: [],
+    refreshing: false,
+    source: "none" as const,
+    lastRefreshAt: null,
+    lastError: null,
+  };
   const lastSyncAt = sync.lastSuccessAt ?? sync.lastSyncAt;
   const accountCount = preview ? 8 : sync.selectedAccounts || wow.selectedAccounts.length;
-  const characterCount = preview ? previewRows.length : rows.length;
+  const characterCount = characterState.characters.length;
   const syncing = sync.state === "syncing";
   const busy = busyAction !== null;
   const forceDisabled = busy || syncing || sync.selectedAccounts === 0;
@@ -255,14 +245,20 @@ export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, pr
   return (
     <section className="sync-screen" aria-labelledby="sync-title">
       <div className="sync-main">
-        <h1 id="sync-title" className="sr-only">Sincronizacion</h1>
+        <h1 id="sync-title" className="sr-only">{t("shell.sync")}</h1>
         <SyncSummaryCards
           accountCount={accountCount}
           addon={addonStatus}
           characterCount={characterCount}
           lastSyncAt={lastSyncAt}
+          language={language}
         />
-        <CharactersTable rows={rows} />
+        <CharactersTable
+          characters={characterState.characters}
+          error={characterState.lastError}
+          loading={characterState.refreshing}
+          onOpenError={(caught) => setError(formatError(caught, t("sync.errorGeneric")))}
+        />
       </div>
 
       <SyncSidebar
@@ -270,8 +266,9 @@ export function SyncPage({ appVersion, initialAddon, initialSync, initialWow, pr
         busy={busy}
         forceDisabled={forceDisabled}
         lastSyncAt={lastSyncAt}
+        language={language}
         message={message}
-        onForce={() => runAction("force", forceSync, "Sincronizacion forzada.")}
+        onForce={() => runAction("force", forceSync, t("sync.forced"))}
         status={status}
         sync={sync}
       />
@@ -286,15 +283,17 @@ type SummaryProps = {
   addon: AddonPresentation;
   characterCount: number;
   lastSyncAt: string | null;
+  language: "es" | "en";
 };
 
-function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt }: SummaryProps) {
+function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt, language }: SummaryProps) {
+  const { t } = useI18n();
   return (
-    <div className="sync-summary-grid" aria-label="Resumen de sincronizacion">
-      <SummaryCard detail={addon.detail} icon={addon.icon} label="Addon" tone={addon.tone} value={addon.label} />
-      <SummaryCard icon={accountsIcon} label="Cuentas" value={accountCount} detail="Cuentas conectadas" />
-      <SummaryCard icon={lastSyncIcon} label="Ultima sync" value={formatTime(lastSyncAt)} detail={formatDate(lastSyncAt)} />
-      <SummaryCard icon={charactersIcon} label="Personajes" value={characterCount} detail="Detectados" />
+    <div className="sync-summary-grid" aria-label={t("sync.summary")}>
+      <SummaryCard detail={addon.detail} icon={addon.icon} label={t("common.addon")} tone={addon.tone} value={addon.label} />
+      <SummaryCard icon={accountsIcon} label={t("sync.accounts")} value={accountCount} detail={t("sync.connectedAccounts")} />
+      <SummaryCard icon={lastSyncIcon} label={t("sync.last")} value={formatTime(lastSyncAt, language)} detail={formatDate(lastSyncAt, language, t("sync.noSyncs"))} />
+      <SummaryCard icon={charactersIcon} label={t("sync.characters")} value={characterCount} detail={t("sync.detected")} />
     </div>
   );
 }
@@ -323,38 +322,113 @@ function SummaryCard({ detail, icon, label, tone, value }: SummaryCardProps) {
   );
 }
 
-function CharactersTable({ rows }: { rows: CharacterRow[] }) {
+type CharactersTableProps = {
+  characters: Character[];
+  error: string | null;
+  loading: boolean;
+  onOpenError: (error: unknown) => void;
+};
+
+function CharactersTable({ characters, error, loading, onOpenError }: CharactersTableProps) {
+  const { t } = useI18n();
+  const columns: Array<{ key: CharacterSortKey; label: string }> = [
+    { key: "name", label: t("sync.name") }, { key: "realm", label: t("sync.realm") },
+    { key: "ilvl", label: "ilvl" }, { key: "keystone", label: t("sync.keystone") },
+    { key: "rioScore", label: "Raider.IO" },
+  ];
+  const [sortKey, setSortKey] = useState<CharacterSortKey>("rioScore");
+  const [direction, setDirection] = useState<SortDirection>("desc");
+  const rows = useMemo(
+    () => sortCharacters(characters, sortKey, direction),
+    [characters, direction, sortKey],
+  );
+
+  function changeSort(nextKey: CharacterSortKey) {
+    if (nextKey === sortKey) {
+      setDirection((current) => current === "asc" ? "desc" : "asc");
+      return;
+    }
+    setSortKey(nextKey);
+    setDirection(nextKey === "name" || nextKey === "realm" ? "asc" : "desc");
+  }
+
+  function openCharacter(character: Character) {
+    void openRaiderIoCharacter(character.region, character.realm, character.name).catch(onOpenError);
+  }
+
   return (
     <section className="sync-table-panel" aria-labelledby="characters-title">
-      <h2 id="characters-title" className="sr-only">Personajes</h2>
-      <div className="sync-table" role="table" aria-label="Personajes sincronizados">
+      <h2 id="characters-title" className="sr-only">{t("sync.characters")}</h2>
+      <div className="sync-table" role="table" aria-label={t("sync.characterTable")}>
         <div className="sync-table__header" role="row">
-          <span role="columnheader">Nombre</span>
-          <span role="columnheader">Reino</span>
-          <span role="columnheader">ilvl</span>
-          <span role="columnheader">Piedra Angular</span>
-          <span role="columnheader">Raider.IO</span>
+          {columns.map((column) => {
+            const active = sortKey === column.key;
+            const SortIcon = active ? direction === "asc" ? ChevronUp : ChevronDown : ChevronsUpDown;
+            return (
+              <span aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"} key={column.key} role="columnheader">
+                <button className="sync-table__sort" onClick={() => changeSort(column.key)} type="button">
+                  {column.label}
+                  <SortIcon aria-hidden="true" size={15} />
+                </button>
+              </span>
+            );
+          })}
         </div>
         {rows.length === 0 ? (
-          <p className="sync-table__empty">No hay cuentas o personajes disponibles.</p>
+          <p className="sync-table__empty" role={error ? "alert" : "status"}>
+            {loading ? t("sync.loadingCharacters") : error ?? t("sync.noCharacters")}
+          </p>
         ) : (
-          rows.map((row) => (
-            <div className="sync-table__row" key={row.id} role="row">
+          <div className="sync-table__body" role="rowgroup">
+          {rows.map((row) => (
+            <div
+              aria-label={t("sync.openRaiderIo", { name: row.name })}
+              className="sync-table__row"
+              key={row.id}
+              onClick={() => openCharacter(row)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openCharacter(row);
+                }
+              }}
+              role="row"
+              tabIndex={0}
+            >
               <span className="sync-table__name" role="cell">
-                <span className={`sync-avatar sync-avatar--${row.tone}`} aria-hidden="true">
-                  {row.name.slice(0, 1)}
-                </span>
-                <strong>{row.name}</strong>
+                <CharacterAvatar character={row} />
+                <strong style={{ color: classColor(row.wowClass) }}>{row.name}</strong>
               </span>
               <span role="cell">{row.realm}</span>
-              <span className="sync-table__ilvl" role="cell">{row.itemLevel}</span>
-              <span className="sync-table__key" role="cell">{row.keystone}</span>
-              <span className="sync-table__rio" role="cell">{row.raiderIo}</span>
+              <span className="sync-table__ilvl" role="cell" style={{ color: itemLevelColor(row.ilvl) ?? MISSING_VALUE_COLOR }}>{displayNumber(row.ilvl)}</span>
+              <span className="sync-table__key" role="cell">{row.keystoneDisplay || MISSING_CHARACTER_VALUE}</span>
+              <span className="sync-table__rio" role="cell" style={{ color: raiderIoColor(row.rioScore) ?? MISSING_VALUE_COLOR }}>{displayNumber(row.rioScore)}</span>
             </div>
-          ))
+          ))}
+          </div>
         )}
       </div>
     </section>
+  );
+}
+
+function CharacterAvatar({ character }: { character: Character }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [character.avatarUrl]);
+  const color = classColor(character.wowClass);
+  const showImage = Boolean(character.avatarUrl) && !failed;
+
+  return (
+    <span aria-hidden="true" className="sync-avatar" style={{ backgroundColor: color }}>
+      <span>{character.name.slice(0, 1).toUpperCase()}</span>
+      {showImage ? (
+        <img
+          alt=""
+          onError={() => setFailed(true)}
+          src={character.avatarUrl ?? undefined}
+        />
+      ) : null}
+    </span>
   );
 }
 
@@ -363,15 +437,17 @@ type SidebarProps = {
   busy: boolean;
   forceDisabled: boolean;
   lastSyncAt: string | null;
+  language: "es" | "en";
   message: string | null;
   onForce: () => void;
   status: ReturnType<typeof stateMeta>;
   sync: SyncStatus;
 };
 
-function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, message, onForce, status, sync }: SidebarProps) {
+function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, message, onForce, status, sync }: SidebarProps) {
+  const { t } = useI18n();
   return (
-    <aside className="sync-sidebar" aria-label="Estado de sincronizacion">
+    <aside className="sync-sidebar" aria-label={t("sync.status")}>
       <section className="sync-emblem-panel" aria-label="KeystoneClient">
         <div className="sync-emblem-panel__artwork">
           <img alt="" className="sync-emblem-panel__frame" src={rightHeroPanelFrame} />
@@ -380,42 +456,42 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, message, onF
         <section className="sync-version-panel">
           <img alt="" className="sync-version-panel__icon" src={versionIcon} />
           <div>
-            <p>Version de la aplicacion</p>
+            <p>{t("sync.appVersion")}</p>
             <strong>v{appVersion}</strong>
-            <span>Actualizada</span>
+            <span>{t("sync.updated")}</span>
           </div>
         </section>
       </section>
 
       <section
-        aria-label={`Estado actual: ${status.label}`}
+        aria-label={t("sync.currentAria", { status: status.label })}
         aria-live="polite"
         className={`sync-current-panel sync-current-panel--${status.state}`}
         data-sync-state={status.state}
       >
-        <h2>Estado actual</h2>
+        <h2>{t("sync.currentStatus")}</h2>
         <div className="sync-current-panel__body">
           <img alt="" src={status.icon} />
           <div>
             <strong>{status.label}</strong>
             <span>{sync.lastError ?? status.detail}</span>
-            <small>{message ?? formatCurrentTimestamp(lastSyncAt)}</small>
+            <small>{message ?? formatCurrentTimestamp(lastSyncAt, language, t("sync.noPrevious"), t("sync.noSyncs"))}</small>
           </div>
         </div>
       </section>
 
       <button className="sync-primary-action" disabled={forceDisabled} onClick={onForce} type="button">
         <RefreshCw aria-hidden="true" size={34} />
-        {busy ? "Sincronizando..." : "Sincronizar ahora"}
+        {busy ? t("sync.syncing") : t("sync.now")}
       </button>
     </aside>
   );
 }
 
-function formatCurrentTimestamp(value: string | null): string {
+function formatCurrentTimestamp(value: string | null, language: "es" | "en", noPrevious: string, noSyncs: string): string {
   if (!value) {
-    return "Sin resultados anteriores";
+    return noPrevious;
   }
 
-  return `${formatTime(value)} - ${formatDate(value)}`;
+  return `${formatTime(value, language)} - ${formatDate(value, language, noSyncs)}`;
 }

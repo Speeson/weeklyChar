@@ -22,15 +22,19 @@ from bridge_protocol import (
 )
 import auth_service
 import addon_service
+import character_service
 import config as config_module
+import profile_service
 import settings_service
 import sync_service
 import wow_service
 
 
 Handler = Callable[[dict[str, Any]], dict[str, Any]]
-SYNC_SERVICE = sync_service.SyncService()
+CHARACTER_SERVICE = character_service.CharacterService()
+SYNC_SERVICE = sync_service.SyncService(on_completed=CHARACTER_SERVICE.schedule_refresh)
 ADDON_SERVICE = addon_service.AddonService()
+PROFILE_SERVICE = profile_service.ProfileService()
 _STDOUT_LOCK = threading.Lock()
 
 
@@ -54,6 +58,7 @@ def handle_get_state(payload: dict[str, Any]) -> dict[str, Any]:
         "settings": settings_service.get_settings(cfg),
         "wow": wow_service.get_wow_state(cfg),
         "sync": SYNC_SERVICE.get_status(),
+        "characters": CHARACTER_SERVICE.get_state(cfg),
         "addon": ADDON_SERVICE.get_status(cfg),
     }
 
@@ -68,16 +73,53 @@ def handle_auth_login(payload: dict[str, Any]) -> dict[str, Any]:
 
     cfg = config_module.load()
     try:
-        return auth_service.login(cfg, username, password)
+        result = auth_service.login(cfg, username, password)
+        refreshed_cfg = config_module.load()
+        SYNC_SERVICE.reconcile(emit_events=False)
+        CHARACTER_SERVICE.refresh_async(refreshed_cfg)
+        ADDON_SERVICE.check_async(refreshed_cfg)
+        return result
     except auth_service.AuthError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
 
 
 def handle_auth_logout(payload: dict[str, Any]) -> dict[str, Any]:
     _require_empty_payload(payload)
-    SYNC_SERVICE.stop()
     cfg = config_module.load()
-    return auth_service.logout(cfg)
+    result = auth_service.logout(cfg)
+    SYNC_SERVICE.stop()
+    CHARACTER_SERVICE.reset()
+    return result
+
+
+def handle_profile_set_avatar(payload: dict[str, Any]) -> dict[str, Any]:
+    avatar_url = payload.get("avatarUrl")
+    if not isinstance(avatar_url, str) or not avatar_url.strip():
+        raise ProtocolError(ERROR_INVALID_REQUEST, "avatarUrl must be a non-empty string.")
+    cfg = config_module.load()
+    characters = CHARACTER_SERVICE.get_state(cfg)["characters"]
+    try:
+        return PROFILE_SERVICE.set_avatar(cfg, avatar_url, characters)
+    except profile_service.ProfileError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_auth_register(payload: dict[str, Any]) -> dict[str, Any]:
+    required = (
+        "firstName",
+        "lastName",
+        "email",
+        "username",
+        "password",
+        "confirmPassword",
+        "dateOfBirth",
+    )
+    if any(not isinstance(payload.get(key), str) or not payload[key].strip() for key in required):
+        raise ProtocolError(ERROR_INVALID_REQUEST, "All registration fields are required.")
+    try:
+        return auth_service.register(config_module.load(), {key: payload[key] for key in required})
+    except auth_service.AuthError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
 
 
 def handle_settings_get(payload: dict[str, Any]) -> dict[str, Any]:
@@ -94,7 +136,11 @@ def handle_settings_update(payload: dict[str, Any]) -> dict[str, Any]:
 
 def handle_wow_detect(payload: dict[str, Any]) -> dict[str, Any]:
     _require_empty_payload(payload)
-    return wow_service.detect_wow(config_module.load())
+    cfg = config_module.load()
+    result = wow_service.detect_wow(cfg)
+    SYNC_SERVICE.reconcile(restart=True, emit_events=False)
+    ADDON_SERVICE.check_async(cfg)
+    return result
 
 
 def handle_wow_list_accounts(payload: dict[str, Any]) -> dict[str, Any]:
@@ -107,7 +153,11 @@ def handle_wow_select_install(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(path, str) or not path.strip():
         raise ProtocolError(ERROR_INVALID_REQUEST, "path must be a non-empty string.")
     try:
-        return wow_service.select_install(config_module.load(), path)
+        cfg = config_module.load()
+        result = wow_service.select_install(cfg, path)
+        SYNC_SERVICE.reconcile(restart=True, emit_events=False)
+        ADDON_SERVICE.check_async(cfg)
+        return result
     except wow_service.WowError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
 
@@ -115,7 +165,11 @@ def handle_wow_select_install(payload: dict[str, Any]) -> dict[str, Any]:
 def handle_wow_select_accounts(payload: dict[str, Any]) -> dict[str, Any]:
     accounts = payload.get("accounts")
     try:
-        return wow_service.select_accounts(config_module.load(), accounts)
+        cfg = config_module.load()
+        result = wow_service.select_accounts(cfg, accounts)
+        SYNC_SERVICE.reconcile(restart=True, emit_events=False)
+        CHARACTER_SERVICE.refresh_async(cfg)
+        return result
     except wow_service.WowError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
 
@@ -144,6 +198,22 @@ def handle_sync_force(payload: dict[str, Any]) -> dict[str, Any]:
         return SYNC_SERVICE.force()
     except sync_service.SyncServiceError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_characters_get(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    return CHARACTER_SERVICE.get_state(config_module.load())
+
+
+def handle_characters_refresh(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    cfg = config_module.load()
+    if not config_module.is_session_valid(cfg):
+        raise ProtocolError(
+            character_service.CHARACTER_NOT_AUTHENTICATED,
+            "Inicia sesion para cargar los personajes.",
+        )
+    return CHARACTER_SERVICE.refresh_async(cfg)
 
 
 def handle_addon_get_status(payload: dict[str, Any]) -> dict[str, Any]:
@@ -187,7 +257,9 @@ COMMANDS: dict[str, Handler] = {
     "system.ping": handle_ping,
     "system.get_state": handle_get_state,
     "auth.login": handle_auth_login,
+    "auth.register": handle_auth_register,
     "auth.logout": handle_auth_logout,
+    "profile.set_avatar": handle_profile_set_avatar,
     "settings.get": handle_settings_get,
     "settings.update": handle_settings_update,
     "wow.detect": handle_wow_detect,
@@ -198,6 +270,8 @@ COMMANDS: dict[str, Handler] = {
     "sync.start": handle_sync_start,
     "sync.stop": handle_sync_stop,
     "sync.force": handle_sync_force,
+    "characters.get": handle_characters_get,
+    "characters.refresh": handle_characters_refresh,
     "addon.get_status": handle_addon_get_status,
     "addon.check": handle_addon_check,
     "addon.install": handle_addon_install,
@@ -208,7 +282,7 @@ COMMANDS: dict[str, Handler] = {
 
 def write_message(message: dict[str, Any], stdout: TextIO = sys.stdout) -> None:
     with _STDOUT_LOCK:
-        stdout.write(json.dumps(message, separators=(",", ":"), ensure_ascii=False) + "\n")
+        stdout.write(json.dumps(message, separators=(",", ":"), ensure_ascii=True) + "\n")
         stdout.flush()
 
 
@@ -259,9 +333,17 @@ def _handle_line(line: bytes) -> dict[str, Any]:
 
 
 def run(stdin=sys.stdin.buffer, stdout=sys.stdout, stderr=sys.stderr) -> int:
+    cfg = config_module.load()
+    SYNC_SERVICE.reconcile(emit_events=False)
     SYNC_SERVICE.set_emit(lambda event, data: write_message(event_message(event, data), stdout))
+    CHARACTER_SERVICE.set_emit(lambda event, data: write_message(event_message(event, data), stdout))
     ADDON_SERVICE.set_emit(lambda event, data: write_message(event_message(event, data), stdout))
     write_message(event_message("system.ready", {"capabilities": list(COMMANDS)}), stdout)
+
+    ADDON_SERVICE.check_async(cfg)
+    if config_module.is_session_valid(cfg):
+        CHARACTER_SERVICE.get_state(cfg)
+        CHARACTER_SERVICE.refresh_async(cfg)
 
     try:
         while True:

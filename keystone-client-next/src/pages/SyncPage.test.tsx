@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
-import type { AddonStatus, CoreEvent, SyncStatus, WowState } from "../core/types";
+import { openRaiderIoCharacter } from "../core/native";
+import type { AddonStatus, CharacterState, CoreEvent, SyncStatus, WowState } from "../core/types";
 import { SyncPage } from "./SyncPage";
 
 vi.mock("../core/sync", () => ({
@@ -10,10 +11,12 @@ vi.mock("../core/sync", () => ({
   getSyncStatus: vi.fn(),
   subscribeToSyncEvents: vi.fn(),
 }));
+vi.mock("../core/native", () => ({ openRaiderIoCharacter: vi.fn() }));
 
 const forceSyncMock = vi.mocked(forceSync);
 const getSyncStatusMock = vi.mocked(getSyncStatus);
 const subscribeToSyncEventsMock = vi.mocked(subscribeToSyncEvents);
+const openRaiderIoCharacterMock = vi.mocked(openRaiderIoCharacter);
 
 const idleStatus: SyncStatus = {
   running: false,
@@ -50,6 +53,17 @@ const addonStatus: AddonStatus = {
   operation: null,
 };
 
+const characterState: CharacterState = {
+  refreshing: false,
+  source: "remote",
+  lastRefreshAt: "2026-08-23T12:00:00Z",
+  lastError: null,
+  characters: [
+    { id: "low", name: "Alpha", realm: "Dun Modr", region: "eu", wowAccount: "ACCOUNT_A", wowClass: "Mage", avatarUrl: null, ilvl: 250, rioScore: 0, currentKeystone: null, keystoneDisplay: "\u2014" },
+    { id: "high", name: "Zulu", realm: "Ragnaros", region: "eu", wowAccount: "ACCOUNT_A", wowClass: "Warrior", avatarUrl: "https://example.test/avatar.jpg", ilvl: 344, rioScore: 4500, currentKeystone: { level: 10, dungeon: "The Stonevault", challengeMapId: 403, mapId: null }, keystoneDisplay: "+10 Stonevault (SV)" },
+  ],
+};
+
 type SyncEvent = Extract<CoreEvent, { event: `sync.${string}` }>;
 
 describe("SyncPage", () => {
@@ -57,6 +71,7 @@ describe("SyncPage", () => {
     forceSyncMock.mockReset();
     getSyncStatusMock.mockReset();
     subscribeToSyncEventsMock.mockReset();
+    openRaiderIoCharacterMock.mockReset().mockResolvedValue(undefined);
     getSyncStatusMock.mockResolvedValue(idleStatus);
     subscribeToSyncEventsMock.mockResolvedValue(vi.fn());
   });
@@ -117,18 +132,84 @@ describe("SyncPage", () => {
         preview
       />,
     );
-    expect(screen.getByLabelText("Addon: Actualizacion disponible")).toHaveTextContent("Version 0.1.17 disponible");
-    expect(screen.getByLabelText("Addon: Actualizacion disponible")).toHaveClass("sync-summary-card--warning");
+    expect(screen.getByLabelText("Addon: Actualización disponible")).toHaveTextContent("Version 0.1.17 disponible");
+    expect(screen.getByLabelText("Addon: Actualización disponible")).toHaveClass("sync-summary-card--warning");
   });
 
-  it("renders real account rows with unavailable character fields as dashes", () => {
-    render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialSync={idleStatus} initialWow={wowState} />);
+  it("renders real characters and reports a character count independent from accounts", () => {
+    render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={characterState} initialSync={idleStatus} initialWow={wowState} />);
 
-    expect(screen.getByText("ACCOUNT_A")).toBeInTheDocument();
+    expect(screen.getByText("Zulu")).toHaveStyle({ color: "#C69B3A" });
+    expect(screen.getByText("Alpha")).toHaveStyle({ color: "#3FC7EB" });
+    expect(screen.getByText("4500")).toHaveStyle({ color: "#FF9100" });
+    expect(screen.getByText("0")).toHaveStyle({ color: "#00C800" });
+    expect(screen.getByLabelText("Personajes: 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cuentas: 1")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Piedra Angular" })).toBeInTheDocument();
     expect(screen.getByText("Version de la aplicacion")).toBeInTheDocument();
     expect(screen.getByText("v0.1.0")).toBeInTheDocument();
     expect(screen.getByText("Detectados")).toBeInTheDocument();
+  });
+
+  it("sorts by Raider.IO descending by default and toggles headers", async () => {
+    const user = userEvent.setup();
+    render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={characterState} initialSync={idleStatus} initialWow={wowState} />);
+
+    const rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("Zulu");
+    await user.click(screen.getByRole("button", { name: /Nombre/ }));
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Alpha");
+    await user.click(screen.getByRole("button", { name: /Nombre/ }));
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Zulu");
+  });
+
+  it("keeps more than eight rows inside the scrollable body with sorting and row actions", async () => {
+    const user = userEvent.setup();
+    const characters = Array.from({ length: 12 }, (_, index) => ({
+      ...characterState.characters[0],
+      id: `character-${index}`,
+      name: `Character ${String(index).padStart(2, "0")}`,
+      rioScore: index * 100,
+    }));
+    render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={{ ...characterState, characters }} initialSync={idleStatus} initialWow={wowState} />);
+
+    const body = screen.getByRole("rowgroup");
+    expect(body).toHaveClass("sync-table__body");
+    expect(within(body).getAllByRole("row")).toHaveLength(12);
+    expect(within(body).getAllByRole("row")[0]).toHaveTextContent("Character 11");
+
+    await user.click(screen.getByRole("button", { name: /Nombre/ }));
+    expect(within(body).getAllByRole("row")[0]).toHaveTextContent("Character 00");
+    await user.click(within(body).getByRole("row", { name: "Abrir Character 11 en Raider.IO" }));
+    expect(openRaiderIoCharacterMock).toHaveBeenCalledWith("eu", "Dun Modr", "Character 11");
+  });
+
+  it("opens a row through the scoped native Raider.IO command", async () => {
+    const user = userEvent.setup();
+    render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={characterState} initialSync={idleStatus} initialWow={wowState} />);
+
+    await user.click(screen.getByRole("row", { name: "Abrir Zulu en Raider.IO" }));
+    expect(openRaiderIoCharacterMock).toHaveBeenCalledWith("eu", "Ragnaros", "Zulu");
+  });
+
+  it("replaces a failed remote avatar with the class-colored initial", () => {
+    const { container } = render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={characterState} initialSync={idleStatus} initialWow={wowState} />);
+    const avatar = container.querySelector('img[src="https://example.test/avatar.jpg"]');
+    expect(avatar).toBeInTheDocument();
+    fireEvent.error(avatar!);
+    expect(container.querySelector('img[src="https://example.test/avatar.jpg"]')).not.toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "Abrir Zulu en Raider.IO" }).querySelector(".sync-avatar")).toHaveTextContent("Z");
+  });
+
+  it("shows controlled loading, empty and refresh error states", () => {
+    const { rerender } = render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={{ ...characterState, characters: [], refreshing: true }} initialSync={idleStatus} initialWow={wowState} />);
+    expect(screen.getByText("Cargando personajes...")).toBeInTheDocument();
+
+    rerender(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={{ ...characterState, characters: [], refreshing: false }} initialSync={idleStatus} initialWow={wowState} />);
+    expect(screen.getByText("No hay personajes sincronizados.")).toBeInTheDocument();
+
+    rerender(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={{ ...characterState, characters: [], refreshing: false, lastError: "No se pudieron actualizar los personajes." }} initialSync={idleStatus} initialWow={wowState} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("No se pudieron actualizar los personajes.");
   });
 
   it("calls force sync through the existing wrapper", async () => {

@@ -6,7 +6,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, including 
 
 ## Current modernization status
 
-`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, selective GitHub Actions workflow infrastructure, autonomous KeystoneClient releases, and an independent remote-release KeystoneClient addon updater. The next planned milestone is Phase 12, the full WoW 12.1 / Midnight Season 2 update.
+`docs/KEYSTONESYNC_ACTION_PLAN.md` is the master modernization plan. Phases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11 are complete. The repository now retains the current Worker/D1 backend, current KeystoneClient, current Web app, historical documentation, project skills aligned to the verified architecture, local validation around the addon -> Client -> Worker data path, deterministic deployment-impact tooling, selective GitHub Actions workflow infrastructure, autonomous KeystoneClient releases, and an independent remote-release KeystoneClient addon updater. A separately authorized Tauri migration is in progress. Blocks 1 and 2 and the local Block 3 updater/release implementation are present in the working tree; native dependency resolution, unsigned NSIS packaging and the production updater signing chain are verified locally. Tauri is not yet the released client: the remote release dry-run, legacy Inno-to-NSIS migration smoke tests, and final approval remain release gates.
 
 ## Verified current architecture
 
@@ -14,6 +14,7 @@ KeystoneSync tracks World of Warcraft Retail Mythic+ character state, including 
 - Active database: Cloudflare D1 binding `DB`, database name `keystone-sync`, configured in `keystone-worker/wrangler.jsonc`. Schema is in `keystone-worker/migrations/0001_initial.sql`.
 - Active Web application: `keystone-web`, a Next.js app. `keystone-web/lib/auth.ts` uses `NEXT_PUBLIC_API_URL` with fallback `https://api-keystonesync.esgarpe.dev`.
 - Active Windows client: `keystone-client`. Its config defaults to `https://api-keystonesync.esgarpe.dev` and normalizes the old Railway URL to that value.
+- In-progress Windows client migration: `keystone-client-next` provides the approved Tauri/React UI and uses the packaged Python JSONL sidecar; it is not yet the released client.
 - Client release asset expected by Web and updater: `KeystoneClientSetup.exe` from the `Speeson/weeklyChar` GitHub Releases latest download path.
 
 ## Removed legacy implementations
@@ -48,6 +49,11 @@ Main implementation points:
 - Addon distribution to users: `Speeson/KeystoneSync` GitHub Release -> `KeystoneSync-vX.Y.Z.zip` -> `keystone-client/addon_updater.py` -> validated local cache -> WoW AddOns folder.
 - `keystone-client/wow_path.py`: discovers `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
 - `keystone-client/sync_worker.py`: `SyncWorker._sync()` parses SavedVariables with `slpp`, fetches Raider.IO enrichment, builds the payload, and posts to `/api/keystones/update`.
+- `keystone-client/character_service.py`: sanitizes cached/API character DTOs, preserves cached rows on refresh failure, enriches missing display fields server-side and publishes `characters.updated` without exposing tokens.
+- `keystone-client/sync_service.py`: owns the single SavedVariables monitor, reconciles it against authentication/WoW account prerequisites and schedules character refresh after successful sync.
+- `keystone-client-next`: consumes `characters.get` / `characters.refresh`, renders real sortable character rows and uses a scoped Tauri command for Raider.IO profile navigation.
+- The Tauri host owns the frameless window lifecycle, controlled close prompt, native minimize/tray actions, real Windows autostart and localized dynamic tray. Blocking sidecar requests run outside the UI thread, and explicit exit terminates the sidecar without waiting for the synchronization monitor. React owns the ES/EN presentation, login/onboarding routing and profile/avatar dialogs; account creation stays inside the client through the allowlisted `auth.register` bridge command and existing Worker endpoint.
+- The legacy `minimize_on_close` config value is retained for compatibility but is neither shown nor used to bypass the Tauri close-choice dialog.
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
 - `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses.
 - `keystone-worker/src/routes/me.ts`: `GET /api/me/characters` exposes user characters.
@@ -60,8 +66,9 @@ Main implementation points:
 Verified from checked-out files:
 
 - Canonical addon repo `Speeson/KeystoneSync` at verified `main`/`v0.1.16`: `Version: 0.1.16`, `Interface: 120005`
-- Windows client `keystone-client/VERSION`: `0.2.1`
+- Canonical Windows client `keystone-client/VERSION`: `0.3.0`
 - Windows installer `keystone-client/installer/version.ini`: `AppVersion=0.2.1`
+- Planned first public Tauri release from the current pending Client changesets: `0.4.0`, tag `client-v0.4.0`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
@@ -70,7 +77,13 @@ Verified from checked-out files:
 
 - Web: build/lint scripts exist in `keystone-web/package.json`. Deployment is documented as Vercel-based, but checked-in deployment ownership is not fully provable.
 - Worker: `keystone-worker/package.json` defines local dev, deploy, typecheck, tests, and local/remote D1 migration scripts. Remote deploy/migration requires explicit authorization.
-- Client: PyInstaller and Inno Setup scripts produce `KeystoneClient.exe` and `installer/output/KeystoneClientSetup.exe`. Release-impacting Client changes require a valid pending `.changes/` changeset. On qualifying `main` pushes, `.github/workflows/deploy.yml` calls `.github/workflows/release-client.yml` in release mode, bumps `keystone-client/VERSION`, consumes changesets into `.changes/releases/`, atomically pushes the release commit plus `client-vX.Y.Z` tag, and publishes/verifies the GitHub Release asset `KeystoneClientSetup.exe`.
+- Released Client baseline: PyInstaller and Inno Setup remain the currently installed/public migration source until the Tauri cutover gates pass. Their build files stay as legacy/reference and do not provide the planned Tauri release artifact.
+- Local Tauri release cutover: `keystone-client/VERSION` is canonical and `scripts/tauri_release.py` synchronizes package, Cargo and Tauri versions plus bundled release notes. The planned NSIS release assets are `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig`, and `latest.json`; the static updater endpoint is `https://github.com/Speeson/weeklyChar/releases/latest/download/latest.json`.
+- Native Tauri build validation: Cargo resolves the updater/process/autostart plugins in `Cargo.lock`; `npm run tauri:build -- --bundles nsis` generates `src-tauri/target/release/KeystoneClient.exe` and `src-tauri/target/release/bundle/nsis/KeystoneClient_<version>_x64-setup.exe`. An unsigned local `0.4.0` package passed direct launch, sidecar, single-instance, tray-hide/restore, explicit exit, clean install and uninstall smoke tests while preserving the installed legacy client.
+- Tauri update signing uses the official Tauri v2 updater chain. The single production public verification key is committed in `keystone-client-next/src-tauri/tauri.conf.json`; the encrypted private key is stored outside the repository and GitHub Actions receives it only through `TAURI_SIGNING_PRIVATE_KEY`, with its password in `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. No private updater key or password belongs in the repository.
+- A local signed `0.4.0` NSIS build produced `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig` and a valid static `latest.json`. Release preflight checks build/manifest version, canonical asset URL and filename, signature contents and staged installer bytes, then verifies the Minisign signature with the same `minisign-verify` implementation used by the Tauri updater. Valid signatures pass while altered bytes and a wrong public key fail closed.
+- Tauri updater signatures are not Windows Authenticode signatures. Authenticode remains unconfigured as a separate future concern.
+- The locally updated Client workflows preserve `build-only`, `release-dry-run`, `release`, changeset planning, resume state and atomic tag/release publication, but they are not considered production-ready until a signed remote dry-run and native installer/upgrade validation pass. Automatic publication from a qualifying `main` push additionally requires repository variable `TAURI_CLIENT_RELEASE_ENABLED=true`; manual `release` remains an explicit operation.
 - Addon: changes go to canonical `Speeson/KeystoneSync` with version tags after explicit confirmation. Standalone addon releases use tag `vX.Y.Z`, asset `KeystoneSync-vX.Y.Z.zip`, and ZIP root `KeystoneSync/`. KeystoneClient checks these releases automatically in the background and installs/updates only after explicit user action.
 - Client addon cache: `%APPDATA%\KeystoneClient\addon-cache\` stores the last successfully downloaded and validated addon ZIP for recovery. It is not canonical and must not cause automatic downgrade.
 - Deterministic deployment-impact script: `scripts/deploy_impact.py`.

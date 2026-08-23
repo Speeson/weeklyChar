@@ -225,11 +225,12 @@ jobs:
     name: Client release
     needs: impact
     if: >
-      (needs.impact.outputs.client_release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (needs.impact.outputs.client_release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.TAURI_CLIENT_RELEASE_ENABLED == 'true') ||
       (github.event_name == 'workflow_dispatch' && inputs.client_release_mode == 'release')
     permissions:
       contents: write
     uses: ./.github/workflows/release-client.yml
+    secrets: inherit
     with:
       mode: release
       version_bump: ${{ inputs.client_version_bump || 'auto' }}
@@ -241,6 +242,7 @@ jobs:
     permissions:
       contents: write
     uses: ./.github/workflows/release-client.yml
+    secrets: inherit
     with:
       mode: release-dry-run
       version_bump: ${{ inputs.client_version_bump || 'auto' }}

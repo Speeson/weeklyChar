@@ -74,7 +74,14 @@ impl TauriCoreEventSink {
 
 impl CoreEventSink for TauriCoreEventSink {
     fn emit_core_event(&self, event: CoreEventPayload) {
+        let event_name = event.event.clone();
+        let event_data = event.data.clone();
         let _ = self.app.emit(CORE_EVENT_NAME, event);
+
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            crate::tray::update_sync_event(&app, &event_name, &event_data);
+        });
     }
 }
 
@@ -429,7 +436,9 @@ pub fn is_command_allowed(command: &str) -> bool {
         "system.ping"
             | "system.get_state"
             | "auth.login"
+            | "auth.register"
             | "auth.logout"
+            | "profile.set_avatar"
             | "settings.get"
             | "settings.update"
             | "wow.detect"
@@ -440,6 +449,8 @@ pub fn is_command_allowed(command: &str) -> bool {
             | "sync.start"
             | "sync.stop"
             | "sync.force"
+            | "characters.get"
+            | "characters.refresh"
             | "addon.get_status"
             | "addon.check"
             | "addon.install"
@@ -684,6 +695,13 @@ fn spawn_stdout_reader(
     event_sink: Arc<dyn CoreEventSink>,
     ready_sender: SyncSender<Result<(), CoreBridgeError>>,
 ) {
+    let (event_sender, event_receiver) = channel();
+    thread::spawn(move || {
+        for event in event_receiver {
+            event_sink.emit_core_event(event);
+        }
+    });
+
     thread::spawn(move || {
         let mut ready_sender = Some(ready_sender);
         for line in stdout {
@@ -721,7 +739,7 @@ fn spawn_stdout_reader(
                             let _ = sender.send(Ok(()));
                         }
                     }
-                    event_sink.emit_core_event(CoreEventPayload {
+                    let _ = event_sender.send(CoreEventPayload {
                         protocol_version,
                         event,
                         data,
@@ -794,11 +812,16 @@ fn send_trailing_line(buffer: &mut Vec<u8>, sender: &Sender<String>) {
 mod tests {
     use serde_json::json;
     use std::fs;
-    use std::sync::Mutex;
+    use std::sync::{
+        atomic::AtomicBool,
+        mpsc::{channel, Receiver},
+        Arc, Mutex,
+    };
+    use std::time::Duration;
 
     use super::{
-        build_request_envelope, is_command_allowed, parse_protocol_line, CoreBridge,
-        CoreEventPayload, CoreEventSink, PackagedSidecarTestLauncher, PendingRequests,
+        build_request_envelope, is_command_allowed, parse_protocol_line, spawn_stdout_reader,
+        CoreBridge, CoreEventPayload, CoreEventSink, PackagedSidecarTestLauncher, PendingRequests,
         ProtocolMessage, SIDECAR_LOGICAL_NAME,
     };
 
@@ -813,16 +836,29 @@ mod tests {
         }
     }
 
+    struct BlockingSink {
+        release: Mutex<Receiver<()>>,
+    }
+
+    impl CoreEventSink for BlockingSink {
+        fn emit_core_event(&self, event: CoreEventPayload) {
+            if event.event == "sync.status" {
+                let _ = self.release.lock().unwrap().recv();
+            }
+        }
+    }
+
     #[test]
     fn sidecar_logical_name_matches_tauri_configuration() {
         assert_eq!(SIDECAR_LOGICAL_NAME, "keystone-client-core");
     }
 
     #[test]
-    fn command_allowlist_exposes_only_phase_8_commands() {
+    fn command_allowlist_exposes_only_supported_commands() {
         assert!(is_command_allowed("system.ping"));
         assert!(is_command_allowed("system.get_state"));
         assert!(is_command_allowed("auth.login"));
+        assert!(is_command_allowed("auth.register"));
         assert!(is_command_allowed("auth.logout"));
         assert!(is_command_allowed("settings.get"));
         assert!(is_command_allowed("settings.update"));
@@ -834,11 +870,14 @@ mod tests {
         assert!(is_command_allowed("sync.start"));
         assert!(is_command_allowed("sync.stop"));
         assert!(is_command_allowed("sync.force"));
+        assert!(is_command_allowed("characters.get"));
+        assert!(is_command_allowed("characters.refresh"));
         assert!(is_command_allowed("addon.get_status"));
         assert!(is_command_allowed("addon.check"));
         assert!(is_command_allowed("addon.install"));
         assert!(is_command_allowed("addon.update"));
         assert!(is_command_allowed("addon.reinstall"));
+        assert!(is_command_allowed("profile.set_avatar"));
         assert!(!is_command_allowed("auth.get_state"));
         assert!(!is_command_allowed("sync.pause"));
         assert!(!is_command_allowed("addon.install_from_zip"));
@@ -957,6 +996,46 @@ mod tests {
     }
 
     #[test]
+    fn slow_event_consumer_does_not_block_following_response() {
+        let (stdout_sender, stdout_receiver) = channel();
+        let (ready_sender, ready_receiver) = std::sync::mpsc::sync_channel(1);
+        let (release_sender, release_receiver) = channel();
+        let pending = PendingRequests::default();
+        let response = pending.insert("force".to_string());
+
+        spawn_stdout_reader(
+            stdout_receiver,
+            pending,
+            Arc::new(AtomicBool::new(true)),
+            Arc::new(BlockingSink {
+                release: Mutex::new(release_receiver),
+            }),
+            ready_sender,
+        );
+        stdout_sender
+            .send(
+                r#"{"protocolVersion":1,"type":"event","event":"system.ready","data":{}}"#
+                    .to_string(),
+            )
+            .unwrap();
+        ready_receiver
+            .recv_timeout(Duration::from_secs(1))
+            .unwrap()
+            .unwrap();
+        stdout_sender
+            .send(r#"{"protocolVersion":1,"type":"event","event":"sync.status","data":{"state":"syncing"}}"#.to_string())
+            .unwrap();
+        stdout_sender
+            .send(r#"{"protocolVersion":1,"type":"response","id":"force","ok":true,"data":{"state":"syncing"},"error":null}"#.to_string())
+            .unwrap();
+
+        let result = response.recv_timeout(Duration::from_millis(100));
+        release_sender.send(()).unwrap();
+
+        assert_eq!(result.unwrap().unwrap(), json!({"state": "syncing"}));
+    }
+
+    #[test]
     fn real_packaged_sidecar_round_trip_reuses_one_process_and_fails_cleanly_after_death() {
         let sink = std::sync::Arc::new(RecordingSink::default());
         let launcher = PackagedSidecarTestLauncher::new();
@@ -988,7 +1067,8 @@ mod tests {
                 "wow": {
                     "install": {"detected": false, "installPath": null, "retailPath": null, "addonsPath": null},
                     "accounts": [],
-                    "selectedAccounts": []
+                    "selectedAccounts": [],
+                    "configurationComplete": false
                 },
                 "sync": {
                     "running": false,
@@ -997,6 +1077,13 @@ mod tests {
                     "lastSuccessAt": null,
                     "lastError": null,
                     "selectedAccounts": 0
+                },
+                "characters": {
+                    "characters": [],
+                    "refreshing": false,
+                    "source": "none",
+                    "lastRefreshAt": null,
+                    "lastError": null
                 },
                 "addon": {
                     "installed": false,
@@ -1016,7 +1103,7 @@ mod tests {
             CoreEventPayload {
                 protocol_version: 1,
                 event: "system.ready".to_string(),
-                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.logout","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
+                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
             }
         );
 

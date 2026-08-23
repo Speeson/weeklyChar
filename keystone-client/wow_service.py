@@ -70,12 +70,15 @@ def get_wow_state(cfg: dict[str, Any]) -> dict[str, Any]:
     accounts = wow_path.discover_savedvars_accounts(found) if found else []
     selected = _selected_names(cfg, accounts)
 
+    selected_accounts = [
+        account["name"] for account in accounts if str(account["name"]).lower() in selected
+    ]
+    configured_selection = bool(cfg.get("wow_accounts_prompted")) or bool(cfg.get("wow_path"))
     return {
         "install": _install_state(found),
         "accounts": [_account_dto(account, selected) for account in accounts],
-        "selectedAccounts": [
-            account["name"] for account in accounts if str(account["name"]).lower() in selected
-        ],
+        "selectedAccounts": selected_accounts,
+        "configurationComplete": bool(found and configured_selection and selected_accounts),
     }
 
 
@@ -99,10 +102,25 @@ def select_install(cfg: dict[str, Any], path: str) -> dict[str, Any]:
             "The selected folder is not a valid World of Warcraft installation.",
         )
 
+    discovered = wow_path.discover_savedvars_accounts(str(normalized))
+    available = {str(account["name"]).lower(): account for account in discovered}
+    previous = cfg.get("wow_accounts_selected") or []
+    preserved = [
+        available[str(name).lower()]["name"]
+        for name in previous
+        if isinstance(name, str) and str(name).lower() in available
+    ]
+    selected_keys = {name.lower() for name in preserved}
+    active = [
+        account
+        for account in discovered
+        if account.get("exists") and str(account["name"]).lower() in selected_keys
+    ]
+
     cfg["wow_install_path"] = str(normalized)
-    cfg["wow_accounts_selected"] = []
-    cfg["wow_accounts_prompted"] = False
-    cfg["wow_path"] = None
+    cfg["wow_accounts_selected"] = preserved
+    cfg["wow_accounts_prompted"] = bool(preserved) and bool(cfg.get("wow_accounts_prompted"))
+    cfg["wow_path"] = active[0]["savedvars_path"] if active else None
     config_module.save(cfg)
     return get_wow_state(cfg)
 
