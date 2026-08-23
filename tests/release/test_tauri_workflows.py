@@ -88,6 +88,24 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("RMDir", hooks)
         self.assertNotIn("Delete", hooks)
 
+    def test_legacy_inno_build_entrypoints_are_removed_but_migration_hook_remains(self):
+        legacy_build_paths = (
+            REPO_ROOT / "keystone-client" / "build_installer.bat",
+            REPO_ROOT / "keystone-client" / "installer" / "KeystoneClient.iss",
+            REPO_ROOT / "keystone-client" / "installer" / "version.ini",
+        )
+        for path in legacy_build_paths:
+            self.assertFalse(path.exists(), str(path))
+        self.assertTrue(
+            (
+                REPO_ROOT
+                / "keystone-client-next"
+                / "src-tauri"
+                / "windows"
+                / "installer-hooks.nsh"
+            ).is_file()
+        )
+
     def test_build_workflow_packages_tauri_instead_of_legacy_inno(self):
         workflow = (REPO_ROOT / ".github" / "workflows" / "build-client.yml").read_text(
             encoding="utf-8"
