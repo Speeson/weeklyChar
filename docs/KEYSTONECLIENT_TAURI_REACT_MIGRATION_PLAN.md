@@ -1321,10 +1321,12 @@ Test using staged/local releases before production.
 - [x] Build and smoke an unsigned local `0.4.0` release executable and NSIS installer through the canonical Tauri build command.
 - [x] Prove production updater public/private signing configuration without exposing private material.
 - [x] Build and inspect real signed local `0.4.0` NSIS/updater artifacts, including positive, tamper and wrong-key verification.
-- [ ] Run and inspect the signed remote `release-dry-run` without publishing.
+- [x] Run and inspect the signed remote `release-dry-run` without publishing.
 - [x] Complete clean install, shortcut, launch, sidecar and uninstall smoke tests for the unsigned local NSIS package.
-- [ ] Complete the legacy Inno upgrade, config preservation and autostart migration smoke tests on Windows.
+- [x] Complete the legacy Inno upgrade, config preservation and autostart migration smoke tests on Windows.
 - [ ] Obtain the final explicit approval before any public Tauri Client tag or release.
+
+Remote signed release-dry-run: **PASS**. GitHub Actions run `32662654062` built and independently verified the signed `0.4.0` NSIS release artifacts from the non-production branch without creating a tag, release, public manifest, deployment or database migration.
 
 ---
 
@@ -1389,6 +1391,8 @@ No production workflow cutover until:
 - old → new upgrade PASS;
 - config preservation PASS;
 - uninstall PASS.
+
+Upgrade-path status (2026-08-23): **PASS**. The machine-wide NSIS installer removes the known legacy Inno installation through its registered uninstaller, fails closed if that migration fails, preserves `%APPDATA%\KeystoneClient`, migrates an enabled legacy auto-start entry to the new executable, leaves one application/uninstall entry and one coherent shortcut set, and retains user data across NSIS uninstall/reinstall.
 
 ---
 
