@@ -93,6 +93,17 @@ class TauriWorkflowContractTests(unittest.TestCase):
 
         self.assertIn("python -m unittest discover -s tests/client_bridge", workflow)
 
+    def test_workflows_build_the_sidecar_before_rust_validation(self):
+        for name in ("build-client.yml", "release-client.yml"):
+            with self.subTest(workflow=name):
+                workflow = (REPO_ROOT / ".github" / "workflows" / name).read_text(
+                    encoding="utf-8"
+                )
+                self.assertLess(
+                    workflow.index("- name: Build clean Python sidecar"),
+                    workflow.index("- name: Validate Rust"),
+                )
+
     def test_deploy_passes_signing_secrets_only_to_release_workflow(self):
         workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
             encoding="utf-8"

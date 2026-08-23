@@ -71,6 +71,10 @@ jobs:
           npm test
           npm run build
 
+      - name: Build clean Python sidecar
+        shell: pwsh
+        run: python scripts/build_client_sidecar.py --clean
+
       - name: Validate Rust
         shell: pwsh
         working-directory: keystone-client-next/src-tauri
@@ -78,10 +82,6 @@ jobs:
           cargo fmt --all -- --check
           cargo check
           cargo test
-
-      - name: Build clean Python sidecar
-        shell: pwsh
-        run: python scripts/build_client_sidecar.py --clean
 
       - name: Build Tauri NSIS installer
         shell: pwsh
