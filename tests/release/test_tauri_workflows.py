@@ -11,12 +11,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 class TauriWorkflowContractTests(unittest.TestCase):
     def test_public_product_identity_is_stable(self):
         config = json.loads(
-            (REPO_ROOT / "keystone-client-next" / "src-tauri" / "tauri.conf.json").read_text(
+            (REPO_ROOT / "keystone-client" / "src-tauri" / "tauri.conf.json").read_text(
                 encoding="utf-8"
             )
         )
         package = json.loads(
-            (REPO_ROOT / "keystone-client-next" / "package.json").read_text(encoding="utf-8")
+            (REPO_ROOT / "keystone-client" / "package.json").read_text(encoding="utf-8")
         )
         self.assertEqual(config["productName"], "KeystoneClient")
         self.assertEqual(config["mainBinaryName"], "KeystoneClient")
@@ -24,7 +24,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertEqual(config["bundle"]["targets"], ["nsis"])
         self.assertEqual(package["name"], "keystone-client")
         self.assertNotIn("Next", json.dumps(config))
-        main_rs = (REPO_ROOT / "keystone-client-next" / "src-tauri" / "src" / "main.rs").read_text(
+        main_rs = (REPO_ROOT / "keystone-client" / "src-tauri" / "src" / "main.rs").read_text(
             encoding="utf-8"
         )
         self.assertIn("keystone_client_lib::run()", main_rs)
@@ -32,7 +32,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
 
     def test_base_build_config_contains_the_production_updater_public_key(self):
         config = json.loads(
-            (REPO_ROOT / "keystone-client-next" / "src-tauri" / "tauri.conf.json").read_text(
+            (REPO_ROOT / "keystone-client" / "src-tauri" / "tauri.conf.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -50,7 +50,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
 
     def test_nsis_installer_replaces_the_machine_wide_legacy_install(self):
         config = json.loads(
-            (REPO_ROOT / "keystone-client-next" / "src-tauri" / "tauri.conf.json").read_text(
+            (REPO_ROOT / "keystone-client" / "src-tauri" / "tauri.conf.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -62,7 +62,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
     def test_nsis_legacy_migration_fails_closed_without_removing_user_data(self):
         hooks = (
             REPO_ROOT
-            / "keystone-client-next"
+            / "keystone-client"
             / "src-tauri"
             / "windows"
             / "installer-hooks.nsh"
@@ -99,7 +99,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertTrue(
             (
                 REPO_ROOT
-                / "keystone-client-next"
+                / "keystone-client"
                 / "src-tauri"
                 / "windows"
                 / "installer-hooks.nsh"
@@ -138,7 +138,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertIn("cargo check --locked", workflow)
         self.assertIn("cargo test --locked", workflow)
         self.assertIn(
-            "cargo check --manifest-path keystone-client-next/src-tauri/Cargo.toml",
+            "cargo check --manifest-path keystone-client/src-tauri/Cargo.toml",
             workflow,
         )
         self.assertIn('"KeystoneClient_$($version)_x64-setup.exe"', workflow)
@@ -172,7 +172,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
             workflow.index("- name: Synchronize Tauri release metadata"),
         )
         self.assertIn(
-            "cargo check --manifest-path keystone-client-next/src-tauri/Cargo.toml\n"
+            "cargo check --manifest-path keystone-client/src-tauri/Cargo.toml\n"
             "          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
             workflow,
         )

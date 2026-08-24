@@ -287,7 +287,7 @@ def build_sidecar(args: argparse.Namespace) -> dict[str, Any]:
         shutil.rmtree(temp_dir)
 
     output_dir = Path(args.output_dir) if args.output_dir else (
-        repo_root / "keystone-client-next" / "src-tauri" / "binaries"
+        repo_root / "keystone-client" / "src-tauri" / "binaries"
     )
     output_path = output_dir / physical_sidecar_filename(
         LOGICAL_SIDECAR_NAME, target_triple, sys.platform
