@@ -76,10 +76,10 @@ Responsibilities:
 - keeps one validated local addon ZIP cache for recovery;
 - runs as a packaged Windows application.
 
-Current version:
+Current production version:
 
 ```text
-0.2.1
+0.4.0
 ```
 
 Default API URL:
@@ -90,30 +90,26 @@ https://api-keystonesync.esgarpe.dev
 
 The client normalizes the old Railway API URL to the current API URL.
 
-Build scripts:
+Local validation and build:
 
-```bat
-cd keystone-client
-build.bat
+```bash
+npm ci --prefix keystone-client
+npm --prefix keystone-client test
+npm --prefix keystone-client run build
+cargo check --locked --manifest-path keystone-client/src-tauri/Cargo.toml
+python scripts/build_client_sidecar.py --clean
 ```
 
-Produces:
+Build the NSIS installer with:
+
+```bash
+npm --prefix keystone-client run tauri:build -- --bundles nsis
+```
+
+The native installer is generated under:
 
 ```text
-keystone-client\dist\KeystoneClient.exe
-```
-
-Installer build:
-
-```bat
-cd keystone-client
-build_installer.bat
-```
-
-Produces:
-
-```text
-keystone-client\installer\output\KeystoneClientSetup.exe
+keystone-client/src-tauri/target/release/bundle/nsis/KeystoneClient_<version>_x64-setup.exe
 ```
 
 The expected public GitHub Release asset name is:
@@ -122,7 +118,7 @@ The expected public GitHub Release asset name is:
 KeystoneClientSetup.exe
 ```
 
-Client releases are automated from `main` when Deployment Impact reports `CLIENT_RELEASE=true` and a valid pending Client changeset exists. The release workflow bumps `keystone-client/VERSION`, builds `KeystoneClientSetup.exe`, pushes the release commit plus `client-vX.Y.Z` tag atomically, and publishes the GitHub Release.
+Client releases can run automatically from `main` when Deployment Impact reports `CLIENT_RELEASE=true`, a valid pending Client changeset exists, and `TAURI_CLIENT_RELEASE_ENABLED=true`. The release workflow bumps `keystone-client/VERSION`, builds the signed updater assets, pushes the release commit plus `client-vX.Y.Z` tag atomically, and publishes the GitHub Release.
 
 ### `keystone-worker`
 
@@ -214,9 +210,9 @@ The Web application is currently documented as deployed through Vercel. The exac
 Primary source files for this flow:
 
 - Addon source/releases: `Speeson/KeystoneSync`
-- Addon updater/cache/install code: `keystone-client/addon_updater.py`, `keystone-client/addon_installer.py`
-- SavedVariables discovery: `keystone-client/wow_path.py`
-- Client parse/payload/sync: `keystone-client/sync_worker.py`
+- Addon updater/cache/install code: `keystone-client/sidecar/addon_updater.py`, `keystone-client/sidecar/addon_installer.py`
+- SavedVariables discovery: `keystone-client/sidecar/wow_path.py`
+- Client parse/payload/sync: `keystone-client/sidecar/sync_worker.py`
 - Sync endpoint: `keystone-worker/src/routes/keystones.ts`
 - D1 schema: `keystone-worker/migrations/0001_initial.sql`
 - Read responses: `keystone-worker/src/routes/me.ts`, `keystone-worker/src/db.ts`, `keystone-worker/src/routes/teams.ts`
@@ -231,7 +227,7 @@ Primary source files for this flow:
 | --- | --- | --- |
 | Web | Partial / external | Build and lint scripts are versioned. Deployment is documented as Vercel-based, but external Git Integration settings are not stored here. |
 | Worker | Manual | Wrangler scripts are versioned. Deploy and remote D1 migration require explicit authorization. |
-| Client | Automated release on qualifying `main` push | PyInstaller/Inno Setup build the app and installer. Release-impacting Client changes require a pending `.changes/` changeset and publish `KeystoneClientSetup.exe` under `client-vX.Y.Z`. |
+| Client | Automated release on qualifying `main` push | React/Vite and Rust/Tauri build the app, PyInstaller packages the Python sidecar, and NSIS builds the installer. Release-impacting Client changes require a pending `.changes/` changeset and publish signed updater assets under `client-vX.Y.Z`. |
 | Addon | Independent external release | `Speeson/KeystoneSync` is the canonical addon source. KeystoneClient can install standalone addon release ZIPs without a new Client release. This repository does not publish addon releases. |
 | Deployment Impact | Scripted | Run `python scripts/deploy_impact.py --files <changed-paths>` before deploy/release decisions. The script classifies impact only; it does not deploy or release. |
 
@@ -241,7 +237,7 @@ CI/CD workflow infrastructure is versioned under `.github/workflows/`:
 - `deploy-web.yml` validates the Web app; deployment remains documented as Vercel-managed externally.
 - `deploy-worker.yml` validates Worker changes and supports guarded manual Worker deploy / remote D1 migration.
 - `build-client.yml` builds the Windows installer artifact with read-only permissions for build-only validation/orchestration.
-- `release-client.yml` supports `build-only`, `release-dry-run`, and `release`; `deploy.yml` calls release mode automatically for qualifying `main` pushes.
+- `release-client.yml` supports `build-only`, `release-dry-run`, and `release`; `deploy.yml` calls release mode for qualifying `main` pushes only while `TAURI_CLIENT_RELEASE_ENABLED=true`.
 
 Standalone addon workflows are now owned by `Speeson/KeystoneSync`. This repository keeps only a pointer under `docs/workflow-handoff/addon/` and must not publish addon releases. No cross-repository token is used; each repository publishes only its own releases.
 
@@ -279,11 +275,12 @@ weeklyChar/
 |-- .agents/                         # Project agent skills
 |-- docs/                            # Modernization plans and project context
 |-- scripts/                         # Repository validation and impact tooling
-|-- keystone-client/                 # Current Windows client
-|   |-- sync_worker.py               # SavedVariables parse/payload/API sync
-|   |-- wow_path.py                  # WoW install and SavedVariables discovery
-|   |-- addon_installer.py           # Local addon state/install/rollback
-|   `-- addon_updater.py             # GitHub release updater and cache
+|-- keystone-client/                 # Canonical Tauri/React Windows client
+|   |-- src/                         # React/TypeScript frontend
+|   |-- src-tauri/                   # Rust host, NSIS and updater config
+|   |-- sidecar/                     # Python domain services and JSONL bridge
+|   |-- tests/                       # Playwright visual coverage
+|   `-- VERSION                      # Canonical Client version
 |-- keystone-worker/                 # Current Worker API and D1 integration
 |   |-- src/
 |   |-- migrations/

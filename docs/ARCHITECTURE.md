@@ -64,14 +64,17 @@ Current Windows desktop client.
 
 Owns:
 
-- WoW install and account SavedVariables discovery in `keystone-client/wow_path.py`.
-- Parsing `KeystoneSyncDB` with `slpp` in `keystone-client/sync_worker.py`.
+- The React/TypeScript presentation under `keystone-client/src/`.
+- The Rust/Tauri host, native window/tray lifecycle, updater and NSIS packaging under `keystone-client/src-tauri/`.
+- The packaged Python JSONL sidecar and domain services under `keystone-client/sidecar/`.
+- WoW install and account SavedVariables discovery in `keystone-client/sidecar/wow_path.py`.
+- Parsing `KeystoneSyncDB` with `slpp` in `keystone-client/sidecar/sync_worker.py`.
 - Raider.IO enrichment for avatar URL, score, class, and equipped item level fallback.
 - Sync payload construction and `POST /api/keystones/update`.
 - Windows desktop/tray UX, login, account selection, and local config.
 - Checking addon releases in the background without blocking startup.
 - Downloading, validating, caching, and installing standalone addon releases from `Speeson/KeystoneSync` after explicit user action.
-- PyInstaller/Inno Setup build path for `KeystoneClientSetup.exe`.
+- PyInstaller sidecar packaging and the Tauri/NSIS build path for `KeystoneClientSetup.exe`.
 
 Does not own:
 
@@ -79,22 +82,9 @@ Does not own:
 - D1 schema ownership.
 - Web display semantics.
 
-### `keystone-client-next`
-
-Tauri 2 + React migration client, developed beside the current released Windows client until the explicit cutover phase.
-
-Owns:
-
-- The approved React presentation, deterministic preview states and Playwright visual baselines.
-- Tauri-native window/tray lifecycle and scoped external navigation.
-- A persistent private JSONL sidecar connection to the Python domain services.
-- Typed, allowlisted UI capabilities for login, internal registration, logout, settings, WoW discovery, synchronization, characters and addon management.
-
 The Python sidecar remains authoritative for tokens, `%APPDATA%\KeystoneClient\config.json`, SavedVariables monitoring, character cache/API/Raider.IO enrichment, authenticated avatar updates and addon release operations. The synchronization view receives sanitized rendering DTOs only; React does not call Raider.IO or the Worker directly. A valid authenticated WoW configuration starts one monitor automatically, and successful synchronization schedules a coalesced character refresh.
 
 The Tauri host owns frameless window behavior, controlled native close requests, explicit clean exit, OS autostart, the persistent dynamic tray and scoped browser navigation. Blocking Python requests run on Tauri's blocking executor so monitor shutdown cannot freeze the desktop event loop; tray hiding uses a scoped Rust command, and exit terminates the sidecar directly. React owns the localized ES/EN interface, internal login/registration and first-run WoW/account routing, Settings, profile dropdown and character-derived avatar picker. `auth.register` forwards the existing Worker registration contract without persisting credentials, while `profile.set_avatar` validates the requested URL against sanitized character state before Python calls `/api/me/avatar`. The historical `minimize_on_close` key remains in the private config contract for compatibility but does not silently override the Tauri close-choice flow.
-
-This migration does not yet replace the released PyInstaller/Inno client or its release pipeline.
 
 ### `keystone-worker`
 
@@ -171,7 +161,7 @@ Primary workflow files:
 - `.github/workflows/deploy-web.yml` - validates Web build/lint without duplicating Vercel deployment.
 - `.github/workflows/deploy-worker.yml` - validates Worker changes and supports guarded manual deploy/migrations.
 - `.github/workflows/build-client.yml` - builds Client installer artifacts for build-only validation/orchestration with read-only permissions.
-- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and `release` modes; `deploy.yml` calls release mode automatically on qualifying `main` pushes.
+- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and `release` modes; `deploy.yml` calls release mode on qualifying `main` pushes only while `TAURI_CLIENT_RELEASE_ENABLED=true`.
 
 Standalone addon workflows are owned by `Speeson/KeystoneSync`. `weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML.
 
@@ -210,14 +200,9 @@ The Web application is documented as deployed through Vercel. The exact external
 
 ### Client
 
-The Windows client defaults to `https://api-keystonesync.esgarpe.dev` in `keystone-client/config.py` and normalizes the old Railway URL to the current API domain.
+The Windows client defaults to `https://api-keystonesync.esgarpe.dev` in `keystone-client/sidecar/config.py` and normalizes the old Railway URL to the current API domain.
 
-Released legacy build path, retained until the Tauri production gate passes:
-
-- `keystone-client/build.bat` builds the executable with PyInstaller.
-- `keystone-client/build_installer.bat` builds the installer with Inno Setup.
-
-Pending Tauri cutover path in the local working tree:
+Current production build path:
 
 ```text
 Python domain services
@@ -232,10 +217,10 @@ Python domain services
 - `keystone-client/VERSION` remains the canonical Client version. `scripts/tauri_release.py` synchronizes Tauri, Cargo and npm metadata and embeds changeset-derived notes.
 - The stable Tauri identity is product/binary `KeystoneClient` with identifier `dev.esgarpe.keystoneclient`.
 - React owns update state and presentation through a typed controller; the official Tauri updater plugin owns signed download and installation, and the process plugin owns relaunch. The Python sidecar is not an application updater.
-- Release signing material is injected only in CI. `TAURI_SIGNING_PRIVATE_KEY` and its optional password remain secret; the public verification key is written only to a temporary release overlay.
+- Release signing material is injected only in CI. `TAURI_SIGNING_PRIVATE_KEY` and its optional password remain secret; the production public verification key is committed in `keystone-client/src-tauri/tauri.conf.json`.
 - The canonical release assets are `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig`, and `latest.json`. The manifest uses platform key `windows-x86_64` and endpoint `https://github.com/Speeson/weeklyChar/releases/latest/download/latest.json`.
-- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` is gated by `TAURI_CLIENT_RELEASE_ENABLED=true` so the initial integration cannot publish before the signed dry-run and approval.
-- `%APPDATA%\KeystoneClient` remains owned by the existing Python configuration/services and is not removed by the Tauri application. Clean install, Inno-to-NSIS upgrade, shortcut/uninstall behavior and duplicate-autostart prevention remain mandatory native smoke gates before public cutover.
+- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` remains gated by `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- `%APPDATA%\KeystoneClient` remains owned by the Python sidecar and is not removed by the Tauri application. The retained NSIS hook supports direct migration from the public Inno 0.3.0 AppId, fails closed if legacy uninstall fails, preserves AppData and migrates legacy autostart.
 
 ### Addon
 
@@ -275,8 +260,8 @@ Rules:
 ## Current Data Flow Implementation Points
 
 ```text
-SavedVariables discovery: keystone-client/wow_path.py
-SavedVariables parse/payload: keystone-client/sync_worker.py
+SavedVariables discovery: keystone-client/sidecar/wow_path.py
+SavedVariables parse/payload: keystone-client/sidecar/sync_worker.py
 Sync write endpoint: keystone-worker/src/routes/keystones.ts
 D1 schema: keystone-worker/migrations/0001_initial.sql
 Read response shaping: keystone-worker/src/db.ts

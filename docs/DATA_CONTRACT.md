@@ -29,7 +29,7 @@ This document describes the current contract implemented by the repository. It d
 Primary files:
 
 - Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
-- Client parser/payload: `keystone-client/sync_worker.py`
+- Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
 - D1 schema: `keystone-worker/migrations/0001_initial.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
@@ -139,7 +139,7 @@ The addon includes safeguards to avoid accepting empty or duplicate season snaps
 
 ## Client Parsing And Payload Contract
 
-`keystone-client/sync_worker.py` watches selected SavedVariables files discovered by `keystone-client/wow_path.py`.
+`keystone-client/sidecar/sync_worker.py` watches selected SavedVariables files discovered by `keystone-client/sidecar/wow_path.py`.
 
 Parsing behavior:
 
@@ -375,7 +375,7 @@ Verified addon fields that are written to `KeystoneSyncDB` but do not cross the 
 
 | Field | Addon source | Current status |
 | --- | --- | --- |
-| `keystoneWeeklyResetKey` | `SaveCharacterData()` writes `keystone.weeklyResetKey` | Used locally by addon preservation logic; not included in `keystone-client/sync_worker.py` payload; not accepted/persisted by Worker. |
+| `keystoneWeeklyResetKey` | `SaveCharacterData()` writes `keystone.weeklyResetKey` | Used locally by addon preservation logic; not included in `keystone-client/sidecar/sync_worker.py` payload; not accepted/persisted by Worker. |
 | `mythicPlusSeasonUpdatedAt` | `UpdateMythicPlusSeason()` writes `time()` or preserves previous value | Used locally to track season capture time; not included in client payload; not accepted/persisted by Worker. |
 
 Do not fix this gap in documentation-only phases. Future work should decide whether these are intentionally local-only or should become transported contract fields.

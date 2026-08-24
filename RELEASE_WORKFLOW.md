@@ -6,10 +6,10 @@ Estado actual verificado:
 
 - El impacto de build/deploy/release se clasifica con `python scripts/deploy_impact.py --files <changed-paths>`.
 - El orquestador versionado esta en `.github/workflows/deploy.yml`.
-- El cliente se construye con PyInstaller/Inno Setup.
+- El frontend se construye con React/Vite, el host nativo con Rust/Tauri, el sidecar Python con PyInstaller y el instalador con NSIS.
 - El instalador publico esperado es `KeystoneClientSetup.exe`.
 - El build del cliente para validacion/orquestacion usa `.github/workflows/build-client.yml` con permisos read-only.
-- La publicacion de GitHub Releases del cliente esta automatizada para pushes a `main` cuando Deployment Impact marca `CLIENT_RELEASE=true` y existe un changeset valido de cliente.
+- La publicacion de GitHub Releases del cliente puede ejecutarse para pushes a `main` cuando Deployment Impact marca `CLIENT_RELEASE=true`, existe un changeset valido y `TAURI_CLIENT_RELEASE_ENABLED=true`.
 - El Worker se despliega con Wrangler y usa D1; despliegue y migraciones remotas estan disponibles solo por ejecucion manual/guardada de `.github/workflows/deploy-worker.yml`.
 - La web esta documentada como desplegada con Vercel, pero la configuracion externa de Git Integration no esta versionada en este repositorio.
 - Los workflows del addon canonico viven en `Speeson/KeystoneSync`. `docs/workflow-handoff/addon/` conserva solo un puntero para evitar una segunda copia autoritativa. Este repositorio no publica releases del addon.
@@ -32,14 +32,17 @@ Estado actual verificado:
 - Tras confirmacion explicita, subir los cambios al repositorio principal del proyecto: `Speeson/weeklyChar`.
 - El build del cliente no descarga ni empaqueta el addon.
 - El instalador del cliente no debe contener `KeystoneSync.toc`, `KeystoneSync.lua` ni otros archivos runtime del addon.
-- Generar el instalador con `keystone-client/build_installer.bat`.
+- Generar el sidecar con `python scripts/build_client_sidecar.py --clean`.
+- Generar el instalador local con `npm --prefix keystone-client run tauri:build -- --bundles nsis`.
+- El instalador nativo aparece en `keystone-client/src-tauri/target/release/bundle/nsis/KeystoneClient_<version>_x64-setup.exe`.
 - El workflow `.github/workflows/build-client.yml` genera el instalador como artifact para validacion/orquestacion.
 - El workflow `.github/workflows/release-client.yml` soporta `build-only`, `release-dry-run` y `release`.
+- `release-dry-run` construye y valida los artefactos firmados sin crear tag, GitHub Release ni `latest.json` publico; `release` requiere autorizacion explicita o el gate automatico habilitado.
 - En Pull Requests, los cambios con `CLIENT_RELEASE=true` validan el changeset, calculan version/notas y buildan sin publicar.
-- En push a `main`, los cambios con `CLIENT_RELEASE=true` publican automaticamente usando `auto` para seleccionar `patch`, `minor` o `major`.
+- En push a `main`, los cambios con `CLIENT_RELEASE=true` solo publican automaticamente si `TAURI_CLIENT_RELEASE_ENABLED=true`; `auto` selecciona `patch`, `minor` o `major`.
 - El release commit y el tag se suben con `git push --atomic`; no hay fallback secuencial.
 - El tag del cliente debe seguir el formato existente `client-vX.Y.Z`, derivado de `keystone-client/VERSION`.
-- El release del cliente debe incluir el instalador generado como asset con el nombre `KeystoneClientSetup.exe`.
+- El release del cliente debe incluir `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig` y `latest.json`; la firma Minisign se valida contra la clave publica configurada en Tauri.
 
 ## Pagina web
 
@@ -63,7 +66,7 @@ Estado actual verificado:
 - Antes de decidir que construir, desplegar, migrar o publicar, ejecutar Deployment Impact. Para cambios del addon canonico externo usar `python scripts/deploy_impact.py --addon-changed`.
 - Tras Phase 11, `--addon-changed` implica release standalone del addon, no build/release del cliente.
 - En Pull Requests, el orquestador solo valida/builda segun impacto; no publica releases, despliega Worker ni ejecuta migraciones remotas.
-- En `main`, el orquestador valida/builda segun impacto. Los releases de cliente son automaticos cuando `CLIENT_RELEASE=true`; Worker deploy y migraciones remotas siguen siendo manuales/guardadas.
+- En `main`, el orquestador valida/builda segun impacto. Los releases de cliente requieren `CLIENT_RELEASE=true` y `TAURI_CLIENT_RELEASE_ENABLED=true`; Worker deploy y migraciones remotas siguen siendo manuales/guardadas.
 - Nunca hacer push sin confirmacion explicita del usuario.
 - Antes de cualquier push, revisar el estado de Git y confirmar que los cambios pertenecen al alcance esperado.
 - Si hay cambios mezclados de addon, cliente y web, separar mentalmente el impacto:

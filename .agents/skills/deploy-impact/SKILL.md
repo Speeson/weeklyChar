@@ -73,8 +73,10 @@ Phase 11 decoupled standalone addon releases from KeystoneClient releases:
 - KeystoneClient no longer embeds addon runtime files.
 - Changes to Client updater/installer code classify as Client build/release impact, not addon release impact.
 - `.changes/**`, generated release metadata, and release helper tooling are known no-product-impact.
-- `keystone-client/VERSION` and generated `keystone-client/installer/version.ini` are build-only so release-generated commits do not recursively trigger another Client release.
-- Client build scripts are build-only; Client runtime `.py`, runtime dependencies, user-visible assets, and installer behavior that changes the installed app are build+release.
+- `keystone-client/VERSION` and generated release metadata are build-only/no-impact as classified so release-generated commits do not recursively trigger another Client release.
+- Canonical Client runtime paths are `keystone-client/src/**`, `keystone-client/src-tauri/**`, top-level npm/Vite/TypeScript config, and `keystone-client/sidecar/**`; product changes are Client build+release.
+- `keystone-client/tests/**`, frontend `*.test.*`, `keystone-client/design/**`, generated output, `node_modules`, Playwright reports and Rust `target/` are known no-product-impact.
+- Historical `keystone-client-next/**` and deleted pre-Tauri paths remain classified only so comparisons against older refs stay deterministic; they must not be recreated.
 
 ## Report Format
 
