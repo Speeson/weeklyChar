@@ -9,7 +9,7 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLIENT_ROOT = REPO_ROOT / "keystone-client"
+CLIENT_ROOT = REPO_ROOT / "keystone-client" / "sidecar"
 sys.path.insert(0, str(CLIENT_ROOT))
 
 import config  # noqa: E402

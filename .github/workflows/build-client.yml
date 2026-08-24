@@ -23,14 +23,14 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: keystone-client/requirements.txt
+          cache-dependency-path: keystone-client/sidecar/requirements.txt
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: keystone-client-next/package-lock.json
+          cache-dependency-path: keystone-client/package-lock.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -41,13 +41,13 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: keystone-client-next/src-tauri
+          workspaces: keystone-client/src-tauri
 
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install -r keystone-client/requirements.txt
-          npm ci --prefix keystone-client-next
+          python -m pip install -r keystone-client/sidecar/requirements.txt
+          npm ci --prefix keystone-client
 
       - name: Validate version contract
         id: version
@@ -66,7 +66,7 @@ jobs:
 
       - name: Validate React
         shell: pwsh
-        working-directory: keystone-client-next
+        working-directory: keystone-client
         run: |
           npm test
           npm run build
@@ -77,7 +77,7 @@ jobs:
 
       - name: Validate Rust
         shell: pwsh
-        working-directory: keystone-client-next/src-tauri
+        working-directory: keystone-client/src-tauri
         run: |
           cargo fmt --all -- --check
           cargo check
@@ -85,13 +85,13 @@ jobs:
 
       - name: Build Tauri NSIS installer
         shell: pwsh
-        working-directory: keystone-client-next
+        working-directory: keystone-client
         run: npm run tauri:build -- --bundles nsis
 
       - name: Stage canonical installer
         shell: pwsh
         run: |
-          $source = Get-ChildItem "keystone-client-next/src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
+          $source = Get-ChildItem "keystone-client/src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
           if (!$source) { throw "Tauri NSIS installer was not generated." }
           New-Item -ItemType Directory -Force -Path dist-client | Out-Null
           Copy-Item $source.FullName dist-client/KeystoneClientSetup.exe

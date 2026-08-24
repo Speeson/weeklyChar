@@ -1,123 +1,71 @@
 ---
 name: keystonesync-client
-description: Work on the KeystoneSync Windows client, SavedVariables parsing, Raider.IO enrichment, addon installation, PyInstaller/Inno packaging and client releases.
+description: Work on the canonical KeystoneSync Windows client, including React/Tauri, the Python sidecar, addon integration, NSIS packaging and Client releases.
 ---
 
 # KeystoneSync Windows Client
 
 ## When to use
 
-Load this skill for changes under the current Windows client, including:
+Load this skill for changes to the canonical `keystone-client/` product tree:
 
-- Python client code
-- Tkinter UI
-- tray behavior
-- SavedVariables discovery/parsing
-- sync polling
-- Raider.IO enrichment
-- API payload creation
-- Worker API transport
-- addon installer/updater
-- PyInstaller
-- Inno Setup
-- `VERSION`
-- client GitHub releases
+- React/TypeScript UI and Playwright visual states
+- Rust/Tauri window, tray, lifecycle, updater and scoped navigation
+- Python JSONL sidecar and domain services
+- SavedVariables discovery/parsing and sync polling
+- Raider.IO enrichment and Worker payload transport
+- addon installer/updater and validated cache
+- PyInstaller sidecar, NSIS packaging, `VERSION` and Client releases
 
-## Architectural role
+## Architecture
 
-The client bridges local WoW SavedVariables and the remote KeystoneSync API.
+`keystone-client/src/` owns presentation, `keystone-client/src-tauri/` owns the native host and installer, and `keystone-client/sidecar/` owns Python domain behavior. The host maintains one private persistent JSONL sidecar process. End users do not need Python installed.
 
-Typical flow:
+The sidecar remains authoritative for `%APPDATA%\KeystoneClient`, authentication/session state, WoW discovery, SavedVariables parsing, synchronization, character cache, Raider.IO enrichment and addon release operations. React receives sanitized DTOs and must not bypass the bridge to access tokens, Raider.IO or the Worker directly.
 
-```text
-SavedVariables
- ↓
-parse
- ↓
-optional Raider.IO enrichment
- ↓
-payload
- ↓
-Worker API
-```
-
-Current implementation uses Python, `slpp` parsing, Raider.IO enrichment, Tkinter/tray UI, the configured Worker API URL, and a remote-release addon updater.
-
-KeystoneClient does not embed KeystoneSync addon runtime files. Addon installation/update is based on validated GitHub Release ZIP assets from `Speeson/KeystoneSync`.
+KeystoneClient does not embed addon runtime files. Addon install/update consumes validated `Speeson/KeystoneSync` GitHub Release ZIPs and keeps one recovery cache under `%APPDATA%\KeystoneClient\addon-cache\`.
 
 ## Rules
 
-1. Do not silently discard addon fields.
-2. Load `keystonesync-data-contract` for payload/schema changes.
-3. Keep parsing resilient to missing/additive SavedVariables fields.
-4. Preserve compatibility with existing user configuration where practical.
-5. Treat network failures as recoverable.
-6. Do not block the UI thread with long-running sync/update operations.
-7. Validate addon paths before installing/updating.
-8. Do not add addon source/runtime files to the Client package.
-9. Keep release asset compatibility with the Web download link.
-10. Do not release without explicit authorization.
+1. Load `keystonesync-data-contract` for payload/schema changes and do not silently discard addon fields.
+2. Preserve missing/additive SavedVariables compatibility and unknown future config keys.
+3. Preserve the existing JSONL protocol unless the task explicitly changes that contract.
+4. Keep network and long-running sidecar work off the UI thread and treat failures as recoverable.
+5. Validate addon archive layout and versions before installation; preserve rollback and anti-downgrade behavior.
+6. Do not add addon source/runtime files to the Client package.
+7. Preserve `%APPDATA%\KeystoneClient` across install, update and uninstall.
+8. Preserve direct migration from public Inno 0.3.0 AppId `{B5D12F8B-FC43-4E22-A3E1-4B2D84A4C910}` through `src-tauri/windows/installer-hooks.nsh`; legacy uninstall failures must abort NSIS installation.
+9. Keep the Tauri updater public key and canonical release assets stable.
+10. Add a valid pending Client changeset for release-impacting behavior and never publish without authorization.
 
-## Packaging
+## Packaging And Release
 
-Current release tooling may include:
+`keystone-client/VERSION` is the canonical version. `scripts/tauri_release.py` synchronizes npm, Cargo, Tauri and generated release metadata.
 
-- PyInstaller
-- Inno Setup
-- `VERSION`
-- installer scripts
+Public artifacts are:
 
-When changing user-visible Client behavior, add a valid pending Client changeset under `.changes/pending/`:
+- `KeystoneClientSetup.exe`
+- `KeystoneClientSetup.exe.sig`
+- `latest.json`
 
-- `components` includes `client`;
-- `type` is `patch`, `minor`, or `major`;
-- `category` is `added`, `changed`, `fixed`, `removed`, or `security`;
-- `summary` and `details` are user-facing Spanish release-note text.
-
-When changing packaging, confirm:
-
-- generated executable location;
-- bundled resource paths;
-- absence of addon runtime files;
-- installer output name;
-- expected public GitHub release asset name.
-
-Public installer compatibility target:
-
-`KeystoneClientSetup.exe`
-
-Versioned workflow:
-
-- `.github/workflows/build-client.yml` builds the Windows installer on `windows-latest` for validation/orchestration with read-only permissions.
-- `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run`, and `release`.
-- Pull requests with Client release impact validate the changeset, calculate planned version/notes, and build without publishing.
-- Pushes to `main` with `CLIENT_RELEASE=true` publish automatically after a valid changeset is present.
-- The release workflow uploads `KeystoneClientSetup.exe` as a workflow artifact and publishes it as the release asset in release mode.
-- Client release tags use the existing `client-vX.Y.Z` convention from `keystone-client/VERSION`.
-- Release notes are generated in Spanish from `.changes/pending/` and consumed into `.changes/releases/`.
-
-## Addon updater
-
-Remote addon updating is implemented in `keystone-client/addon_updater.py`.
-
-KeystoneClient checks `Speeson/KeystoneSync` stable GitHub Releases in the background and updates the UI, but install/update/reinstall always requires a user click. Validated release ZIPs are cached under `%APPDATA%\KeystoneClient\addon-cache\` for recovery.
-
-When working on addon update support:
-
-- compare installed/latest versions with semantic version rules;
-- validate downloaded archive layout and `.toc` version consistency;
-- use safe replacement through `addon_installer.install_from_source`;
-- avoid partial installation and preserve rollback behavior;
-- keep anti-downgrade behavior for cached packages;
-- handle offline/network failure gracefully;
-- run updater tests in `tests/client/test_addon_updater.py`.
+`.github/workflows/build-client.yml` provides read-only build validation. `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run` and `release`, retains changeset planning and resume/repair behavior, and uses `client-vX.Y.Z` tags. Tauri updater signing is Minisign-based and separate from Windows Authenticode.
 
 ## Validation
 
-Relevant checks include:
+```powershell
+python -m compileall -q keystone-client/sidecar scripts tests
+python -m unittest discover -s tests/client
+python -m unittest discover -s tests/client_bridge
+python -m unittest discover -s tests/release
+npm ci --prefix keystone-client
+npm --prefix keystone-client test
+npm --prefix keystone-client run build
+npm --prefix keystone-client run test:visual
+cargo fmt --all --manifest-path keystone-client/src-tauri/Cargo.toml -- --check
+cargo check --locked --manifest-path keystone-client/src-tauri/Cargo.toml
+cargo test --locked --manifest-path keystone-client/src-tauri/Cargo.toml
+python scripts/build_client_sidecar.py --clean
+npm --prefix keystone-client run tauri:build -- --bundles nsis
+```
 
-- `python -m compileall -q keystone-client scripts`
-- `python -m unittest discover -s tests/client`
-- PyInstaller build
-- installer build on Windows
-- manual SavedVariables sync test
+Run Deployment Impact for the changed paths and require strict Client-only impact when the task is Client-scoped.

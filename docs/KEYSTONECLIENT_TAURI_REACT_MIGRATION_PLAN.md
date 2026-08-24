@@ -12,6 +12,8 @@
 
 **Tech stack:** Tauri 2, Rust stable MSVC, React, TypeScript, Vite, Tailwind CSS, Lucide React, Vitest + Testing Library, Playwright visual tests, Python sidecar packaged with PyInstaller, existing GitHub Actions + changeset/release system.
 
+> **Completion note (2026-08-24):** KeystoneClient 0.4.0 completed the production Tauri cutover at commit `b927d6721ab68272413f1035e583886927caf5ae`. Post-cutover cleanup then consolidated the React frontend, Rust/Tauri host, NSIS configuration and Python sidecar under the single canonical `keystone-client/` tree on `chore/keystoneclient-post-tauri-cleanup`. Commands below remain the historical execution record and are not current operating instructions.
+
 ---
 
 # 1. Approved Architecture Contract

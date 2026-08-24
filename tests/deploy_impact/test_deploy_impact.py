@@ -50,6 +50,12 @@ class DeployImpactTests(unittest.TestCase):
     def test_client_source_impacts_build_and_release(self):
         self.assertImpact(["keystone-client/sync_worker.py"], {"client_build", "client_release"})
 
+    def test_client_sidecar_requirements_impacts_build_and_release(self):
+        self.assertImpact(
+            ["keystone-client/sidecar/requirements.txt"],
+            {"client_build", "client_release"},
+        )
+
     def test_client_sidecar_files_impact_tauri_distribution(self):
         paths = [
             "keystone-client/auth_service.py",
@@ -67,7 +73,7 @@ class DeployImpactTests(unittest.TestCase):
     def test_tauri_product_paths_impact_client_distribution(self):
         paths = [
             "keystone-client-next/src/App.tsx",
-            "keystone-client-next/src/components/example.tsx",
+            "keystone-client-next/src/components/KeystoneShell.tsx",
             "keystone-client-next/src-tauri/src/lib.rs",
             "keystone-client-next/src-tauri/tauri.conf.json",
             "keystone-client-next/package.json",
@@ -76,6 +82,38 @@ class DeployImpactTests(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path):
                 self.assertImpact([path], {"client_build", "client_release"})
+
+    def test_canonical_client_product_paths_impact_distribution(self):
+        paths = [
+            "keystone-client/src/App.tsx",
+            "keystone-client/src-tauri/src/lib.rs",
+            "keystone-client/src-tauri/tauri.conf.json",
+            "keystone-client/package.json",
+            "keystone-client/package-lock.json",
+            "keystone-client/sidecar/bridge_main.py",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertImpact([path], {"client_build", "client_release"})
+
+    def test_canonical_client_non_product_paths_are_known_no_impact(self):
+        paths = [
+            "keystone-client/tests/visual/preview.spec.ts",
+            "keystone-client/src/App.test.tsx",
+            "keystone-client/design/synchronization-master.png",
+            "keystone-client/README.md",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                impact = self.assertImpact([path], set())
+                self.assertEqual(impact.known_no_impact_paths, [path])
+
+    def test_unclassified_canonical_client_path_remains_unknown(self):
+        impact = self.assertImpact(["keystone-client/unclassified-product-file.bin"], set())
+        self.assertEqual(
+            impact.unknown_paths,
+            ["keystone-client/unclassified-product-file.bin"],
+        )
 
     def test_tauri_tests_do_not_trigger_a_release(self):
         self.assertImpact(["keystone-client-next/src/App.test.tsx"], set())
@@ -116,6 +154,16 @@ class DeployImpactTests(unittest.TestCase):
 
     def test_deploy_impact_tooling_is_no_product_impact(self):
         self.assertImpact(["scripts/deploy_impact.py"], set())
+
+    def test_removed_historical_addon_archive_is_known_no_impact(self):
+        impact = self.assertImpact(["release-assets/KeystoneSync-v0.1.13.zip"], set())
+        self.assertEqual(
+            impact.known_no_impact_paths,
+            ["release-assets/KeystoneSync-v0.1.13.zip"],
+        )
+
+        unknown = self.assertImpact(["release-assets/unexpected.zip"], set())
+        self.assertEqual(unknown.unknown_paths, ["release-assets/unexpected.zip"])
 
     def test_changesets_and_release_tooling_are_no_product_impact(self):
         impact = self.assertImpact(

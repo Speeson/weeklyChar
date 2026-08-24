@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
-import os
 from pathlib import Path
 from unittest import mock
 
@@ -55,7 +55,15 @@ class SidecarBuildTests(unittest.TestCase):
         self.assertIn("--console", command)
         self.assertIn("--hidden-import", command)
         self.assertIn("requests", command)
-        self.assertIn(str(REPO_ROOT / "keystone-client" / "bridge_main.py"), command)
+        self.assertIn(
+            str(REPO_ROOT / "keystone-client" / "sidecar" / "bridge_main.py"),
+            command,
+        )
+        self.assertIn(str(REPO_ROOT / "keystone-client" / "sidecar"), command)
+        self.assertIn(
+            f"{REPO_ROOT / 'keystone-client' / 'VERSION'}{os.pathsep}.",
+            command,
+        )
         self.assertNotIn("main.py", command)
         self.assertNotIn("bg.jpg", command)
 
@@ -77,17 +85,35 @@ class SidecarBuildTests(unittest.TestCase):
             os.utime(source, (output.stat().st_mtime + 10, output.stat().st_mtime + 10))
             self.assertTrue(sidecar_needs_rebuild(output, [source]))
 
-    def test_sidecar_sources_include_all_bridge_domain_services(self) -> None:
-        sources = {path.name for path in sidecar_sources(REPO_ROOT)}
+    def test_sidecar_sources_discover_python_modules_and_build_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            sidecar_dir = repo_root / "keystone-client" / "sidecar"
+            sidecar_dir.mkdir(parents=True)
+            (sidecar_dir / "bridge_main.py").write_text("", encoding="utf-8")
+            (sidecar_dir / "new_domain_service.py").write_text("", encoding="utf-8")
+            (sidecar_dir / "requirements.txt").write_text("requests\n", encoding="utf-8")
+            (sidecar_dir / "ignored.txt").write_text("", encoding="utf-8")
+            (sidecar_dir / "__pycache__").mkdir()
+            (repo_root / "keystone-client" / "VERSION").write_text(
+                "0.4.0\n", encoding="utf-8"
+            )
+            scripts_dir = repo_root / "scripts"
+            scripts_dir.mkdir()
+            (scripts_dir / "build_client_sidecar.py").write_text("", encoding="utf-8")
 
-        self.assertIn("auth_service.py", sources)
-        self.assertIn("settings_service.py", sources)
-        self.assertIn("sync_service.py", sources)
-        self.assertIn("character_service.py", sources)
-        self.assertIn("profile_service.py", sources)
-        self.assertIn("sync_worker.py", sources)
-        self.assertIn("wow_path.py", sources)
-        self.assertIn("wow_service.py", sources)
+            sources = set(sidecar_sources(repo_root))
+
+            self.assertEqual(
+                sources,
+                {
+                    sidecar_dir / "bridge_main.py",
+                    sidecar_dir / "new_domain_service.py",
+                    sidecar_dir / "requirements.txt",
+                    repo_root / "keystone-client" / "VERSION",
+                    scripts_dir / "build_client_sidecar.py",
+                },
+            )
 
 
 if __name__ == "__main__":

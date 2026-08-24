@@ -27,13 +27,13 @@ class TauriReleaseTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         (self.tmp / "keystone-client").mkdir()
-        (self.tmp / "keystone-client-next" / "src-tauri").mkdir(parents=True)
-        (self.tmp / "keystone-client-next" / "src" / "generated").mkdir(parents=True)
+        (self.tmp / "keystone-client" / "src-tauri").mkdir(parents=True)
+        (self.tmp / "keystone-client" / "src" / "generated").mkdir(parents=True)
         (self.tmp / "keystone-client" / "VERSION").write_text("0.3.0\n", encoding="utf-8")
-        (self.tmp / "keystone-client-next" / "package.json").write_text(
+        (self.tmp / "keystone-client" / "package.json").write_text(
             json.dumps({"name": "keystone-client", "version": "0.1.0"}), encoding="utf-8"
         )
-        (self.tmp / "keystone-client-next" / "package-lock.json").write_text(
+        (self.tmp / "keystone-client" / "package-lock.json").write_text(
             json.dumps(
                 {
                     "name": "keystone-client",
@@ -44,7 +44,7 @@ class TauriReleaseTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        (self.tmp / "keystone-client-next" / "src-tauri" / "tauri.conf.json").write_text(
+        (self.tmp / "keystone-client" / "src-tauri" / "tauri.conf.json").write_text(
             json.dumps(
                 {
                     "productName": "KeystoneClient",
@@ -55,7 +55,7 @@ class TauriReleaseTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        (self.tmp / "keystone-client-next" / "src-tauri" / "Cargo.toml").write_text(
+        (self.tmp / "keystone-client" / "src-tauri" / "Cargo.toml").write_text(
             '[package]\nname = "keystone-client"\nversion = "0.1.0"\n\n[dependencies]\nserde = "1"\n',
             encoding="utf-8",
         )
@@ -72,13 +72,13 @@ class TauriReleaseTests(unittest.TestCase):
 
         versions = tauri_release.read_versions(self.tmp)
         self.assertEqual(set(versions.values()), {"0.4.0"})
-        generated = (self.tmp / "keystone-client-next" / "src" / "generated" / "release.ts").read_text(
+        generated = (self.tmp / "keystone-client" / "src" / "generated" / "release.ts").read_text(
             encoding="utf-8"
         )
         self.assertIn('version: "0.4.0"', generated)
         self.assertIn('notes: "Notas de la version"', generated)
         package_lock = json.loads(
-            (self.tmp / "keystone-client-next" / "package-lock.json").read_text(encoding="utf-8")
+            (self.tmp / "keystone-client" / "package-lock.json").read_text(encoding="utf-8")
         )
         self.assertEqual(package_lock["version"], "0.4.0")
         self.assertEqual(package_lock["packages"][""]["version"], "0.4.0")
@@ -94,7 +94,7 @@ class TauriReleaseTests(unittest.TestCase):
         self.assertNotIn("plugins", payload)
 
     def test_release_config_rejects_placeholder_and_malformed_public_keys(self):
-        config_path = self.tmp / "keystone-client-next" / "src-tauri" / "tauri.conf.json"
+        config_path = self.tmp / "keystone-client" / "src-tauri" / "tauri.conf.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))
 
         for invalid_key in ("LOCAL_BUILD_ONLY_REPLACED_BY_RELEASE_CONFIG", "not-base64"):

@@ -1,5 +1,0 @@
-requests
-pystray
-Pillow
-slpp
-pyinstaller

@@ -8,7 +8,7 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLIENT_ROOT = REPO_ROOT / "keystone-client"
+CLIENT_ROOT = REPO_ROOT / "keystone-client" / "sidecar"
 sys.path.insert(0, str(CLIENT_ROOT))
 
 import addon_service  # noqa: E402
@@ -24,6 +24,27 @@ def make_wow_tree(root: Path) -> Path:
 
 
 class AddonServiceTests(unittest.TestCase):
+    def test_client_version_reads_canonical_root_in_source_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            client_root = Path(tmp) / "keystone-client"
+            module_path = client_root / "sidecar" / "addon_service.py"
+            module_path.parent.mkdir(parents=True)
+            (client_root / "VERSION").write_text("0.4.7\n", encoding="utf-8")
+
+            with mock.patch.object(addon_service, "__file__", str(module_path)), mock.patch.object(
+                addon_service.sys, "_MEIPASS", None, create=True
+            ):
+                self.assertEqual(addon_service._client_version(), "0.4.7")
+
+    def test_client_version_reads_bundled_resource_when_frozen(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_root = Path(tmp) / "bundle"
+            bundle_root.mkdir()
+            (bundle_root / "VERSION").write_text("0.4.8\n", encoding="utf-8")
+
+            with mock.patch.object(addon_service.sys, "_MEIPASS", bundle_root, create=True):
+                self.assertEqual(addon_service._client_version(), "0.4.8")
+
     def test_check_async_runs_only_once_per_addons_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             wow = make_wow_tree(Path(tmp))

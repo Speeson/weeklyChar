@@ -160,11 +160,13 @@ def is_known_no_impact(path: str) -> bool:
         "LICENSE",
         "README.md",
         "RELEASE_WORKFLOW.md",
+        "release-assets/KeystoneSync-v0.1.13.zip",
         "keystone-worker/README.md",
         "keystone-web/AGENTS.md",
         "keystone-web/CLAUDE.md",
         "keystone-web/README.md",
         "keystone-client/README.md",
+        "keystone-client/.gitignore",
         "keystone-client/addon/README.md",
         "keystone-client/addon/KeystoneSync/KeystoneSync.lua",
         "keystone-client/addon/KeystoneSync/KeystoneSync.toc",
@@ -185,11 +187,24 @@ def is_known_no_impact(path: str) -> bool:
         "keystone-client/build/",
         "keystone-client/dist/",
         "keystone-client/installer/output/",
+        "keystone-client/design/",
+        "keystone-client/node_modules/",
+        "keystone-client/test-results/",
+        "keystone-client/playwright-report/",
+        "keystone-client/tests/",
+        "keystone-client/src/generated/",
+        "keystone-client/src-tauri/binaries/",
+        "keystone-client/src-tauri/target/",
         "KeystoneSync/",
         "keystone-api/",
         "keystone-sync-client/",
     )
-    return path in exact or any(path.startswith(prefix) for prefix in prefixes)
+    name = posixpath.basename(path)
+    return (
+        path in exact
+        or any(path.startswith(prefix) for prefix in prefixes)
+        or (path.startswith("keystone-client/src/") and ".test." in name)
+    )
 
 
 def is_worker_config(path: str) -> bool:
@@ -227,9 +242,47 @@ def is_client_release_path(path: str) -> bool:
         "keystone-client/icon.ico",
         "keystone-client/KeystoneClient.exe",
         "keystone-client/requirements.txt",
+        "keystone-client/sidecar/requirements.txt",
         "keystone-client/installer/KeystoneClient.iss",
+        "keystone-client/package.json",
+        "keystone-client/package-lock.json",
+        "keystone-client/index.html",
+        "keystone-client/vite.config.ts",
+        "keystone-client/tsconfig.json",
+        "keystone-client/tsconfig.node.json",
+        "keystone-client/playwright.config.ts",
     }
-    return path in exact or (path.startswith("keystone-client/") and path.endswith(".py"))
+    historical_python = {
+        "addon_installer.py",
+        "addon_service.py",
+        "addon_updater.py",
+        "auth.py",
+        "auth_service.py",
+        "bridge_main.py",
+        "bridge_protocol.py",
+        "character_service.py",
+        "config.py",
+        "installer_window.py",
+        "main.py",
+        "main_window.py",
+        "profile_service.py",
+        "settings_service.py",
+        "sync_service.py",
+        "sync_worker.py",
+        "tray_app.py",
+        "wow_path.py",
+        "wow_service.py",
+    }
+    prefixes = (
+        "keystone-client/src/",
+        "keystone-client/src-tauri/",
+    )
+    return (
+        path in exact
+        or path in {f"keystone-client/{name}" for name in historical_python}
+        or (path.startswith("keystone-client/sidecar/") and path.endswith(".py"))
+        or any(path.startswith(prefix) for prefix in prefixes)
+    )
 
 
 def is_client_bridge_migration_path(path: str) -> bool:

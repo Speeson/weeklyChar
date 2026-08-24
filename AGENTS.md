@@ -98,8 +98,11 @@ For component work, use the repository's actual scripts when relevant:
 - Web: `cd keystone-web; npm run lint; npm run build`
 - Worker: `cd keystone-worker; npm run typecheck; npm test`
 - Worker local D1 migrations: `cd keystone-worker; npm run d1:migrate:local`
-- Client: `cd keystone-client; build.bat`
-- Client installer: `cd keystone-client; build_installer.bat`
+- Client Python: `python -m compileall -q keystone-client/sidecar scripts tests; python -m unittest discover -s tests/client; python -m unittest discover -s tests/client_bridge`
+- Client frontend: `npm ci --prefix keystone-client; npm --prefix keystone-client test; npm --prefix keystone-client run build; npm --prefix keystone-client run test:visual`
+- Client Rust: `cargo fmt --all --manifest-path keystone-client/src-tauri/Cargo.toml -- --check; cargo check --locked --manifest-path keystone-client/src-tauri/Cargo.toml; cargo test --locked --manifest-path keystone-client/src-tauri/Cargo.toml`
+- Client sidecar: `python scripts/build_client_sidecar.py --clean`
+- Client installer: `npm --prefix keystone-client run tauri:build -- --bundles nsis`
 - Addon: verify `.toc` metadata, required files, package layout, and manual in-game behavior when release readiness is claimed.
 
 Remote migration, deployment, release, tag, and push commands are not validation defaults.

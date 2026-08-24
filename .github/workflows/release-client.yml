@@ -89,14 +89,14 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: keystone-client/requirements.txt
+          cache-dependency-path: keystone-client/sidecar/requirements.txt
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: keystone-client-next/package-lock.json
+          cache-dependency-path: keystone-client/package-lock.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -107,13 +107,13 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: keystone-client-next/src-tauri
+          workspaces: keystone-client/src-tauri
 
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install -r keystone-client/requirements.txt
-          npm ci --prefix keystone-client-next
+          python -m pip install -r keystone-client/sidecar/requirements.txt
+          npm ci --prefix keystone-client
 
       - name: Current version
         id: version
@@ -224,7 +224,7 @@ jobs:
         shell: pwsh
         run: |
           python scripts/tauri_release.py sync-versions --version "${{ steps.release-meta.outputs.version }}" --notes-file release-notes.md
-          cargo check --manifest-path keystone-client-next/src-tauri/Cargo.toml
+          cargo check --manifest-path keystone-client/src-tauri/Cargo.toml
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/tauri_release.py validate-versions --expected "${{ steps.release-meta.outputs.version }}"
 
@@ -246,14 +246,14 @@ jobs:
 
       - name: Validate React
         shell: pwsh
-        working-directory: keystone-client-next
+        working-directory: keystone-client
         run: |
           npm test
           npm run build
 
       - name: Validate Rust
         shell: pwsh
-        working-directory: keystone-client-next/src-tauri
+        working-directory: keystone-client/src-tauri
         run: |
           cargo fmt --all -- --check
           cargo check --locked
@@ -261,7 +261,7 @@ jobs:
 
       - name: Build Tauri NSIS
         shell: pwsh
-        working-directory: keystone-client-next
+        working-directory: keystone-client
         run: |
           if ("${{ inputs.mode }}" -eq "build-only") {
             npm run tauri:build -- --bundles nsis
@@ -274,7 +274,7 @@ jobs:
         run: |
           $version = if ("${{ inputs.mode }}" -eq "build-only") { "${{ steps.version.outputs.version }}" } else { "${{ steps.release-meta.outputs.version }}" }
           $expectedInstaller = "KeystoneClient_$($version)_x64-setup.exe"
-          $sourcePath = "keystone-client-next/src-tauri/target/release/bundle/nsis/$expectedInstaller"
+          $sourcePath = "keystone-client/src-tauri/target/release/bundle/nsis/$expectedInstaller"
           if (!(Test-Path $sourcePath)) { throw "Expected Tauri NSIS installer was not generated: $expectedInstaller" }
           $source = Get-Item $sourcePath
           "TAURI_SOURCE_INSTALLER=$($source.FullName)" >> $env:GITHUB_ENV
@@ -310,11 +310,11 @@ jobs:
             --installer dist-client/KeystoneClientSetup.exe `
             --signature-file dist-client/KeystoneClientSetup.exe.sig `
             --manifest-file dist-client/latest.json
-          cargo run --locked --manifest-path keystone-client-next/src-tauri/Cargo.toml `
+          cargo run --locked --manifest-path keystone-client/src-tauri/Cargo.toml `
             --example verify_updater_signature -- `
             dist-client/KeystoneClientSetup.exe `
             dist-client/KeystoneClientSetup.exe.sig `
-            keystone-client-next/src-tauri/tauri.conf.json
+            keystone-client/src-tauri/tauri.conf.json
 
       - name: Upload Tauri release artifact
         if: inputs.mode != 'build-only'
@@ -336,7 +336,7 @@ jobs:
           $tag = "${{ steps.release-meta.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add keystone-client/VERSION keystone-client-next/package.json keystone-client-next/package-lock.json keystone-client-next/src/generated/release.ts keystone-client-next/src-tauri/Cargo.toml keystone-client-next/src-tauri/Cargo.lock keystone-client-next/src-tauri/tauri.conf.json .changes
+          git add keystone-client/VERSION keystone-client/package.json keystone-client/package-lock.json keystone-client/src/generated/release.ts keystone-client/src-tauri/Cargo.toml keystone-client/src-tauri/Cargo.lock keystone-client/src-tauri/tauri.conf.json .changes
           git diff --cached --quiet
           if ($LASTEXITCODE -eq 0) { throw "Release preparation produced no commit changes." }
           git commit -m "Release KeystoneClient $version"
