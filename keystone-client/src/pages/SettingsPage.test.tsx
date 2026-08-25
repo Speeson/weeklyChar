@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSettings, updateSettings } from "../core/settings";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SettingsPage } from "./SettingsPage";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
 

@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { login, register } from "../core/auth";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { LoginPage } from "./LoginPage";
 
 vi.mock("../core/auth", () => ({

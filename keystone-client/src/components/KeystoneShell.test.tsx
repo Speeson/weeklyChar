@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { KeystoneShell } from "./KeystoneShell";
 
 function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn(), onNavigate = vi.fn()) {

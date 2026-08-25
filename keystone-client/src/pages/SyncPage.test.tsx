@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
 import { openRaiderIoCharacter } from "../core/native";
 import type { AddonStatus, CharacterState, CoreEvent, SyncStatus, WowState } from "../core/types";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SyncPage } from "./SyncPage";
 
 vi.mock("../core/sync", () => ({

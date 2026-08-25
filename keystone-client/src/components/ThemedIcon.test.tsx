@@ -36,6 +36,12 @@ describe("theme icon resolution", () => {
 });
 
 describe("ThemedIcon", () => {
+  it("fails clearly when rendered outside ThemeProvider", () => {
+    expect(() => render(<ThemedIcon name="save" />)).toThrowError(
+      "useTheme must be used within a ThemeProvider.",
+    );
+  });
+
   it("preserves requested dimensions, classes, and decorative accessibility", () => {
     const { container } = render(
       <ThemeProvider>

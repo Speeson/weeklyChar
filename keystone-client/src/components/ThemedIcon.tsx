@@ -1,6 +1,6 @@
 import type { LucideProps } from "lucide-react";
 import { resolveThemeIcon, type ThemeIconRole } from "../theme/icon.registry";
-import { useResolvedThemeId } from "../theme/useTheme";
+import { useTheme } from "../theme/useTheme";
 
 export type ThemedIconProps = Omit<LucideProps, "ref"> & {
   label?: string;
@@ -8,7 +8,7 @@ export type ThemedIconProps = Omit<LucideProps, "ref"> & {
 };
 
 export function ThemedIcon({ label, name, ...props }: ThemedIconProps) {
-  const theme = useResolvedThemeId();
+  const { theme } = useTheme();
   const Icon = resolveThemeIcon(theme, name);
   const {
     "aria-hidden": ariaHidden,

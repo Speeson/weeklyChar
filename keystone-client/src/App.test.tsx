@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -14,6 +14,7 @@ import {
   minimizeWindow,
 } from "./core/native";
 import type { CoreEvent, SystemState } from "./core/types";
+import { renderWithTheme as render } from "./test/renderWithTheme";
 
 vi.mock("./core/client", () => ({
   coreRequest: vi.fn(),
