@@ -7,6 +7,7 @@ import { applyThemeToDocument } from "./theme.dom";
 import { getSelectableThemes, isThemeId, resolveThemeId, THEMES } from "./theme.registry";
 import { readStoredTheme, writeStoredTheme } from "./theme.storage";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "./theme.types";
+import type { ThemeAssetOverrides } from "./asset.registry";
 import { useTheme } from "./useTheme";
 
 // @ts-expect-error Production ThemeProvider must use the canonical registry.
@@ -101,9 +102,36 @@ describe("theme engine", () => {
     expect(document.documentElement.style.getPropertyValue("--theme-artwork-background")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-artwork-overlay")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-emblem-artwork")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-emblem-fallback-visibility")).toBe("visible");
     expect(document.documentElement.style.getPropertyValue("--theme-app-badge-artwork")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-panel-ornament")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-serpentine-decoration")).toBe("none");
+  });
+
+  it("applies a registered transparent emblem and clears every optional slot when returning to Keystone", () => {
+    const overrides: ThemeAssetOverrides = {
+      poison: {
+        "brand-theme-emblem": "/assets/poison/Emblem final (transparent).svg",
+      },
+    };
+
+    applyThemeToDocument("poison", overrides);
+
+    expect(document.documentElement.style.getPropertyValue("--theme-emblem-artwork")).toBe(
+      'url("/assets/poison/Emblem final (transparent).svg")',
+    );
+    expect(document.documentElement.style.getPropertyValue("--theme-emblem-fallback-visibility")).toBe("hidden");
+
+    applyThemeToDocument("keystone", overrides);
+
+    expect(document.documentElement.dataset.theme).toBe("keystone");
+    expect(document.documentElement.style.getPropertyValue("--theme-artwork-background")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-artwork-overlay")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-emblem-artwork")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-app-badge-artwork")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-panel-ornament")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-serpentine-decoration")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-emblem-fallback-visibility")).toBe("visible");
   });
 
   it("switches themes live through the provider without remounting application children", async () => {

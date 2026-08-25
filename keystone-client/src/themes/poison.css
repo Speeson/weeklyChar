@@ -246,6 +246,19 @@ html[data-theme="poison"] :where(.ui-button[data-variant="danger"], .ks-choice-m
   filter: none;
 }
 
+html[data-theme="poison"] :where(
+  .addon-primary-action,
+  .ui-button[data-variant="primary"],
+  .settings-gold-action,
+  .settings-segmented button[aria-pressed="true"]
+) .theme-icon {
+  color: inherit;
+}
+
+html[data-theme="poison"] .ks-avatar-choice__check {
+  color: var(--theme-choice-check-text);
+}
+
 html[data-theme="poison"] .ks-brand__name {
   color: var(--theme-text-accent);
   text-shadow: 0 1px 0 rgb(0 0 0 / 90%), 0 0 14px rgb(169 238 67 / 24%);

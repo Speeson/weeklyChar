@@ -99,6 +99,7 @@ describe("theme asset resolution", () => {
       "--theme-artwork-background": 'url("/assets/poison/background.webp")',
       "--theme-artwork-overlay": "none",
       "--theme-emblem-artwork": 'url("/assets/poison/emblem.svg")',
+      "--theme-emblem-fallback-visibility": "hidden",
       "--theme-panel-ornament": "none",
       "--theme-serpentine-decoration": "none",
     });

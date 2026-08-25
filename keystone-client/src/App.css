@@ -876,6 +876,7 @@ h2 {
   width: 156px;
   height: 156px;
   object-fit: contain;
+  visibility: var(--theme-emblem-fallback-visibility);
   filter: var(--theme-emblem-glow);
 }
 

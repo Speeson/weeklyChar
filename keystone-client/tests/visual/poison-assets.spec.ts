@@ -20,6 +20,7 @@ test("Poison artwork slots are inert by default and consume future registry URLs
     const brandElement = document.querySelector<HTMLElement>(".ks-brand")!;
     const cardElement = document.querySelector<HTMLElement>(".sync-summary-card")!;
     const emblemElement = document.querySelector<HTMLElement>(".sync-emblem-panel__artwork")!;
+    const emblemFallback = document.querySelector<HTMLElement>(".sync-emblem-panel__icon")!;
     const before = {
       card: cardElement.getBoundingClientRect().toJSON(),
       shell: shellElement.getBoundingClientRect().toJSON(),
@@ -43,6 +44,7 @@ test("Poison artwork slots are inert by default and consume future registry URLs
     ]) {
       root.style.setProperty(property, image);
     }
+    root.style.setProperty("--theme-emblem-fallback-visibility", "hidden");
     const after = {
       card: cardElement.getBoundingClientRect().toJSON(),
       shell: shellElement.getBoundingClientRect().toJSON(),
@@ -52,6 +54,7 @@ test("Poison artwork slots are inert by default and consume future registry URLs
       after,
       before,
       emptySlots,
+      emblemFallbackVisibility: getComputedStyle(emblemFallback).visibility,
       backgrounds: {
         appBadge: getComputedStyle(brandElement, "::after").backgroundImage,
         artwork: getComputedStyle(shellElement).backgroundImage,
@@ -70,6 +73,7 @@ test("Poison artwork slots are inert by default and consume future registry URLs
   });
 
   expect(result.emptySlots).toEqual(["none", "none", "none", "none", "none", "none"]);
+  expect(result.emblemFallbackVisibility).toBe("hidden");
   for (const background of Object.values(result.backgrounds)) {
     expect(background).toContain("data:image/svg+xml");
   }
@@ -100,4 +104,38 @@ test("Poison semantic icons receive the shared color and glow treatment", async 
 
   expect(treatment.color).toBe("rgb(197, 238, 98)");
   expect(treatment.filter).not.toBe("none");
+});
+
+test("Poison primary action icons inherit the high-contrast action foreground", async ({ page }) => {
+  await page.goto("/?preview=addon-not-installed");
+  await page.getByRole("button", { name: "Addon" }).click();
+
+  const action = page.locator(".addon-primary-action").first();
+  const icon = action.locator(".theme-icon");
+  await expect(action).toBeVisible();
+  await expect(icon).toBeVisible();
+
+  expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
+  expect(await action.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
+});
+
+test("Poison selected-avatar checks preserve their dedicated contrast foreground", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+
+  const color = await page.evaluate(() => {
+    const choice = document.createElement("button");
+    choice.className = "ks-avatar-choice";
+    choice.setAttribute("aria-pressed", "true");
+    const portrait = document.createElement("span");
+    portrait.className = "ks-avatar-choice__portrait";
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.classList.add("theme-icon", "ks-avatar-choice__check");
+    icon.setAttribute("data-icon-role", "confirm");
+    portrait.append(icon);
+    choice.append(portrait);
+    document.body.append(choice);
+    return getComputedStyle(icon).color;
+  });
+
+  expect(color).toBe("rgb(8, 18, 5)");
 });

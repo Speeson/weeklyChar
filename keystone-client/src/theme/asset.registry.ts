@@ -81,7 +81,11 @@ export const THEME_ASSET_CSS_PROPERTIES = {
   "decoration-serpentine-amani": "--theme-serpentine-decoration",
 } as const satisfies Record<OptionalThemeAssetRole, `--theme-${string}`>;
 
-export type ThemeAssetCssProperty = (typeof THEME_ASSET_CSS_PROPERTIES)[OptionalThemeAssetRole];
+export const THEME_EMBLEM_FALLBACK_CSS_PROPERTY = "--theme-emblem-fallback-visibility";
+
+export type ThemeAssetCssProperty =
+  | (typeof THEME_ASSET_CSS_PROPERTIES)[OptionalThemeAssetRole]
+  | typeof THEME_EMBLEM_FALLBACK_CSS_PROPERTY;
 export type ThemeAssetCssProperties = Record<ThemeAssetCssProperty, string>;
 
 export function resolveThemeAsset(
@@ -113,7 +117,7 @@ export function resolveThemeAssetCssProperties(
   theme: ThemeId,
   overrides: ThemeAssetOverrides = THEME_ASSET_OVERRIDES,
 ): ThemeAssetCssProperties {
-  return Object.fromEntries(
+  const properties = Object.fromEntries(
     OPTIONAL_THEME_ASSET_ROLES.map((role) => {
       const asset = resolveThemeAsset(theme, role, overrides);
       return [
@@ -121,5 +125,10 @@ export function resolveThemeAssetCssProperties(
         asset ? `url(${JSON.stringify(asset)})` : "none",
       ];
     }),
-  ) as ThemeAssetCssProperties;
+  );
+  const emblem = resolveThemeAsset(theme, "brand-theme-emblem", overrides);
+  return {
+    ...properties,
+    [THEME_EMBLEM_FALLBACK_CSS_PROPERTY]: emblem ? "hidden" : "visible",
+  } as ThemeAssetCssProperties;
 }
