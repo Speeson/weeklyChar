@@ -1,0 +1,11 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Añade una base local reutilizable para los temas de KeystoneClient.",
+  "details": [
+    "Incorpora infraestructura local reutilizable para definir temas mediante tokens semánticos y compartirlos entre la interfaz del cliente.",
+    "Restaura el tema guardado antes del primer render para conservar la preferencia del usuario sin parpadeos visibles.",
+    "Migra la apariencia existente de Keystone a los nuevos tokens semánticos manteniendo el aspecto visual actual sin cambios."
+  ]
+}
