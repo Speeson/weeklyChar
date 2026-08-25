@@ -5,6 +5,7 @@ export type ThemeDefinition = {
   id: ThemeId;
   label: string;
   description: string;
+  selectable: boolean;
 };
 
 export const DEFAULT_THEME: ThemeId = "keystone";

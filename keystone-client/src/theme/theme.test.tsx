@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "./ThemeProvider";
 import { applyThemeToDocument } from "./theme.dom";
-import { isThemeId, resolveThemeId, THEMES } from "./theme.registry";
+import { getSelectableThemes, isThemeId, resolveThemeId, THEMES } from "./theme.registry";
 import { readStoredTheme, writeStoredTheme } from "./theme.storage";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "./theme.types";
 import { useTheme } from "./useTheme";
@@ -57,6 +57,12 @@ describe("theme engine", () => {
     expect(isThemeId("keystone")).toBe(true);
     expect(isThemeId("poison")).toBe(true);
     expect(resolveThemeId("poison")).toBe("poison");
+  });
+
+  it("offers only themes marked selectable by the registry", () => {
+    expect(getSelectableThemes(THEMES).map(({ id }) => id)).toEqual(["keystone"]);
+    expect(THEMES.find(({ id }) => id === "keystone")).toMatchObject({ selectable: true });
+    expect(THEMES.find(({ id }) => id === "poison")).toMatchObject({ selectable: false });
   });
 
   it("uses Keystone as the default when no theme preference is stored", () => {

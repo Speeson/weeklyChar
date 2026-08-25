@@ -1804,6 +1804,10 @@ h2 {
   order: 3;
 }
 
+.settings-appearance {
+  order: 3;
+}
+
 .ks-modal__footer {
   order: 4;
   display: flex;

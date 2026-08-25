@@ -2,10 +2,12 @@
   "components": ["client"],
   "type": "minor",
   "category": "added",
-  "summary": "Añade una base local reutilizable para los temas de KeystoneClient.",
+  "summary": "Añade infraestructura temática reutilizable y prepara Ajustes para seleccionar temas disponibles.",
   "details": [
-    "Incorpora infraestructura local reutilizable para definir temas mediante tokens semánticos y compartirlos entre la interfaz del cliente.",
+    "Incorpora contratos reutilizables para componentes, estados y tokens semánticos que permiten aplicar temas sin duplicar la interfaz del cliente.",
+    "Centraliza la resolución temática de iconos y recursos visuales con alternativas seguras que conservan la apariencia actual de Keystone.",
     "Restaura el tema guardado antes del primer render para conservar la preferencia del usuario sin parpadeos visibles.",
-    "Migra la apariencia existente de Keystone a los nuevos tokens semánticos manteniendo el aspecto visual actual sin cambios."
+    "Prepara en Ajustes un selector accesible dirigido por el registro que solo aparece cuando hay al menos dos temas seleccionables; Poison permanece oculto y no seleccionable en esta fase.",
+    "Migra la apariencia existente de Keystone a los nuevos contratos temáticos manteniendo su aspecto visual actual sin cambios."
   ]
 }
