@@ -9,7 +9,13 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function Button({ children, className, icon, type = "button", variant = "secondary", ...props }: ButtonProps) {
   return (
-    <button className={["ui-button", `ui-button--${variant}`, className].filter(Boolean).join(" ")} type={type} {...props}>
+    <button
+      {...props}
+      className={["ui-button", `ui-button--${variant}`, className].filter(Boolean).join(" ")}
+      data-ui="button"
+      data-variant={variant}
+      type={type}
+    >
       {icon}
       {children}
     </button>
@@ -29,6 +35,7 @@ export function IconButton({ className, icon, label, type = "button", ...props }
       title={label}
       type={type}
       {...props}
+      data-ui="icon-button"
     >
       {icon}
     </button>
@@ -39,7 +46,7 @@ type CardProps = HTMLAttributes<HTMLDivElement>;
 
 export function Card({ children, className, ...props }: CardProps) {
   return (
-    <div className={["ui-card", className].filter(Boolean).join(" ")} {...props}>
+    <div {...props} className={["ui-card", className].filter(Boolean).join(" ")} data-ui="card">
       {children}
     </div>
   );
@@ -51,7 +58,7 @@ type BadgeProps = {
 };
 
 export function Badge({ children, tone = "neutral" }: BadgeProps) {
-  return <span className={`ui-badge ui-badge--${tone}`}>{children}</span>;
+  return <span className={`ui-badge ui-badge--${tone}`} data-tone={tone} data-ui="badge">{children}</span>;
 }
 
 type FieldProps = {
@@ -61,7 +68,7 @@ type FieldProps = {
 
 export function Field({ children, label }: FieldProps) {
   return (
-    <label className="ui-field">
+    <label className="ui-field" data-ui="field">
       <span>{label}</span>
       {children}
     </label>
@@ -75,7 +82,7 @@ type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 export function TextField({ label, ...props }: TextFieldProps) {
   return (
     <Field label={label}>
-      <input {...props} />
+      <input {...props} data-ui="text-field" />
     </Field>
   );
 }
@@ -88,7 +95,7 @@ type SelectFieldProps = SelectHTMLAttributes<HTMLSelectElement> & {
 export function SelectField({ children, label, ...props }: SelectFieldProps) {
   return (
     <Field label={label}>
-      <select {...props}>{children}</select>
+      <select {...props} data-ui="select-field">{children}</select>
     </Field>
   );
 }
@@ -107,8 +114,8 @@ export function Dialog({ children, open, title }: DialogProps) {
   const titleId = "ui-dialog-title";
 
   return (
-    <div aria-labelledby={titleId} aria-modal="true" className="ui-dialog" role="dialog">
-      <div className="ui-dialog__panel">
+    <div aria-labelledby={titleId} aria-modal="true" className="ui-dialog" data-ui="dialog" role="dialog">
+      <div className="ui-dialog__panel" data-ui="dialog-panel">
         <h2 id={titleId}>{title}</h2>
         {children}
       </div>
@@ -125,9 +132,9 @@ type StatusRowProps = {
 
 export function StatusRow({ label, title, tone = "neutral", value }: StatusRowProps) {
   return (
-    <div className="ui-status-row">
+    <div className="ui-status-row" data-ui="status-row">
       <dt>{label}</dt>
-      <dd className={`ui-status-row__value ui-status-row__value--${tone}`} title={title}>
+      <dd className={`ui-status-row__value ui-status-row__value--${tone}`} data-tone={tone} data-ui="status-value" title={title}>
         {value}
       </dd>
     </div>
@@ -141,7 +148,7 @@ type TooltipProps = {
 
 export function Tooltip({ children, label }: TooltipProps) {
   return (
-    <span className="ui-tooltip" data-tooltip={label}>
+    <span className="ui-tooltip" data-tooltip={label} data-ui="tooltip">
       {children}
     </span>
   );

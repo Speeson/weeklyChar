@@ -4,6 +4,7 @@
   --theme-card-texture: none;
   --theme-card-highlight: none;
   --theme-card-overlay: none;
+  --theme-disabled-opacity: 0.56;
   --status-success: #21f38d;
   --status-success-feedback: #29e08a;
   --status-success-strong: #59e55b;

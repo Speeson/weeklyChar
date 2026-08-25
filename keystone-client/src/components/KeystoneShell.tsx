@@ -74,6 +74,7 @@ export function KeystoneShell({
   return (
     <div
       className="ks-app-frame"
+      data-ui="keystone-shell"
       style={{ "--ks-client-scale": clientScale } as CSSProperties}
     >
       <KeystoneHeader
@@ -164,16 +165,18 @@ function KeystoneHeader({
   };
 
   return (
-    <header className="ks-header" onPointerDown={handleHeaderPointerDown}>
+    <header className="ks-header" data-ui="shell-header" onPointerDown={handleHeaderPointerDown}>
       <div className="ks-brand">
         <img alt="" className="ks-brand__icon" src={appIcon} />
         <span className="ks-brand__name">KeystoneClient</span>
       </div>
 
-      <nav aria-label={t("shell.mainNavigation")} className="ks-tabs">
+      <nav aria-label={t("shell.mainNavigation")} className="ks-tabs" data-ui="shell-tabs">
         <button
           aria-current={currentView === "sync" ? "page" : undefined}
           className="ks-tab"
+          data-state={currentView === "sync" ? "selected" : "default"}
+          data-ui="shell-tab"
           onClick={() => onNavigate("sync")}
           type="button"
         >
@@ -183,6 +186,8 @@ function KeystoneHeader({
         <button
           aria-current={currentView === "addon" ? "page" : undefined}
           className="ks-tab"
+          data-state={currentView === "addon" ? "selected" : "default"}
+          data-ui="shell-tab"
           onClick={() => onNavigate("addon")}
           type="button"
         >
@@ -192,7 +197,7 @@ function KeystoneHeader({
       </nav>
 
       <div className="ks-header-actions">
-        <button aria-label={t("shell.settings")} className="ks-icon-control ks-settings-control" onClick={() => {
+        <button aria-label={t("shell.settings")} className="ks-icon-control ks-settings-control" data-ui="settings-control" onClick={() => {
           setUserMenuOpen(false);
           onOpenSettings();
         }} type="button">
@@ -205,6 +210,8 @@ function KeystoneHeader({
             aria-haspopup="menu"
             aria-label={t("shell.userMenu", { name: username })}
             className="ks-user-menu__trigger"
+            data-state={userMenuOpen ? "open" : "closed"}
+            data-ui="user-menu-trigger"
             onClick={() => setUserMenuOpen((open) => !open)}
             type="button"
           >
@@ -217,7 +224,7 @@ function KeystoneHeader({
             <img alt="" className="ks-user-menu__dropdown-icon" src={dropdownIcon} />
           </button>
           {userMenuOpen ? (
-            <div className="ks-user-dropdown" id="ks-user-dropdown" role="menu">
+            <div className="ks-user-dropdown" data-ui="user-menu" id="ks-user-dropdown" role="menu">
               <button
                 onClick={() => {
                   setUserMenuOpen(false);
@@ -245,10 +252,10 @@ function KeystoneHeader({
           ) : null}
         </div>
         <div className="ks-window-controls" aria-label={t("shell.windowControls")}>
-          <button aria-label={t("shell.minimize")} className="ks-window-button ks-window-button--minimize" onClick={onMinimizeWindow} type="button">
+          <button aria-label={t("shell.minimize")} className="ks-window-button ks-window-button--minimize" data-ui="window-control" data-variant="minimize" onClick={onMinimizeWindow} type="button">
             <img alt="" src={windowMinimizeButton} />
           </button>
-          <button aria-label={t("shell.close")} className="ks-window-button ks-window-button--close" onClick={onCloseWindow} type="button">
+          <button aria-label={t("shell.close")} className="ks-window-button ks-window-button--close" data-ui="window-control" data-variant="close" onClick={onCloseWindow} type="button">
             <img alt="" src={windowCloseButton} />
           </button>
         </div>
@@ -266,11 +273,11 @@ function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
   const { t } = useI18n();
   return (
     <footer className="ks-footer">
-      <button className="ks-footer-action ks-footer-action--web" onClick={onOpenWeb} type="button">
+      <button className="ks-footer-action ks-footer-action--web" data-ui="shell-footer-action" data-variant="web" onClick={onOpenWeb} type="button">
         <img alt="" className="ks-footer-action__asset" src={footerWebButton} />
         <span>{t("shell.openWeb")}</span>
       </button>
-      <button className="ks-footer-action ks-footer-action--tray" onClick={onMinimizeToTray} type="button">
+      <button className="ks-footer-action ks-footer-action--tray" data-ui="shell-footer-action" data-variant="tray" onClick={onMinimizeToTray} type="button">
         <Download aria-hidden="true" size={28} />
         {t("shell.minimizeTray")}
       </button>
