@@ -2,12 +2,12 @@
   "components": ["client"],
   "type": "minor",
   "category": "added",
-  "summary": "Añade infraestructura temática reutilizable y prepara Ajustes para seleccionar temas disponibles.",
+  "summary": "Añade temas visuales seleccionables a KeystoneClient y estrena la apariencia Poison.",
   "details": [
-    "Incorpora contratos reutilizables para componentes, estados y tokens semánticos que permiten aplicar temas sin duplicar la interfaz del cliente.",
-    "Centraliza la resolución temática de iconos y recursos visuales con alternativas seguras que conservan la apariencia actual de Keystone.",
+    "Incorpora contratos reutilizables para componentes, estados, iconos, recursos visuales y tokens semánticos sin duplicar la interfaz ni la lógica del cliente.",
+    "Incluye la apariencia Poison completa en autenticación, configuración inicial, sincronización, Addon, Ajustes y ventanas superpuestas.",
+    "Añade en Ajustes un selector accesible dirigido por el registro para cambiar en directo entre Keystone y Poison.",
     "Restaura el tema guardado antes del primer render para conservar la preferencia del usuario sin parpadeos visibles.",
-    "Prepara en Ajustes un selector accesible dirigido por el registro que solo aparece cuando hay al menos dos temas seleccionables; Poison permanece oculto y no seleccionable en esta fase.",
-    "Migra la apariencia existente de Keystone a los nuevos contratos temáticos manteniendo su aspecto visual actual sin cambios."
+    "Mantiene la apariencia de Keystone y conserva independientes los colores de estado, clase, Raider.IO y nivel de objeto."
   ]
 }
