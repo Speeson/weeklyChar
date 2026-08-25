@@ -119,6 +119,19 @@ test("Poison primary action icons inherit the high-contrast action foreground", 
   expect(await action.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
 });
 
+test("Poison Settings save icons inherit the high-contrast gold-action foreground", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  await page.getByRole("button", { name: "Configuracion" }).click();
+
+  const action = page.locator(".settings-gold-action").filter({ has: page.locator(".theme-icon") }).first();
+  const icon = action.locator(".theme-icon");
+  await expect(action).toBeVisible();
+  await expect(icon).toBeVisible();
+
+  expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
+  expect(await action.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
+});
+
 test("Poison selected-avatar checks preserve their dedicated contrast foreground", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
