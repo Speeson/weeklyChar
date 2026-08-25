@@ -4,7 +4,6 @@ import { Check, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import packageJson from "../package.json";
 import appIcon from "./assets/keystone-ui/app-icon.png";
-import bgImage from "./assets/keystone-ui/bg.jpg";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
 import { ChangelogModal } from "./components/ChangelogModal";
 import { UpdateModal } from "./components/UpdateModal";
@@ -360,7 +359,7 @@ function App() {
 
   return (
     <I18nProvider language={language}>
-    <main className="shell" style={{ "--ks-bg-image": `url(${bgImage})` } as React.CSSProperties}>
+    <main className="shell">
       {auth?.authenticated && settings && wow && sync && characters && addon && (!needsOnboarding || onboardingSkipped) ? (
         <KeystoneShell
           auth={auth}
