@@ -39,7 +39,7 @@ describe("SettingsPage", () => {
     setAutostartEnabledMock.mockImplementation(async (enabled) => enabled);
   });
 
-  it("hides unfinished Poison and the one-option theme control", () => {
+  it("renders the canonical selectable themes in Settings", () => {
     render(
       <SettingsPage
         appVersion="0.4.1"
@@ -49,8 +49,12 @@ describe("SettingsPage", () => {
       />,
     );
 
-    expect(screen.queryByRole("combobox", { name: "Tema visual" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Poison")).not.toBeInTheDocument();
+    const selector = screen.getByRole("combobox", { name: "Tema visual" });
+    expect(selector).toHaveValue("keystone");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Keystone",
+      "Poison",
+    ]);
   });
 
   it("loads settings", async () => {

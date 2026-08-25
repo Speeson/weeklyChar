@@ -16,7 +16,7 @@ export const THEMES: readonly ThemeDefinition[] = [
     id: "poison",
     label: "Poison",
     description: "A dark toxic skin with acid-green energy and organic glow.",
-    selectable: false,
+    selectable: true,
   },
 ];
 

@@ -66,9 +66,9 @@ describe("theme engine", () => {
   });
 
   it("offers only themes marked selectable by the registry", () => {
-    expect(getSelectableThemes(THEMES).map(({ id }) => id)).toEqual(["keystone"]);
+    expect(getSelectableThemes(THEMES).map(({ id }) => id)).toEqual(["keystone", "poison"]);
     expect(THEMES.find(({ id }) => id === "keystone")).toMatchObject({ selectable: true });
-    expect(THEMES.find(({ id }) => id === "poison")).toMatchObject({ selectable: false });
+    expect(THEMES.find(({ id }) => id === "poison")).toMatchObject({ selectable: true });
   });
 
   it("uses Keystone as the default when no theme preference is stored", () => {

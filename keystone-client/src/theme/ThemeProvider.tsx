@@ -1,4 +1,4 @@
-import { createContext, useCallback, useState, type ReactNode } from "react";
+import { createContext, useCallback, useEffect, useState, type ReactNode } from "react";
 import { applyThemeToDocument } from "./theme.dom";
 import { THEMES, resolveThemeId } from "./theme.registry";
 import { readStoredTheme, writeStoredTheme } from "./theme.storage";
@@ -14,6 +14,11 @@ export const ThemeContext = createContext<ThemeContextValue | undefined>(undefin
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setCurrentTheme] = useState<ThemeId>(readStoredTheme);
+
+  useEffect(() => {
+    applyThemeToDocument(theme);
+  }, [theme]);
+
   const setTheme = useCallback((candidate: ThemeId) => {
     const nextTheme = resolveThemeId(candidate);
     applyThemeToDocument(nextTheme);
