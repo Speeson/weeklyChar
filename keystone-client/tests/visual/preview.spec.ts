@@ -132,6 +132,7 @@ test.describe("preview states", () => {
     await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison"]);
     await expect(page.getByRole("heading", { name: "Seleccion de cuentas" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Aplicacion" })).toBeVisible();
+    await expect(page).toHaveScreenshot("settings-theme-selector.png", { fullPage: true });
   });
 
   test("renders the signed update confirmation above the client", async ({ page }) => {
