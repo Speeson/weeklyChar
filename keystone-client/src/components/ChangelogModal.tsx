@@ -1,5 +1,5 @@
-import { Check, X } from "lucide-react";
 import { useI18n } from "../core/i18n";
+import { ThemedIcon } from "./ThemedIcon";
 
 type ChangelogModalProps = {
   version: string;
@@ -18,7 +18,7 @@ export function ChangelogModal({ version, notes, onClose }: ChangelogModalProps)
             <h2 id="changelog-modal-title">{t("changelog.title")}</h2>
           </div>
           <button aria-label={t("common.close")} className="ks-modal__close" onClick={onClose} type="button">
-            <X aria-hidden="true" size={20} />
+            <ThemedIcon name="close" size={20} />
           </button>
         </div>
         <div className="ks-update-modal__body">
@@ -27,7 +27,7 @@ export function ChangelogModal({ version, notes, onClose }: ChangelogModalProps)
           </section>
         </div>
         <div className="ks-update-modal__actions">
-          <button onClick={onClose} type="button"><Check aria-hidden="true" size={18} />{t("changelog.understood")}</button>
+          <button onClick={onClose} type="button"><ThemedIcon name="confirm" size={18} />{t("changelog.understood")}</button>
         </div>
       </div>
     </div>

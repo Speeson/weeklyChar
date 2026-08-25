@@ -1,4 +1,3 @@
-import { Download, LogOut, UserRoundPen } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -9,15 +8,8 @@ import {
 } from "react";
 import type { AuthState } from "../core/types";
 import { useI18n } from "../core/i18n";
-import appIcon from "../assets/keystone-ui/app-icon.png";
-import activeTabIndicator from "../assets/keystone-ui/02-active-tab-indicator.png.png";
-import footerWebButton from "../assets/keystone-ui/05-footer-web-button.png.png";
-import settingsButton from "../assets/keystone-ui/03-settings-button.png.png";
-import userPanelFrame from "../assets/keystone-ui/13-current-status-panel-frame.png.png";
-import windowCloseButton from "../assets/keystone-ui/16-window-close-button.png.png";
-import windowMinimizeButton from "../assets/keystone-ui/15-window-minimize-button.png.png";
-import dropdownIcon from "../assets/keystone-ui/25-dropdown-icon.png";
-import avatarFrame from "../assets/keystone-ui/26-avatar.png";
+import { useThemeAsset } from "../theme/useThemeAsset";
+import { ThemedIcon } from "./ThemedIcon";
 
 const CLIENT_WIDTH = 1672;
 const CLIENT_HEIGHT = 941;
@@ -125,6 +117,14 @@ function KeystoneHeader({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
+  const activeTabIndicator = useThemeAsset("shell-active-tab");
+  const appIcon = useThemeAsset("brand-mark");
+  const avatarFrame = useThemeAsset("shell-avatar-frame");
+  const dropdownIcon = useThemeAsset("shell-user-dropdown");
+  const settingsButton = useThemeAsset("shell-settings");
+  const userPanelFrame = useThemeAsset("shell-user-panel");
+  const windowCloseButton = useThemeAsset("shell-window-close");
+  const windowMinimizeButton = useThemeAsset("shell-window-minimize");
   const username = auth.username ?? t("shell.user");
 
   useEffect(() => {
@@ -233,7 +233,7 @@ function KeystoneHeader({
                 role="menuitem"
                 type="button"
               >
-                <UserRoundPen aria-hidden="true" />
+                <ThemedIcon name="edit-avatar" />
                 {t("shell.changeAvatar")}
               </button>
               <button
@@ -245,7 +245,7 @@ function KeystoneHeader({
                 role="menuitem"
                 type="button"
               >
-                <LogOut aria-hidden="true" />
+                <ThemedIcon name="logout" />
                 {t("shell.logout")}
               </button>
             </div>
@@ -271,6 +271,7 @@ type KeystoneFooterProps = {
 
 function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
   const { t } = useI18n();
+  const footerWebButton = useThemeAsset("shell-footer-web");
   return (
     <footer className="ks-footer">
       <button className="ks-footer-action ks-footer-action--web" data-ui="shell-footer-action" data-variant="web" onClick={onOpenWeb} type="button">
@@ -278,7 +279,7 @@ function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
         <span>{t("shell.openWeb")}</span>
       </button>
       <button className="ks-footer-action ks-footer-action--tray" data-ui="shell-footer-action" data-variant="tray" onClick={onMinimizeToTray} type="button">
-        <Download aria-hidden="true" size={28} />
+        <ThemedIcon name="download" size={28} />
         {t("shell.minimizeTray")}
       </button>
     </footer>

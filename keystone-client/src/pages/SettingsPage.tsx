@@ -1,5 +1,5 @@
-import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ThemedIcon } from "../components/ThemedIcon";
 import { Button } from "../components/ui";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
 import { getSettings, updateSettings } from "../core/settings";
@@ -202,7 +202,7 @@ export function SettingsPage({
         <p className="muted settings-last-check">{lastCheck}</p>
         {error ? <p className="error" role="alert">{error}</p> : null}
         {message ? <p className="success" role="status">{message}</p> : null}
-        <Button icon={<Save size={18} aria-hidden="true" />} onClick={saveSettings} disabled={saving || loading}>
+        <Button icon={<ThemedIcon name="save" size={18} />} onClick={saveSettings} disabled={saving || loading}>
           {saving ? t("settings.saving") : t("settings.save")}
         </Button>
       </section>

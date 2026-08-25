@@ -1,16 +1,5 @@
-import { ChevronDown, ChevronUp, ChevronsUpDown, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import accountsIcon from "../assets/keystone-ui/18-accounts-icon.png.png";
-import charactersIcon from "../assets/keystone-ui/20-characters-icon.png.png";
-import appIconHd from "../assets/keystone-ui/21-app-icon-hd.png";
-import errorIcon from "../assets/keystone-ui/23-error-icon.png";
-import warningIcon from "../assets/keystone-ui/24-warning-icon.png";
-import syncIcon from "../assets/keystone-ui/27-sync-icon.png";
-import infoIcon from "../assets/keystone-ui/28-info-icon.png";
-import rightHeroPanelFrame from "../assets/keystone-ui/09-right-hero-panel-frame.png.png";
-import lastSyncIcon from "../assets/keystone-ui/19-last-sync-icon.png.png";
-import statusIcon from "../assets/keystone-ui/17-status-icon-success.png.png";
-import versionIcon from "../assets/keystone-ui/22-version-icon.png";
+import { ThemedIcon } from "../components/ThemedIcon";
 import {
   MISSING_CHARACTER_VALUE,
   MISSING_VALUE_COLOR,
@@ -26,6 +15,8 @@ import { openRaiderIoCharacter } from "../core/native";
 import { useI18n, type TranslationKey } from "../core/i18n";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
 import type { AddonStatus, Character, CharacterState, CoreError, SyncState, SyncStatus, WowState } from "../core/types";
+import type { ThemeAssetRole } from "../theme/asset.registry";
+import { useThemeAsset } from "../theme/useThemeAsset";
 
 type SyncPageProps = {
   appVersion: string;
@@ -77,14 +68,14 @@ function formatDate(value: string | null, language: "es" | "en" = "es", noSyncs 
 
 type SyncPresentation = {
   detail: string;
-  icon: string;
+  icon: ThemeAssetRole;
   label: string;
   state: SyncState;
 };
 
 type AddonPresentation = {
   detail: string;
-  icon: string;
+  icon: ThemeAssetRole;
   label: string;
   tone: "error" | "idle" | "info" | "success" | "warning";
 };
@@ -94,15 +85,15 @@ type Translate = (key: TranslationKey, values?: Record<string, string | number>)
 function stateMeta(state: SyncState, t: Translate): SyncPresentation {
   switch (state) {
     case "watching":
-      return { state, label: t("sync.watchingLabel"), detail: t("sync.watchingDetail"), icon: infoIcon };
+      return { state, label: t("sync.watchingLabel"), detail: t("sync.watchingDetail"), icon: "sync-status-info" };
     case "syncing":
-      return { state, label: t("sync.syncingLabel"), detail: t("sync.syncingDetail"), icon: syncIcon };
+      return { state, label: t("sync.syncingLabel"), detail: t("sync.syncingDetail"), icon: "sync-status-syncing" };
     case "success":
-      return { state, label: t("sync.successLabel"), detail: t("sync.successDetail"), icon: statusIcon };
+      return { state, label: t("sync.successLabel"), detail: t("sync.successDetail"), icon: "sync-status-success" };
     case "error":
-      return { state, label: t("sync.errorLabel"), detail: t("sync.errorDetail"), icon: errorIcon };
+      return { state, label: t("sync.errorLabel"), detail: t("sync.errorDetail"), icon: "sync-status-error" };
     default:
-      return { state, label: t("sync.idleLabel"), detail: t("sync.idleDetail"), icon: warningIcon };
+      return { state, label: t("sync.idleLabel"), detail: t("sync.idleDetail"), icon: "sync-status-warning" };
   }
 }
 
@@ -116,7 +107,7 @@ function addonMeta(addon: AddonStatus, t: Translate): AddonPresentation {
     return {
       label: operationLabel,
       detail: addon.operation.message || t("addon.operation"),
-      icon: syncIcon,
+      icon: "addon-status-operation",
       tone: "info",
     };
   }
@@ -126,31 +117,31 @@ function addonMeta(addon: AddonStatus, t: Translate): AddonPresentation {
       return {
         label: t("addon.current"),
         detail: addon.installedVersion ? t("addon.installedVersion", { version: addon.installedVersion }) : t("addon.latestInstalled"),
-        icon: statusIcon,
+        icon: "addon-status-current",
         tone: "success",
       };
     case "update-available":
       return {
         label: t("addon.updateAvailable"),
         detail: addon.latestVersion ? t("addon.versionAvailable", { version: addon.latestVersion }) : t("addon.newVersion"),
-        icon: warningIcon,
+        icon: "addon-status-update",
         tone: "warning",
       };
     case "local-newer":
       return {
         label: t("addon.localVersion"),
         detail: addon.installedVersion ? t("addon.installedVersion", { version: addon.installedVersion }) : t("addon.localDetected"),
-        icon: infoIcon,
+        icon: "addon-status-local-newer",
         tone: "info",
       };
     case "offline-cache":
-      return { label: t("addon.offline"), detail: t("addon.cacheAvailable"), icon: infoIcon, tone: "info" };
+      return { label: t("addon.offline"), detail: t("addon.cacheAvailable"), icon: "addon-status-offline-cache", tone: "info" };
     case "unavailable":
-      return { label: t("common.notAvailable"), detail: addon.message || t("addon.notFound"), icon: errorIcon, tone: "error" };
+      return { label: t("common.notAvailable"), detail: addon.message || t("addon.notFound"), icon: "addon-status-unavailable", tone: "error" };
     case "error":
-      return { label: t("addon.errorTitle"), detail: addon.message || t("addon.reviewInstall"), icon: errorIcon, tone: "error" };
+      return { label: t("addon.errorTitle"), detail: addon.message || t("addon.reviewInstall"), icon: "addon-status-error", tone: "error" };
     default:
-      return { label: t("addon.notInstalled"), detail: t("addon.installAvailable"), icon: errorIcon, tone: "error" };
+      return { label: t("addon.notInstalled"), detail: t("addon.installAvailable"), icon: "addon-status-not-installed", tone: "error" };
   }
 }
 
@@ -291,28 +282,29 @@ function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt, lan
   return (
     <div className="sync-summary-grid" aria-label={t("sync.summary")}>
       <SummaryCard detail={addon.detail} icon={addon.icon} label={t("common.addon")} tone={addon.tone} value={addon.label} />
-      <SummaryCard icon={accountsIcon} label={t("sync.accounts")} value={accountCount} detail={t("sync.connectedAccounts")} />
-      <SummaryCard icon={lastSyncIcon} label={t("sync.last")} value={formatTime(lastSyncAt, language)} detail={formatDate(lastSyncAt, language, t("sync.noSyncs"))} />
-      <SummaryCard icon={charactersIcon} label={t("sync.characters")} value={characterCount} detail={t("sync.detected")} />
+      <SummaryCard icon="sync-summary-accounts" label={t("sync.accounts")} value={accountCount} detail={t("sync.connectedAccounts")} />
+      <SummaryCard icon="sync-summary-last" label={t("sync.last")} value={formatTime(lastSyncAt, language)} detail={formatDate(lastSyncAt, language, t("sync.noSyncs"))} />
+      <SummaryCard icon="sync-summary-characters" label={t("sync.characters")} value={characterCount} detail={t("sync.detected")} />
     </div>
   );
 }
 
 type SummaryCardProps = {
   detail: string;
-  icon: string;
+  icon: ThemeAssetRole;
   label: string;
   tone?: "error" | "idle" | "info" | "success" | "warning";
   value: string | number;
 };
 
 function SummaryCard({ detail, icon, label, tone, value }: SummaryCardProps) {
+  const iconSource = useThemeAsset(icon);
   return (
     <article
       aria-label={`${label}: ${value}`}
       className={`sync-summary-card sync-summary-card--${tone ?? "metric"}`}
     >
-      <img alt="" className="sync-summary-card__icon" src={icon} />
+      <img alt="" className="sync-summary-card__icon" src={iconSource} />
       <div>
         <p>{label}</p>
         <strong>{value}</strong>
@@ -363,12 +355,12 @@ function CharactersTable({ characters, error, loading, onOpenError }: Characters
         <div className="sync-table__header" role="row">
           {columns.map((column) => {
             const active = sortKey === column.key;
-            const SortIcon = active ? direction === "asc" ? ChevronUp : ChevronDown : ChevronsUpDown;
+            const sortIcon = active ? direction === "asc" ? "sort-ascending" : "sort-descending" : "sort-unsorted";
             return (
               <span aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"} key={column.key} role="columnheader">
                 <button className="sync-table__sort" onClick={() => changeSort(column.key)} type="button">
                   {column.label}
-                  <SortIcon aria-hidden="true" size={15} />
+                  <ThemedIcon name={sortIcon} size={15} />
                 </button>
               </span>
             );
@@ -446,12 +438,16 @@ type SidebarProps = {
 
 function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, message, onForce, status, sync }: SidebarProps) {
   const { t } = useI18n();
+  const brandEmblem = useThemeAsset("brand-emblem");
+  const heroFrame = useThemeAsset("sync-hero-frame");
+  const statusIcon = useThemeAsset(status.icon);
+  const versionIcon = useThemeAsset("sync-version");
   return (
     <aside className="sync-sidebar" aria-label={t("sync.status")}>
       <section className="sync-emblem-panel" aria-label="KeystoneClient">
         <div className="sync-emblem-panel__artwork">
-          <img alt="" className="sync-emblem-panel__frame" src={rightHeroPanelFrame} />
-          <img alt="" className="sync-emblem-panel__icon" src={appIconHd} />
+          <img alt="" className="sync-emblem-panel__frame" src={heroFrame} />
+          <img alt="" className="sync-emblem-panel__icon" src={brandEmblem} />
         </div>
         <section className="sync-version-panel">
           <img alt="" className="sync-version-panel__icon" src={versionIcon} />
@@ -471,7 +467,7 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
       >
         <h2>{t("sync.currentStatus")}</h2>
         <div className="sync-current-panel__body">
-          <img alt="" src={status.icon} />
+          <img alt="" src={statusIcon} />
           <div>
             <strong>{status.label}</strong>
             <span>{sync.lastError ?? status.detail}</span>
@@ -481,7 +477,7 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
       </section>
 
       <button className="sync-primary-action" disabled={forceDisabled} onClick={onForce} type="button">
-        <RefreshCw aria-hidden="true" size={34} />
+        <ThemedIcon name="refresh" size={34} />
         {busy ? t("sync.syncing") : t("sync.now")}
       </button>
     </aside>

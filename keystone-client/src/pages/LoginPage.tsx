@@ -1,6 +1,6 @@
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { ThemedIcon } from "../components/ThemedIcon";
 import { Button, TextField } from "../components/ui";
 import { login, register } from "../core/auth";
 import { useI18n } from "../core/i18n";
@@ -110,9 +110,9 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         </div>
         {success ? (
           <div className="auth-register-success">
-            <CheckCircle2 aria-hidden="true" />
+            <ThemedIcon name="status-success" />
             <p className="success">{success}</p>
-            <Button icon={<ArrowLeft aria-hidden="true" size={18} />} onClick={() => switchMode("login")}>
+            <Button icon={<ThemedIcon name="back" size={18} />} onClick={() => switchMode("login")}>
               {t("register.backToLogin")}
             </Button>
           </div>
@@ -187,12 +187,12 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
             </label>
             {error ? <p className="error" role="alert">{error}</p> : null}
             <div className="auth-register-actions">
-              <Button icon={<ArrowLeft aria-hidden="true" size={18} />} onClick={() => switchMode("login")}>
+              <Button icon={<ThemedIcon name="back" size={18} />} onClick={() => switchMode("login")}>
                 {t("common.cancel")}
               </Button>
               <Button
                 disabled={loading}
-                icon={<UserPlus aria-hidden="true" size={18} />}
+                icon={<ThemedIcon name="register" size={18} />}
                 type="submit"
                 variant="primary"
               >
@@ -228,20 +228,20 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
               onChange={(event) => setPassword(event.target.value)}
             />
             <button aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")} onClick={() => setShowPassword((shown) => !shown)} type="button">
-              {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+              {showPassword ? <ThemedIcon name="hide-password" /> : <ThemedIcon name="show-password" />}
             </button>
           </span>
         </label>
         {error ? <p className="error" role="alert">{error}</p> : null}
         <Button
-          icon={<LogIn size={18} aria-hidden="true" />}
+          icon={<ThemedIcon name="login" size={18} />}
           type="submit"
           disabled={loading || !username.trim() || !password}
         >
           {loading ? t("login.connecting") : t("login.enter")}
         </Button>
         <button className="auth-register" disabled={loading} onClick={() => switchMode("register")} type="button">
-          <UserPlus aria-hidden="true" size={18} />
+          <ThemedIcon name="register" size={18} />
           {t("login.register")}
         </button>
       </form>

@@ -1,25 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
-import {
-  Activity,
-  Check,
-  Clock3,
-  Copy,
-  Database,
-  Download,
-  ExternalLink,
-  FolderOpen,
-  Globe,
-  LoaderCircle,
-  RefreshCw,
-  RotateCcw,
-  Search,
-  ShieldCheck,
-  Tag,
-  type LucideIcon,
-} from "lucide-react";
 import { useEffect, useState } from "react";
-import appIcon from "../assets/keystone-ui/21-app-icon-hd.png";
+import { ThemedIcon } from "../components/ThemedIcon";
 import {
   checkAddon,
   getAddonStatus,
@@ -31,6 +13,8 @@ import {
 import type { AddonStatus, CoreError, WowState } from "../core/types";
 import { selectWowInstall } from "../core/wow";
 import { useI18n, type TranslationKey } from "../core/i18n";
+import type { ThemeIconRole } from "../theme/icon.registry";
+import { useThemeAsset } from "../theme/useThemeAsset";
 
 type AddonPageProps = {
   initialAddon: AddonStatus;
@@ -150,6 +134,7 @@ export function AddonPage({
   preview = false,
 }: AddonPageProps) {
   const { language, t } = useI18n();
+  const appIcon = useThemeAsset("brand-emblem");
   const [addon, setAddon] = useState<AddonStatus>(initialAddon);
   const [wow, setWow] = useState<WowState>(initialWow);
   const [busyAction, setBusyAction] = useState<AddonAction | null>(null);
@@ -330,7 +315,7 @@ export function AddonPage({
 
         <section className="addon-path-card" aria-labelledby="addon-path-title">
           <div className="addon-section-heading">
-            <FolderOpen aria-hidden="true" />
+            <ThemedIcon name="folder" />
             <h2 id="addon-path-title">{t("addon.path")}</h2>
           </div>
 
@@ -343,17 +328,17 @@ export function AddonPage({
               onClick={() => void copyAddonPath()}
               disabled={!addonsPath}
             >
-              {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+              {copied ? <ThemedIcon name="confirm" /> : <ThemedIcon name="copy" />}
             </button>
           </div>
 
           <div className="addon-folder-actions">
             <button type="button" onClick={() => void chooseAddonFolder()} disabled={busy}>
-              <FolderOpen aria-hidden="true" />
+              <ThemedIcon name="folder" />
               {t("addon.selectFolder")}
             </button>
             <button type="button" onClick={() => void openAddonDirectory()} disabled={!addonsPath || busy}>
-              <ExternalLink aria-hidden="true" />
+              <ThemedIcon name="external-link" />
               {t("addon.openFolder")}
             </button>
           </div>
@@ -366,7 +351,7 @@ export function AddonPage({
             onClick={() => void runAction("install", installAddon, t("addon.installStarted"))}
             disabled={busy}
           >
-            <Download aria-hidden="true" />
+            <ThemedIcon name="download" />
             {t("addon.install")}
           </button>
         ) : (
@@ -378,7 +363,7 @@ export function AddonPage({
                 onClick={() => void runAction("update", updateAddon, t("addon.updateStarted"))}
                 disabled={busy}
               >
-                <RefreshCw aria-hidden="true" />
+                <ThemedIcon name="refresh" />
                 {t("addon.update")}
               </button>
             ) : null}
@@ -389,7 +374,7 @@ export function AddonPage({
                 onClick={() => void runAction("reinstall", reinstallAddon, t("addon.reinstallStarted"))}
                 disabled={busy}
               >
-                <RotateCcw aria-hidden="true" />
+                <ThemedIcon name="reinstall" />
                 {t("addon.reinstall")}
               </button>
             ) : null}
@@ -405,29 +390,29 @@ export function AddonPage({
       <aside className="addon-status-column">
         <section className="addon-status-card" aria-labelledby="addon-status-title">
           <div className="addon-status-heading">
-            <ShieldCheck aria-hidden="true" />
+            <ThemedIcon name="status-verified" />
             <h2 id="addon-status-title">{t("addon.statusTitle")}</h2>
           </div>
 
           <dl className="addon-status-list" aria-label={t("addon.statusTitle")}>
             <AddonStatusRow
-              icon={Download}
+              icon="status-installed"
               label={t("addon.installed")}
               value={addon.installed ? t("addon.yes") : t("addon.no")}
               tone={addon.installed ? "good" : "bad"}
               badge
             />
-            <AddonStatusRow icon={Tag} label={t("addon.latest")} value={formatVersion(addon.latestVersion)} />
-            <AddonStatusRow icon={Activity} label={t("addon.state")} value={statusText} tone={statusTextTone} />
-            <AddonStatusRow icon={Globe} label={t("addon.source")} value={sourceLabel(addon.source, t)} />
+            <AddonStatusRow icon="status-version" label={t("addon.latest")} value={formatVersion(addon.latestVersion)} />
+            <AddonStatusRow icon="status-activity" label={t("addon.state")} value={statusText} tone={statusTextTone} />
+            <AddonStatusRow icon="status-source" label={t("addon.source")} value={sourceLabel(addon.source, t)} />
             <AddonStatusRow
-              icon={Database}
+              icon="status-cache"
               label={t("addon.cache")}
               value={addon.cacheAvailable ? t("addon.available") : t("addon.unavailable")}
               tone={addon.cacheAvailable ? "good" : "default"}
             />
             <AddonStatusRow
-              icon={Clock3}
+              icon="status-last-check"
               label={t("addon.lastCheck")}
               value={formatLastCheck(addon.lastCheckAt, preview, language, t)}
             />
@@ -439,7 +424,7 @@ export function AddonPage({
             onClick={() => void runAction("check", checkAddon, t("addon.statusUpdated"))}
             disabled={busy}
           >
-            {busyAction === "check" ? <LoaderCircle className="addon-spin" aria-hidden="true" /> : <Search aria-hidden="true" />}
+            {busyAction === "check" ? <ThemedIcon className="addon-spin" name="loading" /> : <ThemedIcon name="search" />}
             {busyAction === "check" ? t("addon.checking") : t("addon.check")}
           </button>
         </section>
@@ -449,13 +434,13 @@ export function AddonPage({
 }
 
 function AddonStatusRow({
-  icon: Icon,
+  icon,
   label,
   value,
   tone = "default",
   badge = false,
 }: {
-  icon: LucideIcon;
+  icon: ThemeIconRole;
   label: string;
   value: string;
   tone?: StatusTone;
@@ -463,7 +448,7 @@ function AddonStatusRow({
 }) {
   return (
     <div className="addon-status-row">
-      <Icon aria-hidden="true" />
+      <ThemedIcon name={icon} />
       <dt>{label}</dt>
       <dd className={`addon-status-row__value addon-status-row__value--${tone}${badge ? " addon-status-row__value--badge" : ""}`}>
         {value}

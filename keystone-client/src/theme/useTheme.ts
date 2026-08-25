@@ -1,5 +1,6 @@
 import { useContext } from "react";
 import { ThemeContext, type ThemeContextValue } from "./ThemeProvider";
+import { DEFAULT_THEME, type ThemeId } from "./theme.types";
 
 export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
@@ -9,4 +10,8 @@ export function useTheme(): ThemeContextValue {
   }
 
   return context;
+}
+
+export function useResolvedThemeId(): ThemeId {
+  return useContext(ThemeContext)?.theme ?? DEFAULT_THEME;
 }
