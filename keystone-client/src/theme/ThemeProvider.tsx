@@ -12,13 +12,7 @@ export type ThemeContextValue = {
 
 export const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-export function ThemeProvider({
-  children,
-  themes = THEMES,
-}: {
-  children: ReactNode;
-  themes?: readonly ThemeDefinition[];
-}) {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setCurrentTheme] = useState<ThemeId>(readStoredTheme);
   const setTheme = useCallback((candidate: ThemeId) => {
     const nextTheme = resolveThemeId(candidate);
@@ -28,7 +22,7 @@ export function ThemeProvider({
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, themes, setTheme }}>
+    <ThemeContext.Provider value={{ theme, themes: THEMES, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

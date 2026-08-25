@@ -12,6 +12,8 @@ type ThemeSelectorProps = {
 export function ThemeSelector({ onThemeChange, theme, themes }: ThemeSelectorProps) {
   const { t } = useI18n();
   const selectableThemes = getSelectableThemes(themes);
+  const currentTheme = themes.find(({ id }) => id === theme);
+  const currentThemeIsSelectable = selectableThemes.some(({ id }) => id === theme);
 
   if (selectableThemes.length < 2) {
     return null;
@@ -33,6 +35,11 @@ export function ThemeSelector({ onThemeChange, theme, themes }: ThemeSelectorPro
         }}
         value={theme}
       >
+        {!currentThemeIsSelectable ? (
+          <option disabled value={theme}>
+            {t("settings.themeUnavailable", { theme: currentTheme?.label ?? theme })}
+          </option>
+        ) : null}
         {selectableThemes.map((candidate) => (
           <option key={candidate.id} value={candidate.id}>{candidate.label}</option>
         ))}

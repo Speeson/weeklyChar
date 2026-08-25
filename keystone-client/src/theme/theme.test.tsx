@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +8,10 @@ import { getSelectableThemes, isThemeId, resolveThemeId, THEMES } from "./theme.
 import { readStoredTheme, writeStoredTheme } from "./theme.storage";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "./theme.types";
 import { useTheme } from "./useTheme";
+
+// @ts-expect-error Production ThemeProvider must use the canonical registry.
+const invalidThemeProviderProps: ComponentProps<typeof ThemeProvider> = { children: null, themes: [] };
+void invalidThemeProviderProps;
 
 const createRootMock = vi.fn();
 const rootRenderMock = vi.fn();

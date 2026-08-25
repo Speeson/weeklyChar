@@ -1,12 +1,10 @@
-import { render as testingLibraryRender, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSettings, updateSettings } from "../core/settings";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SettingsPage } from "./SettingsPage";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
-import { ThemeProvider } from "../theme/ThemeProvider";
-import { THEME_STORAGE_KEY, type ThemeDefinition } from "../theme/theme.types";
 
 vi.mock("../core/settings", () => ({
   getSettings: vi.fn(),
@@ -28,34 +26,6 @@ const initialSettings = {
   minimizeOnClose: false,
   lang: "es" as const,
 };
-
-const selectableThemes: readonly ThemeDefinition[] = [
-  {
-    id: "keystone",
-    label: "Keystone",
-    description: "Keystone theme",
-    selectable: true,
-  },
-  {
-    id: "poison",
-    label: "Poison",
-    description: "Poison theme",
-    selectable: true,
-  },
-];
-
-function renderSettingsWithSelectableThemes() {
-  return testingLibraryRender(
-    <ThemeProvider themes={selectableThemes}>
-      <SettingsPage
-        appVersion="0.4.1"
-        initialSettings={initialSettings}
-        onSettingsChanged={vi.fn()}
-        preview
-      />
-    </ThemeProvider>,
-  );
-}
 
 describe("SettingsPage", () => {
   beforeEach(() => {
@@ -81,21 +51,6 @@ describe("SettingsPage", () => {
 
     expect(screen.queryByRole("combobox", { name: "Tema visual" })).not.toBeInTheDocument();
     expect(screen.queryByText("Poison")).not.toBeInTheDocument();
-  });
-
-  it("applies, persists, and restores a selectable theme when Settings is reopened", async () => {
-    const user = userEvent.setup();
-    const firstView = renderSettingsWithSelectableThemes();
-    const selector = screen.getByRole("combobox", { name: "Tema visual" });
-
-    expect(selector).toHaveValue("keystone");
-    await user.selectOptions(selector, "poison");
-    expect(document.documentElement.dataset.theme).toBe("poison");
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("poison");
-
-    firstView.unmount();
-    renderSettingsWithSelectableThemes();
-    expect(screen.getByRole("combobox", { name: "Tema visual" })).toHaveValue("poison");
   });
 
   it("loads settings", async () => {
