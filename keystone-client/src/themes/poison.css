@@ -606,6 +606,13 @@ html[data-theme="poison"] :where(.ui-button[data-variant="danger"], .ks-choice-m
   box-shadow: inset 0 0 16px var(--status-danger-surface);
 }
 
+html[data-theme="poison"] .ks-choice-modal__exit:hover:not(:disabled),
+html[data-theme="poison"] .ks-choice-modal__exit:focus-visible,
+html[data-theme="poison"] .ui-button[data-variant="danger"]:hover:not(:disabled),
+html[data-theme="poison"] .ui-button[data-variant="danger"]:focus-visible {
+  border-color: var(--status-danger-border-strong);
+}
+
 html[data-theme="poison"] :where(
   button,
   .addon-section-heading,
@@ -618,11 +625,6 @@ html[data-theme="poison"] :where(
 
 html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell) {
   scrollbar-color: var(--theme-scrollbar) var(--theme-scrollbar-track);
-  scrollbar-width: thin;
-}
-
-html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar {
-  width: 8px;
 }
 
 html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-track {

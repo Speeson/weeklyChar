@@ -83,6 +83,31 @@ test("Poison keeps the decorative modal stroke anchored to the dialog panel", as
   expect(decoration.pointerEvents).toBe("none");
 });
 
+test("Poison does not force thin scrollbar geometry on modal content", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  await page.getByRole("button", { name: "Configuracion" }).click();
+
+  const content = page.locator(".ks-modal__content");
+  await expect(content).toBeVisible();
+  await expect(content).toHaveCSS("scrollbar-width", "auto");
+});
+
+test("Poison keeps the danger exit border red on hover and keyboard focus", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  await page.getByRole("button", { name: "Cerrar" }).click();
+
+  const exit = page.locator(".ks-choice-modal__exit");
+  await expect(exit).toBeVisible();
+  await exit.hover();
+  await expect(exit).toHaveCSS("border-color", "rgba(255, 91, 108, 0.56)");
+
+  await page.mouse.move(0, 0);
+  await expect(page.locator(".ks-choice-modal__actions button").first()).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(exit).toBeFocused();
+  await expect(exit).toHaveCSS("border-color", "rgba(255, 91, 108, 0.56)");
+});
+
 test("Poison reduced motion disables ambient and syncing animation while preserving selected state", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/?preview=sync-syncing");
