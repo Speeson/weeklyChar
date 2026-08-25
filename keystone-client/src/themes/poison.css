@@ -151,3 +151,512 @@ html[data-theme="poison"] {
   --theme-choice-portrait-border: rgb(186 255 83 / 62%);
   --theme-choice-check-text: #081205;
 }
+
+html[data-theme="poison"] .shell {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 50% 104%, rgb(137 224 48 / 14%), transparent 48%),
+    linear-gradient(90deg, rgb(0 0 0 / 28%), transparent 18% 82%, rgb(0 0 0 / 28%)),
+    var(--theme-bg-overlay),
+    var(--theme-bg);
+}
+
+html[data-theme="poison"] .shell::before {
+  z-index: -2;
+  opacity: 0.92;
+  background:
+    radial-gradient(circle at 10% 16%, rgb(183 255 71 / 12%), transparent 24%),
+    radial-gradient(circle at 84% 76%, rgb(91 172 35 / 13%), transparent 30%),
+    repeating-linear-gradient(112deg, transparent 0 48px, rgb(182 153 76 / 2%) 49px 50px),
+    linear-gradient(180deg, rgb(0 0 0 / 8%), rgb(4 15 6 / 18%));
+}
+
+html[data-theme="poison"] .shell::after {
+  content: "";
+  position: fixed;
+  inset: -18%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 22% 78%, rgb(128 229 44 / 9%), transparent 26%),
+    radial-gradient(ellipse at 72% 18%, rgb(190 255 79 / 6%), transparent 22%);
+  filter: blur(24px);
+  animation: poison-haze-drift 16s ease-in-out infinite alternate;
+}
+
+html[data-theme="poison"] .ks-app-frame {
+  background: linear-gradient(145deg, rgb(6 17 8 / 94%), rgb(2 8 4 / 96%));
+  box-shadow:
+    0 0 0 1px rgb(34 26 11 / 95%),
+    0 0 0 3px rgb(147 117 52 / 24%),
+    0 30px 80px rgb(0 0 0 / 76%),
+    var(--theme-frame-shadow);
+}
+
+html[data-theme="poison"] .ks-app-frame::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: 190;
+  border: 1px solid rgb(208 180 96 / 12%);
+  pointer-events: none;
+}
+
+html[data-theme="poison"] .ks-header {
+  background:
+    linear-gradient(90deg, rgb(141 210 49 / 5%), transparent 28% 72%, rgb(141 210 49 / 4%)),
+    var(--theme-header-background);
+  box-shadow:
+    inset 0 -1px 0 rgb(195 255 88 / 9%),
+    var(--theme-header-shadow);
+}
+
+html[data-theme="poison"] .ks-brand {
+  background: linear-gradient(105deg, rgb(15 38 15 / 62%), rgb(4 12 6 / 28%));
+}
+
+html[data-theme="poison"] .ks-brand__name {
+  color: var(--theme-text-accent);
+  text-shadow: 0 1px 0 rgb(0 0 0 / 90%), 0 0 14px rgb(169 238 67 / 24%);
+}
+
+html[data-theme="poison"] .ks-tab {
+  overflow: visible;
+  border-radius: 0;
+}
+
+html[data-theme="poison"] .ks-tab[data-state="default"]:hover,
+html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible {
+  background:
+    linear-gradient(180deg, rgb(113 183 39 / 5%), rgb(132 219 44 / 13%)),
+    var(--theme-surface-hover);
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"] {
+  color: var(--theme-accent-strong);
+  background:
+    radial-gradient(ellipse at 50% 100%, rgb(183 255 65 / 20%), transparent 62%),
+    linear-gradient(180deg, rgb(73 107 27 / 5%), rgb(122 206 39 / 13%));
+  text-shadow: 0 0 13px rgb(166 255 63 / 42%);
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"]::after {
+  content: "";
+  position: absolute;
+  right: 18%;
+  bottom: -1px;
+  left: 18%;
+  height: 4px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(183 255 65 / 94%) 28% 72%, transparent);
+  box-shadow: 0 0 7px rgb(166 255 63 / 88%), 0 4px 20px rgb(139 235 42 / 62%);
+}
+
+html[data-theme="poison"] .ks-tab__indicator {
+  opacity: 0.2;
+  filter: sepia(1) hue-rotate(38deg) saturate(2.2) drop-shadow(0 4px 10px rgb(157 255 47 / 68%));
+}
+
+html[data-theme="poison"] :where(
+  .ks-icon-control,
+  .ks-user-menu__trigger,
+  .ks-window-button,
+  .ks-footer-action,
+  button,
+  input,
+  select
+) {
+  transition:
+    border-color var(--theme-motion-fast),
+    color var(--theme-motion-fast),
+    background-color var(--theme-motion-fast),
+    box-shadow var(--theme-motion-fast),
+    filter var(--theme-motion-fast),
+    transform var(--theme-motion-fast);
+}
+
+html[data-theme="poison"] :where(
+  button,
+  input,
+  select,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  border-color: var(--theme-border-active);
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgb(3 10 4 / 92%), 0 0 18px rgb(166 255 63 / 34%);
+}
+
+html[data-theme="poison"] :where(input, select) {
+  border-color: var(--theme-control-border);
+  background:
+    linear-gradient(180deg, rgb(18 39 17 / 88%), rgb(5 16 7 / 94%)),
+    var(--theme-bg-secondary);
+  box-shadow: inset 0 1px 0 rgb(231 214 143 / 8%), inset 0 0 18px rgb(92 151 34 / 9%);
+}
+
+html[data-theme="poison"] :where(input[type="checkbox"], input[type="radio"], progress) {
+  accent-color: var(--theme-accent);
+}
+
+html[data-theme="poison"] :where(button, [role="button"]):hover:not(:disabled) {
+  border-color: var(--theme-border-active);
+}
+
+html[data-theme="poison"] :where(button, [role="button"]):active:not(:disabled) {
+  filter: brightness(0.92) saturate(1.08);
+}
+
+html[data-theme="poison"] :where(button, input, select):disabled {
+  filter: saturate(0.42) brightness(0.74);
+}
+
+html[data-theme="poison"] .ks-settings-control img,
+html[data-theme="poison"] .ks-window-button img,
+html[data-theme="poison"] .ks-user-menu__shell,
+html[data-theme="poison"] .ks-user-menu__avatar-frame,
+html[data-theme="poison"] .ks-user-menu__dropdown-icon,
+html[data-theme="poison"] .ks-footer-action__asset {
+  filter: sepia(0.74) hue-rotate(38deg) saturate(1.5) brightness(0.86) drop-shadow(0 0 5px rgb(166 255 63 / 24%));
+}
+
+html[data-theme="poison"] :where(
+  .ks-user-dropdown,
+  .ks-login-shell,
+  .ks-onboarding,
+  .ks-modal__panel,
+  .ks-legacy-panel,
+  [data-ui="card"],
+  .wow-install > div,
+  .sync-status > div,
+  .account-row
+) {
+  border-color: var(--theme-border);
+  background:
+    linear-gradient(145deg, rgb(20 43 18 / 34%), transparent 44%),
+    var(--theme-surface-2);
+  box-shadow:
+    inset 0 1px 0 rgb(237 220 147 / 8%),
+    inset 0 0 24px rgb(92 159 34 / 7%),
+    var(--theme-shadow-panel);
+}
+
+html[data-theme="poison"] .ks-user-dropdown::before,
+html[data-theme="poison"] .ks-modal__panel::before,
+html[data-theme="poison"] .ks-login-shell::before,
+html[data-theme="poison"] .ks-onboarding::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgb(220 197 119 / 10%);
+  pointer-events: none;
+}
+
+html[data-theme="poison"] .ks-modal__panel {
+  position: relative;
+}
+
+html[data-theme="poison"] .ks-user-dropdown button {
+  box-shadow: inset 0 1px 0 rgb(227 210 137 / 8%);
+}
+
+html[data-theme="poison"] .ks-user-dropdown button:hover:not(:disabled),
+html[data-theme="poison"] .ks-user-dropdown button:focus-visible {
+  box-shadow: inset 3px 0 0 rgb(190 255 81 / 72%), 0 0 14px rgb(123 208 41 / 14%);
+}
+
+html[data-theme="poison"] :where(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-emblem-panel,
+  .sync-current-panel
+) {
+  border-color: var(--theme-border-strong);
+  background:
+    linear-gradient(145deg, rgb(31 61 23 / 18%), transparent 44%),
+    radial-gradient(ellipse at 50% 108%, rgb(116 199 39 / 10%), transparent 54%),
+    var(--theme-summary-background);
+  box-shadow:
+    0 0 0 1px rgb(28 20 8 / 86%),
+    inset 0 1px 0 rgb(238 218 139 / 10%),
+    inset 0 0 28px rgb(92 157 34 / 9%),
+    0 14px 34px rgb(0 0 0 / 42%);
+}
+
+html[data-theme="poison"] .sync-table-panel {
+  background:
+    linear-gradient(115deg, rgb(28 54 21 / 16%), transparent 34%),
+    radial-gradient(circle at 48% 58%, rgb(111 185 38 / 9%), transparent 36%),
+    var(--theme-table-background);
+}
+
+html[data-theme="poison"] :where(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-emblem-panel,
+  .sync-current-panel
+)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 0%, rgb(194 255 86 / 9%), transparent 30%),
+    linear-gradient(100deg, transparent 0 72%, rgb(134 204 46 / 4%));
+}
+
+html[data-theme="poison"] :where(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-current-panel,
+  .sync-emblem-panel
+)::after {
+  border-color: rgb(215 192 112 / 15%);
+  box-shadow: inset 0 0 14px rgb(105 176 38 / 7%);
+}
+
+html[data-theme="poison"] .sync-summary-card {
+  transition: border-color var(--theme-motion-normal), box-shadow var(--theme-motion-normal), filter var(--theme-motion-normal);
+}
+
+html[data-theme="poison"] .sync-summary-card:hover {
+  border-color: rgb(181 225 82 / 58%);
+  box-shadow:
+    0 0 0 1px rgb(28 20 8 / 86%),
+    inset 0 0 28px rgb(112 194 38 / 13%),
+    0 0 22px rgb(119 205 39 / 13%),
+    0 14px 34px rgb(0 0 0 / 42%);
+}
+
+html[data-theme="poison"] .sync-table__header {
+  background: linear-gradient(90deg, rgb(177 150 75 / 4%), rgb(111 190 35 / 4%), rgb(177 150 75 / 4%));
+  text-shadow: 0 1px 0 rgb(0 0 0 / 86%);
+}
+
+html[data-theme="poison"] .sync-table__row:hover,
+html[data-theme="poison"] .sync-table__row:focus-visible {
+  background: linear-gradient(90deg, rgb(164 255 61 / 14%), rgb(96 164 33 / 6%) 68%, transparent);
+  box-shadow: inset 3px 0 0 var(--theme-table-row-marker), inset 0 1px 0 rgb(198 255 91 / 7%);
+}
+
+html[data-theme="poison"] .sync-version-panel {
+  background:
+    radial-gradient(circle at 12% 50%, rgb(167 250 58 / 10%), transparent 36%),
+    var(--theme-version-background);
+}
+
+html[data-theme="poison"] .sync-current-panel--watching {
+  border-color: var(--status-info-border);
+}
+
+html[data-theme="poison"] .sync-current-panel--syncing {
+  border-color: var(--status-warning-border);
+}
+
+html[data-theme="poison"] .sync-current-panel--success {
+  border-color: var(--status-success-border);
+}
+
+html[data-theme="poison"] .sync-current-panel--error {
+  border-color: var(--status-danger-border-strong);
+}
+
+html[data-theme="poison"] .sync-primary-action {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: var(--theme-sync-action-border);
+  background:
+    linear-gradient(90deg, rgb(40 70 15 / 72%), rgb(103 169 30 / 88%) 48%, rgb(40 70 15 / 72%)),
+    var(--theme-sync-action-background);
+  box-shadow:
+    0 0 0 2px rgb(20 35 7 / 94%),
+    0 0 0 3px rgb(180 150 64 / 38%),
+    0 0 24px rgb(166 255 63 / 28%),
+    inset 0 0 24px rgb(197 255 94 / 12%);
+  text-shadow: 0 1px 0 rgb(0 0 0 / 84%), 0 0 10px rgb(190 255 80 / 24%);
+}
+
+html[data-theme="poison"] .sync-primary-action::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  z-index: -1;
+  border: 1px solid rgb(229 255 162 / 32%);
+  pointer-events: none;
+  background: linear-gradient(90deg, rgb(186 255 69 / 10%), transparent 18% 82%, rgb(186 255 69 / 10%));
+}
+
+html[data-theme="poison"] .sync-primary-action:hover:not(:disabled) {
+  border-color: var(--theme-accent-strong);
+  box-shadow:
+    0 0 0 2px rgb(20 35 7 / 94%),
+    0 0 0 3px rgb(198 164 71 / 48%),
+    0 0 30px rgb(166 255 63 / 40%),
+    inset 0 0 28px rgb(217 255 130 / 16%);
+}
+
+html[data-theme="poison"] .addon-screen {
+  background:
+    radial-gradient(ellipse at 16% 0%, rgb(165 248 58 / 10%), transparent 34%),
+    radial-gradient(ellipse at 100% 100%, rgb(99 170 34 / 10%), transparent 38%),
+    var(--theme-addon-background);
+  box-shadow:
+    0 0 0 1px rgb(31 23 9 / 88%),
+    inset 0 1px 0 rgb(234 216 140 / 10%),
+    var(--theme-addon-shadow);
+}
+
+html[data-theme="poison"] .addon-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(118deg, transparent 0 58px, rgb(190 159 75 / 2%) 59px 60px),
+    radial-gradient(circle at 70% 24%, rgb(163 244 55 / 5%), transparent 22%);
+}
+
+html[data-theme="poison"] .addon-screen::after {
+  border-color: rgb(221 198 117 / 16%);
+  box-shadow: inset 0 0 22px rgb(101 169 36 / 8%);
+}
+
+html[data-theme="poison"] :where(.addon-path-card, .addon-status-card) {
+  background:
+    linear-gradient(145deg, rgb(29 56 22 / 24%), transparent 48%),
+    var(--theme-addon-card-background);
+  box-shadow:
+    inset 0 1px 0 rgb(229 211 139 / 9%),
+    inset 0 0 26px rgb(100 170 35 / 7%),
+    0 12px 28px rgb(0 0 0 / 28%);
+}
+
+html[data-theme="poison"] .addon-path-field {
+  box-shadow: inset 0 0 18px rgb(99 172 34 / 8%);
+}
+
+html[data-theme="poison"] .addon-primary-action {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgb(30 53 10 / 92%),
+    0 0 0 3px rgb(174 145 62 / 34%),
+    0 12px 30px rgb(0 0 0 / 34%),
+    inset 0 1px 0 rgb(244 255 205 / 32%);
+}
+
+html[data-theme="poison"] .addon-primary-action::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgb(42 75 13 / 44%);
+  pointer-events: none;
+}
+
+html[data-theme="poison"] .addon-folder-actions button,
+html[data-theme="poison"] .addon-check-action,
+html[data-theme="poison"] .ks-footer-action--tray {
+  box-shadow: inset 0 1px 0 rgb(231 215 146 / 9%), inset 0 0 18px rgb(95 162 34 / 8%);
+}
+
+html[data-theme="poison"] .ks-footer {
+  background:
+    radial-gradient(ellipse at 50% 115%, rgb(156 246 51 / 13%), transparent 46%),
+    linear-gradient(90deg, rgb(113 83 34 / 8%), transparent 24% 76%, rgb(113 83 34 / 8%)),
+    var(--theme-footer-background);
+  box-shadow: inset 0 1px 0 rgb(221 194 111 / 7%);
+}
+
+html[data-theme="poison"] .ks-footer::before {
+  content: "";
+  position: absolute;
+  inset: auto 18% 0;
+  height: 38px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 100%, rgb(151 255 50 / 13%), transparent 68%);
+  filter: blur(8px);
+}
+
+html[data-theme="poison"] :where(.ks-login-shell, .ks-onboarding, .ks-modal__panel) {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 12% 0%, rgb(168 247 60 / 8%), transparent 28%),
+    linear-gradient(150deg, rgb(19 43 18 / 88%), rgb(4 14 6 / 96%));
+}
+
+html[data-theme="poison"] :where(.ks-modal__header, .ks-onboarding__brand) {
+  background: linear-gradient(90deg, rgb(151 120 55 / 7%), rgb(107 183 35 / 6%), rgb(151 120 55 / 7%));
+  box-shadow: inset 0 -1px 0 rgb(210 187 107 / 8%);
+}
+
+html[data-theme="poison"] :where(.auth-register, .ks-onboarding__accounts label, .ks-onboarding__empty, .ks-avatar-choice) {
+  box-shadow: inset 0 1px 0 rgb(231 214 143 / 8%), inset 0 0 18px rgb(100 171 36 / 7%);
+}
+
+html[data-theme="poison"] .ks-avatar-choice[aria-pressed="true"] {
+  box-shadow: inset 3px 0 0 var(--theme-accent), inset 0 0 22px var(--theme-accent-soft), 0 0 14px rgb(166 255 63 / 14%);
+}
+
+html[data-theme="poison"] :where(.ui-button[data-variant="primary"], .settings-gold-action, .settings-segmented button[aria-pressed="true"]) {
+  box-shadow: 0 0 0 1px rgb(37 66 12 / 88%), inset 0 1px 0 rgb(239 255 196 / 28%), 0 0 16px rgb(166 255 63 / 18%);
+}
+
+html[data-theme="poison"] :where(.ui-button[data-variant="danger"], .ks-choice-modal__exit, .error) {
+  box-shadow: inset 0 0 16px var(--status-danger-surface);
+}
+
+html[data-theme="poison"] :where(
+  button,
+  .addon-section-heading,
+  .addon-status-heading,
+  .ks-update-modal__installing,
+  .settings-block h3
+) svg {
+  filter: drop-shadow(0 0 4px rgb(178 255 77 / 20%));
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell) {
+  scrollbar-color: var(--theme-scrollbar) var(--theme-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar {
+  width: 8px;
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-thumb {
+  border: 2px solid var(--theme-scrollbar-track);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgb(177 147 67 / 78%), var(--theme-scrollbar), rgb(95 133 42 / 84%));
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-hover);
+}
+
+@keyframes poison-haze-drift {
+  from {
+    opacity: 0.62;
+    transform: translate3d(-1%, 0, 0) scale(0.98);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: translate3d(1%, -1%, 0) scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="poison"] *,
+  html[data-theme="poison"] *::before,
+  html[data-theme="poison"] *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
