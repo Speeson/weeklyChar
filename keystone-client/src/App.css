@@ -1937,7 +1937,7 @@ h2 {
   justify-content: flex-end;
   gap: 10px;
   padding: 18px 24px 24px;
-  border-top: 1px solid var(--theme-panel-divider);
+  border-top: 1px solid var(--theme-update-modal-divider);
 }
 
 .ks-update-modal__actions button {

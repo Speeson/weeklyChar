@@ -139,6 +139,7 @@ html[data-theme="keystone"] {
   --theme-auth-shadow: var(--theme-shadow-panel), 0 0 38px rgb(45 122 232 / 18%);
   --theme-auth-register-border: rgb(94 151 228 / 35%);
   --theme-auth-register-background: rgb(15 43 81 / 62%);
+  --theme-update-modal-divider: rgb(127 176 248 / 18%);
   --theme-onboarding-background: linear-gradient(155deg, rgb(7 27 61 / 97%), rgb(3 13 34 / 97%));
   --theme-onboarding-account-background: rgb(7 25 53 / 74%);
   --theme-accent-border-soft: rgb(244 183 42 / 28%);
