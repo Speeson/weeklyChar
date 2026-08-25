@@ -85,6 +85,7 @@ h2 {
   color: var(--theme-text);
   background:
     var(--theme-bg-overlay),
+    var(--theme-artwork-background) center / cover no-repeat,
     var(--theme-bg-image) center / cover no-repeat,
     var(--theme-bg);
 }
@@ -95,6 +96,7 @@ h2 {
   inset: 0;
   pointer-events: none;
   background:
+    var(--theme-artwork-overlay) center / cover no-repeat,
     var(--theme-ambient-primary),
     var(--theme-ambient-secondary);
 }
@@ -137,12 +139,24 @@ h2 {
 }
 
 .ks-brand {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 20px;
   min-width: 0;
   padding: 0 50px 0 38px;
   border-right: 1px solid var(--theme-header-divider);
+}
+
+.ks-brand::after {
+  content: "";
+  position: absolute;
+  left: 82px;
+  bottom: 8px;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  background: var(--theme-app-badge-artwork) center / contain no-repeat;
 }
 
 .ks-brand__icon {
@@ -529,6 +543,14 @@ h2 {
   pointer-events: none;
 }
 
+:where(.ui-card, .sync-summary-card, .sync-table-panel, .sync-current-panel, .sync-emblem-panel)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--theme-panel-ornament) center / 100% 100% no-repeat;
+}
+
 .sync-summary-card__icon {
   width: 75px;
   height: 75px;
@@ -812,6 +834,30 @@ h2 {
   min-height: 0;
   display: grid;
   place-items: center;
+}
+
+.sync-emblem-panel__artwork::before,
+.sync-emblem-panel__artwork::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.sync-emblem-panel__artwork::before {
+  inset: 0;
+  z-index: 1;
+  background-image: var(--theme-serpentine-decoration);
+  background-size: contain;
+}
+
+.sync-emblem-panel__artwork::after {
+  inset: 18%;
+  z-index: 2;
+  background-image: var(--theme-emblem-artwork);
+  background-size: contain;
+  filter: var(--theme-emblem-glow);
 }
 
 .sync-emblem-panel__frame {
@@ -2007,6 +2053,7 @@ h2 {
 }
 
 .ui-card {
+  position: relative;
   min-width: 0;
 }
 

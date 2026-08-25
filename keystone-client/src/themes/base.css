@@ -4,6 +4,12 @@
   --theme-card-texture: none;
   --theme-card-highlight: none;
   --theme-card-overlay: none;
+  --theme-artwork-background: none;
+  --theme-artwork-overlay: none;
+  --theme-emblem-artwork: none;
+  --theme-app-badge-artwork: none;
+  --theme-panel-ornament: none;
+  --theme-serpentine-decoration: none;
   --theme-disabled-opacity: 0.56;
   --status-success: #21f38d;
   --status-success-feedback: #29e08a;

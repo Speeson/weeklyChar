@@ -54,6 +54,7 @@ describe("theme engine", () => {
   afterEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset.theme;
+    document.documentElement.removeAttribute("style");
   });
 
   it("defines the stable Keystone and Poison theme IDs", () => {
@@ -97,6 +98,12 @@ describe("theme engine", () => {
     applyThemeToDocument("poison");
 
     expect(document.documentElement.dataset.theme).toBe("poison");
+    expect(document.documentElement.style.getPropertyValue("--theme-artwork-background")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-artwork-overlay")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-emblem-artwork")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-app-badge-artwork")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-panel-ornament")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-serpentine-decoration")).toBe("none");
   });
 
   it("switches themes live through the provider without remounting application children", async () => {

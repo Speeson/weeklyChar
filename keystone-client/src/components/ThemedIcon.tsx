@@ -14,6 +14,7 @@ export function ThemedIcon({ label, name, ...props }: ThemedIconProps) {
     "aria-hidden": ariaHidden,
     "aria-label": ariaLabel,
     "aria-labelledby": ariaLabelledBy,
+    className,
     role,
     ...iconProps
   } = props;
@@ -26,6 +27,8 @@ export function ThemedIcon({ label, name, ...props }: ThemedIconProps) {
       aria-hidden={isAccessible ? undefined : ariaHidden ?? true}
       aria-label={accessibleLabel}
       aria-labelledby={ariaLabelledBy}
+      className={["theme-icon", className].filter(Boolean).join(" ")}
+      data-icon-role={name}
       role={accessibleLabel ? role ?? "img" : role}
     />
   );

@@ -51,19 +51,75 @@ export const KEYSTONE_THEME_ASSETS = {
   "sync-version": versionIcon,
 } as const;
 
-export type ThemeAssetRole = keyof typeof KEYSTONE_THEME_ASSETS;
+export type RequiredThemeAssetRole = keyof typeof KEYSTONE_THEME_ASSETS;
+
+export const OPTIONAL_THEME_ASSET_ROLES = [
+  "artwork-background",
+  "artwork-overlay",
+  "brand-theme-emblem",
+  "brand-app-badge",
+  "decoration-panel-ornament",
+  "decoration-serpentine-amani",
+] as const;
+
+export type OptionalThemeAssetRole = (typeof OPTIONAL_THEME_ASSET_ROLES)[number];
+export type ThemeAssetRole = RequiredThemeAssetRole | OptionalThemeAssetRole;
 export type ThemeAssetOverrides = Partial<
   Record<ThemeId, Partial<Record<ThemeAssetRole, string>>>
 >;
 
-export const THEME_ASSET_OVERRIDES = {
+export const THEME_ASSET_OVERRIDES: ThemeAssetOverrides = {
   poison: {},
-} as const satisfies ThemeAssetOverrides;
+};
+
+export const THEME_ASSET_CSS_PROPERTIES = {
+  "artwork-background": "--theme-artwork-background",
+  "artwork-overlay": "--theme-artwork-overlay",
+  "brand-theme-emblem": "--theme-emblem-artwork",
+  "brand-app-badge": "--theme-app-badge-artwork",
+  "decoration-panel-ornament": "--theme-panel-ornament",
+  "decoration-serpentine-amani": "--theme-serpentine-decoration",
+} as const satisfies Record<OptionalThemeAssetRole, `--theme-${string}`>;
+
+export type ThemeAssetCssProperty = (typeof THEME_ASSET_CSS_PROPERTIES)[OptionalThemeAssetRole];
+export type ThemeAssetCssProperties = Record<ThemeAssetCssProperty, string>;
+
+export function resolveThemeAsset(
+  theme: ThemeId,
+  role: RequiredThemeAssetRole,
+  overrides?: ThemeAssetOverrides,
+): string;
+export function resolveThemeAsset(
+  theme: ThemeId,
+  role: OptionalThemeAssetRole,
+  overrides?: ThemeAssetOverrides,
+): string | undefined;
 
 export function resolveThemeAsset(
   theme: ThemeId,
   role: ThemeAssetRole,
   overrides: ThemeAssetOverrides = THEME_ASSET_OVERRIDES,
-): string {
-  return overrides[theme]?.[role] ?? KEYSTONE_THEME_ASSETS[role];
+): string | undefined {
+  const override = overrides[theme]?.[role];
+  if (override !== undefined) {
+    return override;
+  }
+  return role in KEYSTONE_THEME_ASSETS
+    ? KEYSTONE_THEME_ASSETS[role as RequiredThemeAssetRole]
+    : undefined;
+}
+
+export function resolveThemeAssetCssProperties(
+  theme: ThemeId,
+  overrides: ThemeAssetOverrides = THEME_ASSET_OVERRIDES,
+): ThemeAssetCssProperties {
+  return Object.fromEntries(
+    OPTIONAL_THEME_ASSET_ROLES.map((role) => {
+      const asset = resolveThemeAsset(theme, role, overrides);
+      return [
+        THEME_ASSET_CSS_PROPERTIES[role],
+        asset ? `url(${JSON.stringify(asset)})` : "none",
+      ];
+    }),
+  ) as ThemeAssetCssProperties;
 }

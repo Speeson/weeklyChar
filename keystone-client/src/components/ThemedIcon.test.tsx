@@ -42,7 +42,7 @@ describe("ThemedIcon", () => {
     );
   });
 
-  it("preserves requested dimensions, classes, and decorative accessibility", () => {
+  it("adds stable theme and semantic role hooks while preserving dimensions, caller classes, and decorative accessibility", () => {
     const { container } = render(
       <ThemeProvider>
         <ThemedIcon className="test-icon" name="save" size={18} />
@@ -52,7 +52,9 @@ describe("ThemedIcon", () => {
     const icon = container.querySelector("svg");
     expect(icon).toHaveAttribute("width", "18");
     expect(icon).toHaveAttribute("height", "18");
+    expect(icon).toHaveClass("theme-icon");
     expect(icon).toHaveClass("test-icon");
+    expect(icon).toHaveAttribute("data-icon-role", "save");
     expect(icon).toHaveAttribute("aria-hidden", "true");
   });
 

@@ -1,7 +1,12 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   KEYSTONE_THEME_ASSETS,
+  OPTIONAL_THEME_ASSET_ROLES,
+  resolveThemeAssetCssProperties,
   resolveThemeAsset,
+  type OptionalThemeAssetRole,
+  type RequiredThemeAssetRole,
+  type ThemeAssetOverrides,
   type ThemeAssetRole,
 } from "./asset.registry";
 
@@ -34,15 +39,15 @@ const expectedKeystoneAssets = {
   "addon-status-unavailable": "23-error-icon.png",
   "addon-status-error": "23-error-icon.png",
   "addon-status-not-installed": "23-error-icon.png",
-} as const satisfies Record<ThemeAssetRole, string>;
+} as const satisfies Record<RequiredThemeAssetRole, string>;
 
 describe("theme asset resolution", () => {
   it("resolves every semantic Keystone role to the exact existing bundled file", () => {
     for (const [role, fileName] of Object.entries(expectedKeystoneAssets)) {
-      expect(resolveThemeAsset("keystone", role as ThemeAssetRole)).toBe(
-        KEYSTONE_THEME_ASSETS[role as ThemeAssetRole],
+      expect(resolveThemeAsset("keystone", role as RequiredThemeAssetRole)).toBe(
+        KEYSTONE_THEME_ASSETS[role as RequiredThemeAssetRole],
       );
-      expect(resolveThemeAsset("keystone", role as ThemeAssetRole)).toMatch(
+      expect(resolveThemeAsset("keystone", role as RequiredThemeAssetRole)).toMatch(
         new RegExp(`/assets/keystone-ui/${fileName.replace(/\./g, "\\.")}$`),
       );
     }
@@ -57,8 +62,51 @@ describe("theme asset resolution", () => {
     );
   });
 
+  it("resolves missing decorative artwork roles safely without borrowing a Keystone raster", () => {
+    for (const role of OPTIONAL_THEME_ASSET_ROLES) {
+      expect(resolveThemeAsset("poison", role)).toBeUndefined();
+      expect(resolveThemeAsset("keystone", role)).toBeUndefined();
+    }
+  });
+
+  it("resolves a registered decorative override through the existing asset registry", () => {
+    const overrides: ThemeAssetOverrides = {
+      poison: {
+        "artwork-background": "/assets/poison/background.webp",
+        "decoration-serpentine-amani": "/assets/poison/serpent.svg",
+      },
+    };
+
+    expect(resolveThemeAsset("poison", "artwork-background", overrides)).toBe(
+      "/assets/poison/background.webp",
+    );
+    expect(resolveThemeAsset("poison", "decoration-serpentine-amani", overrides)).toBe(
+      "/assets/poison/serpent.svg",
+    );
+    expect(resolveThemeAsset("keystone", "artwork-background", overrides)).toBeUndefined();
+  });
+
+  it("maps registered decorative overrides to the stable CSS slots", () => {
+    const overrides: ThemeAssetOverrides = {
+      poison: {
+        "artwork-background": "/assets/poison/background.webp",
+        "brand-theme-emblem": "/assets/poison/emblem.svg",
+      },
+    };
+
+    expect(resolveThemeAssetCssProperties("poison", overrides)).toEqual({
+      "--theme-app-badge-artwork": "none",
+      "--theme-artwork-background": 'url("/assets/poison/background.webp")',
+      "--theme-artwork-overlay": "none",
+      "--theme-emblem-artwork": 'url("/assets/poison/emblem.svg")',
+      "--theme-panel-ornament": "none",
+      "--theme-serpentine-decoration": "none",
+    });
+  });
+
   it("restricts callers to the declared semantic asset contract", () => {
-    expectTypeOf<Parameters<typeof resolveThemeAsset>[1]>().toEqualTypeOf<ThemeAssetRole>();
+    expectTypeOf<ThemeAssetRole>().toEqualTypeOf<RequiredThemeAssetRole | OptionalThemeAssetRole>();
+    expectTypeOf<(typeof OPTIONAL_THEME_ASSET_ROLES)[number]>().toEqualTypeOf<OptionalThemeAssetRole>();
     // @ts-expect-error Unknown roles must remain a compile-time error.
     resolveThemeAsset("keystone", "unknown-role");
   });

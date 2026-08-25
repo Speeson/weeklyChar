@@ -15,7 +15,7 @@ import { openRaiderIoCharacter } from "../core/native";
 import { useI18n, type TranslationKey } from "../core/i18n";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
 import type { AddonStatus, Character, CharacterState, CoreError, SyncState, SyncStatus, WowState } from "../core/types";
-import type { ThemeAssetRole } from "../theme/asset.registry";
+import type { RequiredThemeAssetRole } from "../theme/asset.registry";
 import { useThemeAsset } from "../theme/useThemeAsset";
 
 type SyncPageProps = {
@@ -68,14 +68,14 @@ function formatDate(value: string | null, language: "es" | "en" = "es", noSyncs 
 
 type SyncPresentation = {
   detail: string;
-  icon: ThemeAssetRole;
+  icon: RequiredThemeAssetRole;
   label: string;
   state: SyncState;
 };
 
 type AddonPresentation = {
   detail: string;
-  icon: ThemeAssetRole;
+  icon: RequiredThemeAssetRole;
   label: string;
   tone: "error" | "idle" | "info" | "success" | "warning";
 };
@@ -291,7 +291,7 @@ function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt, lan
 
 type SummaryCardProps = {
   detail: string;
-  icon: ThemeAssetRole;
+  icon: RequiredThemeAssetRole;
   label: string;
   tone?: "error" | "idle" | "info" | "success" | "warning";
   value: string | number;

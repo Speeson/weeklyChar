@@ -158,6 +158,7 @@ html[data-theme="poison"] .shell {
     radial-gradient(ellipse at 50% 104%, rgb(137 224 48 / 14%), transparent 48%),
     linear-gradient(90deg, rgb(0 0 0 / 28%), transparent 18% 82%, rgb(0 0 0 / 28%)),
     var(--theme-bg-overlay),
+    var(--theme-artwork-background) center / cover no-repeat,
     var(--theme-bg);
 }
 
@@ -165,6 +166,7 @@ html[data-theme="poison"] .shell::before {
   z-index: -2;
   opacity: 0.92;
   background:
+    var(--theme-artwork-overlay) center / cover no-repeat,
     radial-gradient(circle at 10% 16%, rgb(183 255 71 / 12%), transparent 24%),
     radial-gradient(circle at 84% 76%, rgb(91 172 35 / 13%), transparent 30%),
     repeating-linear-gradient(112deg, transparent 0 48px, rgb(182 153 76 / 2%) 49px 50px),
@@ -213,6 +215,35 @@ html[data-theme="poison"] .ks-header {
 
 html[data-theme="poison"] .ks-brand {
   background: linear-gradient(105deg, rgb(15 38 15 / 62%), rgb(4 12 6 / 28%));
+}
+
+html[data-theme="poison"] .theme-icon {
+  color: var(--theme-icon);
+  filter: var(--theme-icon-glow);
+}
+
+html[data-theme="poison"] :where(button:hover:not(:disabled), button:focus-visible, [aria-selected="true"], [aria-pressed="true"]) .theme-icon {
+  color: var(--theme-icon-active);
+}
+
+html[data-theme="poison"] .theme-icon:is(
+  [data-icon-role="sort-ascending"],
+  [data-icon-role="sort-descending"],
+  [data-icon-role="sort-unsorted"]
+) {
+  color: var(--theme-icon-muted);
+}
+
+html[data-theme="poison"] .theme-icon:is(
+  [data-icon-role="status-success"],
+  [data-icon-role="status-verified"]
+) {
+  color: var(--status-success);
+}
+
+html[data-theme="poison"] :where(.ui-button[data-variant="danger"], .ks-choice-modal__exit) .theme-icon {
+  color: currentColor;
+  filter: none;
 }
 
 html[data-theme="poison"] .ks-brand__name {
@@ -401,6 +432,7 @@ html[data-theme="poison"] :where(
   inset: 0;
   pointer-events: none;
   background:
+    var(--theme-panel-ornament) center / 100% 100% no-repeat,
     radial-gradient(circle at 14% 0%, rgb(194 255 86 / 9%), transparent 30%),
     linear-gradient(100deg, transparent 0 72%, rgb(134 204 46 / 4%));
 }
