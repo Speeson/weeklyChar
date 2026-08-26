@@ -18,6 +18,34 @@ import avatarFrame from "../assets/keystone-ui/26-avatar.png";
 import syncIcon from "../assets/keystone-ui/27-sync-icon.png";
 import infoIcon from "../assets/keystone-ui/28-info-icon.png";
 import appIcon from "../assets/keystone-ui/app-icon.png";
+import poisonBackground from "../themes/assets/poison/backgrounds/background-main.png";
+import poisonAppBadge from "../themes/assets/poison/branding/app-badge.png";
+import poisonEmblem from "../themes/assets/poison/branding/emblem.png";
+import poisonCloseButton from "../themes/assets/poison/frames/buttons/close-button.png";
+import poisonMinimizeButton from "../themes/assets/poison/frames/buttons/minimize-button.png";
+import poisonSettingsButton from "../themes/assets/poison/frames/buttons/settings-button.png";
+import poisonSyncButtonFrame from "../themes/assets/poison/frames/buttons/sync-button-frame.png";
+import poisonTrayButtonFrame from "../themes/assets/poison/frames/buttons/tray-button-frame.png";
+import poisonWebButtonFrame from "../themes/assets/poison/frames/buttons/web-button-frame.png";
+import poisonCharactersTableFrame from "../themes/assets/poison/frames/cards/characters-table-frame.png";
+import poisonEmblemPanelFrame from "../themes/assets/poison/frames/cards/emblem-panel-frame.png";
+import poisonStatusCardFrame from "../themes/assets/poison/frames/cards/status-card-frame.png";
+import poisonSummaryAddonFrame from "../themes/assets/poison/frames/cards/summary-card-addon-frame.png";
+import poisonSummaryFrame from "../themes/assets/poison/frames/cards/summary-card-frame.png";
+import poisonVersionCardFrame from "../themes/assets/poison/frames/cards/version-card-frame.png";
+import poisonProfileFrame from "../themes/assets/poison/frames/profile/profile-frame.png";
+import poisonAccountsIcon from "../themes/assets/poison/icons/poison-accounts-icon.png";
+import poisonCharactersIcon from "../themes/assets/poison/icons/poison-characters-icon.png";
+import poisonErrorIcon from "../themes/assets/poison/icons/poison-error-icon.png";
+import poisonInfoIcon from "../themes/assets/poison/icons/poison-info-icon.png";
+import poisonLastSyncIcon from "../themes/assets/poison/icons/poison-last-sync-icon.png";
+import poisonStatusSuccessIcon from "../themes/assets/poison/icons/poison-status-icon-success.png";
+import poisonSyncIcon from "../themes/assets/poison/icons/poison-sync-icon.png";
+import poisonVersionIcon from "../themes/assets/poison/icons/poison-version-icon.png";
+import poisonWarningIcon from "../themes/assets/poison/icons/poison-warning-icon.png";
+import poisonActiveTab from "../themes/assets/poison/navigation/tab-active-decoration.png";
+import poisonInactiveTab from "../themes/assets/poison/navigation/tab-inactive-decoration.png";
+import poisonAmbientOverlay from "../themes/assets/poison/overlays/ambient-overlay.png";
 import type { ThemeId } from "./theme.types";
 
 export const KEYSTONE_THEME_ASSETS = {
@@ -58,8 +86,17 @@ export const OPTIONAL_THEME_ASSET_ROLES = [
   "artwork-overlay",
   "brand-theme-emblem",
   "brand-app-badge",
+  "chrome-scalable-frame",
   "decoration-panel-ornament",
   "decoration-serpentine-amani",
+  "shell-footer-tray",
+  "shell-inactive-tab",
+  "sync-action-frame",
+  "sync-current-frame",
+  "sync-summary-addon-frame",
+  "sync-summary-frame",
+  "sync-table-frame",
+  "sync-version-frame",
 ] as const;
 
 export type OptionalThemeAssetRole = (typeof OPTIONAL_THEME_ASSET_ROLES)[number];
@@ -69,7 +106,45 @@ export type ThemeAssetOverrides = Partial<
 >;
 
 export const THEME_ASSET_OVERRIDES: ThemeAssetOverrides = {
-  poison: {},
+  poison: {
+    "addon-status-current": poisonStatusSuccessIcon,
+    "addon-status-error": poisonErrorIcon,
+    "addon-status-local-newer": poisonInfoIcon,
+    "addon-status-not-installed": poisonErrorIcon,
+    "addon-status-offline-cache": poisonInfoIcon,
+    "addon-status-operation": poisonSyncIcon,
+    "addon-status-unavailable": poisonErrorIcon,
+    "addon-status-update": poisonWarningIcon,
+    "artwork-background": poisonBackground,
+    "artwork-overlay": poisonAmbientOverlay,
+    "brand-emblem": poisonEmblem,
+    "brand-mark": poisonAppBadge,
+    "chrome-scalable-frame": poisonSummaryFrame,
+    "shell-active-tab": poisonActiveTab,
+    "shell-footer-tray": poisonTrayButtonFrame,
+    "shell-footer-web": poisonWebButtonFrame,
+    "shell-inactive-tab": poisonInactiveTab,
+    "shell-settings": poisonSettingsButton,
+    "shell-user-panel": poisonProfileFrame,
+    "shell-window-close": poisonCloseButton,
+    "shell-window-minimize": poisonMinimizeButton,
+    "sync-action-frame": poisonSyncButtonFrame,
+    "sync-current-frame": poisonStatusCardFrame,
+    "sync-hero-frame": poisonEmblemPanelFrame,
+    "sync-status-error": poisonErrorIcon,
+    "sync-status-info": poisonInfoIcon,
+    "sync-status-success": poisonStatusSuccessIcon,
+    "sync-status-syncing": poisonSyncIcon,
+    "sync-status-warning": poisonWarningIcon,
+    "sync-summary-accounts": poisonAccountsIcon,
+    "sync-summary-addon-frame": poisonSummaryAddonFrame,
+    "sync-summary-characters": poisonCharactersIcon,
+    "sync-summary-frame": poisonSummaryFrame,
+    "sync-summary-last": poisonLastSyncIcon,
+    "sync-table-frame": poisonCharactersTableFrame,
+    "sync-version": poisonVersionIcon,
+    "sync-version-frame": poisonVersionCardFrame,
+  },
 };
 
 export const THEME_ASSET_CSS_PROPERTIES = {
@@ -77,9 +152,10 @@ export const THEME_ASSET_CSS_PROPERTIES = {
   "artwork-overlay": "--theme-artwork-overlay",
   "brand-theme-emblem": "--theme-emblem-artwork",
   "brand-app-badge": "--theme-app-badge-artwork",
+  "chrome-scalable-frame": "--theme-chrome-scalable-frame",
   "decoration-panel-ornament": "--theme-panel-ornament",
   "decoration-serpentine-amani": "--theme-serpentine-decoration",
-} as const satisfies Record<OptionalThemeAssetRole, `--theme-${string}`>;
+} as const satisfies Partial<Record<OptionalThemeAssetRole, `--theme-${string}`>>;
 
 export const THEME_EMBLEM_FALLBACK_CSS_PROPERTY = "--theme-emblem-fallback-visibility";
 
@@ -118,10 +194,12 @@ export function resolveThemeAssetCssProperties(
   overrides: ThemeAssetOverrides = THEME_ASSET_OVERRIDES,
 ): ThemeAssetCssProperties {
   const properties = Object.fromEntries(
-    OPTIONAL_THEME_ASSET_ROLES.map((role) => {
+    (Object.entries(THEME_ASSET_CSS_PROPERTIES) as Array<
+      [keyof typeof THEME_ASSET_CSS_PROPERTIES, (typeof THEME_ASSET_CSS_PROPERTIES)[keyof typeof THEME_ASSET_CSS_PROPERTIES]]
+    >).map(([role, property]) => {
       const asset = resolveThemeAsset(theme, role, overrides);
       return [
-        THEME_ASSET_CSS_PROPERTIES[role],
+        property,
         asset ? `url(${JSON.stringify(asset)})` : "none",
       ];
     }),
