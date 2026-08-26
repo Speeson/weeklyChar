@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("keystone-client.theme", "poison"));
 });
 
-test("Poison gives the selected tab, ritual surfaces and sync action distinct visible treatment", async ({ page }) => {
+test("Poison gives tabs, ritual surfaces and sync action distinct registered artwork", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
   const selectedTab = page.locator('[data-ui="shell-tab"][data-state="selected"]');
@@ -19,32 +19,26 @@ test("Poison gives the selected tab, ritual surfaces and sync action distinct vi
     const selected = document.querySelector<HTMLElement>('[data-ui="shell-tab"][data-state="selected"]')!;
     const surface = document.querySelector<HTMLElement>(".sync-summary-card")!;
     const action = document.querySelector<HTMLElement>(".sync-primary-action")!;
-    const selectedGlow = getComputedStyle(selected, "::after");
-    const surfaceHaze = getComputedStyle(surface, "::before");
-    const actionEdge = getComputedStyle(action, "::after");
+    const activeDecoration = selected.querySelector<HTMLImageElement>(".ks-tab__decoration--active")!;
+    const surfaceFrame = surface.querySelector<HTMLImageElement>(".sync-summary-card__frame")!;
+    const actionFrame = action.querySelector<HTMLImageElement>(".sync-primary-action__frame")!;
 
     return {
-      actionEdgeBackground: actionEdge.backgroundImage,
-      actionEdgeContent: actionEdge.content,
-      actionEdgePointerEvents: actionEdge.pointerEvents,
-      selectedGlowBackground: selectedGlow.backgroundImage,
-      selectedGlowContent: selectedGlow.content,
-      selectedGlowPointerEvents: selectedGlow.pointerEvents,
-      surfaceHazeBackground: surfaceHaze.backgroundImage,
-      surfaceHazeContent: surfaceHaze.content,
-      surfaceHazePointerEvents: surfaceHaze.pointerEvents,
+      actionFrame: actionFrame.src,
+      actionPointerEvents: getComputedStyle(actionFrame).pointerEvents,
+      activeDecoration: activeDecoration.src,
+      activePointerEvents: getComputedStyle(activeDecoration).pointerEvents,
+      surfaceFrame: surfaceFrame.src,
+      surfacePointerEvents: getComputedStyle(surfaceFrame).pointerEvents,
     };
   });
 
-  expect(treatment.selectedGlowContent).toBe('""');
-  expect(treatment.selectedGlowBackground).toContain("linear-gradient");
-  expect(treatment.selectedGlowPointerEvents).toBe("none");
-  expect(treatment.surfaceHazeContent).toBe('""');
-  expect(treatment.surfaceHazeBackground).toContain("radial-gradient");
-  expect(treatment.surfaceHazePointerEvents).toBe("none");
-  expect(treatment.actionEdgeContent).toBe('""');
-  expect(treatment.actionEdgeBackground).toContain("linear-gradient");
-  expect(treatment.actionEdgePointerEvents).toBe("none");
+  expect(treatment.activeDecoration).toMatch(/tab-active-decoration(?:-[^/]+)?\.png$/);
+  expect(treatment.surfaceFrame).toMatch(/summary-card-addon-frame(?:-[^/]+)?\.png$/);
+  expect(treatment.actionFrame).toMatch(/sync-button-frame(?:-[^/]+)?\.png$/);
+  expect(treatment.activePointerEvents).toBe("none");
+  expect(treatment.surfacePointerEvents).toBe("none");
+  expect(treatment.actionPointerEvents).toBe("none");
 });
 
 test("Poison keeps keyboard focus visible on the primary sync action", async ({ page }) => {
@@ -113,14 +107,14 @@ test("Poison reduced motion disables ambient and syncing animation while preserv
   await page.goto("/?preview=sync-syncing");
 
   const selectedTab = page.locator('[data-ui="shell-tab"][data-state="selected"]');
-  const syncingIcon = page.locator('.sync-current-panel[data-sync-state="syncing"] img');
+  const syncingIcon = page.locator('.sync-current-panel[data-sync-state="syncing"] .sync-current-panel__body > img');
   await expect(selectedTab).toBeVisible();
   await expect(syncingIcon).toBeVisible();
 
   const motion = await page.evaluate(() => {
     const shell = document.querySelector<HTMLElement>(".shell")!;
     const selected = document.querySelector<HTMLElement>('[data-ui="shell-tab"][data-state="selected"]')!;
-    const syncing = document.querySelector<HTMLElement>('.sync-current-panel[data-sync-state="syncing"] img')!;
+    const syncing = document.querySelector<HTMLElement>('.sync-current-panel[data-sync-state="syncing"] .sync-current-panel__body > img')!;
     return {
       selectedGlowContent: getComputedStyle(selected, "::after").content,
       shellAnimation: getComputedStyle(shell, "::after").animationName,

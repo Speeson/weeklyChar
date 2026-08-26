@@ -220,7 +220,7 @@ test.describe("theme behavior in the browser", () => {
     await page.goto("/?preview=sync-syncing");
 
     await expectPoisonTheme(page);
-    await expect(page.locator('.sync-current-panel[data-sync-state="syncing"] img')).toHaveCSS("animation-name", "none");
+    await expect(page.locator('.sync-current-panel[data-sync-state="syncing"] .sync-current-panel__body > img')).toHaveCSS("animation-name", "none");
     const addonTab = page.getByRole("button", { name: "Addon", exact: true });
     await addonTab.click();
     await expect(addonTab).toHaveAttribute("aria-current", "page");

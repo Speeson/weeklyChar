@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("keystone-client.theme", "poison"));
 });
 
-test("Poison artwork slots are inert by default and consume future registry URLs without changing layout", async ({ page }) => {
+test("Poison production artwork resolves through registry slots without changing layout geometry", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
   const shell = page.locator(".shell");
@@ -17,34 +17,18 @@ test("Poison artwork slots are inert by default and consume future registry URLs
   const result = await page.evaluate(() => {
     const root = document.documentElement;
     const shellElement = document.querySelector<HTMLElement>(".shell")!;
-    const brandElement = document.querySelector<HTMLElement>(".ks-brand")!;
     const cardElement = document.querySelector<HTMLElement>(".sync-summary-card")!;
-    const emblemElement = document.querySelector<HTMLElement>(".sync-emblem-panel__artwork")!;
-    const emblemFallback = document.querySelector<HTMLElement>(".sync-emblem-panel__icon")!;
+    const cardFrame = document.querySelector<HTMLImageElement>('[data-asset-role="sync-summary-addon-frame"]')!;
+    const actionFrame = document.querySelector<HTMLImageElement>('[data-asset-role="sync-action-frame"]')!;
+    const emblemFrame = document.querySelector<HTMLImageElement>(".sync-emblem-panel__frame")!;
+    const emblemIcon = document.querySelector<HTMLImageElement>(".sync-emblem-panel__icon")!;
+    const profileFrame = document.querySelector<HTMLImageElement>(".ks-user-menu__shell")!;
+    const activeTab = document.querySelector<HTMLImageElement>(".ks-tab__decoration--active")!;
+    const inactiveTab = document.querySelector<HTMLImageElement>(".ks-tab__decoration--inactive")!;
     const before = {
       card: cardElement.getBoundingClientRect().toJSON(),
       shell: shellElement.getBoundingClientRect().toJSON(),
     };
-    const emptySlots = [
-      "--theme-artwork-background",
-      "--theme-artwork-overlay",
-      "--theme-emblem-artwork",
-      "--theme-app-badge-artwork",
-      "--theme-panel-ornament",
-      "--theme-serpentine-decoration",
-    ].map((property) => root.style.getPropertyValue(property));
-    const image = 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E")';
-    for (const property of [
-      "--theme-artwork-background",
-      "--theme-artwork-overlay",
-      "--theme-emblem-artwork",
-      "--theme-app-badge-artwork",
-      "--theme-panel-ornament",
-      "--theme-serpentine-decoration",
-    ]) {
-      root.style.setProperty(property, image);
-    }
-    root.style.setProperty("--theme-emblem-fallback-visibility", "hidden");
     const after = {
       card: cardElement.getBoundingClientRect().toJSON(),
       shell: shellElement.getBoundingClientRect().toJSON(),
@@ -53,56 +37,61 @@ test("Poison artwork slots are inert by default and consume future registry URLs
     return {
       after,
       before,
-      emptySlots,
-      emblemFallbackVisibility: getComputedStyle(emblemFallback).visibility,
-      backgrounds: {
-        appBadge: getComputedStyle(brandElement, "::after").backgroundImage,
-        artwork: getComputedStyle(shellElement).backgroundImage,
-        emblem: getComputedStyle(emblemElement, "::after").backgroundImage,
-        ornament: getComputedStyle(cardElement, "::before").backgroundImage,
-        overlay: getComputedStyle(shellElement, "::before").backgroundImage,
-        serpentine: getComputedStyle(emblemElement, "::before").backgroundImage,
+      ambientOpacity: getComputedStyle(shellElement, "::before").opacity,
+      documentSlots: {
+        artwork: root.style.getPropertyValue("--theme-artwork-background"),
+        chrome: root.style.getPropertyValue("--theme-chrome-scalable-frame"),
+        overlay: root.style.getPropertyValue("--theme-artwork-overlay"),
       },
-      pointerEvents: {
-        appBadge: getComputedStyle(brandElement, "::after").pointerEvents,
-        emblem: getComputedStyle(emblemElement, "::after").pointerEvents,
-        ornament: getComputedStyle(cardElement, "::before").pointerEvents,
-        serpentine: getComputedStyle(emblemElement, "::before").pointerEvents,
+      assets: {
+        action: actionFrame.src,
+        activeTab: activeTab.src,
+        card: cardFrame.src,
+        emblem: emblemIcon.src,
+        emblemFrame: emblemFrame.src,
+        inactiveTab: inactiveTab.src,
+        profile: profileFrame.src,
       },
+      framePointerEvents: getComputedStyle(cardFrame).pointerEvents,
+      overlayBackground: getComputedStyle(shellElement, "::before").backgroundImage,
     };
   });
 
-  expect(result.emptySlots).toEqual(["none", "none", "none", "none", "none", "none"]);
-  expect(result.emblemFallbackVisibility).toBe("hidden");
-  for (const background of Object.values(result.backgrounds)) {
-    expect(background).toContain("data:image/svg+xml");
-  }
-  expect(result.pointerEvents).toEqual({
-    appBadge: "none",
-    emblem: "none",
-    ornament: "none",
-    serpentine: "none",
+  expect(result.documentSlots.artwork).toContain("background-main");
+  expect(result.documentSlots.overlay).toContain("ambient-overlay");
+  expect(result.documentSlots.chrome).toContain("summary-card-frame");
+  expect(result.overlayBackground).toContain("ambient-overlay");
+  expect(result.ambientOpacity).toBe("0.14");
+  expect(result.assets).toMatchObject({
+    action: expect.stringMatching(/sync-button-frame(?:-[^/]+)?\.png$/),
+    activeTab: expect.stringMatching(/tab-active-decoration(?:-[^/]+)?\.png$/),
+    card: expect.stringMatching(/summary-card-addon-frame(?:-[^/]+)?\.png$/),
+    emblem: expect.stringMatching(/emblem(?:-[^/]+)?\.png$/),
+    emblemFrame: expect.stringMatching(/emblem-panel-frame(?:-[^/]+)?\.png$/),
+    inactiveTab: expect.stringMatching(/tab-inactive-decoration(?:-[^/]+)?\.png$/),
+    profile: expect.stringMatching(/profile-frame(?:-[^/]+)?\.png$/),
   });
+  expect(result.framePointerEvents).toBe("none");
   expect(result.after).toEqual(result.before);
   await expect(brand).toBeVisible();
   await expect(emblem).toBeVisible();
 });
 
-test("Poison semantic icons receive the shared color and glow treatment", async ({ page }) => {
+test("Poison semantic raster status icons receive centralized normalization", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
-  const icon = page.locator('.theme-icon[data-icon-role="refresh"]').first();
+  const icon = page.locator(".sync-current-panel__body > img");
   await expect(icon).toBeVisible();
 
   const treatment = await icon.evaluate((element) => {
     const styles = getComputedStyle(element);
     return {
-      color: styles.color,
       filter: styles.filter,
+      source: (element as HTMLImageElement).src,
     };
   });
 
-  expect(treatment.color).toBe("rgb(197, 238, 98)");
+  expect(treatment.source).toMatch(/poison-status-icon-success(?:-[^/]+)?\.png$/);
   expect(treatment.filter).not.toBe("none");
 });
 
