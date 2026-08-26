@@ -55,6 +55,8 @@ describe("KeystoneShell profile menu", () => {
     expect(document.querySelector('.ks-brand__icon[src$="app-badge.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-tab__decoration--active[src$="tab-active-decoration.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-tab__decoration--inactive[src$="tab-inactive-decoration.png"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sincronizacion" }).querySelector(".ks-tab__label")).toHaveTextContent("Sincronizacion");
+    expect(screen.getByRole("button", { name: "Addon" }).querySelector(".ks-tab__label")).toHaveTextContent("Addon");
     expect(document.querySelector('.ks-user-menu__shell[src$="profile-frame.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/player.jpg"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-footer-action__asset[src$="web-button-frame.png"]')).toBeInTheDocument();

@@ -181,7 +181,7 @@ function KeystoneHeader({
           onClick={() => onNavigate("sync")}
           type="button"
         >
-          {t("shell.sync")}
+          <span className="ks-tab__label">{t("shell.sync")}</span>
           {currentView === "sync" ? (
             <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
           ) : inactiveTabIndicator ? (
@@ -196,7 +196,7 @@ function KeystoneHeader({
           onClick={() => onNavigate("addon")}
           type="button"
         >
-          Addon
+          <span className="ks-tab__label">Addon</span>
           {currentView === "addon" ? (
             <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
           ) : inactiveTabIndicator ? (

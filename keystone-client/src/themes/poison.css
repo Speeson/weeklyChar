@@ -409,70 +409,6 @@ html[data-theme="poison"] .ks-user-dropdown button:focus-visible {
   box-shadow: inset 3px 0 0 rgb(190 255 81 / 72%), 0 0 14px rgb(123 208 41 / 14%);
 }
 
-html[data-theme="poison"] :where(
-  .sync-summary-card,
-  .sync-table-panel,
-  .sync-emblem-panel,
-  .sync-current-panel
-) {
-  border-color: var(--theme-border-strong);
-  background:
-    linear-gradient(145deg, rgb(31 61 23 / 18%), transparent 44%),
-    radial-gradient(ellipse at 50% 108%, rgb(116 199 39 / 10%), transparent 54%),
-    var(--theme-summary-background);
-  box-shadow:
-    0 0 0 1px rgb(28 20 8 / 86%),
-    inset 0 1px 0 rgb(238 218 139 / 10%),
-    inset 0 0 28px rgb(92 157 34 / 9%),
-    0 14px 34px rgb(0 0 0 / 42%);
-}
-
-html[data-theme="poison"] .sync-table-panel {
-  background:
-    linear-gradient(115deg, rgb(28 54 21 / 16%), transparent 34%),
-    radial-gradient(circle at 48% 58%, rgb(111 185 38 / 9%), transparent 36%),
-    var(--theme-table-background);
-}
-
-html[data-theme="poison"] :where(
-  .sync-summary-card,
-  .sync-table-panel,
-  .sync-emblem-panel,
-  .sync-current-panel
-)::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    var(--theme-panel-ornament) center / 100% 100% no-repeat,
-    radial-gradient(circle at 14% 0%, rgb(194 255 86 / 9%), transparent 30%),
-    linear-gradient(100deg, transparent 0 72%, rgb(134 204 46 / 4%));
-}
-
-html[data-theme="poison"] :where(
-  .sync-summary-card,
-  .sync-table-panel,
-  .sync-current-panel,
-  .sync-emblem-panel
-)::after {
-  border-color: rgb(215 192 112 / 15%);
-  box-shadow: inset 0 0 14px rgb(105 176 38 / 7%);
-}
-
-html[data-theme="poison"] .sync-summary-card {
-  transition: border-color var(--theme-motion-normal), box-shadow var(--theme-motion-normal), filter var(--theme-motion-normal);
-}
-
-html[data-theme="poison"] .sync-summary-card:hover {
-  border-color: rgb(181 225 82 / 58%);
-  box-shadow:
-    0 0 0 1px rgb(28 20 8 / 86%),
-    inset 0 0 28px rgb(112 194 38 / 13%),
-    0 0 22px rgb(119 205 39 / 13%),
-    0 14px 34px rgb(0 0 0 / 42%);
-}
-
 html[data-theme="poison"] .sync-table__header {
   background: linear-gradient(90deg, rgb(177 150 75 / 4%), rgb(111 190 35 / 4%), rgb(177 150 75 / 4%));
   text-shadow: 0 1px 0 rgb(0 0 0 / 86%);
@@ -482,28 +418,6 @@ html[data-theme="poison"] .sync-table__row:hover,
 html[data-theme="poison"] .sync-table__row:focus-visible {
   background: linear-gradient(90deg, rgb(164 255 61 / 14%), rgb(96 164 33 / 6%) 68%, transparent);
   box-shadow: inset 3px 0 0 var(--theme-table-row-marker), inset 0 1px 0 rgb(198 255 91 / 7%);
-}
-
-html[data-theme="poison"] .sync-version-panel {
-  background:
-    radial-gradient(circle at 12% 50%, rgb(167 250 58 / 10%), transparent 36%),
-    var(--theme-version-background);
-}
-
-html[data-theme="poison"] .sync-current-panel--watching {
-  border-color: var(--status-info-border);
-}
-
-html[data-theme="poison"] .sync-current-panel--syncing {
-  border-color: var(--status-warning-border);
-}
-
-html[data-theme="poison"] .sync-current-panel--success {
-  border-color: var(--status-success-border);
-}
-
-html[data-theme="poison"] .sync-current-panel--error {
-  border-color: var(--status-danger-border-strong);
 }
 
 html[data-theme="poison"] .sync-primary-action {
@@ -711,16 +625,21 @@ html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onbo
 /* Production Poison artwork composition. The source PNGs stay immutable; these
    shared controls make the independently rendered pieces read as one UI kit. */
 html[data-theme="poison"] {
-  --poison-frame-brightness: 0.66;
-  --poison-frame-saturation: 0.82;
+  --poison-font-display: Georgia, "Times New Roman", serif;
+  --poison-font-body: "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --poison-frame-brightness: 0.74;
+  --poison-frame-brightness-control: 0.88;
+  --poison-frame-brightness-footer: 0.86;
+  --poison-frame-brightness-primary: 0.96;
+  --poison-frame-saturation: 0.86;
   --poison-frame-contrast: 1.08;
-  --poison-frame-opacity: 0.96;
+  --poison-frame-opacity: 1;
   --poison-frame-glow: drop-shadow(0 5px 8px rgb(0 0 0 / 62%)) drop-shadow(0 0 5px rgb(151 224 52 / 15%));
-  --poison-frame-filter: brightness(var(--poison-frame-brightness)) saturate(var(--poison-frame-saturation)) contrast(var(--poison-frame-contrast)) var(--poison-frame-glow);
-  --poison-icon-filter: brightness(0.76) saturate(0.9) contrast(1.04) drop-shadow(0 0 8px rgb(151 235 51 / 24%));
+  --poison-icon-filter: brightness(var(--poison-icon-brightness, 0.86)) saturate(0.92) contrast(1.05) drop-shadow(0 0 7px rgb(151 235 51 / 22%));
 }
 
 html[data-theme="poison"] .shell {
+  font-family: var(--poison-font-body);
   background:
     linear-gradient(180deg, rgb(0 0 0 / 8%), rgb(1 6 2 / 18%)),
     var(--theme-artwork-background) center / cover no-repeat,
@@ -753,11 +672,16 @@ html[data-theme="poison"] :where(
   .sync-emblem-panel__frame,
   .ks-user-menu__shell,
   .ks-tab__decoration,
-  .ks-footer-action__asset
+  .ks-footer-action__asset,
+  .ks-brand__icon,
+  .ks-settings-control img,
+  .ks-window-button img
 ) {
+  --poison-frame-filter: brightness(var(--poison-artwork-brightness, var(--poison-frame-brightness))) saturate(var(--poison-artwork-saturation, var(--poison-frame-saturation))) contrast(var(--poison-frame-contrast)) var(--poison-frame-glow);
   opacity: var(--poison-frame-opacity);
   filter: var(--poison-frame-filter);
   pointer-events: none;
+  transition: filter var(--theme-motion-fast);
 }
 
 html[data-theme="poison"] :where(
@@ -775,30 +699,40 @@ html[data-theme="poison"] .ks-brand::after {
 }
 
 html[data-theme="poison"] .ks-brand__icon {
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
   width: 70px;
   height: 70px;
   border-radius: 0;
+  opacity: 1;
+  filter: var(--poison-frame-filter);
 }
 
 html[data-theme="poison"] .ks-tab {
   isolation: isolate;
+  font-family: var(--poison-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 html[data-theme="poison"] .ks-tab__decoration {
+  --poison-artwork-brightness: 0.82;
   position: absolute;
-  top: 76%;
+  top: auto;
   left: 50%;
-  bottom: auto;
-  z-index: 0;
-  width: 96%;
+  bottom: -13px;
+  z-index: 1;
+  width: 212px;
   height: 70px;
   object-fit: contain;
   object-position: center;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 html[data-theme="poison"] .ks-tab__decoration--active {
-  opacity: 0.62;
+  --poison-artwork-brightness: 0.9;
+  opacity: 1;
+  filter: var(--poison-frame-filter);
 }
 
 html[data-theme="poison"] .ks-tab__decoration--inactive {
@@ -810,18 +744,40 @@ html[data-theme="poison"] .ks-tab[data-state="selected"]::after {
   display: none;
 }
 
-html[data-theme="poison"] .ks-settings-control img,
-html[data-theme="poison"] .ks-window-button img {
+html[data-theme="poison"] .ks-tab[data-state="selected"] {
+  background: transparent;
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"]::before {
+  content: "";
+  position: absolute;
+  inset: 8px 10px 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 100%, rgb(183 255 65 / 24%), transparent 68%);
+  box-shadow: inset 0 -1px 0 rgb(183 255 65 / 24%);
+}
+
+html[data-theme="poison"] .ks-tab__label {
+  position: relative;
+  z-index: 2;
+}
+
+html[data-theme="poison"] .ks-settings-control img {
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
   width: 76px;
   height: 76px;
-  opacity: 0.88;
+  opacity: 1;
   filter: var(--poison-frame-filter);
 }
 
 html[data-theme="poison"] .ks-window-button--minimize img,
 html[data-theme="poison"] .ks-window-button--close img {
-  width: 76px;
-  height: 76px;
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
+  width: 75px;
+  height: 75px;
+  opacity: 1;
+  filter: var(--poison-frame-filter);
 }
 
 html[data-theme="poison"] .ks-user-menu {
@@ -829,17 +785,22 @@ html[data-theme="poison"] .ks-user-menu {
 }
 
 html[data-theme="poison"] .ks-user-menu__trigger {
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
+  isolation: isolate;
   grid-template-columns: 54px minmax(0, 1fr) 26px;
   padding-right: 16px;
 }
 
 html[data-theme="poison"] .ks-user-menu__shell {
+  z-index: 2;
   width: 100%;
   height: 82px;
   object-fit: fill;
+  filter: var(--poison-frame-filter);
 }
 
 html[data-theme="poison"] .ks-user-menu__avatar {
+  z-index: 1;
   width: 54px;
   height: 54px;
 }
@@ -857,8 +818,12 @@ html[data-theme="poison"] .ks-user-menu__dropdown-icon {
 }
 
 html[data-theme="poison"] .ks-user-menu__name {
+  z-index: 3;
   padding-right: 12px;
   color: #efe5bf;
+  font-family: var(--poison-font-display);
+  font-size: 17px;
+  font-weight: 600;
   text-shadow: 0 1px 0 rgb(0 0 0 / 92%);
 }
 
@@ -866,18 +831,18 @@ html[data-theme="poison"] .sync-summary-grid {
   grid-template-columns: minmax(0, 1.18fr) repeat(3, minmax(0, 1fr));
 }
 
-html[data-theme="poison"] :where(
+html[data-theme="poison"] :is(
   .sync-summary-card,
   .sync-table-panel,
   .sync-version-panel,
-  .sync-current-panel
+  .sync-current-panel,
+  .sync-emblem-panel
 ) {
   isolation: isolate;
-  border-color: transparent;
+  border: 0;
   border-radius: 0;
-  background-color: rgb(3 12 5 / 74%);
-  background-blend-mode: normal;
-  box-shadow: 0 12px 28px rgb(0 0 0 / 38%);
+  background: transparent;
+  box-shadow: none;
 }
 
 html[data-theme="poison"] :where(
@@ -912,25 +877,59 @@ html[data-theme="poison"] .sync-current-panel > :not(.sync-current-panel__frame)
 }
 
 html[data-theme="poison"] .sync-summary-card {
-  padding: 18px 23px;
+  --poison-content-inset-left: 24px;
+  --poison-content-inset-right: 22px;
+  --poison-content-inset-top: 18px;
+  --poison-content-inset-bottom: 18px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
 }
 
 html[data-theme="poison"] .sync-summary-card__icon {
-  width: 72px;
-  height: 72px;
+  width: 68px;
+  height: 68px;
+}
+
+html[data-theme="poison"] .sync-summary-card p,
+html[data-theme="poison"] .sync-version-panel p,
+html[data-theme="poison"] .sync-current-panel h2 {
+  font-family: var(--poison-font-display);
+  font-weight: 600;
+}
+
+html[data-theme="poison"] .sync-summary-card p {
+  font-size: 17px;
+}
+
+html[data-theme="poison"] .sync-summary-card strong {
+  margin-top: 2px;
+  font-family: var(--poison-font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+html[data-theme="poison"] .sync-summary-card span {
+  margin-top: 3px;
+  font-family: var(--poison-font-body);
+  font-size: 13px;
 }
 
 html[data-theme="poison"] .sync-table-panel {
-  padding: 27px 30px 25px;
+  --poison-content-inset-left: 32px;
+  --poison-content-inset-right: 34px;
+  --poison-content-inset-top: 29px;
+  --poison-content-inset-bottom: 30px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
+  overflow: hidden;
 }
 
 html[data-theme="poison"] .sync-table-panel__frame {
-  z-index: 0;
+  z-index: 3;
 }
 
 html[data-theme="poison"] .sync-table {
   z-index: 1;
-  background: rgb(2 9 4 / 48%);
+  overflow: hidden;
+  background: rgb(2 9 4 / 56%);
 }
 
 html[data-theme="poison"] .sync-table__header {
@@ -939,6 +938,21 @@ html[data-theme="poison"] .sync-table__header {
 
 html[data-theme="poison"] .sync-table__body {
   background: rgb(1 7 3 / 42%);
+}
+
+html[data-theme="poison"] .sync-table__header {
+  position: relative;
+  z-index: 2;
+  font-family: var(--poison-font-display);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+html[data-theme="poison"] .sync-table__row {
+  position: relative;
+  z-index: 1;
+  font-family: var(--poison-font-body);
+  font-size: 16px;
 }
 
 html[data-theme="poison"] .sync-sidebar {
@@ -950,8 +964,6 @@ html[data-theme="poison"] .sync-emblem-panel {
   grid-template-rows: minmax(250px, 1fr) 116px;
   gap: 6px;
   padding: 6px;
-  border-color: rgb(153 125 58 / 44%);
-  background: rgb(2 10 4 / 62%);
 }
 
 html[data-theme="poison"] .sync-emblem-panel__frame {
@@ -966,26 +978,53 @@ html[data-theme="poison"] .sync-emblem-panel__icon {
 }
 
 html[data-theme="poison"] .sync-version-panel {
+  --poison-content-inset-left: 30px;
+  --poison-content-inset-right: 28px;
+  --poison-content-inset-top: 17px;
+  --poison-content-inset-bottom: 16px;
   min-height: 116px;
   grid-template-columns: 70px minmax(0, 1fr);
   gap: 18px;
-  padding: 17px 24px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
 }
 
 html[data-theme="poison"] .sync-version-panel__icon {
-  width: 64px;
-  height: 64px;
+  width: 62px;
+  height: 62px;
+}
+
+html[data-theme="poison"] .sync-version-panel p {
+  font-size: 17px;
+}
+
+html[data-theme="poison"] .sync-version-panel strong {
+  font-family: var(--poison-font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+html[data-theme="poison"] .sync-version-panel span {
+  font-family: var(--poison-font-body);
+  font-size: 15px;
 }
 
 html[data-theme="poison"] .sync-current-panel {
-  padding: 18px 25px;
+  --poison-content-inset-left: 28px;
+  --poison-content-inset-right: 28px;
+  --poison-content-inset-top: 18px;
+  --poison-content-inset-bottom: 18px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
+}
+
+html[data-theme="poison"] .sync-current-panel h2 {
+  font-size: 18px;
 }
 
 html[data-theme="poison"] .sync-current-panel__body {
-  grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-columns: 70px minmax(0, 1fr);
   gap: 14px;
-  min-height: 119px;
-  margin-top: 8px;
+  min-height: 118px;
+  margin-top: 5px;
 }
 
 html[data-theme="poison"] .sync-current-panel__body img {
@@ -995,16 +1034,38 @@ html[data-theme="poison"] .sync-current-panel__body img {
 }
 
 html[data-theme="poison"] .sync-current-panel small {
-  margin-top: 8px;
+  margin-top: 6px;
+  font-family: var(--poison-font-body);
+  font-size: 13px;
+}
+
+html[data-theme="poison"] .sync-current-panel strong {
+  font-family: var(--poison-font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+html[data-theme="poison"] .sync-current-panel__body span {
+  font-family: var(--poison-font-body);
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 html[data-theme="poison"] .sync-primary-action {
+  --poison-artwork-brightness: var(--poison-frame-brightness-primary);
+  --poison-content-inset-left: 25%;
+  --poison-content-inset-right: 10%;
   isolation: isolate;
   min-height: 78px;
+  padding-inline: var(--poison-content-inset-left) var(--poison-content-inset-right);
   overflow: visible;
   border: 0;
   background: transparent;
   box-shadow: none;
+  font-family: var(--poison-font-display);
+  font-size: 23px;
+  font-weight: 700;
 }
 
 html[data-theme="poison"] .sync-primary-action::after {
@@ -1017,45 +1078,105 @@ html[data-theme="poison"] .sync-primary-action__frame {
   width: 108%;
   height: auto;
   max-width: none;
+  z-index: 1;
   transform: translate(-50%, -50%);
 }
 
 html[data-theme="poison"] .sync-primary-action > span {
   position: relative;
-  z-index: 1;
-  margin-left: 66px;
+  z-index: 2;
+  width: 100%;
+  margin-left: 0;
+  text-align: center;
 }
 
 html[data-theme="poison"] .ks-footer-action--web,
 html[data-theme="poison"] .ks-footer-action--tray {
+  --poison-artwork-brightness: var(--poison-frame-brightness-footer);
   isolation: isolate;
   width: 310px;
   min-height: 72px;
   justify-content: center;
+  padding-block: 0;
   overflow: visible;
   border: 0;
   background: transparent;
   box-shadow: none;
+  font-family: var(--poison-font-display);
+  font-size: 17px;
+  font-weight: 700;
 }
 
 html[data-theme="poison"] .ks-footer-action--web {
-  padding-left: 74px;
+  --poison-content-inset-left: 74px;
+  --poison-content-inset-right: 34px;
+  padding-inline: var(--poison-content-inset-left) var(--poison-content-inset-right);
 }
 
 html[data-theme="poison"] .ks-footer-action--tray {
+  --poison-content-inset-left: 71px;
+  --poison-content-inset-right: 31px;
   position: relative;
-  padding-left: 64px;
+  padding-inline: var(--poison-content-inset-left) var(--poison-content-inset-right);
 }
 
 html[data-theme="poison"] .ks-footer-action__asset {
+  z-index: 1;
   width: 104%;
   height: auto;
   max-width: none;
+  filter: var(--poison-frame-filter);
 }
 
+html[data-theme="poison"] .ks-footer-action--web > span,
 html[data-theme="poison"] .ks-footer-action--tray > span {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+html[data-theme="poison"] :is(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-version-panel,
+  .sync-current-panel,
+  .sync-emblem-panel
+):hover {
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] :is(
+  .sync-summary-card,
+  .sync-version-panel,
+  .sync-current-panel
+):hover .theme-frame-artwork {
+  --poison-artwork-brightness: 0.79;
+}
+
+html[data-theme="poison"] .sync-primary-action:hover:not(:disabled) {
+  --poison-artwork-brightness: 1.08;
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] :is(.ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):hover:not(:disabled) {
+  --poison-artwork-brightness: 0.98;
+  filter: none;
+}
+
+html[data-theme="poison"] :is(.ks-settings-control, .ks-window-button):hover:not(:disabled) img {
+  --poison-artwork-brightness: 0.98;
+}
+
+html[data-theme="poison"] .ks-footer-action:hover:not(:disabled) .ks-footer-action__asset {
+  --poison-artwork-brightness: 0.98;
+}
+
+html[data-theme="poison"] :where(.sync-primary-action, .ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):active:not(:disabled) {
+  filter: none;
 }
 
 html[data-theme="poison"] :where(
