@@ -159,8 +159,9 @@ export const THEME_ASSET_CSS_PROPERTIES = {
 
 export const THEME_EMBLEM_FALLBACK_CSS_PROPERTY = "--theme-emblem-fallback-visibility";
 
+type ThemeDocumentAssetRole = keyof typeof THEME_ASSET_CSS_PROPERTIES;
 export type ThemeAssetCssProperty =
-  | (typeof THEME_ASSET_CSS_PROPERTIES)[OptionalThemeAssetRole]
+  | (typeof THEME_ASSET_CSS_PROPERTIES)[ThemeDocumentAssetRole]
   | typeof THEME_EMBLEM_FALLBACK_CSS_PROPERTY;
 export type ThemeAssetCssProperties = Record<ThemeAssetCssProperty, string>;
 
@@ -195,7 +196,7 @@ export function resolveThemeAssetCssProperties(
 ): ThemeAssetCssProperties {
   const properties = Object.fromEntries(
     (Object.entries(THEME_ASSET_CSS_PROPERTIES) as Array<
-      [keyof typeof THEME_ASSET_CSS_PROPERTIES, (typeof THEME_ASSET_CSS_PROPERTIES)[keyof typeof THEME_ASSET_CSS_PROPERTIES]]
+      [ThemeDocumentAssetRole, (typeof THEME_ASSET_CSS_PROPERTIES)[ThemeDocumentAssetRole]]
     >).map(([role, property]) => {
       const asset = resolveThemeAsset(theme, role, overrides);
       return [

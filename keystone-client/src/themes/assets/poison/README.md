@@ -1,14 +1,19 @@
 # Poison artwork contract
 
-This directory is reserved for optional, replaceable Poison theme artwork. Register a file in `src/theme/asset.registry.ts`; pages must not import these assets or branch on the active theme.
+Production Poison artwork is registered centrally in `src/theme/asset.registry.ts`. Pages request semantic roles; they must not import these files directly or branch on the active theme.
 
-| Registry role | Intended use | Preferred format |
-| --- | --- | --- |
-| `artwork-background` | Full-window environment or atmospheric backdrop | WebP |
-| `artwork-overlay` | Transparent full-window texture or haze | WebP or SVG |
-| `brand-theme-emblem` | Primary Poison emblem/logo | SVG |
-| `brand-app-badge` | Small brand badge layered near the app mark | SVG |
-| `decoration-panel-ornament` | Transparent panel/card border ornament | SVG or WebP |
-| `decoration-serpentine-amani` | Transparent serpentine or Amani-inspired accent | SVG |
+The runtime set contains:
 
-Missing roles intentionally resolve to `undefined` and publish `none` to their CSS slots. Keep assets transparent where appropriate, pointer-neutral through the existing decorative layers, and optimized before committing. The design north-star under `keystone-client/design/` is reference-only and must never be imported by runtime code.
+- `backgrounds/background-main.png` and `overlays/ambient-overlay.png` for the global environment.
+- `branding/app-badge.png` and `branding/emblem.png` for Poison branding.
+- Card frames for the Sync summary, character table, emblem, version, and current-status surfaces.
+- Button frames for Sync, Web, tray, Settings, minimize, and close actions.
+- `frames/profile/profile-frame.png`, with the real user avatar and username mounted separately by React.
+- Active and inactive tab decorations.
+- Semantic Sync icons for accounts, characters, last sync, version, success, error, warning, information, and active synchronization.
+
+Decorative layers remain pointer-neutral and never replace interactive HTML, localized text, dynamic data, or accessibility semantics. Variable-size overlays reuse the neutral frame role through Poison's CSS 9-slice treatment rather than stretching ornamental artwork.
+
+The Addon tab currently receives the production Poison shell only. Its page-specific artwork is intentionally deferred until approved Addon assets exist; do not invent or reuse Sync artwork for its interior.
+
+The north-star image under `keystone-client/design/` is a reference-only file and must never be imported by runtime code. Source PNGs are intentionally preserved at production quality for review; optimize them only in a separately approved asset pass.

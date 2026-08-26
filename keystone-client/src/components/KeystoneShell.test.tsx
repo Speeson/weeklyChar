@@ -26,10 +26,41 @@ function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn(), onNa
 }
 
 afterEach(() => {
+  localStorage.clear();
   delete document.documentElement.dataset.theme;
 });
 
 describe("KeystoneShell profile menu", () => {
+  it("mounts Poison shell artwork around the existing interactive controls and real avatar", () => {
+    localStorage.setItem("keystone-client.theme", "poison");
+    render(
+      <KeystoneShell
+        auth={{ authenticated: true, username: "player", avatarUrl: "https://img.test/player.jpg" }}
+        busyLogout={false}
+        currentView="sync"
+        onChangeAvatar={vi.fn()}
+        onCloseWindow={vi.fn()}
+        onLogout={vi.fn()}
+        onMinimizeToTray={vi.fn()}
+        onMinimizeWindow={vi.fn()}
+        onNavigate={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onOpenWeb={vi.fn()}
+        onStartWindowDrag={vi.fn()}
+      >
+        <span>Contenido</span>
+      </KeystoneShell>,
+    );
+
+    expect(document.querySelector('.ks-brand__icon[src$="app-badge.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-tab__decoration--active[src$="tab-active-decoration.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-tab__decoration--inactive[src$="tab-inactive-decoration.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-user-menu__shell[src$="profile-frame.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/player.jpg"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-footer-action__asset[src$="web-button-frame.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-footer-action__asset[src$="tray-button-frame.png"]')).toBeInTheDocument();
+  });
+
   it.each(["keystone", "poison"] as const)("keeps shell state hooks, ARIA, and navigation behavior under the %s theme", async (theme) => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();

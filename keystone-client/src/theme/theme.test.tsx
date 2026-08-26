@@ -99,8 +99,9 @@ describe("theme engine", () => {
     applyThemeToDocument("poison");
 
     expect(document.documentElement.dataset.theme).toBe("poison");
-    expect(document.documentElement.style.getPropertyValue("--theme-artwork-background")).toBe("none");
-    expect(document.documentElement.style.getPropertyValue("--theme-artwork-overlay")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-artwork-background")).toMatch(/background-main\.png"\)$/);
+    expect(document.documentElement.style.getPropertyValue("--theme-artwork-overlay")).toMatch(/ambient-overlay\.png"\)$/);
+    expect(document.documentElement.style.getPropertyValue("--theme-chrome-scalable-frame")).toMatch(/summary-card-frame\.png"\)$/);
     expect(document.documentElement.style.getPropertyValue("--theme-emblem-artwork")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-emblem-fallback-visibility")).toBe("visible");
     expect(document.documentElement.style.getPropertyValue("--theme-app-badge-artwork")).toBe("none");
@@ -127,6 +128,7 @@ describe("theme engine", () => {
     expect(document.documentElement.dataset.theme).toBe("keystone");
     expect(document.documentElement.style.getPropertyValue("--theme-artwork-background")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-artwork-overlay")).toBe("none");
+    expect(document.documentElement.style.getPropertyValue("--theme-chrome-scalable-frame")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-emblem-artwork")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-app-badge-artwork")).toBe("none");
     expect(document.documentElement.style.getPropertyValue("--theme-panel-ornament")).toBe("none");

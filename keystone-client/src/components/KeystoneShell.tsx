@@ -118,6 +118,7 @@ function KeystoneHeader({
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const activeTabIndicator = useThemeAsset("shell-active-tab");
+  const inactiveTabIndicator = useThemeAsset("shell-inactive-tab");
   const appIcon = useThemeAsset("brand-mark");
   const avatarFrame = useThemeAsset("shell-avatar-frame");
   const dropdownIcon = useThemeAsset("shell-user-dropdown");
@@ -181,7 +182,11 @@ function KeystoneHeader({
           type="button"
         >
           {t("shell.sync")}
-          {currentView === "sync" ? <img alt="" className="ks-tab__indicator" src={activeTabIndicator} /> : null}
+          {currentView === "sync" ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
+          ) : inactiveTabIndicator ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
+          ) : null}
         </button>
         <button
           aria-current={currentView === "addon" ? "page" : undefined}
@@ -192,7 +197,11 @@ function KeystoneHeader({
           type="button"
         >
           Addon
-          {currentView === "addon" ? <img alt="" className="ks-tab__indicator" src={activeTabIndicator} /> : null}
+          {currentView === "addon" ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
+          ) : inactiveTabIndicator ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
+          ) : null}
         </button>
       </nav>
 
@@ -271,6 +280,7 @@ type KeystoneFooterProps = {
 
 function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
   const { t } = useI18n();
+  const footerTrayButton = useThemeAsset("shell-footer-tray");
   const footerWebButton = useThemeAsset("shell-footer-web");
   return (
     <footer className="ks-footer">
@@ -279,8 +289,11 @@ function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
         <span>{t("shell.openWeb")}</span>
       </button>
       <button className="ks-footer-action ks-footer-action--tray" data-ui="shell-footer-action" data-variant="tray" onClick={onMinimizeToTray} type="button">
-        <ThemedIcon name="download" size={28} />
-        {t("shell.minimizeTray")}
+        {footerTrayButton ? (
+          <><img alt="" className="ks-footer-action__asset" src={footerTrayButton} /><span>{t("shell.minimizeTray")}</span></>
+        ) : (
+          <><ThemedIcon name="download" size={28} />{t("shell.minimizeTray")}</>
+        )}
       </button>
     </footer>
   );

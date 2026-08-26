@@ -15,7 +15,7 @@ import { openRaiderIoCharacter } from "../core/native";
 import { useI18n, type TranslationKey } from "../core/i18n";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
 import type { AddonStatus, Character, CharacterState, CoreError, SyncState, SyncStatus, WowState } from "../core/types";
-import type { RequiredThemeAssetRole } from "../theme/asset.registry";
+import type { OptionalThemeAssetRole, RequiredThemeAssetRole } from "../theme/asset.registry";
 import { useThemeAsset } from "../theme/useThemeAsset";
 
 type SyncPageProps = {
@@ -281,29 +281,32 @@ function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt, lan
   const { t } = useI18n();
   return (
     <div className="sync-summary-grid" aria-label={t("sync.summary")}>
-      <SummaryCard detail={addon.detail} icon={addon.icon} label={t("common.addon")} tone={addon.tone} value={addon.label} />
-      <SummaryCard icon="sync-summary-accounts" label={t("sync.accounts")} value={accountCount} detail={t("sync.connectedAccounts")} />
-      <SummaryCard icon="sync-summary-last" label={t("sync.last")} value={formatTime(lastSyncAt, language)} detail={formatDate(lastSyncAt, language, t("sync.noSyncs"))} />
-      <SummaryCard icon="sync-summary-characters" label={t("sync.characters")} value={characterCount} detail={t("sync.detected")} />
+      <SummaryCard detail={addon.detail} frame="sync-summary-addon-frame" icon={addon.icon} label={t("common.addon")} tone={addon.tone} value={addon.label} />
+      <SummaryCard frame="sync-summary-frame" icon="sync-summary-accounts" label={t("sync.accounts")} value={accountCount} detail={t("sync.connectedAccounts")} />
+      <SummaryCard frame="sync-summary-frame" icon="sync-summary-last" label={t("sync.last")} value={formatTime(lastSyncAt, language)} detail={formatDate(lastSyncAt, language, t("sync.noSyncs"))} />
+      <SummaryCard frame="sync-summary-frame" icon="sync-summary-characters" label={t("sync.characters")} value={characterCount} detail={t("sync.detected")} />
     </div>
   );
 }
 
 type SummaryCardProps = {
   detail: string;
+  frame: Extract<OptionalThemeAssetRole, "sync-summary-addon-frame" | "sync-summary-frame">;
   icon: RequiredThemeAssetRole;
   label: string;
   tone?: "error" | "idle" | "info" | "success" | "warning";
   value: string | number;
 };
 
-function SummaryCard({ detail, icon, label, tone, value }: SummaryCardProps) {
+function SummaryCard({ detail, frame, icon, label, tone, value }: SummaryCardProps) {
+  const frameSource = useThemeAsset(frame);
   const iconSource = useThemeAsset(icon);
   return (
     <article
       aria-label={`${label}: ${value}`}
       className={`sync-summary-card sync-summary-card--${tone ?? "metric"}`}
     >
+      {frameSource ? <img alt="" className="theme-frame-artwork sync-summary-card__frame" data-asset-role={frame} src={frameSource} /> : null}
       <img alt="" className="sync-summary-card__icon" src={iconSource} />
       <div>
         <p>{label}</p>
@@ -323,6 +326,7 @@ type CharactersTableProps = {
 
 function CharactersTable({ characters, error, loading, onOpenError }: CharactersTableProps) {
   const { t } = useI18n();
+  const tableFrame = useThemeAsset("sync-table-frame");
   const columns: Array<{ key: CharacterSortKey; label: string }> = [
     { key: "name", label: t("sync.name") }, { key: "realm", label: t("sync.realm") },
     { key: "ilvl", label: "ilvl" }, { key: "keystone", label: t("sync.keystone") },
@@ -350,6 +354,7 @@ function CharactersTable({ characters, error, loading, onOpenError }: Characters
 
   return (
     <section className="sync-table-panel" aria-labelledby="characters-title">
+      {tableFrame ? <img alt="" className="theme-frame-artwork sync-table-panel__frame" data-asset-role="sync-table-frame" src={tableFrame} /> : null}
       <h2 id="characters-title" className="sr-only">{t("sync.characters")}</h2>
       <div className="sync-table" role="table" aria-label={t("sync.characterTable")}>
         <div className="sync-table__header" role="row">
@@ -441,7 +446,10 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
   const brandEmblem = useThemeAsset("brand-emblem");
   const heroFrame = useThemeAsset("sync-hero-frame");
   const statusIcon = useThemeAsset(status.icon);
+  const statusFrame = useThemeAsset("sync-current-frame");
+  const syncActionFrame = useThemeAsset("sync-action-frame");
   const versionIcon = useThemeAsset("sync-version");
+  const versionFrame = useThemeAsset("sync-version-frame");
   return (
     <aside className="sync-sidebar" aria-label={t("sync.status")}>
       <section className="sync-emblem-panel" aria-label="KeystoneClient">
@@ -450,6 +458,7 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
           <img alt="" className="sync-emblem-panel__icon" src={brandEmblem} />
         </div>
         <section className="sync-version-panel">
+          {versionFrame ? <img alt="" className="theme-frame-artwork sync-version-panel__frame" data-asset-role="sync-version-frame" src={versionFrame} /> : null}
           <img alt="" className="sync-version-panel__icon" src={versionIcon} />
           <div>
             <p>{t("sync.appVersion")}</p>
@@ -465,6 +474,7 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
         className={`sync-current-panel sync-current-panel--${status.state}`}
         data-sync-state={status.state}
       >
+        {statusFrame ? <img alt="" className="theme-frame-artwork sync-current-panel__frame" data-asset-role="sync-current-frame" src={statusFrame} /> : null}
         <h2>{t("sync.currentStatus")}</h2>
         <div className="sync-current-panel__body">
           <img alt="" src={statusIcon} />
@@ -477,8 +487,11 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
       </section>
 
       <button className="sync-primary-action" disabled={forceDisabled} onClick={onForce} type="button">
-        <ThemedIcon name="refresh" size={34} />
-        {busy ? t("sync.syncing") : t("sync.now")}
+        {syncActionFrame ? (
+          <><img alt="" className="theme-frame-artwork sync-primary-action__frame" data-asset-role="sync-action-frame" src={syncActionFrame} /><span>{busy ? t("sync.syncing") : t("sync.now")}</span></>
+        ) : (
+          <><ThemedIcon name="refresh" size={34} />{busy ? t("sync.syncing") : t("sync.now")}</>
+        )}
       </button>
     </aside>
   );
