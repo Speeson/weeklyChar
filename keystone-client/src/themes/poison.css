@@ -629,8 +629,8 @@ html[data-theme="poison"] {
   --poison-font-body: "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --poison-frame-brightness: 0.74;
   --poison-frame-brightness-control: 0.88;
-  --poison-frame-brightness-footer: 0.86;
-  --poison-frame-brightness-primary: 0.96;
+  --poison-frame-brightness-footer: 0.8;
+  --poison-frame-brightness-primary: 0.87;
   --poison-frame-saturation: 0.86;
   --poison-frame-contrast: 1.08;
   --poison-frame-opacity: 1;
@@ -884,6 +884,11 @@ html[data-theme="poison"] .sync-summary-card {
   padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
 }
 
+html[data-theme="poison"] .sync-summary-card:has([data-asset-role="sync-summary-addon-frame"]) {
+  --poison-content-inset-top: 20px;
+  --poison-content-inset-bottom: 16px;
+}
+
 html[data-theme="poison"] .sync-summary-card__icon {
   width: 68px;
   height: 68px;
@@ -916,8 +921,8 @@ html[data-theme="poison"] .sync-summary-card span {
 html[data-theme="poison"] .sync-table-panel {
   --poison-content-inset-left: 32px;
   --poison-content-inset-right: 34px;
-  --poison-content-inset-top: 29px;
-  --poison-content-inset-bottom: 30px;
+  --poison-content-inset-top: 32px;
+  --poison-content-inset-bottom: 40px;
   padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
   overflow: hidden;
 }
@@ -937,6 +942,9 @@ html[data-theme="poison"] .sync-table__header {
 }
 
 html[data-theme="poison"] .sync-table__body {
+  box-sizing: border-box;
+  padding-bottom: 14px;
+  scroll-padding-bottom: 14px;
   background: rgb(1 7 3 / 42%);
 }
 
@@ -944,7 +952,7 @@ html[data-theme="poison"] .sync-table__header {
   position: relative;
   z-index: 2;
   font-family: var(--poison-font-display);
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -999,8 +1007,9 @@ html[data-theme="poison"] .sync-version-panel p {
 
 html[data-theme="poison"] .sync-version-panel strong {
   font-family: var(--poison-font-display);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
+  line-height: 1.08;
 }
 
 html[data-theme="poison"] .sync-version-panel span {
@@ -1041,8 +1050,9 @@ html[data-theme="poison"] .sync-current-panel small {
 
 html[data-theme="poison"] .sync-current-panel strong {
   font-family: var(--poison-font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 html[data-theme="poison"] .sync-current-panel__body span {
@@ -1172,7 +1182,7 @@ html[data-theme="poison"] :is(.ks-settings-control, .ks-window-button):hover:not
 }
 
 html[data-theme="poison"] .ks-footer-action:hover:not(:disabled) .ks-footer-action__asset {
-  --poison-artwork-brightness: 0.98;
+  --poison-artwork-brightness: 0.94;
 }
 
 html[data-theme="poison"] :where(.sync-primary-action, .ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):active:not(:disabled) {

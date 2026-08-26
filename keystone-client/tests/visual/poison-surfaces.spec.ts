@@ -119,6 +119,33 @@ test("Poison keeps the stationary table frame above a real scrolling viewport", 
   expect(result.frameZ).toBeGreaterThan(result.tableZ);
 });
 
+test("Poison reserves inner table safe areas above the header and below scrolled rows", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  await expect(page.locator(".sync-table__row").last()).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>(".sync-table-panel")!;
+    const table = panel.querySelector<HTMLElement>(".sync-table")!;
+    const header = panel.querySelector<HTMLElement>(".sync-table__header")!;
+    const body = panel.querySelector<HTMLElement>(".sync-table__body")!;
+    body.scrollTop = body.scrollHeight;
+    const lastRow = body.querySelector<HTMLElement>(".sync-table__row:last-child")!;
+    const panelBox = panel.getBoundingClientRect();
+    const tableBox = table.getBoundingClientRect();
+    const headerBox = header.getBoundingClientRect();
+    const lastRowBox = lastRow.getBoundingClientRect();
+    return {
+      bottomInset: panelBox.bottom - tableBox.bottom,
+      headerTopInset: headerBox.top - panelBox.top,
+      lastRowBottomClearance: tableBox.bottom - lastRowBox.bottom,
+    };
+  });
+
+  expect(geometry.bottomInset).toBeGreaterThanOrEqual(38);
+  expect(geometry.headerTopInset).toBeGreaterThanOrEqual(32);
+  expect(geometry.lastRowBottomClearance).toBeGreaterThanOrEqual(12);
+});
+
 test("Poison keeps profile artwork above the real avatar and below its text", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
@@ -135,6 +162,42 @@ test("Poison keeps profile artwork above the real avatar and below its text", as
 
   expect(layers.frameZ).toBeGreaterThan(layers.avatarZ);
   expect(layers.nameZ).toBeGreaterThan(layers.frameZ);
+});
+
+test("Poison clips a real avatar fixture beneath the profile rim", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  const avatarSource = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23132746'/%3E%3Ccircle cx='48' cy='36' r='20' fill='%23d6a86e'/%3E%3Cpath d='M13 96c4-27 18-39 35-39s31 12 35 39' fill='%234a7b3f'/%3E%3Cpath d='M28 34c1-18 11-25 21-25 15 0 22 13 20 29-8-4-13-12-17-19-5 9-12 14-24 15' fill='%23251c18'/%3E%3C/svg%3E";
+  await page.locator(".ks-user-menu__avatar").evaluate((container, source) => {
+    const image = document.createElement("img");
+    image.alt = "";
+    image.className = "ks-user-menu__avatar-image";
+    image.src = source;
+    container.prepend(image);
+  }, avatarSource);
+
+  const avatar = page.locator(".ks-user-menu__avatar-image");
+  await expect(avatar).toBeVisible();
+  await expect.poll(() => avatar.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  const composition = await page.locator(".ks-user-menu__trigger").evaluate((element) => {
+    const container = element.querySelector<HTMLElement>(".ks-user-menu__avatar")!;
+    const image = element.querySelector<HTMLElement>(".ks-user-menu__avatar-image")!;
+    const frame = element.querySelector<HTMLElement>(".ks-user-menu__shell")!;
+    const containerBox = container.getBoundingClientRect();
+    const imageBox = image.getBoundingClientRect();
+    return {
+      clippedInsideHole:
+        imageBox.left >= containerBox.left && imageBox.right <= containerBox.right &&
+        imageBox.top >= containerBox.top && imageBox.bottom <= containerBox.bottom,
+      frameAboveAvatar: Number(getComputedStyle(frame).zIndex) > Number(getComputedStyle(container).zIndex),
+      objectFit: getComputedStyle(image).objectFit,
+      radius: getComputedStyle(image).borderRadius,
+    };
+  });
+
+  expect(composition.objectFit).toBe("cover");
+  expect(composition.radius).toBe("50%");
+  expect(composition.frameAboveAvatar).toBe(true);
+  expect(composition.clippedInsideHole).toBe(true);
 });
 
 test("Poison uses display typography for chrome and system typography for table data", async ({ page }) => {
@@ -155,6 +218,67 @@ test("Poison uses display typography for chrome and system typography for table 
   expect(typography.button).toContain("Georgia");
   expect(typography.cardTitle).toContain("Georgia");
   expect(typography.tableData).toContain("Segoe UI");
+});
+
+test("Poison keeps status titles and table headers subordinate to their artwork", async ({ page }) => {
+  for (const preview of ["sync-success", "sync-syncing", "sync-error", "sync-idle", "sync-watching"]) {
+    await page.goto(`/?preview=${preview}`);
+    const title = page.locator(".sync-current-panel strong");
+    await expect(title).toBeVisible();
+    expect(Number.parseFloat(await title.evaluate((element) => getComputedStyle(element).fontSize)), preview).toBeLessThanOrEqual(16);
+  }
+
+  const tableHeadingSize = await page.locator(".sync-table__header").evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(tableHeadingSize).toBeLessThanOrEqual(18);
+});
+
+test("Poison gives the wider Addon artwork its own optical safe area", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  const addonCard = page.locator('.sync-summary-card:has([data-asset-role="sync-summary-addon-frame"])');
+  const sharedCard = page.locator(".sync-summary-card").nth(1);
+  const insets = await Promise.all([addonCard, sharedCard].map((card) => card.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { bottom: Number.parseFloat(style.paddingBottom), top: Number.parseFloat(style.paddingTop) };
+  })));
+
+  expect(insets[0].top).toBeGreaterThan(insets[1].top);
+  expect(insets[0].top + insets[0].bottom).toBe(insets[1].top + insets[1].bottom);
+});
+
+test("Poison preserves a distinct primary and footer brightness hierarchy", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  const primary = page.locator(".sync-primary-action");
+  const footer = page.locator(".ks-footer-action--web");
+  const brightness = async (control: typeof primary) => Number.parseFloat(
+    await control.evaluate((element) => getComputedStyle(element).getPropertyValue("--poison-artwork-brightness")),
+  );
+
+  const primaryNormal = await brightness(primary);
+  const footerNormal = await brightness(footer);
+  await primary.hover();
+  const primaryHover = await brightness(primary);
+  await footer.hover();
+  const footerHover = await brightness(footer.locator("img"));
+
+  expect(primaryNormal).toBeGreaterThan(footerNormal);
+  expect(primaryNormal).toBeLessThanOrEqual(0.89);
+  expect(footerNormal).toBeLessThanOrEqual(0.82);
+  expect(primaryHover).toBeGreaterThan(primaryNormal);
+  expect(primaryHover).toBeGreaterThan(footerHover);
+  expect(footerHover).toBeGreaterThan(footerNormal);
+});
+
+test("Poison slightly reduces the version number weight without flattening hierarchy", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  const sizes = await page.locator(".sync-version-panel").evaluate((element) => ({
+    title: Number.parseFloat(getComputedStyle(element.querySelector("p")!).fontSize),
+    version: Number.parseFloat(getComputedStyle(element.querySelector("strong")!).fontSize),
+  }));
+
+  expect(sizes.version).toBeLessThanOrEqual(26);
+  expect(sizes.version).toBeGreaterThan(sizes.title);
 });
 
 test("Poison keeps footer action labels centered on one line", async ({ page }) => {

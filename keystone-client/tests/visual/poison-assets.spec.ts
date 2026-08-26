@@ -95,6 +95,21 @@ test("Poison semantic raster status icons receive centralized normalization", as
   expect(treatment.filter).not.toBe("none");
 });
 
+for (const [preview, expectedIcon] of [
+  ["sync-success", /poison-status-icon-success(?:-[^/]+)?\.png$/],
+  ["sync-syncing", /poison-sync-icon(?:-[^/]+)?\.png$/],
+  ["sync-error", /poison-error-icon(?:-[^/]+)?\.png$/],
+  ["sync-idle", /poison-warning-icon(?:-[^/]+)?\.png$/],
+  ["sync-watching", /poison-info-icon(?:-[^/]+)?\.png$/],
+] as const) {
+  test(`Poison preserves the ${preview} semantic status icon`, async ({ page }) => {
+    await page.goto(`/?preview=${preview}`);
+    const icon = page.locator(".sync-current-panel__body > img");
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute("src", expectedIcon);
+  });
+}
+
 test("Poison primary action icons inherit the high-contrast action foreground", async ({ page }) => {
   await page.goto("/?preview=addon-not-installed");
   await page.getByRole("button", { name: "Addon" }).click();
