@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.0",
+  "version": "0.6.1",
+  "bump": "patch",
+  "tag": "client-v0.6.1",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "poison-addon-actions-feedback-spacing.json"
+  ]
+}
