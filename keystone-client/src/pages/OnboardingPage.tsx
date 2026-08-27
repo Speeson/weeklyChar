@@ -1,10 +1,10 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import appIcon from "../assets/keystone-ui/app-icon.png";
+import { ThemedIcon } from "../components/ThemedIcon";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
 import type { CoreError, WowState } from "../core/types";
 import { useI18n } from "../core/i18n";
+import { useThemeAsset } from "../theme/useThemeAsset";
 
 type OnboardingPageProps = {
   initialWow: WowState;
@@ -29,6 +29,7 @@ export function OnboardingPage({
   preview = false,
 }: OnboardingPageProps) {
   const { t } = useI18n();
+  const appIcon = useThemeAsset("brand-mark");
   const [wow, setWow] = useState(initialWow);
   const [stage, setStage] = useState<"install" | "accounts">(
     initialWow.install.detected ? "accounts" : "install",
@@ -162,7 +163,7 @@ export function OnboardingPage({
             <span>{t("onboarding.installFolder")}</span>
             <span>
               <input readOnly value={wow.install.installPath ?? ""} placeholder={t("onboarding.notDetected")} />
-              <button disabled={busy} onClick={() => void browse()} type="button"><FolderOpen aria-hidden="true" />{t("onboarding.change")}</button>
+              <button disabled={busy} onClick={() => void browse()} type="button"><ThemedIcon name="folder" />{t("onboarding.change")}</button>
             </span>
           </label>
           <p className={wow.install.detected ? "success" : "muted"} role="status">
@@ -170,8 +171,8 @@ export function OnboardingPage({
           </p>
           {error ? <p className="error" role="alert">{error}</p> : null}
           <div className="ks-onboarding__actions">
-            <button disabled={busy} onClick={() => void run(detectWow)} type="button"><RefreshCw aria-hidden="true" />{t("onboarding.detectAgain")}</button>
-            <button className="settings-gold-action" disabled={busy || !wow.install.detected} onClick={() => void continueFromInstall()} type="button"><Save aria-hidden="true" />{t("onboarding.saveContinue")}</button>
+            <button disabled={busy} onClick={() => void run(detectWow)} type="button"><ThemedIcon name="refresh" />{t("onboarding.detectAgain")}</button>
+            <button className="settings-gold-action" disabled={busy || !wow.install.detected} onClick={() => void continueFromInstall()} type="button"><ThemedIcon name="save" />{t("onboarding.saveContinue")}</button>
           </div>
         </div>
       ) : (
@@ -201,7 +202,7 @@ export function OnboardingPage({
           )}
           {error ? <p className="error" role="alert">{error}</p> : null}
           <div className="ks-onboarding__actions">
-            <button disabled={busy} onClick={() => void run(detectWow)} type="button"><RefreshCw aria-hidden="true" />{t("onboarding.redetect")}</button>
+            <button disabled={busy} onClick={() => void run(detectWow)} type="button"><ThemedIcon name="refresh" />{t("onboarding.redetect")}</button>
             {usableAccounts.length === 0 ? <button onClick={onOpenAddon} type="button">{t("onboarding.goAddon")}</button> : null}
             <button className="settings-gold-action" disabled={busy || selected.length === 0} onClick={() => void saveAccounts()} type="button">{t("onboarding.continue")}</button>
           </div>

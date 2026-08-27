@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { UpdaterSnapshot } from "../core/updater";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { UpdateModal } from "./UpdateModal";
 
 const available: UpdaterSnapshot = {

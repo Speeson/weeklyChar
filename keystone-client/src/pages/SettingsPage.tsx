@@ -1,11 +1,13 @@
-import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ThemedIcon } from "../components/ThemedIcon";
+import { ThemeSelector } from "../components/ThemeSelector";
 import { Button } from "../components/ui";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
 import { getSettings, updateSettings } from "../core/settings";
 import type { ClientSettings, CoreError } from "../core/types";
 import { useI18n } from "../core/i18n";
 import type { UpdaterSnapshot } from "../core/updater";
+import { useTheme } from "../theme/useTheme";
 
 type SettingsPageProps = {
   appVersion: string;
@@ -49,6 +51,7 @@ export function SettingsPage({
   preview = false,
 }: SettingsPageProps) {
   const { t } = useI18n();
+  const { setTheme, theme, themes } = useTheme();
   const [settings, setSettings] = useState<ClientSettings>(initialSettings);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -157,6 +160,8 @@ export function SettingsPage({
         </label>
       </section>
 
+      <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />
+
       <section className="settings-block settings-application" aria-labelledby="settings-application-title">
         <h3 id="settings-application-title">{t("settings.application")}</h3>
         <div className="settings-language" role="group" aria-label={t("settings.language")}>
@@ -202,7 +207,7 @@ export function SettingsPage({
         <p className="muted settings-last-check">{lastCheck}</p>
         {error ? <p className="error" role="alert">{error}</p> : null}
         {message ? <p className="success" role="status">{message}</p> : null}
-        <Button icon={<Save size={18} aria-hidden="true" />} onClick={saveSettings} disabled={saving || loading}>
+        <Button icon={<ThemedIcon name="save" size={18} />} onClick={saveSettings} disabled={saving || loading}>
           {saving ? t("settings.saving") : t("settings.save")}
         </Button>
       </section>

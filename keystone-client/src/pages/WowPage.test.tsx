@@ -1,9 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
 import type { WowState } from "../core/types";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { WowPage } from "./WowPage";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({

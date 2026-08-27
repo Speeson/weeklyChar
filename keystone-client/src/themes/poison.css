@@ -1,0 +1,1567 @@
+html[data-theme="poison"] {
+  --theme-bg: #040805;
+  --theme-bg-secondary: rgb(7 17 10 / 88%);
+  --theme-bg-image: none;
+  --theme-bg-overlay: linear-gradient(145deg, rgb(4 8 5 / 78%), rgb(7 17 10 / 68%), rgb(2 5 3 / 84%));
+  --theme-ambient-primary: radial-gradient(circle at 14% 8%, rgb(155 244 67 / 13%), transparent 30%);
+  --theme-ambient-secondary: radial-gradient(circle at 84% 90%, rgb(82 151 40 / 12%), transparent 32%);
+  --theme-surface-1: rgb(7 20 11 / 84%);
+  --theme-surface-2: rgb(9 28 14 / 90%);
+  --theme-surface-3: rgb(12 34 17 / 94%);
+  --theme-surface-hover: rgb(166 255 63 / 11%);
+  --theme-surface-active: rgb(196 255 94 / 15%);
+  --theme-border: rgb(135 103 46 / 46%);
+  --theme-border-strong: rgb(178 145 73 / 74%);
+  --theme-border-active: rgb(196 255 94 / 80%);
+  --theme-divider: rgb(159 133 68 / 30%);
+  --theme-text: #f2f7ed;
+  --theme-text-muted: #aab9a5;
+  --theme-text-accent: #d7e7bc;
+  --theme-accent: #a6ff3f;
+  --theme-accent-strong: #c7ff57;
+  --theme-accent-soft: rgb(166 255 63 / 16%);
+  --theme-accent-contrast: #071005;
+  --theme-button-primary: #a6ff3f;
+  --theme-button-primary-hover: #c7ff57;
+  --theme-button-primary-active: #8fdf31;
+  --theme-button-secondary: rgb(20 39 18 / 90%);
+  --theme-button-secondary-hover: rgb(35 59 24 / 94%);
+  --theme-focus-ring: rgb(210 255 119 / 94%);
+  --theme-glow-soft: 0 0 16px rgb(166 255 63 / 20%);
+  --theme-glow-medium: 0 0 24px rgb(136 230 52 / 28%);
+  --theme-glow-strong: 0 0 24px rgb(184 255 79 / 42%);
+  --theme-shadow-panel: 0 20px 60px rgb(0 0 0 / 50%), inset 0 1px 0 rgb(234 219 156 / 8%);
+  --theme-shadow-elevated: 0 18px 42px rgb(0 0 0 / 70%), 0 0 24px rgb(119 182 44 / 20%), inset 0 1px 0 rgb(230 214 140 / 12%);
+  --theme-icon: #c5ee62;
+  --theme-icon-muted: #c6c8ae;
+  --theme-icon-active: #c7ff57;
+  --theme-icon-glow: drop-shadow(0 0 16px rgb(166 255 63 / 38%));
+  --theme-card-texture: none;
+  --theme-card-highlight: none;
+  --theme-card-overlay: none;
+  --theme-modal-backdrop: rgb(0 5 1 / 70%);
+  --theme-scrollbar: rgb(119 145 52 / 78%);
+  --theme-scrollbar-hover: rgb(166 255 63 / 82%);
+  --theme-motion-fast: 140ms ease;
+  --theme-motion-normal: 160ms ease;
+  --theme-motion-ambient: 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --theme-frame-border: rgb(155 124 57 / 58%);
+  --theme-frame-shadow: inset 0 0 0 1px rgb(225 202 125 / 8%), inset 0 0 34px rgb(103 164 38 / 10%);
+  --theme-header-border: rgb(165 133 60 / 54%);
+  --theme-header-background: linear-gradient(180deg, rgb(5 12 6 / 94%), rgb(9 23 11 / 84%));
+  --theme-header-shadow: 0 12px 34px rgb(0 0 0 / 48%);
+  --theme-header-divider: rgb(148 119 55 / 48%);
+  --theme-brand-glow: drop-shadow(0 0 16px rgb(191 239 88 / 28%));
+  --theme-tab-border: rgb(142 115 53 / 38%);
+  --theme-tab-text: rgb(227 229 205 / 82%);
+  --theme-tab-hover-border: rgb(169 229 77 / 56%);
+  --theme-tab-hover-text: #f0f8dc;
+  --theme-tab-hover-shadow: inset 0 0 32px rgb(117 200 45 / 16%), inset 0 -2px 0 rgb(190 246 81 / 30%);
+  --theme-tab-hover-glow: 0 0 14px rgb(166 255 63 / 44%);
+  --theme-tab-active-shadow: inset 0 0 34px rgb(166 255 63 / 14%), inset 0 -1px 0 rgb(211 255 112 / 34%);
+  --theme-control-border: rgb(159 129 60 / 68%);
+  --theme-control-background: rgb(15 29 14 / 88%);
+  --theme-control-shadow: inset 0 0 18px rgb(106 166 43 / 14%);
+  --theme-menu-text: rgb(247 246 229 / 94%);
+  --theme-dropdown-background: linear-gradient(145deg, rgb(20 40 17 / 98%), rgb(5 14 7 / 98%)), rgb(9 25 11 / 98%);
+  --theme-dropdown-item-border: rgb(157 132 71 / 28%);
+  --theme-dropdown-item-text: rgb(238 241 218 / 94%);
+  --theme-dropdown-item-background: rgb(31 55 22 / 70%);
+  --theme-dropdown-hover-border: rgb(198 255 92 / 70%);
+  --theme-dropdown-hover-text: #fbfff0;
+  --theme-dropdown-hover-background: rgb(88 142 32 / 42%);
+  --theme-summary-background: linear-gradient(125deg, rgb(13 33 15 / 88%), rgb(7 19 10 / 78%)), radial-gradient(circle at 20% 20%, rgb(137 226 50 / 18%), transparent 58%);
+  --theme-card-inner-border: rgb(199 176 96 / 16%);
+  --theme-summary-icon-glow: drop-shadow(0 0 16px rgb(168 255 65 / 42%));
+  --theme-summary-label: rgb(238 239 219 / 94%);
+  --theme-summary-value: #fffbe9;
+  --theme-summary-detail: rgb(216 224 201 / 84%);
+  --theme-table-background: linear-gradient(180deg, rgb(9 27 12 / 86%), rgb(5 16 8 / 82%)), radial-gradient(circle at 45% 55%, rgb(102 171 37 / 13%), transparent 45%);
+  --theme-scrollbar-track: rgb(5 17 8 / 72%);
+  --theme-table-divider: rgb(157 132 71 / 26%);
+  --theme-table-heading: rgb(238 239 218 / 92%);
+  --theme-table-sort-icon: rgb(184 171 109 / 78%);
+  --theme-table-row-text: rgb(230 236 217 / 94%);
+  --theme-table-row-hover: rgb(137 224 48 / 11%);
+  --theme-table-row-marker: rgb(166 255 63 / 72%);
+  --theme-avatar-border: rgb(220 202 127 / 42%);
+  --theme-avatar-background: #35572a;
+  --theme-avatar-glow: 0 0 14px rgb(128 218 47 / 35%);
+  --theme-sidebar-background: linear-gradient(155deg, rgb(12 31 13 / 92%), rgb(5 17 8 / 82%)), radial-gradient(circle at 48% 34%, rgb(110 187 40 / 17%), transparent 48%);
+  --theme-emblem-glow: drop-shadow(0 0 22px rgb(166 255 63 / 42%));
+  --theme-version-border: rgb(162 132 61 / 56%);
+  --theme-version-background: rgb(8 24 10 / 84%);
+  --theme-version-shadow: inset 0 0 14px rgb(104 169 41 / 14%);
+  --theme-text-bright: #fffef4;
+  --theme-panel-divider: rgb(166 140 76 / 26%);
+  --theme-sync-action-border: rgb(205 255 103 / 90%);
+  --theme-sync-action-text: #ecffc2;
+  --theme-sync-action-background: linear-gradient(180deg, rgb(103 167 31 / 88%), rgb(45 90 17 / 88%)), radial-gradient(circle at 50% 0%, rgb(218 255 130 / 36%), transparent 70%);
+  --theme-sync-action-shadow: 0 0 0 1px rgb(58 93 18 / 90%), 0 0 28px rgb(166 255 63 / 38%), inset 0 1px 0 rgb(234 255 178 / 32%);
+  --theme-addon-border: rgb(179 154 86 / 32%);
+  --theme-addon-text: #f4f5e7;
+  --theme-addon-background: linear-gradient(120deg, rgb(10 29 12 / 84%), rgb(5 17 8 / 88%)), radial-gradient(circle at 47% 43%, rgb(99 174 37 / 17%), transparent 38%);
+  --theme-addon-shadow: 0 18px 70px rgb(0 0 0 / 46%);
+  --theme-addon-inner-border: rgb(202 179 102 / 14%);
+  --theme-addon-icon-glow: drop-shadow(0 0 18px rgb(166 255 63 / 38%));
+  --theme-addon-eyebrow: rgb(199 255 87 / 88%);
+  --theme-addon-description: #d8dfca;
+  --theme-addon-border-strong: rgb(190 163 92 / 46%);
+  --theme-addon-card-background: rgb(9 27 12 / 90%);
+  --theme-addon-card-highlight: inset 0 1px 0 rgb(228 214 145 / 7%);
+  --theme-addon-field-border: rgb(177 153 87 / 42%);
+  --theme-addon-field-text: #e0e4d1;
+  --theme-addon-field-background: rgb(4 14 6 / 88%);
+  --theme-addon-icon-muted: #c7cdb7;
+  --theme-addon-button-text: #f5fae6;
+  --theme-addon-button-background: rgb(24 48 19 / 90%);
+  --theme-addon-button-hover-border: rgb(202 255 101 / 78%);
+  --theme-addon-primary-text: #071005;
+  --theme-addon-primary-background: linear-gradient(105deg, #83c932, #c7ff57 50%, #8fdb34), #a6ff3f;
+  --theme-addon-primary-shadow: 0 0 0 2px rgb(43 79 13 / 82%), 0 12px 30px rgb(0 0 0 / 30%);
+  --theme-addon-column-divider: rgb(180 155 87 / 36%);
+  --theme-addon-card-border: rgb(190 164 93 / 54%);
+  --theme-addon-status-background: rgb(6 22 9 / 94%);
+  --theme-addon-status-shadow: inset 0 0 28px rgb(104 172 39 / 11%);
+  --theme-addon-divider: rgb(217 204 143 / 20%);
+  --theme-addon-label: #d7dcc7;
+  --theme-addon-value: #f5f7e9;
+  --theme-addon-secondary-background: #1d3a19;
+  --theme-footer-border: rgb(148 121 58 / 36%);
+  --theme-footer-background: linear-gradient(180deg, rgb(6 14 7 / 50%), rgb(2 7 3 / 84%));
+  --theme-footer-action-border: rgb(169 142 70 / 68%);
+  --theme-footer-action-text: rgb(240 244 224 / 94%);
+  --theme-footer-action-background: rgb(13 31 13 / 88%);
+  --theme-footer-action-shadow: inset 0 0 18px rgb(105 167 40 / 14%);
+  --theme-footer-accent-border: rgb(191 255 86 / 78%);
+  --theme-footer-web-hover-filter: brightness(1.16);
+  --theme-footer-web-active-filter: brightness(0.92);
+  --theme-auth-background: linear-gradient(155deg, rgb(12 32 14 / 97%), rgb(5 15 7 / 97%)), var(--theme-surface-2);
+  --theme-auth-shadow: var(--theme-shadow-panel), 0 0 38px rgb(113 189 43 / 18%);
+  --theme-auth-register-border: rgb(162 135 66 / 48%);
+  --theme-auth-register-background: rgb(25 49 19 / 76%);
+  --theme-update-modal-divider: rgb(166 140 76 / 28%);
+  --theme-onboarding-background: linear-gradient(155deg, rgb(12 33 14 / 97%), rgb(4 14 6 / 97%));
+  --theme-onboarding-account-background: rgb(14 34 14 / 82%);
+  --theme-accent-border-soft: rgb(166 255 63 / 34%);
+  --theme-accent-surface-soft: rgb(166 255 63 / 8%);
+  --theme-choice-border: rgb(163 136 67 / 42%);
+  --theme-choice-background: rgb(13 33 14 / 84%);
+  --theme-choice-portrait-border: rgb(186 255 83 / 62%);
+  --theme-choice-check-text: #081205;
+}
+
+html[data-theme="poison"] .shell {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 50% 104%, rgb(137 224 48 / 14%), transparent 48%),
+    linear-gradient(90deg, rgb(0 0 0 / 28%), transparent 18% 82%, rgb(0 0 0 / 28%)),
+    var(--theme-bg-overlay),
+    var(--theme-artwork-background) center / cover no-repeat,
+    var(--theme-bg);
+}
+
+html[data-theme="poison"] .shell::before {
+  z-index: -2;
+  opacity: 0.92;
+  background:
+    var(--theme-artwork-overlay) center / cover no-repeat,
+    radial-gradient(circle at 10% 16%, rgb(183 255 71 / 12%), transparent 24%),
+    radial-gradient(circle at 84% 76%, rgb(91 172 35 / 13%), transparent 30%),
+    repeating-linear-gradient(112deg, transparent 0 48px, rgb(182 153 76 / 2%) 49px 50px),
+    linear-gradient(180deg, rgb(0 0 0 / 8%), rgb(4 15 6 / 18%));
+}
+
+html[data-theme="poison"] .shell::after {
+  content: "";
+  position: fixed;
+  inset: -18%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 22% 78%, rgb(128 229 44 / 9%), transparent 26%),
+    radial-gradient(ellipse at 72% 18%, rgb(190 255 79 / 6%), transparent 22%);
+  filter: blur(24px);
+  animation: poison-haze-drift 16s ease-in-out infinite alternate;
+}
+
+html[data-theme="poison"] .ks-app-frame {
+  background: linear-gradient(145deg, rgb(6 17 8 / 94%), rgb(2 8 4 / 96%));
+  box-shadow:
+    0 0 0 1px rgb(34 26 11 / 95%),
+    0 0 0 3px rgb(147 117 52 / 24%),
+    0 30px 80px rgb(0 0 0 / 76%),
+    var(--theme-frame-shadow);
+}
+
+html[data-theme="poison"] .ks-header {
+  background:
+    linear-gradient(90deg, rgb(141 210 49 / 5%), transparent 28% 72%, rgb(141 210 49 / 4%)),
+    var(--theme-header-background);
+  box-shadow:
+    inset 0 -1px 0 rgb(195 255 88 / 9%),
+    var(--theme-header-shadow);
+}
+
+html[data-theme="poison"] .ks-brand {
+  background: linear-gradient(105deg, rgb(15 38 15 / 62%), rgb(4 12 6 / 28%));
+}
+
+html[data-theme="poison"] .theme-icon {
+  color: var(--theme-icon);
+  filter: var(--theme-icon-glow);
+}
+
+html[data-theme="poison"] :where(button:hover:not(:disabled), button:focus-visible, [aria-selected="true"], [aria-pressed="true"]) .theme-icon {
+  color: var(--theme-icon-active);
+}
+
+html[data-theme="poison"] .theme-icon:is(
+  [data-icon-role="sort-ascending"],
+  [data-icon-role="sort-descending"],
+  [data-icon-role="sort-unsorted"]
+) {
+  color: var(--theme-icon-muted);
+}
+
+html[data-theme="poison"] .theme-icon:is(
+  [data-icon-role="status-success"],
+  [data-icon-role="status-verified"]
+) {
+  color: var(--status-success);
+}
+
+html[data-theme="poison"] :where(.ui-button[data-variant="danger"], .ks-choice-modal__exit) .theme-icon {
+  color: currentColor;
+  filter: none;
+}
+
+html[data-theme="poison"] :where(
+  .addon-primary-action,
+  .ui-button[data-variant="primary"],
+  .settings-gold-action,
+  .settings-segmented button[aria-pressed="true"]
+) .theme-icon {
+  color: inherit;
+}
+
+html[data-theme="poison"] .ks-avatar-choice__check {
+  color: var(--theme-choice-check-text);
+}
+
+html[data-theme="poison"] .ks-brand__name {
+  color: var(--theme-text-accent);
+  text-shadow: 0 1px 0 rgb(0 0 0 / 90%), 0 0 14px rgb(169 238 67 / 24%);
+}
+
+html[data-theme="poison"] .ks-tab {
+  overflow: visible;
+  border-radius: 0;
+}
+
+html[data-theme="poison"] .ks-tab[data-state="default"]:hover,
+html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible {
+  background:
+    linear-gradient(180deg, rgb(113 183 39 / 5%), rgb(132 219 44 / 13%)),
+    var(--theme-surface-hover);
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"] {
+  color: var(--theme-accent-strong);
+  background:
+    radial-gradient(ellipse at 50% 100%, rgb(183 255 65 / 20%), transparent 62%),
+    linear-gradient(180deg, rgb(73 107 27 / 5%), rgb(122 206 39 / 13%));
+  text-shadow: 0 0 13px rgb(166 255 63 / 42%);
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"]::after {
+  content: "";
+  position: absolute;
+  right: 18%;
+  bottom: -1px;
+  left: 18%;
+  height: 4px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(183 255 65 / 94%) 28% 72%, transparent);
+  box-shadow: 0 0 7px rgb(166 255 63 / 88%), 0 4px 20px rgb(139 235 42 / 62%);
+}
+
+html[data-theme="poison"] .ks-tab__indicator {
+  opacity: 0.2;
+  filter: sepia(1) hue-rotate(38deg) saturate(2.2) drop-shadow(0 4px 10px rgb(157 255 47 / 68%));
+}
+
+html[data-theme="poison"] :where(
+  .ks-icon-control,
+  .ks-user-menu__trigger,
+  .ks-window-button,
+  .ks-footer-action,
+  button,
+  input,
+  select
+) {
+  transition:
+    border-color var(--theme-motion-fast),
+    color var(--theme-motion-fast),
+    background-color var(--theme-motion-fast),
+    box-shadow var(--theme-motion-fast),
+    filter var(--theme-motion-fast),
+    transform var(--theme-motion-fast);
+}
+
+html[data-theme="poison"] :where(
+  button,
+  input,
+  select,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  border-color: var(--theme-border-active);
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgb(3 10 4 / 92%), 0 0 18px rgb(166 255 63 / 34%);
+}
+
+html[data-theme="poison"] :where(input, select) {
+  border-color: var(--theme-control-border);
+  background:
+    linear-gradient(180deg, rgb(18 39 17 / 88%), rgb(5 16 7 / 94%)),
+    var(--theme-bg-secondary);
+  box-shadow: inset 0 1px 0 rgb(231 214 143 / 8%), inset 0 0 18px rgb(92 151 34 / 9%);
+}
+
+html[data-theme="poison"] :where(input[type="checkbox"], input[type="radio"], progress) {
+  accent-color: var(--theme-accent);
+}
+
+html[data-theme="poison"] :where(button, [role="button"]):hover:not(:disabled) {
+  border-color: var(--theme-border-active);
+}
+
+html[data-theme="poison"] :where(button, [role="button"]):active:not(:disabled) {
+  filter: brightness(0.92) saturate(1.08);
+}
+
+html[data-theme="poison"] :where(button, input, select):disabled {
+  filter: saturate(0.42) brightness(0.74);
+}
+
+html[data-theme="poison"] .ks-settings-control img,
+html[data-theme="poison"] .ks-window-button img,
+html[data-theme="poison"] .ks-user-menu__shell,
+html[data-theme="poison"] .ks-user-menu__avatar-frame,
+html[data-theme="poison"] .ks-user-menu__dropdown-icon,
+html[data-theme="poison"] .ks-footer-action__asset {
+  filter: sepia(0.74) hue-rotate(38deg) saturate(1.5) brightness(0.86) drop-shadow(0 0 5px rgb(166 255 63 / 24%));
+}
+
+html[data-theme="poison"] :where(
+  .ks-user-dropdown,
+  .ks-login-shell,
+  .ks-onboarding,
+  .ks-modal__panel,
+  .ks-legacy-panel,
+  [data-ui="card"],
+  .wow-install > div,
+  .sync-status > div,
+  .account-row
+) {
+  border-color: var(--theme-border);
+  background:
+    linear-gradient(145deg, rgb(20 43 18 / 34%), transparent 44%),
+    var(--theme-surface-2);
+  box-shadow:
+    inset 0 1px 0 rgb(237 220 147 / 8%),
+    inset 0 0 24px rgb(92 159 34 / 7%),
+    var(--theme-shadow-panel);
+}
+
+html[data-theme="poison"] .ks-user-dropdown::before,
+html[data-theme="poison"] .ks-modal__panel::before,
+html[data-theme="poison"] .ks-login-shell::before,
+html[data-theme="poison"] .ks-onboarding::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgb(220 197 119 / 10%);
+  pointer-events: none;
+}
+
+html[data-theme="poison"] .ks-modal__panel {
+  position: relative;
+}
+
+html[data-theme="poison"] .ks-user-dropdown button {
+  box-shadow: inset 0 1px 0 rgb(227 210 137 / 8%);
+}
+
+html[data-theme="poison"] .ks-user-dropdown button:hover:not(:disabled),
+html[data-theme="poison"] .ks-user-dropdown button:focus-visible {
+  box-shadow: inset 3px 0 0 rgb(190 255 81 / 72%), 0 0 14px rgb(123 208 41 / 14%);
+}
+
+html[data-theme="poison"] .sync-table__header {
+  background: linear-gradient(90deg, rgb(177 150 75 / 4%), rgb(111 190 35 / 4%), rgb(177 150 75 / 4%));
+  text-shadow: 0 1px 0 rgb(0 0 0 / 86%);
+}
+
+html[data-theme="poison"] .sync-table__row:hover,
+html[data-theme="poison"] .sync-table__row:focus-visible {
+  background: linear-gradient(90deg, rgb(164 255 61 / 14%), rgb(96 164 33 / 6%) 68%, transparent);
+  box-shadow: inset 3px 0 0 var(--theme-table-row-marker), inset 0 1px 0 rgb(198 255 91 / 7%);
+}
+
+html[data-theme="poison"] .addon-screen {
+  isolation: isolate;
+  grid-template-columns: minmax(0, 1.62fr) minmax(390px, 0.9fr);
+  gap: 42px;
+  padding: 32px 36px 28px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+html[data-theme="poison"] .addon-screen::before {
+  content: none;
+}
+
+html[data-theme="poison"] .addon-screen::after {
+  content: none;
+}
+
+html[data-theme="poison"] .addon-artwork {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+html[data-theme="poison"] .addon-screen__frame {
+  inset: 0;
+  border-width: 32px;
+  border-image-slice: 90;
+}
+
+html[data-theme="poison"] :where(.addon-screen__main, .addon-status-column) {
+  z-index: 2;
+}
+
+html[data-theme="poison"] .addon-screen__main {
+  isolation: isolate;
+  padding: 38px 20px 12px 64px;
+  background-color: rgb(2 10 4 / 28%);
+}
+
+html[data-theme="poison"] .addon-sliced-frame {
+  border-style: solid;
+  border-color: transparent;
+  border-image-source: var(--poison-addon-artwork);
+  border-image-repeat: stretch;
+}
+
+html[data-theme="poison"] .addon-heading {
+  gap: 20px;
+}
+
+html[data-theme="poison"] .addon-heading > div {
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+html[data-theme="poison"] .addon-heading__icon {
+  width: 96px;
+  height: 96px;
+}
+
+html[data-theme="poison"] .addon-heading__eyebrow {
+  margin-bottom: 6px;
+  font-family: var(--poison-font-body);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+}
+
+html[data-theme="poison"] .addon-heading h1,
+html[data-theme="poison"] :where(.addon-section-heading h2, .addon-status-heading h2) {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #e6dca8;
+  text-shadow: 0 1px 0 #050704, 0 0 12px rgb(155 239 54 / 18%);
+}
+
+html[data-theme="poison"] .addon-heading h1 {
+  font-size: 44px;
+  line-height: 0.94;
+}
+
+html[data-theme="poison"] .addon-description {
+  max-width: 650px;
+  margin-top: 14px;
+  margin-left: 116px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+html[data-theme="poison"] .addon-path-card {
+  position: relative;
+  isolation: isolate;
+  height: 232px;
+  margin: 37px 7px 0 -37px;
+  padding: 24px 25px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-color: rgb(2 11 4 / 38%);
+  box-shadow: none;
+}
+
+html[data-theme="poison"] .addon-path-card__frame {
+  inset: 0;
+  border-width: 26px;
+  border-image-slice: 105;
+}
+
+html[data-theme="poison"] .addon-path-card > :not(.addon-artwork),
+html[data-theme="poison"] .addon-path-field > :not(.addon-artwork),
+html[data-theme="poison"] .addon-status-card > :not(.addon-artwork) {
+  position: relative;
+  z-index: 2;
+}
+
+html[data-theme="poison"] .addon-path-field {
+  position: relative;
+  isolation: isolate;
+  min-height: 52px;
+  margin-top: 14px;
+  padding: 0 11px 0 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-color: rgb(2 12 4 / 55%);
+  box-shadow: none;
+}
+
+html[data-theme="poison"] .addon-path-field__frame {
+  inset: 0;
+  border-width: 12px 16px;
+  border-image-slice: 300 110 242;
+  filter: brightness(1.45) saturate(1.55) drop-shadow(0 0 7px rgb(174 255 75 / 42%));
+}
+
+html[data-theme="poison"] .addon-folder-actions {
+  gap: 16px;
+  margin-top: 16px;
+}
+
+html[data-theme="poison"] :where(.addon-folder-actions button, .addon-primary-action, .addon-check-action).addon-action--artwork {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  justify-content: center;
+  padding: 0 var(--poison-addon-content-right) 0 var(--poison-addon-content-left);
+  border: 0;
+  border-radius: 0;
+  color: #eff8d8;
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--poison-addon-font-size);
+  font-weight: var(--poison-addon-font-weight);
+  letter-spacing: var(--poison-addon-letter-spacing, 0);
+  line-height: 1.15;
+  text-shadow: 0 1px 2px #030703, 0 0 8px rgb(178 255 75 / 25%);
+}
+
+html[data-theme="poison"] .addon-action__artwork {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  width: var(--poison-addon-art-width);
+  height: var(--poison-addon-art-height);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+html[data-theme="poison"] :where(.addon-action__artwork-body, .addon-action__artwork-icon) {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: block;
+  background-image: var(--poison-addon-artwork);
+  background-repeat: no-repeat;
+}
+
+html[data-theme="poison"] .addon-action__artwork-body {
+  left: calc(var(--poison-addon-icon-width) - var(--poison-addon-icon-overlap));
+  right: 0;
+  z-index: 1;
+  background-position: right center;
+  background-size: var(--poison-addon-body-background-size, 143%) 100%;
+}
+
+html[data-theme="poison"] .addon-action__artwork-icon {
+  left: 0;
+  z-index: 2;
+  width: var(--poison-addon-icon-width);
+  background-position: left center;
+  background-size: var(--poison-addon-source-width) 100%;
+}
+
+html[data-theme="poison"] .addon-action--artwork .addon-action__label {
+  position: relative;
+  z-index: 3;
+  display: block;
+  min-width: 0;
+}
+
+html[data-theme="poison"] :where(.addon-folder-actions button, .addon-check-action).addon-action--artwork {
+  --poison-addon-art-width: min(100%, 420px);
+  --poison-addon-art-height: 92px;
+  --poison-addon-source-width: 230px;
+  --poison-addon-icon-width: 70px;
+  --poison-addon-icon-overlap: 8px;
+  --poison-addon-content-left: 88px;
+  --poison-addon-content-right: 14px;
+  --poison-addon-font-size: 16px;
+  --poison-addon-font-weight: 650;
+  min-height: 70px;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-select-folder-frame"] {
+  --poison-addon-content-left: 14px;
+  --poison-addon-content-right: 14px;
+  --poison-addon-font-size: 16px;
+  --poison-addon-font-weight: 650;
+  --poison-addon-letter-spacing: 0;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-open-folder-frame"] {
+  --poison-addon-content-left: 14px;
+  --poison-addon-content-right: 14px;
+  --poison-addon-font-size: 16px;
+  --poison-addon-font-weight: 650;
+  --poison-addon-letter-spacing: 0;
+}
+
+html[data-theme="poison"] .addon-primary-actions,
+html[data-theme="poison"] .addon-screen__main > .addon-primary-action {
+  margin-top: 20px;
+}
+
+html[data-theme="poison"] .addon-primary-actions {
+  grid-template-columns: repeat(2, minmax(0, 430px));
+  justify-content: center;
+  gap: 28px;
+  width: 100%;
+  height: 106px;
+}
+
+html[data-theme="poison"] .addon-primary-actions:not(.addon-primary-actions--single) {
+  width: calc(100% + 44px);
+  margin-left: -44px;
+}
+
+html[data-theme="poison"] .addon-primary-actions--single {
+  grid-template-columns: minmax(0, 650px);
+}
+
+html[data-theme="poison"] .addon-primary-action.addon-action--artwork {
+  --poison-addon-art-width: 430px;
+  --poison-addon-art-height: 112px;
+  --poison-addon-source-width: 280px;
+  --poison-addon-icon-width: 86px;
+  --poison-addon-icon-overlap: 8px;
+  --poison-addon-content-left: 104px;
+  --poison-addon-content-right: 18px;
+  --poison-addon-font-size: 19px;
+  --poison-addon-font-weight: 700;
+  width: 100%;
+  min-height: 106px;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-update-frame"] {
+  --poison-addon-content-left: 18px;
+  --poison-addon-content-right: 18px;
+  --poison-addon-font-size: 19px;
+  --poison-addon-font-weight: 700;
+  --poison-addon-letter-spacing: 0;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-reinstall-short-frame"] {
+  --poison-addon-art-width: 510px;
+  --poison-addon-source-width: 336px;
+  --poison-addon-icon-width: 88px;
+  --poison-addon-content-left: 18px;
+  --poison-addon-content-right: 18px;
+  --poison-addon-font-size: 19px;
+  --poison-addon-font-weight: 700;
+  --poison-addon-letter-spacing: 0;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-install-frame"],
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-reinstall-long-frame"] {
+  --poison-addon-art-width: 650px;
+  --poison-addon-art-height: 124px;
+  --poison-addon-source-width: 310px;
+  --poison-addon-icon-width: 102px;
+  --poison-addon-icon-overlap: 8px;
+  --poison-addon-content-left: 120px;
+  --poison-addon-content-right: 30px;
+  --poison-addon-font-size: 22px;
+  --poison-addon-font-weight: 700;
+  --poison-addon-letter-spacing: 0;
+  width: min(100%, 650px);
+  min-height: 112px;
+  align-self: center;
+  justify-self: center;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-reinstall-long-frame"] {
+  --poison-addon-content-left: 28px;
+  --poison-addon-content-right: 28px;
+}
+
+html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-action-install-frame"] {
+  --poison-addon-content-left: 28px;
+  --poison-addon-content-right: 28px;
+  --poison-addon-font-size: 22px;
+  --poison-addon-font-weight: 700;
+  --poison-addon-letter-spacing: 0;
+}
+
+html[data-theme="poison"] .addon-action--artwork:hover:not(:disabled),
+html[data-theme="poison"] .addon-action--artwork:focus-visible {
+  background: transparent;
+  filter: drop-shadow(0 0 5px rgb(172 255 61 / 55%)) brightness(1.08);
+}
+
+html[data-theme="poison"] .addon-action--artwork:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: drop-shadow(0 0 3px rgb(172 255 61 / 42%)) brightness(0.96);
+}
+
+html[data-theme="poison"] .addon-action--artwork:disabled {
+  filter: saturate(0.6) brightness(0.72);
+}
+
+html[data-theme="poison"] .addon-action--artwork:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: -5px;
+}
+
+html[data-theme="poison"] .addon-status-column {
+  display: flex;
+  justify-content: center;
+  padding-left: 0;
+  border-left: 0;
+}
+
+html[data-theme="poison"] .addon-screen__divider {
+  position: absolute;
+  top: 35px;
+  bottom: 35px;
+  left: calc(64.2857% - 16.2857px);
+  z-index: 3;
+  width: 24px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  overflow: hidden;
+}
+
+html[data-theme="poison"] .addon-screen__divider-artwork {
+  top: 0;
+  left: 50%;
+  width: 150px;
+  height: 100%;
+  transform: translateX(-49.93%);
+}
+
+html[data-theme="poison"] .addon-status-card {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  padding: 40px 56px 26px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-color: rgb(2 10 4 / 40%);
+  box-shadow: none;
+}
+
+html[data-theme="poison"] .addon-status-card__frame {
+  inset: 0;
+  border-width: 30px;
+  border-image-slice: 80;
+}
+
+html[data-theme="poison"] .addon-status-heading {
+  padding-bottom: 13px;
+  border-bottom-color: rgb(204 184 110 / 24%);
+}
+
+html[data-theme="poison"] .addon-status-heading > svg {
+  color: #baff52 !important;
+  stroke: #baff52 !important;
+  filter: drop-shadow(0 0 6px rgb(171 255 67 / 28%));
+}
+
+html[data-theme="poison"] .addon-status-row {
+  grid-template-columns: 25px minmax(118px, 1fr) minmax(0, 1.15fr);
+  gap: 10px;
+  min-height: 68px;
+  border-bottom-color: rgb(204 184 110 / 17%);
+}
+
+html[data-theme="poison"] .addon-status-row dt {
+  font-size: 15px;
+}
+
+html[data-theme="poison"] .addon-status-row__value {
+  font-size: 14px;
+}
+
+html[data-theme="poison"] .addon-check-action.addon-action--artwork {
+  --poison-addon-art-width: 420px;
+  --poison-addon-art-height: 101px;
+  --poison-addon-source-width: 254px;
+  --poison-addon-icon-width: 80px;
+  --poison-addon-icon-overlap: 8px;
+  --poison-addon-content-left: 24px;
+  --poison-addon-content-right: 24px;
+  --poison-addon-font-size: 16px;
+  --poison-addon-font-weight: 650;
+  --poison-addon-letter-spacing: 0;
+  min-height: 88px;
+  margin-top: 14px;
+}
+
+html[data-theme="poison"] .ks-footer {
+  background:
+    radial-gradient(ellipse at 50% 115%, rgb(156 246 51 / 13%), transparent 46%),
+    linear-gradient(90deg, rgb(113 83 34 / 8%), transparent 24% 76%, rgb(113 83 34 / 8%)),
+    var(--theme-footer-background);
+  box-shadow: inset 0 1px 0 rgb(221 194 111 / 7%);
+}
+
+html[data-theme="poison"] .ks-footer::before {
+  content: "";
+  position: absolute;
+  inset: auto 18% 0;
+  height: 38px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 100%, rgb(151 255 50 / 13%), transparent 68%);
+  filter: blur(8px);
+}
+
+html[data-theme="poison"] :where(.ks-login-shell, .ks-onboarding, .ks-modal__panel) {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 12% 0%, rgb(168 247 60 / 8%), transparent 28%),
+    linear-gradient(150deg, rgb(19 43 18 / 88%), rgb(4 14 6 / 96%));
+}
+
+html[data-theme="poison"] :where(.ks-modal__header, .ks-onboarding__brand) {
+  background: linear-gradient(90deg, rgb(151 120 55 / 7%), rgb(107 183 35 / 6%), rgb(151 120 55 / 7%));
+  box-shadow: inset 0 -1px 0 rgb(210 187 107 / 8%);
+}
+
+html[data-theme="poison"] :where(.auth-register, .ks-onboarding__accounts label, .ks-onboarding__empty, .ks-avatar-choice) {
+  box-shadow: inset 0 1px 0 rgb(231 214 143 / 8%), inset 0 0 18px rgb(100 171 36 / 7%);
+}
+
+html[data-theme="poison"] .ks-avatar-choice[aria-pressed="true"] {
+  box-shadow: inset 3px 0 0 var(--theme-accent), inset 0 0 22px var(--theme-accent-soft), 0 0 14px rgb(166 255 63 / 14%);
+}
+
+html[data-theme="poison"] :where(.ui-button[data-variant="primary"], .settings-gold-action, .settings-segmented button[aria-pressed="true"]) {
+  box-shadow: 0 0 0 1px rgb(37 66 12 / 88%), inset 0 1px 0 rgb(239 255 196 / 28%), 0 0 16px rgb(166 255 63 / 18%);
+}
+
+html[data-theme="poison"] :where(.ui-button[data-variant="danger"], .ks-choice-modal__exit, .error) {
+  box-shadow: inset 0 0 16px var(--status-danger-surface);
+}
+
+html[data-theme="poison"] .ks-choice-modal__exit:hover:not(:disabled),
+html[data-theme="poison"] .ks-choice-modal__exit:focus-visible,
+html[data-theme="poison"] .ui-button[data-variant="danger"]:hover:not(:disabled),
+html[data-theme="poison"] .ui-button[data-variant="danger"]:focus-visible {
+  border-color: var(--status-danger-border-strong);
+}
+
+html[data-theme="poison"] :where(
+  button,
+  .addon-section-heading,
+  .addon-status-heading,
+  .ks-update-modal__installing,
+  .settings-block h3
+) svg {
+  filter: drop-shadow(0 0 4px rgb(178 255 77 / 20%));
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell) {
+  scrollbar-color: var(--theme-scrollbar) var(--theme-scrollbar-track);
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-thumb {
+  border: 2px solid var(--theme-scrollbar-track);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgb(177 147 67 / 78%), var(--theme-scrollbar), rgb(95 133 42 / 84%));
+}
+
+html[data-theme="poison"] :where(.sync-table__body, .ks-modal__content, .ks-onboarding__content, .ks-avatar-picker__content, .ks-legacy-panel, .ks-login-shell)::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-hover);
+}
+
+@keyframes poison-haze-drift {
+  from {
+    opacity: 0.62;
+    transform: translate3d(-1%, 0, 0) scale(0.98);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: translate3d(1%, -1%, 0) scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="poison"] *,
+  html[data-theme="poison"] *::before,
+  html[data-theme="poison"] *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Production Poison artwork composition. The source PNGs stay immutable; these
+   shared controls make the independently rendered pieces read as one UI kit. */
+html[data-theme="poison"] {
+  --poison-font-display: Georgia, "Times New Roman", serif;
+  --poison-font-body: "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --poison-frame-brightness: 0.74;
+  --poison-frame-brightness-control: 0.88;
+  --poison-frame-brightness-footer: 0.8;
+  --poison-frame-brightness-primary: 0.87;
+  --poison-frame-saturation: 0.86;
+  --poison-frame-contrast: 1.08;
+  --poison-frame-opacity: 1;
+  --poison-frame-glow: drop-shadow(0 5px 8px rgb(0 0 0 / 62%)) drop-shadow(0 0 5px rgb(151 224 52 / 15%));
+  --poison-icon-filter: brightness(var(--poison-icon-brightness, 0.86)) saturate(0.92) contrast(1.05) drop-shadow(0 0 7px rgb(151 235 51 / 22%));
+  --poison-sync-button-content-left: 34%;
+  --poison-sync-button-content-right: 8%;
+  --poison-sync-button-artwork-width: 100%;
+  --poison-web-button-content-left: 78px;
+  --poison-web-button-content-right: 28px;
+  --poison-tray-button-content-left: 74px;
+  --poison-tray-button-content-right: 25px;
+  --poison-footer-button-artwork-width: 104%;
+}
+
+html[data-theme="poison"] .shell {
+  font-family: var(--poison-font-body);
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 8%), rgb(1 6 2 / 18%)),
+    var(--theme-artwork-background) center / cover no-repeat,
+    var(--theme-bg);
+}
+
+html[data-theme="poison"] .shell::before {
+  z-index: 0;
+  opacity: 0.14;
+  background: var(--theme-artwork-overlay) center / cover no-repeat;
+}
+
+html[data-theme="poison"] .shell::after {
+  inset: 0;
+  z-index: 0;
+  opacity: 0.34;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgb(138 230 44 / 18%), transparent 42%),
+    linear-gradient(90deg, rgb(0 0 0 / 18%), transparent 16% 84%, rgb(0 0 0 / 18%));
+  filter: none;
+  animation: none;
+}
+
+html[data-theme="poison"] .ks-app-frame {
+  background: linear-gradient(180deg, rgb(2 8 3 / 20%), rgb(1 5 2 / 10%));
+}
+
+html[data-theme="poison"] :where(
+  .theme-frame-artwork,
+  .sync-emblem-panel__frame,
+  .ks-user-menu__shell,
+  .ks-tab__decoration,
+  .ks-footer-action__asset,
+  .addon-artwork,
+  .ks-brand__icon,
+  .ks-settings-control img,
+  .ks-window-button img
+) {
+  --poison-frame-filter: brightness(var(--poison-artwork-brightness, var(--poison-frame-brightness))) saturate(var(--poison-artwork-saturation, var(--poison-frame-saturation))) contrast(var(--poison-frame-contrast)) var(--poison-frame-glow);
+  opacity: var(--poison-frame-opacity);
+  filter: var(--poison-frame-filter);
+  pointer-events: none;
+  transition: filter var(--theme-motion-fast);
+}
+
+html[data-theme="poison"] :where(
+  .ks-brand__icon,
+  .sync-summary-card__icon,
+  .sync-emblem-panel__icon,
+  .sync-version-panel__icon,
+  .sync-current-panel__body > img
+) {
+  filter: var(--poison-icon-filter);
+}
+
+html[data-theme="poison"] .ks-brand::after {
+  display: none;
+}
+
+html[data-theme="poison"] .ks-brand__icon {
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
+  width: 70px;
+  height: 70px;
+  border-radius: 0;
+  opacity: 1;
+  filter: var(--poison-frame-filter);
+}
+
+html[data-theme="poison"] .ks-tab {
+  isolation: isolate;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--poison-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+html[data-theme="poison"] .ks-tab::before {
+  content: "";
+  position: absolute;
+  inset: 18px 24px 12px;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgb(166 255 63 / 30%), rgb(139 235 42 / 12%) 42%, transparent 74%);
+  filter: blur(14px);
+  transform: scale(0.9);
+  transition: opacity var(--theme-motion-normal), transform var(--theme-motion-normal);
+}
+
+html[data-theme="poison"] .ks-tab[data-state="default"]:hover,
+html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] .ks-tab[data-state="default"]:hover::before,
+html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible::before {
+  opacity: 0.64;
+  transform: scale(1);
+}
+
+html[data-theme="poison"] .ks-tab__decoration {
+  --poison-artwork-brightness: 0.82;
+  position: absolute;
+  top: auto;
+  left: 50%;
+  bottom: -13px;
+  z-index: 1;
+  width: 212px;
+  height: 70px;
+  object-fit: contain;
+  object-position: center;
+  transform: translateX(-50%);
+}
+
+html[data-theme="poison"] .ks-tab__decoration--active {
+  --poison-artwork-brightness: 0.9;
+  opacity: 1;
+  filter: var(--poison-frame-filter);
+}
+
+html[data-theme="poison"] .ks-tab__decoration--inactive {
+  opacity: 0.46;
+  filter: brightness(0.5) saturate(0.58) contrast(1.08) drop-shadow(0 3px 5px rgb(0 0 0 / 55%));
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"]::after {
+  display: none;
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] .ks-tab[data-state="selected"]::before {
+  opacity: 0.92;
+  background: radial-gradient(ellipse at 50% 60%, rgb(183 255 65 / 38%), rgb(139 235 42 / 16%) 44%, transparent 76%);
+  filter: blur(15px);
+  transform: scale(1);
+}
+
+html[data-theme="poison"] .ks-tab__label {
+  position: relative;
+  z-index: 2;
+}
+
+html[data-theme="poison"] :is(
+  .ks-settings-control img,
+  .ks-window-button--minimize img,
+  .ks-window-button--close img
+) {
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
+  width: 78px;
+  height: 78px;
+  opacity: 1;
+  filter: var(--poison-frame-filter);
+}
+
+html[data-theme="poison"] .ks-user-menu {
+  width: 246px;
+}
+
+html[data-theme="poison"] .ks-user-menu__trigger {
+  --poison-artwork-brightness: var(--poison-frame-brightness-control);
+  isolation: isolate;
+  grid-template-columns: 59px minmax(0, 1fr) 28px;
+  padding-right: 18px;
+}
+
+html[data-theme="poison"] .ks-user-menu__shell {
+  z-index: 2;
+  width: 270px;
+  height: 90px;
+  object-fit: fill;
+  filter: var(--poison-frame-filter);
+}
+
+html[data-theme="poison"] .ks-user-menu__avatar {
+  z-index: 1;
+  width: 59px;
+  height: 59px;
+}
+
+html[data-theme="poison"] .ks-user-menu__avatar-image {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgb(184 233 80 / 45%);
+  box-shadow: 0 0 9px rgb(147 226 47 / 26%);
+}
+
+html[data-theme="poison"] .ks-user-menu__avatar-frame,
+html[data-theme="poison"] .ks-user-menu__dropdown-icon {
+  visibility: hidden;
+}
+
+html[data-theme="poison"] .ks-user-menu__name {
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding-right: 0;
+  color: #efe5bf;
+  font-family: var(--poison-font-display);
+  font-size: 17px;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgb(0 0 0 / 92%);
+  transform: translateY(-3px);
+}
+
+html[data-theme="poison"] .sync-summary-grid {
+  grid-template-columns: minmax(0, 1.18fr) repeat(3, minmax(0, 1fr));
+}
+
+html[data-theme="poison"] :is(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-version-panel,
+  .sync-current-panel,
+  .sync-emblem-panel
+) {
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] :where(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-current-panel,
+  .sync-emblem-panel
+)::before,
+html[data-theme="poison"] :where(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-current-panel,
+  .sync-emblem-panel
+)::after {
+  display: none;
+}
+
+html[data-theme="poison"] .theme-frame-artwork {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+html[data-theme="poison"] .sync-summary-card > :not(.sync-summary-card__frame),
+html[data-theme="poison"] .sync-version-panel > :not(.sync-version-panel__frame),
+html[data-theme="poison"] .sync-current-panel > :not(.sync-current-panel__frame) {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-theme="poison"] .sync-summary-card {
+  --poison-content-inset-left: 24px;
+  --poison-content-inset-right: 22px;
+  --poison-content-inset-top: 18px;
+  --poison-content-inset-bottom: 18px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
+}
+
+html[data-theme="poison"] .sync-summary-card:has([data-asset-role="sync-summary-addon-frame"]) {
+  --poison-content-inset-top: 20px;
+  --poison-content-inset-bottom: 16px;
+}
+
+html[data-theme="poison"] .sync-summary-card__icon {
+  width: 68px;
+  height: 68px;
+}
+
+html[data-theme="poison"] .sync-summary-card p,
+html[data-theme="poison"] .sync-version-panel p,
+html[data-theme="poison"] .sync-current-panel h2 {
+  font-family: var(--poison-font-display);
+  font-weight: 600;
+}
+
+html[data-theme="poison"] .sync-summary-card p {
+  font-size: 17px;
+}
+
+html[data-theme="poison"] .sync-summary-card strong {
+  margin-top: 2px;
+  font-family: var(--poison-font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+html[data-theme="poison"] .sync-summary-card span {
+  margin-top: 3px;
+  font-family: var(--poison-font-body);
+  font-size: 13px;
+}
+
+html[data-theme="poison"] .sync-table-panel {
+  --poison-content-inset-left: 32px;
+  --poison-content-inset-right: 34px;
+  --poison-content-inset-top: 32px;
+  --poison-content-inset-bottom: 40px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
+  overflow: hidden;
+}
+
+html[data-theme="poison"] .sync-table-panel__frame {
+  z-index: 3;
+}
+
+html[data-theme="poison"] .sync-table {
+  z-index: 1;
+  overflow: hidden;
+  background: rgb(2 9 4 / 56%);
+}
+
+html[data-theme="poison"] .sync-table__header {
+  background: rgb(5 16 7 / 62%);
+}
+
+html[data-theme="poison"] .sync-table__body {
+  box-sizing: border-box;
+  padding-bottom: 14px;
+  scroll-padding-bottom: 14px;
+  background: rgb(1 7 3 / 42%);
+}
+
+html[data-theme="poison"] .sync-table__header {
+  position: relative;
+  z-index: 2;
+  font-family: var(--poison-font-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+html[data-theme="poison"] .sync-table__row {
+  position: relative;
+  z-index: 1;
+  font-family: var(--poison-font-body);
+  font-size: 16px;
+}
+
+html[data-theme="poison"] .sync-sidebar {
+  grid-template-rows: minmax(398px, 1fr) 186px 78px;
+  gap: 12px;
+}
+
+html[data-theme="poison"] .sync-emblem-panel {
+  grid-template-rows: minmax(250px, 1fr) 116px;
+  gap: 6px;
+  padding: 6px;
+}
+
+html[data-theme="poison"] .sync-emblem-panel__frame {
+  object-fit: fill;
+}
+
+html[data-theme="poison"] .sync-emblem-panel__icon {
+  z-index: 2;
+  width: 164px;
+  height: 164px;
+  transform: translateY(2px);
+}
+
+html[data-theme="poison"] .sync-version-panel {
+  --poison-content-inset-left: 30px;
+  --poison-content-inset-right: 28px;
+  --poison-content-inset-top: 17px;
+  --poison-content-inset-bottom: 16px;
+  min-height: 116px;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 18px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
+}
+
+html[data-theme="poison"] .sync-version-panel__icon {
+  width: 62px;
+  height: 62px;
+}
+
+html[data-theme="poison"] .sync-version-panel p {
+  font-size: 17px;
+}
+
+html[data-theme="poison"] .sync-version-panel strong {
+  font-family: var(--poison-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+html[data-theme="poison"] .sync-version-panel span {
+  font-family: var(--poison-font-body);
+  font-size: 15px;
+}
+
+html[data-theme="poison"] .sync-current-panel {
+  --poison-content-inset-left: 28px;
+  --poison-content-inset-right: 28px;
+  --poison-content-inset-top: 18px;
+  --poison-content-inset-bottom: 18px;
+  padding: var(--poison-content-inset-top) var(--poison-content-inset-right) var(--poison-content-inset-bottom) var(--poison-content-inset-left);
+}
+
+html[data-theme="poison"] .sync-current-panel h2 {
+  font-size: 18px;
+}
+
+html[data-theme="poison"] .sync-current-panel__body {
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 118px;
+  margin-top: 5px;
+}
+
+html[data-theme="poison"] .sync-current-panel__body img {
+  width: 82px;
+  height: 82px;
+  margin-left: -7px;
+}
+
+html[data-theme="poison"] .sync-current-panel small {
+  margin-top: 6px;
+  font-family: var(--poison-font-body);
+  font-size: 13px;
+}
+
+html[data-theme="poison"] .sync-current-panel strong {
+  font-family: var(--poison-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+html[data-theme="poison"] .sync-current-panel__body span {
+  font-family: var(--poison-font-body);
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="poison"] .sync-primary-action {
+  --poison-artwork-brightness: var(--poison-frame-brightness-primary);
+  position: relative;
+  isolation: isolate;
+  min-height: 78px;
+  padding-inline: var(--poison-sync-button-content-left) var(--poison-sync-button-content-right);
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--poison-font-display);
+  font-size: 23px;
+  font-weight: 700;
+}
+
+html[data-theme="poison"] .sync-primary-action::after {
+  display: none;
+}
+
+html[data-theme="poison"] .sync-primary-action__frame {
+  top: 50%;
+  left: 50%;
+  width: var(--poison-sync-button-artwork-width);
+  height: auto;
+  max-width: none;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+}
+
+html[data-theme="poison"] .sync-primary-action > span {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin-left: 0;
+  text-align: center;
+}
+
+html[data-theme="poison"] .ks-footer-action--web,
+html[data-theme="poison"] .ks-footer-action--tray {
+  --poison-artwork-brightness: var(--poison-frame-brightness-footer);
+  isolation: isolate;
+  width: 310px;
+  min-height: 72px;
+  justify-content: center;
+  padding-block: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--poison-font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+html[data-theme="poison"] .ks-footer-action--web {
+  padding-inline: var(--poison-web-button-content-left) var(--poison-web-button-content-right);
+}
+
+html[data-theme="poison"] .ks-footer-action--tray {
+  position: relative;
+  padding-inline: var(--poison-tray-button-content-left) var(--poison-tray-button-content-right);
+}
+
+html[data-theme="poison"] .ks-footer-action__asset {
+  z-index: 1;
+  width: var(--poison-footer-button-artwork-width);
+  height: auto;
+  max-width: none;
+  filter: var(--poison-frame-filter);
+}
+
+html[data-theme="poison"] .ks-footer-action--web > span,
+html[data-theme="poison"] .ks-footer-action--tray > span {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+html[data-theme="poison"] :is(
+  .sync-summary-card,
+  .sync-table-panel,
+  .sync-version-panel,
+  .sync-current-panel,
+  .sync-emblem-panel
+):hover {
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] :is(
+  .sync-summary-card,
+  .sync-version-panel,
+  .sync-current-panel
+):hover .theme-frame-artwork {
+  --poison-artwork-brightness: 0.79;
+}
+
+html[data-theme="poison"] .sync-primary-action:hover:not(:disabled) {
+  --poison-artwork-brightness: 1.08;
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-theme="poison"] :is(.ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):hover:not(:disabled) {
+  --poison-artwork-brightness: 0.98;
+  filter: none;
+}
+
+html[data-theme="poison"] :is(.ks-settings-control, .ks-window-button):hover:not(:disabled) img {
+  --poison-artwork-brightness: 0.98;
+}
+
+html[data-theme="poison"] .ks-footer-action:hover:not(:disabled) .ks-footer-action__asset {
+  --poison-artwork-brightness: 0.94;
+}
+
+html[data-theme="poison"] :where(.sync-primary-action, .ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):active:not(:disabled) {
+  filter: none;
+}
+
+html[data-theme="poison"] :where(
+  .ks-user-dropdown,
+  .ks-login-shell,
+  .ks-onboarding,
+  .ks-modal__panel,
+  .ks-legacy-panel
+)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 16px solid transparent;
+  border-image-source: var(--theme-chrome-scalable-frame);
+  border-image-slice: 150;
+  border-image-width: 16px;
+  border-image-repeat: stretch;
+  opacity: 0.78;
+  filter: brightness(0.58) saturate(0.72) contrast(1.08);
+  pointer-events: none;
+}
+
+html[data-theme="poison"] .ks-user-dropdown::before {
+  border-width: 10px;
+  border-image-width: 10px;
+}

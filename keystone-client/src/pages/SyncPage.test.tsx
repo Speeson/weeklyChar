@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
 import { openRaiderIoCharacter } from "../core/native";
 import type { AddonStatus, CharacterState, CoreEvent, SyncStatus, WowState } from "../core/types";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SyncPage } from "./SyncPage";
 
 vi.mock("../core/sync", () => ({
@@ -68,12 +69,37 @@ type SyncEvent = Extract<CoreEvent, { event: `sync.${string}` }>;
 
 describe("SyncPage", () => {
   beforeEach(() => {
+    localStorage.clear();
     forceSyncMock.mockReset();
     getSyncStatusMock.mockReset();
     subscribeToSyncEventsMock.mockReset();
     openRaiderIoCharacterMock.mockReset().mockResolvedValue(undefined);
     getSyncStatusMock.mockResolvedValue(idleStatus);
     subscribeToSyncEventsMock.mockResolvedValue(vi.fn());
+  });
+
+  it("mounts every Poison Synchronization frame through semantic asset roles", () => {
+    localStorage.setItem("keystone-client.theme", "poison");
+    const { container } = render(
+      <SyncPage
+        appVersion="0.4.1"
+        initialAddon={addonStatus}
+        initialCharacters={characterState}
+        initialSync={{ ...idleStatus, state: "success" }}
+        initialWow={wowState}
+        preview
+      />,
+    );
+
+    expect(container.querySelector('[data-asset-role="sync-summary-addon-frame"]')).toHaveAttribute("src", expect.stringMatching(/summary-card-addon-frame\.png$/));
+    expect(container.querySelectorAll('[data-asset-role="sync-summary-frame"]')).toHaveLength(3);
+    expect(container.querySelector('[data-asset-role="sync-table-frame"]')).toHaveAttribute("src", expect.stringMatching(/characters-table-frame\.png$/));
+    expect(container.querySelector('[data-asset-role="sync-version-frame"]')).toHaveAttribute("src", expect.stringMatching(/version-card-frame\.png$/));
+    expect(container.querySelector('[data-asset-role="sync-current-frame"]')).toHaveAttribute("src", expect.stringMatching(/status-card-frame\.png$/));
+    expect(container.querySelector('[data-asset-role="sync-action-frame"]')).toHaveAttribute("src", expect.stringMatching(/sync-button-frame\.png$/));
+    expect(container.querySelector('.sync-emblem-panel__frame[src$="emblem-panel-frame.png"]')).toBeInTheDocument();
+    expect(container.querySelector('.sync-emblem-panel__icon[src$="emblem.png"]')).toBeInTheDocument();
+    expect(container.querySelector('.sync-current-panel__body img[src$="poison-status-icon-success.png"]')).toBeInTheDocument();
   });
 
   it("renders idle, watching, syncing, success and error states", () => {

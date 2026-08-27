@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { ExternalLink, FolderOpen, RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ThemedIcon } from "../components/ThemedIcon";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
 import type { AddonStatus, CoreError, WowState } from "../core/types";
 import { useI18n, type TranslationKey } from "../core/i18n";
@@ -140,11 +140,11 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
         <span className="wow-path-row">
           <input id="wow-install-path" readOnly title={wow.install.installPath ?? undefined} value={wow.install.installPath ?? ""} />
           <button type="button" onClick={chooseFolder} disabled={loading}>
-            <FolderOpen size={18} aria-hidden="true" />
+            <ThemedIcon name="folder" size={18} />
             {t("onboarding.change")}
           </button>
           <button type="button" className="settings-gold-action" onClick={() => void saveFolder()} disabled={loading || !wow.install.installPath}>
-            <Save size={18} aria-hidden="true" />
+            <ThemedIcon name="save" size={18} />
             {t("common.save")}
           </button>
         </span>
@@ -183,14 +183,14 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
 
       <div className="actions settings-account-actions">
         <button type="button" onClick={() => runAction(detectWow, t("wow.detectionUpdated"))} disabled={loading}>
-          <RefreshCw size={18} aria-hidden="true" />
+          <ThemedIcon name="refresh" size={18} />
           {t("wow.redetect")}
         </button>
         <button type="button" onClick={() => setSelected(wow.accounts.map((account) => account.name))} disabled={loading || wow.accounts.length === 0}>
           {t("wow.selectAll")}
         </button>
         <button type="button" onClick={onGoAddon} disabled={!onGoAddon}>
-          <ExternalLink size={18} aria-hidden="true" />
+          <ThemedIcon name="external-link" size={18} />
           {t("wow.goAddon")}
         </button>
       </div>
@@ -206,7 +206,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
         disabled={loading || selected.length === 0 || wow.accounts.length === 0}
         className="settings-gold-action settings-save-accounts"
       >
-        <Save size={18} aria-hidden="true" />
+        <ThemedIcon name="save" size={18} />
         {t("wow.saveAccounts")}
       </button>
     </section>

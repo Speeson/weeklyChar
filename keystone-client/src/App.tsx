@@ -1,10 +1,8 @@
 import "./App.css";
 import { isTauri } from "@tauri-apps/api/core";
-import { Check, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import packageJson from "../package.json";
-import appIcon from "./assets/keystone-ui/app-icon.png";
-import bgImage from "./assets/keystone-ui/bg.jpg";
+import { ThemedIcon } from "./components/ThemedIcon";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
 import { ChangelogModal } from "./components/ChangelogModal";
 import { UpdateModal } from "./components/UpdateModal";
@@ -28,6 +26,7 @@ import { tauriUpdaterAdapter } from "./core/tauriUpdater";
 import { UpdateController, type UpdaterSnapshot } from "./core/updater";
 import { I18nProvider, translate } from "./core/i18n";
 import { bundledRelease } from "./generated/release";
+import { useThemeAsset } from "./theme/useThemeAsset";
 import type {
   AddonStatus,
   AuthState,
@@ -77,7 +76,7 @@ function AvatarChoice({
     <span className="ks-avatar-choice__portrait" style={{ backgroundColor: classColor(wowClass) }}>
       <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
       {avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={avatarUrl} /> : null}
-      {selected ? <Check aria-hidden="true" className="ks-avatar-choice__check" /> : null}
+      {selected ? <ThemedIcon className="ks-avatar-choice__check" name="confirm" /> : null}
     </span>
   );
 }
@@ -91,6 +90,7 @@ function formatError(error: unknown, fallback: string): string {
 }
 
 function App() {
+  const appIcon = useThemeAsset("brand-mark");
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>("loading");
   const [busyAction, setBusyAction] = useState<ActionName | null>("startup");
   const [auth, setAuth] = useState<AuthState | null>(null);
@@ -360,7 +360,7 @@ function App() {
 
   return (
     <I18nProvider language={language}>
-    <main className="shell" style={{ "--ks-bg-image": `url(${bgImage})` } as React.CSSProperties}>
+    <main className="shell">
       {auth?.authenticated && settings && wow && sync && characters && addon && (!needsOnboarding || onboardingSkipped) ? (
         <KeystoneShell
           auth={auth}
@@ -411,7 +411,7 @@ function App() {
                     onClick={() => setSettingsOpen(false)}
                     type="button"
                   >
-                    <X aria-hidden="true" size={20} />
+                    <ThemedIcon name="close" size={20} />
                   </button>
                 </div>
                 <div className="ks-modal__content">
@@ -450,7 +450,7 @@ function App() {
                     <h2 id="avatar-picker-title">{t("avatar.title")}</h2>
                   </div>
                   <button aria-label={t("avatar.close")} className="ks-modal__close" onClick={() => setAvatarPickerOpen(false)} type="button">
-                    <X aria-hidden="true" size={20} />
+                    <ThemedIcon name="close" size={20} />
                   </button>
                 </div>
                 <div className="ks-avatar-picker__content">
@@ -518,7 +518,7 @@ function App() {
                 <h2 id="close-dialog-title">{t("close.title")}</h2>
               </div>
               <button aria-label={t("close.cancelLabel")} className="ks-modal__close" onClick={() => setCloseDialogOpen(false)} type="button">
-                <X aria-hidden="true" size={20} />
+                <ThemedIcon name="close" size={20} />
               </button>
             </div>
             <div className="ks-choice-modal__actions">

@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { KeystoneShell } from "./KeystoneShell";
 
-function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn()) {
+function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn(), onNavigate = vi.fn()) {
   render(
     <KeystoneShell
       auth={{ authenticated: true, username: "player", avatarUrl: null }}
@@ -14,7 +15,7 @@ function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn()) {
       onLogout={vi.fn()}
       onMinimizeToTray={vi.fn()}
       onMinimizeWindow={vi.fn()}
-      onNavigate={vi.fn()}
+      onNavigate={onNavigate}
       onOpenSettings={vi.fn()}
       onOpenWeb={vi.fn()}
       onStartWindowDrag={onStartWindowDrag}
@@ -24,7 +25,71 @@ function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn()) {
   );
 }
 
+afterEach(() => {
+  localStorage.clear();
+  delete document.documentElement.dataset.theme;
+});
+
 describe("KeystoneShell profile menu", () => {
+  it("mounts Poison shell artwork around the existing interactive controls and real avatar", () => {
+    localStorage.setItem("keystone-client.theme", "poison");
+    render(
+      <KeystoneShell
+        auth={{ authenticated: true, username: "player", avatarUrl: "https://img.test/player.jpg" }}
+        busyLogout={false}
+        currentView="sync"
+        onChangeAvatar={vi.fn()}
+        onCloseWindow={vi.fn()}
+        onLogout={vi.fn()}
+        onMinimizeToTray={vi.fn()}
+        onMinimizeWindow={vi.fn()}
+        onNavigate={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onOpenWeb={vi.fn()}
+        onStartWindowDrag={vi.fn()}
+      >
+        <span>Contenido</span>
+      </KeystoneShell>,
+    );
+
+    expect(document.querySelector('.ks-brand__icon[src$="app-badge.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-tab__decoration--active[src$="tab-active-decoration.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-tab__decoration--inactive[src$="tab-inactive-decoration.png"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sincronizacion" }).querySelector(".ks-tab__label")).toHaveTextContent("Sincronizacion");
+    expect(screen.getByRole("button", { name: "Addon" }).querySelector(".ks-tab__label")).toHaveTextContent("Addon");
+    expect(document.querySelector('.ks-user-menu__shell[src$="profile-frame.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/player.jpg"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-footer-action__asset[src$="web-button-frame.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-footer-action__asset[src$="tray-button-frame.png"]')).toBeInTheDocument();
+  });
+
+  it.each(["keystone", "poison"] as const)("keeps shell state hooks, ARIA, and navigation behavior under the %s theme", async (theme) => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    document.documentElement.dataset.theme = theme;
+    renderShell(vi.fn(), vi.fn(), onNavigate);
+
+    const frame = screen.getByRole("banner").parentElement;
+    const syncTab = screen.getByRole("button", { name: "Sincronizacion" });
+    const addonTab = screen.getByRole("button", { name: "Addon" });
+    const trigger = screen.getByRole("button", { name: "Menu de usuario de player" });
+
+    expect(frame).toHaveAttribute("data-ui", "keystone-shell");
+    expect(syncTab).toHaveAttribute("data-ui", "shell-tab");
+    expect(syncTab).toHaveAttribute("data-state", "selected");
+    expect(syncTab).toHaveAttribute("aria-current", "page");
+    expect(addonTab).toHaveAttribute("data-state", "default");
+    await user.click(addonTab);
+    expect(onNavigate).toHaveBeenCalledWith("addon");
+
+    expect(trigger).toHaveAttribute("data-ui", "user-menu-trigger");
+    expect(trigger).toHaveAttribute("data-state", "closed");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute("data-state", "open");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("closes on outside click and Escape", async () => {
     const user = userEvent.setup();
     renderShell();

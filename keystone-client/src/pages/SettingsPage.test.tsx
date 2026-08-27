@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSettings, updateSettings } from "../core/settings";
+import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SettingsPage } from "./SettingsPage";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
 
@@ -28,12 +29,32 @@ const initialSettings = {
 
 describe("SettingsPage", () => {
   beforeEach(() => {
+    localStorage.clear();
+    delete document.documentElement.dataset.theme;
     getSettingsMock.mockReset();
     updateSettingsMock.mockReset();
     getAutostartEnabledMock.mockReset();
     setAutostartEnabledMock.mockReset();
     getAutostartEnabledMock.mockResolvedValue(false);
     setAutostartEnabledMock.mockImplementation(async (enabled) => enabled);
+  });
+
+  it("renders the canonical selectable themes in Settings", () => {
+    render(
+      <SettingsPage
+        appVersion="0.4.1"
+        initialSettings={initialSettings}
+        onSettingsChanged={vi.fn()}
+        preview
+      />,
+    );
+
+    const selector = screen.getByRole("combobox", { name: "Tema visual" });
+    expect(selector).toHaveValue("keystone");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Keystone",
+      "Poison",
+    ]);
   });
 
   it("loads settings", async () => {

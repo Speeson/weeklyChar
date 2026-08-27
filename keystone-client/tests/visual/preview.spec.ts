@@ -120,15 +120,19 @@ test.describe("preview states", () => {
     });
   });
 
-  test("renders the legacy settings options in the current style", async ({ page }) => {
+  test("renders the selectable theme control in Settings", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await page.getByRole("button", { name: "Configuracion" }).click();
 
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Apariencia" })).toBeVisible();
+    const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
+    await expect(themeSelector).toHaveValue("keystone");
+    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison"]);
     await expect(page.getByRole("heading", { name: "Seleccion de cuentas" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Aplicacion" })).toBeVisible();
-    await expect(page).toHaveScreenshot("settings.png", { fullPage: true });
+    await expect(page).toHaveScreenshot("settings-theme-selector.png", { fullPage: true });
   });
 
   test("renders the signed update confirmation above the client", async ({ page }) => {

@@ -1,4 +1,3 @@
-import { Download, LogOut, UserRoundPen } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -9,15 +8,8 @@ import {
 } from "react";
 import type { AuthState } from "../core/types";
 import { useI18n } from "../core/i18n";
-import appIcon from "../assets/keystone-ui/app-icon.png";
-import activeTabIndicator from "../assets/keystone-ui/02-active-tab-indicator.png.png";
-import footerWebButton from "../assets/keystone-ui/05-footer-web-button.png.png";
-import settingsButton from "../assets/keystone-ui/03-settings-button.png.png";
-import userPanelFrame from "../assets/keystone-ui/13-current-status-panel-frame.png.png";
-import windowCloseButton from "../assets/keystone-ui/16-window-close-button.png.png";
-import windowMinimizeButton from "../assets/keystone-ui/15-window-minimize-button.png.png";
-import dropdownIcon from "../assets/keystone-ui/25-dropdown-icon.png";
-import avatarFrame from "../assets/keystone-ui/26-avatar.png";
+import { useThemeAsset } from "../theme/useThemeAsset";
+import { ThemedIcon } from "./ThemedIcon";
 
 const CLIENT_WIDTH = 1672;
 const CLIENT_HEIGHT = 941;
@@ -74,6 +66,7 @@ export function KeystoneShell({
   return (
     <div
       className="ks-app-frame"
+      data-ui="keystone-shell"
       style={{ "--ks-client-scale": clientScale } as CSSProperties}
     >
       <KeystoneHeader
@@ -124,6 +117,15 @@ function KeystoneHeader({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
+  const activeTabIndicator = useThemeAsset("shell-active-tab");
+  const inactiveTabIndicator = useThemeAsset("shell-inactive-tab");
+  const appIcon = useThemeAsset("brand-mark");
+  const avatarFrame = useThemeAsset("shell-avatar-frame");
+  const dropdownIcon = useThemeAsset("shell-user-dropdown");
+  const settingsButton = useThemeAsset("shell-settings");
+  const userPanelFrame = useThemeAsset("shell-user-panel");
+  const windowCloseButton = useThemeAsset("shell-window-close");
+  const windowMinimizeButton = useThemeAsset("shell-window-minimize");
   const username = auth.username ?? t("shell.user");
 
   useEffect(() => {
@@ -164,35 +166,47 @@ function KeystoneHeader({
   };
 
   return (
-    <header className="ks-header" onPointerDown={handleHeaderPointerDown}>
+    <header className="ks-header" data-ui="shell-header" onPointerDown={handleHeaderPointerDown}>
       <div className="ks-brand">
         <img alt="" className="ks-brand__icon" src={appIcon} />
         <span className="ks-brand__name">KeystoneClient</span>
       </div>
 
-      <nav aria-label={t("shell.mainNavigation")} className="ks-tabs">
+      <nav aria-label={t("shell.mainNavigation")} className="ks-tabs" data-ui="shell-tabs">
         <button
           aria-current={currentView === "sync" ? "page" : undefined}
           className="ks-tab"
+          data-state={currentView === "sync" ? "selected" : "default"}
+          data-ui="shell-tab"
           onClick={() => onNavigate("sync")}
           type="button"
         >
-          {t("shell.sync")}
-          {currentView === "sync" ? <img alt="" className="ks-tab__indicator" src={activeTabIndicator} /> : null}
+          <span className="ks-tab__label">{t("shell.sync")}</span>
+          {currentView === "sync" ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
+          ) : inactiveTabIndicator ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
+          ) : null}
         </button>
         <button
           aria-current={currentView === "addon" ? "page" : undefined}
           className="ks-tab"
+          data-state={currentView === "addon" ? "selected" : "default"}
+          data-ui="shell-tab"
           onClick={() => onNavigate("addon")}
           type="button"
         >
-          Addon
-          {currentView === "addon" ? <img alt="" className="ks-tab__indicator" src={activeTabIndicator} /> : null}
+          <span className="ks-tab__label">Addon</span>
+          {currentView === "addon" ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
+          ) : inactiveTabIndicator ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
+          ) : null}
         </button>
       </nav>
 
       <div className="ks-header-actions">
-        <button aria-label={t("shell.settings")} className="ks-icon-control ks-settings-control" onClick={() => {
+        <button aria-label={t("shell.settings")} className="ks-icon-control ks-settings-control" data-ui="settings-control" onClick={() => {
           setUserMenuOpen(false);
           onOpenSettings();
         }} type="button">
@@ -205,6 +219,8 @@ function KeystoneHeader({
             aria-haspopup="menu"
             aria-label={t("shell.userMenu", { name: username })}
             className="ks-user-menu__trigger"
+            data-state={userMenuOpen ? "open" : "closed"}
+            data-ui="user-menu-trigger"
             onClick={() => setUserMenuOpen((open) => !open)}
             type="button"
           >
@@ -217,7 +233,7 @@ function KeystoneHeader({
             <img alt="" className="ks-user-menu__dropdown-icon" src={dropdownIcon} />
           </button>
           {userMenuOpen ? (
-            <div className="ks-user-dropdown" id="ks-user-dropdown" role="menu">
+            <div className="ks-user-dropdown" data-ui="user-menu" id="ks-user-dropdown" role="menu">
               <button
                 onClick={() => {
                   setUserMenuOpen(false);
@@ -226,7 +242,7 @@ function KeystoneHeader({
                 role="menuitem"
                 type="button"
               >
-                <UserRoundPen aria-hidden="true" />
+                <ThemedIcon name="edit-avatar" />
                 {t("shell.changeAvatar")}
               </button>
               <button
@@ -238,17 +254,17 @@ function KeystoneHeader({
                 role="menuitem"
                 type="button"
               >
-                <LogOut aria-hidden="true" />
+                <ThemedIcon name="logout" />
                 {t("shell.logout")}
               </button>
             </div>
           ) : null}
         </div>
         <div className="ks-window-controls" aria-label={t("shell.windowControls")}>
-          <button aria-label={t("shell.minimize")} className="ks-window-button ks-window-button--minimize" onClick={onMinimizeWindow} type="button">
+          <button aria-label={t("shell.minimize")} className="ks-window-button ks-window-button--minimize" data-ui="window-control" data-variant="minimize" onClick={onMinimizeWindow} type="button">
             <img alt="" src={windowMinimizeButton} />
           </button>
-          <button aria-label={t("shell.close")} className="ks-window-button ks-window-button--close" onClick={onCloseWindow} type="button">
+          <button aria-label={t("shell.close")} className="ks-window-button ks-window-button--close" data-ui="window-control" data-variant="close" onClick={onCloseWindow} type="button">
             <img alt="" src={windowCloseButton} />
           </button>
         </div>
@@ -264,15 +280,20 @@ type KeystoneFooterProps = {
 
 function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
   const { t } = useI18n();
+  const footerTrayButton = useThemeAsset("shell-footer-tray");
+  const footerWebButton = useThemeAsset("shell-footer-web");
   return (
     <footer className="ks-footer">
-      <button className="ks-footer-action ks-footer-action--web" onClick={onOpenWeb} type="button">
+      <button className="ks-footer-action ks-footer-action--web" data-ui="shell-footer-action" data-variant="web" onClick={onOpenWeb} type="button">
         <img alt="" className="ks-footer-action__asset" src={footerWebButton} />
         <span>{t("shell.openWeb")}</span>
       </button>
-      <button className="ks-footer-action ks-footer-action--tray" onClick={onMinimizeToTray} type="button">
-        <Download aria-hidden="true" size={28} />
-        {t("shell.minimizeTray")}
+      <button className="ks-footer-action ks-footer-action--tray" data-ui="shell-footer-action" data-variant="tray" onClick={onMinimizeToTray} type="button">
+        {footerTrayButton ? (
+          <><img alt="" className="ks-footer-action__asset" src={footerTrayButton} /><span>{t("shell.minimizeTray")}</span></>
+        ) : (
+          <><ThemedIcon name="download" size={28} />{t("shell.minimizeTray")}</>
+        )}
       </button>
     </footer>
   );
