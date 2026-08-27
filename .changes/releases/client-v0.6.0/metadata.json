@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.5.0",
+  "version": "0.6.0",
+  "bump": "minor",
+  "tag": "client-v0.6.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "midnight-season-2-ui-polish.json"
+  ]
+}
