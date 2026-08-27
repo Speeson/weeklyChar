@@ -1,0 +1,10 @@
+# KeystoneClient 0.5.0
+
+## Novedades
+
+- Añade temas visuales seleccionables a KeystoneClient y estrena la apariencia Poison.
+  - Incorpora contratos reutilizables para componentes, estados, iconos, recursos visuales y tokens semánticos sin duplicar la interfaz ni la lógica del cliente.
+  - Incluye la apariencia Poison de producción en autenticación, configuración inicial, sincronización, Addon, shell global, Ajustes y ventanas superpuestas.
+  - Añade en Ajustes un selector accesible dirigido por el registro para cambiar en directo entre Keystone y Poison.
+  - Restaura el tema guardado antes del primer render para conservar la preferencia del usuario sin parpadeos visibles.
+  - Mantiene la apariencia de Keystone y conserva independientes los colores de estado, clase, Raider.IO y nivel de objeto.

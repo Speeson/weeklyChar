@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.4.1",
+  "version": "0.5.0",
+  "bump": "minor",
+  "tag": "client-v0.5.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-theme-foundation.json"
+  ]
+}
