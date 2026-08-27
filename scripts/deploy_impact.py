@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+from release_changes import ChangesetError, validate_changeset
+
 
 DIMENSIONS = (
     "web",
@@ -86,23 +88,27 @@ def normalize_path(raw_path: str, repo_root: Path | None = None) -> tuple[str | 
 
 def classify_paths(paths: Iterable[str], *, addon_changed: bool = False, repo_root: Path | None = None) -> Impact:
     impact = Impact()
+    root = (repo_root or Path.cwd()).resolve()
 
     if addon_changed:
         impact.add(EXTERNAL_ADDON_RELEASE, "<external:addon>")
 
     for raw_path in paths:
-        path, outside = normalize_path(raw_path, repo_root)
+        path, outside = normalize_path(raw_path, root)
         if path is None:
             continue
         if outside:
             impact.outside(path)
             continue
-        classify_path(path, impact)
+        classify_path(path, impact, repo_root=root)
 
     return impact
 
 
-def classify_path(path: str, impact: Impact) -> None:
+def classify_path(path: str, impact: Impact, *, repo_root: Path | None = None) -> None:
+    if classify_pending_changeset(path, impact, repo_root=repo_root or Path.cwd()):
+        return
+
     if is_known_no_impact(path):
         impact.no_impact(path)
         return
@@ -151,6 +157,29 @@ def classify_path(path: str, impact: Impact) -> None:
         return
 
     impact.unknown(path)
+
+
+def classify_pending_changeset(path: str, impact: Impact, *, repo_root: Path) -> bool:
+    if posixpath.dirname(path) != ".changes/pending" or not path.endswith(".json"):
+        return False
+
+    changeset_path = repo_root.joinpath(*path.split("/"))
+    if not changeset_path.exists():
+        impact.no_impact(path)
+        return True
+
+    try:
+        with changeset_path.open(encoding="utf-8") as handle:
+            changeset = validate_changeset(changeset_path, json.load(handle))
+    except (ChangesetError, json.JSONDecodeError, OSError, UnicodeError):
+        impact.unknown(path)
+        return True
+
+    if "client" in changeset.components:
+        impact.add(("client_release",), path)
+    else:
+        impact.no_impact(path)
+    return True
 
 
 def is_known_no_impact(path: str) -> bool:

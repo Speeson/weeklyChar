@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,6 +15,35 @@ import deploy_impact  # noqa: E402
 
 
 class DeployImpactTests(unittest.TestCase):
+    def writeChangeset(self, root, name="example.json", *, components=("client",), raw=None):
+        path = Path(root) / ".changes" / "pending" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = raw if raw is not None else {
+            "components": list(components),
+            "type": "minor",
+            "category": "added",
+            "summary": "Example release intent",
+            "details": ["Exercises deploy impact classification."],
+        }
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return path.relative_to(root).as_posix()
+
+    def runStrictJson(self, root, path):
+        return subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "deploy_impact.py"),
+                "--files",
+                path,
+                "--strict",
+                "--json",
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
     def assertImpact(self, paths, expected_true, *, addon_changed=False):
         impact = deploy_impact.classify_paths(paths, addon_changed=addon_changed, repo_root=REPO_ROOT)
         for dimension in deploy_impact.DIMENSIONS:
@@ -165,17 +195,139 @@ class DeployImpactTests(unittest.TestCase):
         unknown = self.assertImpact(["release-assets/unexpected.zip"], set())
         self.assertEqual(unknown.unknown_paths, ["release-assets/unexpected.zip"])
 
-    def test_changesets_and_release_tooling_are_no_product_impact(self):
+    def test_release_records_and_release_tooling_are_no_product_impact(self):
         impact = self.assertImpact(
             [
-                ".changes/pending/client-addon-updater.json",
                 ".changes/releases/client-v0.3.0/release-notes.md",
+                ".changes/releases/client-v0.5.0/metadata.json",
                 "scripts/release_changes.py",
                 "scripts/release_state.py",
             ],
             set(),
         )
         self.assertEqual(impact.unknown_paths, [])
+
+    def test_existing_pending_client_changeset_requests_release_without_build(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = self.writeChangeset(root)
+
+            impact = deploy_impact.classify_paths([path], repo_root=root)
+
+        self.assertTrue(impact.dimensions["client_release"])
+        self.assertFalse(impact.dimensions["client_build"])
+        self.assertEqual(impact.reasons["client_release"], [path])
+        self.assertEqual(impact.unknown_paths, [])
+        self.assertEqual(impact.outside_paths, [])
+
+    def test_existing_pending_multi_component_changeset_requests_client_release(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = self.writeChangeset(root, components=("addon", "client"))
+
+            impact = deploy_impact.classify_paths([path], repo_root=root)
+
+        self.assertTrue(impact.dimensions["client_release"])
+        self.assertFalse(impact.dimensions["client_build"])
+
+    def test_existing_pending_non_client_changeset_is_no_impact(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = self.writeChangeset(root, components=("addon",))
+
+            impact = deploy_impact.classify_paths([path], repo_root=root)
+
+        self.assertFalse(any(impact.dimensions.values()))
+        self.assertEqual(impact.known_no_impact_paths, [path])
+        self.assertEqual(impact.unknown_paths, [])
+
+    def test_missing_pending_changeset_path_is_treated_as_consumed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = ".changes/pending/consumed.json"
+
+            impact = deploy_impact.classify_paths([path], repo_root=root)
+
+        self.assertFalse(any(impact.dimensions.values()))
+        self.assertEqual(impact.known_no_impact_paths, [path])
+        self.assertEqual(impact.unknown_paths, [])
+
+    def test_invalid_json_pending_changeset_fails_strict_with_json_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = root / ".changes" / "pending" / "invalid.json"
+            path.parent.mkdir(parents=True)
+            path.write_text("{not-json", encoding="utf-8")
+
+            result = self.runStrictJson(root, path.relative_to(root).as_posix())
+
+        self.assertEqual(result.returncode, 2)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["unknown_paths"], [".changes/pending/invalid.json"])
+        self.assertFalse(payload["client_release"])
+
+    def test_structurally_invalid_pending_changeset_fails_strict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = self.writeChangeset(
+                root,
+                "invalid-structure.json",
+                raw={"components": ["client"], "type": "minor"},
+            )
+
+            result = self.runStrictJson(root, path)
+
+        self.assertEqual(result.returncode, 2)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["unknown_paths"], [path])
+        self.assertFalse(payload["client_release"])
+
+    def test_pending_client_changeset_unions_with_docs_as_release_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = self.writeChangeset(root)
+
+            impact = deploy_impact.classify_paths([path, "docs/release.md"], repo_root=root)
+
+        self.assertTrue(impact.dimensions["client_release"])
+        self.assertFalse(impact.dimensions["client_build"])
+        self.assertFalse(any(impact.dimensions[key] for key in ("web", "worker", "db", "addon", "addon_release")))
+
+    def test_pending_client_changeset_unions_with_client_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = self.writeChangeset(root)
+
+            impact = deploy_impact.classify_paths([path, "keystone-client/src/App.tsx"], repo_root=root)
+
+        self.assertTrue(impact.dimensions["client_release"])
+        self.assertTrue(impact.dimensions["client_build"])
+        self.assertEqual(
+            impact.reasons["client_release"],
+            [path, "keystone-client/src/App.tsx"],
+        )
+
+    def test_release_commit_shape_does_not_request_another_client_release(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            release_dir = root / ".changes" / "releases" / "client-v0.5.0"
+            release_dir.mkdir(parents=True)
+            (release_dir / "example.json").write_text("{}", encoding="utf-8")
+            (release_dir / "metadata.json").write_text("{}", encoding="utf-8")
+            (release_dir / "release-notes.md").write_text("notes", encoding="utf-8")
+            paths = [
+                ".changes/pending/example.json",
+                ".changes/releases/client-v0.5.0/example.json",
+                ".changes/releases/client-v0.5.0/metadata.json",
+                ".changes/releases/client-v0.5.0/release-notes.md",
+                "keystone-client/VERSION",
+            ]
+
+            impact = deploy_impact.classify_paths(paths, repo_root=root)
+
+        self.assertTrue(impact.dimensions["client_build"])
+        self.assertFalse(impact.dimensions["client_release"])
+        self.assertFalse(any(impact.dimensions[key] for key in ("web", "worker", "db", "addon", "addon_release")))
 
     def test_multiple_files_union_impacts_all_relevant_dimensions(self):
         self.assertImpact(
