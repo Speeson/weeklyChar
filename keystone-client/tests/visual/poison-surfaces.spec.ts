@@ -64,6 +64,17 @@ test("Poison keeps framed surfaces transparent outside their artwork", async ({ 
   }
 });
 
+test("Poison does not draw a legacy inset rectangle inside the client edge", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+
+  const insetFrame = await page.locator(".ks-app-frame").evaluate((element) => {
+    const styles = getComputedStyle(element, "::before");
+    return { content: styles.content };
+  });
+
+  expect(insetFrame.content).toBe("none");
+});
+
 test("Poison layers active tab artwork above its glow and below its label", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
@@ -86,6 +97,44 @@ test("Poison layers active tab artwork above its glow and below its label", asyn
   expect(layers.labelZ).toBe(2);
   expect(layers.decorationOpacity).toBe("1");
   expect(layers.decorationFilter).not.toContain("sepia");
+});
+
+test("Poison tabs use only a soft edgeless glow for selected and hover states", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+
+  const selected = page.locator('[data-ui="shell-tab"][data-state="selected"]');
+  const idle = page.locator('[data-ui="shell-tab"][data-state="default"]');
+
+  const readTreatment = (element: HTMLElement) => {
+    const styles = getComputedStyle(element);
+    const glow = getComputedStyle(element, "::before");
+    return {
+      backgroundImage: styles.backgroundImage,
+      borderColor: styles.borderColor,
+      boxShadow: styles.boxShadow,
+      glowBackground: glow.backgroundImage,
+      glowBoxShadow: glow.boxShadow,
+      glowFilter: glow.filter,
+      outlineStyle: styles.outlineStyle,
+    };
+  };
+
+  const selectedTreatment = await selected.evaluate(readTreatment);
+  await idle.hover();
+  const hoverTreatment = await idle.evaluate(readTreatment);
+  await page.mouse.move(1600, 800);
+  await idle.focus();
+  const focusTreatment = await idle.evaluate(readTreatment);
+
+  for (const treatment of [selectedTreatment, hoverTreatment, focusTreatment]) {
+    expect(treatment.backgroundImage).toBe("none");
+    expect(treatment.borderColor).toBe("rgba(0, 0, 0, 0)");
+    expect(treatment.boxShadow).toBe("none");
+    expect(treatment.glowBackground).toContain("radial-gradient");
+    expect(treatment.glowBoxShadow).toBe("none");
+    expect(treatment.glowFilter).toContain("blur(");
+    expect(treatment.outlineStyle).toBe("none");
+  }
 });
 
 test("Poison keeps the stationary table frame above a real scrolling viewport", async ({ page }) => {
@@ -162,6 +211,55 @@ test("Poison keeps profile artwork above the real avatar and below its text", as
 
   expect(layers.frameZ).toBeGreaterThan(layers.avatarZ);
   expect(layers.nameZ).toBeGreaterThan(layers.frameZ);
+});
+
+test("Poison centers the profile name horizontally and optically raises it in its panel", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+
+  const deltas = await page.locator(".ks-user-menu__name").evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const trigger = element.closest(".ks-user-menu__trigger")!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const text = range.getBoundingClientRect();
+    return {
+      horizontal: text.left + text.width / 2 - (box.left + box.width / 2),
+      vertical: text.top + text.height / 2 - (trigger.top + trigger.height / 2),
+    };
+  });
+
+  expect(Math.abs(deltas.horizontal)).toBeLessThanOrEqual(1);
+  expect(deltas.vertical).toBeGreaterThanOrEqual(-3.5);
+  expect(deltas.vertical).toBeLessThanOrEqual(-1.5);
+});
+
+test("Poison keeps Settings, Minimize, and Close compact and optically identical", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  await expect(page.locator(".ks-settings-control")).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const rect = (selector: string) => document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
+    return {
+      close: rect(".ks-window-button--close img"),
+      closeHitbox: rect(".ks-window-button--close"),
+      minimize: rect(".ks-window-button--minimize img"),
+      minimizeHitbox: rect(".ks-window-button--minimize"),
+      profileHitbox: rect(".ks-user-menu__trigger"),
+      settings: rect(".ks-settings-control img"),
+      settingsHitbox: rect(".ks-settings-control"),
+    };
+  });
+
+  const controlWidths = [geometry.settings.width, geometry.minimize.width, geometry.close.width];
+  const controlHeights = [geometry.settings.height, geometry.minimize.height, geometry.close.height];
+  expect(Math.max(...controlWidths) - Math.min(...controlWidths)).toBeLessThanOrEqual(0.01);
+  expect(Math.max(...controlHeights) - Math.min(...controlHeights)).toBeLessThanOrEqual(0.01);
+  expect(Math.max(...controlWidths)).toBeLessThanOrEqual(80);
+  expect(Math.max(...controlHeights)).toBeLessThanOrEqual(80);
+  expect([geometry.profileHitbox.width, geometry.profileHitbox.height]).toEqual([246, 56]);
+  expect([geometry.settingsHitbox.width, geometry.settingsHitbox.height]).toEqual([58, 56]);
+  expect([geometry.minimizeHitbox.width, geometry.minimizeHitbox.height]).toEqual([61, 56]);
+  expect([geometry.closeHitbox.width, geometry.closeHitbox.height]).toEqual([61, 56]);
 });
 
 test("Poison clips a real avatar fixture beneath the profile rim", async ({ page }) => {
@@ -300,6 +398,84 @@ test("Poison keeps footer action labels centered on one line", async ({ page }) 
     expect(layout.textAlign, selector).toBe("center");
     expect(layout.whiteSpace, selector).toBe("nowrap");
     expect(layout.fits, `${selector}: ${layout.scrollWidth}px text in ${layout.clientWidth}px safe area`).toBe(true);
+  }
+});
+
+test("Poison global actions use undistorted artwork with integrated icons and per-asset label safe areas", async ({ page }) => {
+  await page.goto("/?preview=sync-success");
+  await expect(page.locator(".sync-primary-action")).toBeVisible();
+  await expect(page.locator(".ks-footer-action--web")).toBeVisible();
+  await expect(page.locator(".ks-footer-action--tray")).toBeVisible();
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll<HTMLImageElement>(
+      ".sync-primary-action__frame, .ks-footer-action__asset",
+    )).every((image) => image.complete && image.naturalWidth > 0),
+  );
+
+  const controls = await page.evaluate(() => {
+    const definitions = [
+      ["sync", ".sync-primary-action", ".sync-primary-action__frame", "--poison-sync-button-content-left", "--poison-sync-button-content-right"],
+      ["web", ".ks-footer-action--web", ".ks-footer-action__asset", "--poison-web-button-content-left", "--poison-web-button-content-right"],
+      ["tray", ".ks-footer-action--tray", ".ks-footer-action__asset", "--poison-tray-button-content-left", "--poison-tray-button-content-right"],
+    ] as const;
+
+    return Object.fromEntries(definitions.map(([name, controlSelector, artworkSelector, leftProperty, rightProperty]) => {
+      const control = document.querySelector<HTMLElement>(controlSelector)!;
+      const artwork = control.querySelector<HTMLImageElement>(artworkSelector)!;
+      const controlStyle = getComputedStyle(control);
+      const controlBox = control.getBoundingClientRect();
+      const artworkBox = artwork.getBoundingClientRect();
+      return [name, {
+        artworkHeight: artworkBox.height,
+        artworkWidth: artworkBox.width,
+        backgroundColor: controlStyle.backgroundColor,
+        backgroundImage: controlStyle.backgroundImage,
+        boxShadow: controlStyle.boxShadow,
+        controlHeight: controlBox.height,
+        controlWidth: controlBox.width,
+        hasRuntimeSvg: control.querySelector("svg") !== null,
+        leftSafeArea: controlStyle.getPropertyValue(leftProperty).trim(),
+        naturalHeight: artwork.naturalHeight,
+        naturalWidth: artwork.naturalWidth,
+        pointerEvents: getComputedStyle(artwork).pointerEvents,
+        rightSafeArea: controlStyle.getPropertyValue(rightProperty).trim(),
+      }];
+    }));
+  });
+
+  expect(controls.sync).toMatchObject({
+    leftSafeArea: "34%",
+    naturalWidth: 1983,
+    naturalHeight: 793,
+    rightSafeArea: "8%",
+  });
+  expect(controls.web).toMatchObject({
+    leftSafeArea: "78px",
+    naturalWidth: 1983,
+    naturalHeight: 793,
+    rightSafeArea: "28px",
+  });
+  expect(controls.tray).toMatchObject({
+    leftSafeArea: "74px",
+    naturalWidth: 1983,
+    naturalHeight: 793,
+    rightSafeArea: "25px",
+  });
+
+  for (const [name, control] of Object.entries(controls)) {
+    expect(control.hasRuntimeSvg, `${name} duplicate icon`).toBe(false);
+    expect(control.pointerEvents, `${name} decorative pointer events`).toBe("none");
+    expect(control.backgroundColor, `${name} background color`).toBe("rgba(0, 0, 0, 0)");
+    expect(control.backgroundImage, `${name} background image`).toBe("none");
+    expect(control.boxShadow, `${name} box shadow`).toBe("none");
+    expect(control.leftSafeArea, `${name} left safe area`).not.toBe("");
+    expect(control.rightSafeArea, `${name} right safe area`).not.toBe("");
+    expect(control.artworkWidth, `${name} artwork width`).toBeGreaterThanOrEqual(control.controlWidth);
+    expect(control.artworkWidth, `${name} artwork width`).toBeLessThanOrEqual(control.controlWidth * 1.05);
+    expect(control.artworkWidth / control.artworkHeight, `${name} aspect ratio`).toBeCloseTo(
+      control.naturalWidth / control.naturalHeight,
+      2,
+    );
   }
 });
 

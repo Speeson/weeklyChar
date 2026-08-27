@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ButtonHTMLAttributes, type CSSProperties } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
 import {
   checkAddon,
@@ -14,6 +14,7 @@ import type { AddonStatus, CoreError, WowState } from "../core/types";
 import { selectWowInstall } from "../core/wow";
 import { useI18n, type TranslationKey } from "../core/i18n";
 import type { ThemeIconRole } from "../theme/icon.registry";
+import type { OptionalThemeAssetRole } from "../theme/asset.registry";
 import { useThemeAsset } from "../theme/useThemeAsset";
 
 type AddonPageProps = {
@@ -135,6 +136,18 @@ export function AddonPage({
 }: AddonPageProps) {
   const { language, t } = useI18n();
   const appIcon = useThemeAsset("brand-emblem");
+  const addonMainFrame = useThemeAsset("addon-main-frame");
+  const addonPathCardFrame = useThemeAsset("addon-path-card-frame");
+  const addonPathFieldFrame = useThemeAsset("addon-path-field-frame");
+  const addonStatusFrame = useThemeAsset("addon-status-frame");
+  const addonDivider = useThemeAsset("addon-divider");
+  const installFrame = useThemeAsset("addon-action-install-frame");
+  const updateFrame = useThemeAsset("addon-action-update-frame");
+  const reinstallShortFrame = useThemeAsset("addon-action-reinstall-short-frame");
+  const reinstallLongFrame = useThemeAsset("addon-action-reinstall-long-frame");
+  const selectFolderFrame = useThemeAsset("addon-action-select-folder-frame");
+  const openFolderFrame = useThemeAsset("addon-action-open-folder-frame");
+  const checkFrame = useThemeAsset("addon-action-check-frame");
   const [addon, setAddon] = useState<AddonStatus>(initialAddon);
   const [wow, setWow] = useState<WowState>(initialWow);
   const [busyAction, setBusyAction] = useState<AddonAction | null>(null);
@@ -301,6 +314,7 @@ export function AddonPage({
   return (
     <section className="addon-screen" aria-labelledby="addon-title">
       <div className="addon-screen__main">
+        <ThemeAddonSlicedFrame role="addon-main-frame" src={addonMainFrame} className="addon-screen__frame" />
         <header className="addon-heading">
           <img src={appIcon} alt="" className="addon-heading__icon" />
           <div>
@@ -314,12 +328,14 @@ export function AddonPage({
         </p>
 
         <section className="addon-path-card" aria-labelledby="addon-path-title">
+          <ThemeAddonSlicedFrame role="addon-path-card-frame" src={addonPathCardFrame} className="addon-path-card__frame" />
           <div className="addon-section-heading">
             <ThemedIcon name="folder" />
             <h2 id="addon-path-title">{t("addon.path")}</h2>
           </div>
 
           <div className="addon-path-field">
+            <ThemeAddonSlicedFrame role="addon-path-field-frame" src={addonPathFieldFrame} className="addon-path-field__frame" />
             <span title={addonsPath ?? undefined}>{addonsPath ?? t("addon.noPath")}</span>
             <button
               type="button"
@@ -333,50 +349,68 @@ export function AddonPage({
           </div>
 
           <div className="addon-folder-actions">
-            <button type="button" onClick={() => void chooseAddonFolder()} disabled={busy}>
-              <ThemedIcon name="folder" />
+            <ThemeAddonButton
+              frame={selectFolderFrame}
+              frameRole="addon-action-select-folder-frame"
+              icon="folder"
+              type="button"
+              onClick={() => void chooseAddonFolder()}
+              disabled={busy}
+            >
               {t("addon.selectFolder")}
-            </button>
-            <button type="button" onClick={() => void openAddonDirectory()} disabled={!addonsPath || busy}>
-              <ThemedIcon name="external-link" />
+            </ThemeAddonButton>
+            <ThemeAddonButton
+              frame={openFolderFrame}
+              frameRole="addon-action-open-folder-frame"
+              icon="external-link"
+              type="button"
+              onClick={() => void openAddonDirectory()}
+              disabled={!addonsPath || busy}
+            >
               {t("addon.openFolder")}
-            </button>
+            </ThemeAddonButton>
           </div>
         </section>
 
         {canInstall ? (
-          <button
+          <ThemeAddonButton
             type="button"
             className="addon-primary-action"
+            frame={installFrame}
+            frameRole="addon-action-install-frame"
+            icon="download"
             onClick={() => void runAction("install", installAddon, t("addon.installStarted"))}
             disabled={busy}
           >
-            <ThemedIcon name="download" />
             {t("addon.install")}
-          </button>
+          </ThemeAddonButton>
         ) : (
           <div className={`addon-primary-actions${canUpdate && canReinstall ? "" : " addon-primary-actions--single"}`}>
             {canUpdate ? (
-              <button
+              <ThemeAddonButton
                 type="button"
                 className="addon-primary-action"
+                frame={updateFrame}
+                frameRole="addon-action-update-frame"
+                icon="refresh"
                 onClick={() => void runAction("update", updateAddon, t("addon.updateStarted"))}
                 disabled={busy}
               >
-                <ThemedIcon name="refresh" />
                 {t("addon.update")}
-              </button>
+              </ThemeAddonButton>
             ) : null}
             {canReinstall ? (
-              <button
+              <ThemeAddonButton
                 type="button"
                 className="addon-primary-action"
+                frame={canUpdate ? reinstallShortFrame : reinstallLongFrame}
+                frameRole={canUpdate ? "addon-action-reinstall-short-frame" : "addon-action-reinstall-long-frame"}
+                icon="reinstall"
                 onClick={() => void runAction("reinstall", reinstallAddon, t("addon.reinstallStarted"))}
                 disabled={busy}
               >
-                <ThemedIcon name="reinstall" />
                 {t("addon.reinstall")}
-              </button>
+              </ThemeAddonButton>
             ) : null}
           </div>
         )}
@@ -387,8 +421,10 @@ export function AddonPage({
         </div>
       </div>
 
+      <ThemeAddonDivider src={addonDivider} />
       <aside className="addon-status-column">
         <section className="addon-status-card" aria-labelledby="addon-status-title">
+          <ThemeAddonSlicedFrame role="addon-status-frame" src={addonStatusFrame} className="addon-status-card__frame" />
           <div className="addon-status-heading">
             <ThemedIcon name="status-verified" />
             <h2 id="addon-status-title">{t("addon.statusTitle")}</h2>
@@ -418,18 +454,92 @@ export function AddonPage({
             />
           </dl>
 
-          <button
+          <ThemeAddonButton
             type="button"
             className="addon-check-action"
+            frame={checkFrame}
+            frameRole="addon-action-check-frame"
+            icon={busyAction === "check" ? "loading" : "search"}
+            iconClassName={busyAction === "check" ? "addon-spin" : undefined}
             onClick={() => void runAction("check", checkAddon, t("addon.statusUpdated"))}
             disabled={busy}
           >
-            {busyAction === "check" ? <ThemedIcon className="addon-spin" name="loading" /> : <ThemedIcon name="search" />}
             {busyAction === "check" ? t("addon.checking") : t("addon.check")}
-          </button>
+          </ThemeAddonButton>
         </section>
       </aside>
     </section>
+  );
+}
+
+function artworkStyle(src: string): CSSProperties {
+  return { "--poison-addon-artwork": `url("${src}")` } as CSSProperties;
+}
+
+function ThemeAddonSlicedFrame({
+  role,
+  src,
+  className,
+}: {
+  role: OptionalThemeAssetRole;
+  src: string | undefined;
+  className: string;
+}) {
+  return src ? (
+    <span
+      aria-hidden="true"
+      className={`addon-artwork addon-sliced-frame ${className}`}
+      data-asset-role={role}
+      style={artworkStyle(src)}
+    />
+  ) : null;
+}
+
+function ThemeAddonDivider({ src }: { src: string | undefined }) {
+  return src ? (
+    <span className="addon-screen__divider" data-asset-role="addon-divider" aria-hidden="true">
+      <img src={src} alt="" draggable="false" className="addon-screen__divider-artwork addon-artwork" />
+    </span>
+  ) : null;
+}
+
+type ThemeAddonButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  frame: string | undefined;
+  frameRole: OptionalThemeAssetRole;
+  icon: ThemeIconRole;
+  iconClassName?: string;
+};
+
+function ThemeAddonButton({
+  children,
+  className = "",
+  frame,
+  frameRole,
+  icon,
+  iconClassName,
+  ...buttonProps
+}: ThemeAddonButtonProps) {
+  return (
+    <button
+      {...buttonProps}
+      className={`${className}${frame ? " addon-action--artwork" : ""}`}
+      data-addon-action-role={frame ? frameRole : undefined}
+    >
+      {frame ? (
+        <span
+          className="addon-action__artwork"
+          data-asset-role={frameRole}
+          aria-hidden="true"
+          style={artworkStyle(frame)}
+        >
+          <span className="addon-action__artwork-body" />
+          <span className="addon-action__artwork-icon" />
+        </span>
+      ) : (
+        <ThemedIcon className={iconClassName} name={icon} />
+      )}
+      <span className="addon-action__label">{children}</span>
+    </button>
   );
 }
 

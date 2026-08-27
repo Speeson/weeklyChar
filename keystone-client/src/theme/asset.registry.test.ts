@@ -63,6 +63,18 @@ const expectedPoisonAssets = {
 } as const satisfies Partial<Record<RequiredThemeAssetRole, string>>;
 
 const expectedPoisonDecorations = {
+  "addon-action-check-frame": "check-for-updates-button-frame.png",
+  "addon-action-install-frame": "install-keystonesync-button-frame.png",
+  "addon-action-open-folder-frame": "open-addon-folder-button-frame.png",
+  "addon-action-reinstall-long-frame": "reinstall-keystonesync-button-long-frame.png",
+  "addon-action-reinstall-short-frame": "reinstall-keystonesync-button-short-frame.png",
+  "addon-action-select-folder-frame": "select-addons-folder-button-frame.png",
+  "addon-action-update-frame": "update-keystonesync-button-frame.png",
+  "addon-divider": "addon-vertical-divider.png",
+  "addon-main-frame": "addon-main-panel-frame.png",
+  "addon-path-card-frame": "addon-path-card-frame.png",
+  "addon-path-field-frame": "addon-path-field-frame.png",
+  "addon-status-frame": "addon-status-panel-frame.png",
   "artwork-background": "background-main.png",
   "artwork-overlay": "ambient-overlay.png",
   "chrome-scalable-frame": "summary-card-frame.png",

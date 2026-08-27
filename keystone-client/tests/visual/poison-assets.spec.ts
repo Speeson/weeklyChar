@@ -110,17 +110,17 @@ for (const [preview, expectedIcon] of [
   });
 }
 
-test("Poison primary action icons inherit the high-contrast action foreground", async ({ page }) => {
+test("Poison Addon primary actions use their integrated artwork icon", async ({ page }) => {
   await page.goto("/?preview=addon-not-installed");
   await page.getByRole("button", { name: "Addon" }).click();
 
   const action = page.locator(".addon-primary-action").first();
-  const icon = action.locator(".theme-icon");
+  const frame = action.locator('[data-asset-role="addon-action-install-frame"]');
   await expect(action).toBeVisible();
-  await expect(icon).toBeVisible();
+  await expect(frame).toBeVisible();
 
-  expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
-  expect(await action.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(7, 16, 5)");
+  await expect(action.locator(".theme-icon")).toHaveCount(0);
+  expect(await frame.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("none");
 });
 
 test("Poison Settings save icons inherit the high-contrast gold-action foreground", async ({ page }) => {

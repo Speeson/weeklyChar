@@ -89,6 +89,7 @@ function renderAddon(
 
 describe("AddonPage", () => {
   beforeEach(() => {
+    localStorage.clear();
     checkAddonMock.mockReset();
     getAddonStatusMock.mockReset();
     installAddonMock.mockReset();
@@ -134,6 +135,74 @@ describe("AddonPage", () => {
     expect(screen.getByText("Actualización disponible")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Actualizar KeystoneSync" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reinstalar KeystoneSync" })).toBeInTheDocument();
+  });
+
+  it("uses Poison Addon artwork without duplicating integrated button icons", () => {
+    localStorage.setItem("keystone-client.theme", "poison");
+    renderAddon({ ...baseStatus, installed: true, installedVersion: "0.1.16", state: "update-available" });
+
+    for (const role of [
+      "addon-main-frame",
+      "addon-path-card-frame",
+      "addon-path-field-frame",
+      "addon-status-frame",
+      "addon-divider",
+      "addon-action-select-folder-frame",
+      "addon-action-open-folder-frame",
+      "addon-action-update-frame",
+      "addon-action-reinstall-short-frame",
+      "addon-action-check-frame",
+    ]) {
+      expect(document.querySelector(`[data-asset-role="${role}"]`)).toBeInTheDocument();
+    }
+
+    for (const name of [
+      "Seleccionar carpeta de AddOns",
+      "Abrir carpeta del addon",
+      "Actualizar KeystoneSync",
+      "Reinstalar KeystoneSync",
+      "Buscar actualizaciones",
+    ]) {
+      const action = screen.getByRole("button", { name });
+      expect(action.querySelector(".theme-icon")).not.toBeInTheDocument();
+    }
+  });
+
+  it("selects long Poison artwork for a sole reinstall action and install artwork when absent", () => {
+    localStorage.setItem("keystone-client.theme", "poison");
+    const { rerender } = renderAddon({
+      ...baseStatus,
+      installed: true,
+      installedVersion: "0.1.17",
+      state: "current",
+    });
+
+    expect(document.querySelector('[data-asset-role="addon-action-reinstall-long-frame"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-asset-role="addon-action-reinstall-short-frame"]')).not.toBeInTheDocument();
+
+    rerender(
+      <AddonPage
+        initialAddon={baseStatus}
+        initialWow={initialWow}
+        onWowChanged={vi.fn()}
+        preview
+      />,
+    );
+    expect(document.querySelector('[data-asset-role="addon-action-install-frame"]')).toBeInTheDocument();
+  });
+
+  it("preserves the Poison check artwork and dynamic label while checking", async () => {
+    localStorage.setItem("keystone-client.theme", "poison");
+    checkAddonMock.mockReturnValueOnce(new Promise(() => undefined));
+    const user = userEvent.setup();
+    renderAddon();
+
+    await user.click(screen.getByRole("button", { name: "Buscar actualizaciones" }));
+
+    const checking = screen.getByRole("button", { name: "Comprobando..." });
+    expect(checking).toBeDisabled();
+    expect(checking.querySelector('[data-asset-role="addon-action-check-frame"]')).toBeInTheDocument();
+    expect(checking.querySelector(".theme-icon")).not.toBeInTheDocument();
   });
 
   it("calls only typed addon wrappers for user actions", async () => {

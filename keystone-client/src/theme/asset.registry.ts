@@ -27,6 +27,18 @@ import poisonSettingsButton from "../themes/assets/poison/frames/buttons/setting
 import poisonSyncButtonFrame from "../themes/assets/poison/frames/buttons/sync-button-frame.png";
 import poisonTrayButtonFrame from "../themes/assets/poison/frames/buttons/tray-button-frame.png";
 import poisonWebButtonFrame from "../themes/assets/poison/frames/buttons/web-button-frame.png";
+import poisonAddonCheckFrame from "../themes/assets/poison/frames/buttons/check-for-updates-button-frame.png";
+import poisonAddonInstallFrame from "../themes/assets/poison/frames/buttons/install-keystonesync-button-frame.png";
+import poisonAddonOpenFolderFrame from "../themes/assets/poison/frames/buttons/open-addon-folder-button-frame.png";
+import poisonAddonReinstallLongFrame from "../themes/assets/poison/frames/buttons/reinstall-keystonesync-button-long-frame.png";
+import poisonAddonReinstallShortFrame from "../themes/assets/poison/frames/buttons/reinstall-keystonesync-button-short-frame.png";
+import poisonAddonSelectFolderFrame from "../themes/assets/poison/frames/buttons/select-addons-folder-button-frame.png";
+import poisonAddonUpdateFrame from "../themes/assets/poison/frames/buttons/update-keystonesync-button-frame.png";
+import poisonAddonDivider from "../themes/assets/poison/frames/addon/addon-vertical-divider.png";
+import poisonAddonMainFrame from "../themes/assets/poison/frames/addon/addon-main-panel-frame.png";
+import poisonAddonPathCardFrame from "../themes/assets/poison/frames/addon/addon-path-card-frame.png";
+import poisonAddonPathFieldFrame from "../themes/assets/poison/frames/addon/addon-path-field-frame.png";
+import poisonAddonStatusFrame from "../themes/assets/poison/frames/addon/addon-status-panel-frame.png";
 import poisonCharactersTableFrame from "../themes/assets/poison/frames/cards/characters-table-frame.png";
 import poisonEmblemPanelFrame from "../themes/assets/poison/frames/cards/emblem-panel-frame.png";
 import poisonStatusCardFrame from "../themes/assets/poison/frames/cards/status-card-frame.png";
@@ -82,6 +94,18 @@ export const KEYSTONE_THEME_ASSETS = {
 export type RequiredThemeAssetRole = keyof typeof KEYSTONE_THEME_ASSETS;
 
 export const OPTIONAL_THEME_ASSET_ROLES = [
+  "addon-action-check-frame",
+  "addon-action-install-frame",
+  "addon-action-open-folder-frame",
+  "addon-action-reinstall-long-frame",
+  "addon-action-reinstall-short-frame",
+  "addon-action-select-folder-frame",
+  "addon-action-update-frame",
+  "addon-divider",
+  "addon-main-frame",
+  "addon-path-card-frame",
+  "addon-path-field-frame",
+  "addon-status-frame",
   "artwork-background",
   "artwork-overlay",
   "brand-theme-emblem",
@@ -107,6 +131,18 @@ export type ThemeAssetOverrides = Partial<
 
 export const THEME_ASSET_OVERRIDES: ThemeAssetOverrides = {
   poison: {
+    "addon-action-check-frame": poisonAddonCheckFrame,
+    "addon-action-install-frame": poisonAddonInstallFrame,
+    "addon-action-open-folder-frame": poisonAddonOpenFolderFrame,
+    "addon-action-reinstall-long-frame": poisonAddonReinstallLongFrame,
+    "addon-action-reinstall-short-frame": poisonAddonReinstallShortFrame,
+    "addon-action-select-folder-frame": poisonAddonSelectFolderFrame,
+    "addon-action-update-frame": poisonAddonUpdateFrame,
+    "addon-divider": poisonAddonDivider,
+    "addon-main-frame": poisonAddonMainFrame,
+    "addon-path-card-frame": poisonAddonPathCardFrame,
+    "addon-path-field-frame": poisonAddonPathFieldFrame,
+    "addon-status-frame": poisonAddonStatusFrame,
     "addon-status-current": poisonStatusSuccessIcon,
     "addon-status-error": poisonErrorIcon,
     "addon-status-local-newer": poisonInfoIcon,
