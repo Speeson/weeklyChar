@@ -99,23 +99,24 @@ Weekly behavior: if a current same-week read returns zero completed hunts while 
 
 ### `currencies`
 
-The addon writes a map of known keys such as:
+The addon writes the canonical Midnight Season 2 keys:
 
-- `adventurerDawncrest`
-- `veteranDawncrest`
-- `championDawncrest`
-- `heroDawncrest`
-- `mythDawncrest`
-- `dawnlightManaflux`
-- `radiantSparkDust`
+- `adventurerMistcrest`
+- `veteranMistcrest`
+- `championMistcrest`
+- `heroMistcrest`
+- `mythMistcrest`
+- `venomblightManaflux`
+- `tidalSparkDust`
 - `cofferKeyShards`
 - `restoredCofferKey`
 - `nebulousVoidcore`
-- `sparksOfRadiance`
+- `sparksOfTides`
+- `trovehuntersBounty`
 
 Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyComplete`, and `displayColor`.
 
-`sparksOfRadiance` is item/currency-derived and includes item and dust counts.
+`sparksOfTides` is item/currency-derived and includes Spark of Tides item counts plus Tidal Spark Dust currency counts. `trovehuntersBounty` includes `itemID`, `bagCount`, `hasBuff`, `questCompleted`, `iconFileID`, `iconPath`, and `weekKey`; same-week completed quest state is preserved across transient incomplete reads.
 
 ### `money`
 

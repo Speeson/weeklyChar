@@ -124,12 +124,12 @@ Verified from checked-out files:
 - Historical FastAPI/Railway docs are retained for project history and should not be used as current architecture instructions.
 - The canonical addon repository is external. This repository contains addon updater tests and a pointer to addon workflow ownership, but no active embedded addon source and no active addon release workflows.
 - `KeystoneSyncDB.keystoneWeeklyResetKey` and `mythicPlusSeasonUpdatedAt` are written by the addon but are not currently included in the client sync payload.
-- Web API response types are duplicated in individual pages, and seasonal dungeon/currency metadata remains hardcoded pending the WoW patch/season phase.
+- Web API response types remain duplicated in individual pages. Midnight Season 2 dungeon and currency metadata is shared by the active Web views under `keystone-web/lib/season2.ts` and `keystone-web/lib/season2Currencies.ts`.
 
 ## Current WoW patch / season status
 
-The master plan records WoW 12.1 basic addon compatibility as manually verified. The `.toc` Interface value, seasonal data, hardcoded IDs, dungeon pools, and WoW API details are pending the dedicated WoW patch/season audit.
+The application layers use the verified Midnight Season 2 pool (challenge map IDs 588, 587, 586, 584, 585, 249, 250, and 399) and canonical Season 2 currency keys. The standalone addon implements Interface 120100, Season 2 currencies, Prey quest IDs, and Trovehunter's Bounty and has passed its automated, changeset, package, and deployment-impact validation. An in-game smoke test is still required before release.
 
 ## Next planned milestone
 
-Phase 12 - Full WoW 12.1 / Midnight Season 2 update.
+Perform the Midnight Season 2 in-game addon smoke test, then coordinate the separately authorized KeystoneClient v0.6.0 and addon v0.2.0 releases.

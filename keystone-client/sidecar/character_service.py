@@ -32,11 +32,15 @@ _DUNGEON_ABBR = {
     "Operation: Floodgate": ("Floodgate", "OF"),
     "The MOTHERLODE!!": ("MOTHERLODE!!", "ML"),
     "Mechagon Workshop": ("Mechagon Workshop", "MW"),
-    "Algeth'ar Academy": ("Algeth'ar Academy", "AA"),
     "Brackenhide Hollow": ("Brackenhide Hollow", "BH"),
     "Halls of Infusion": ("Halls of Infusion", "HoI"),
     "Neltharus": ("Neltharus", "Nel"),
     "Ruby Life Pools": ("Ruby Life Pools", "RLP"),
+    "Altar of Fangs": ("Altar of Fangs", "AOF"),
+    "Murder Row": ("Murder Row", "MR"),
+    "Den of Nalorakk": ("Den of Nalorakk", "DON"),
+    "The Blinding Vale": ("The Blinding Vale", "BV"),
+    "Voidscar Arena": ("Voidscar Arena", "VSA"),
     "Uldaman: Legacy of Tyr": ("Uldaman", "ULD"),
     "The Azure Vault": ("Azure Vault", "AV"),
     "The Nokhud Offensive": ("Nokhud Offensive", "NO"),
@@ -69,8 +73,6 @@ _DUNGEON_ABBR = {
     "Return to Karazhan: Lower": ("Karazhan: Lower", "KarL"),
     "Return to Karazhan: Upper": ("Karazhan: Upper", "KarU"),
     "The Nexus": ("The Nexus", "NX"),
-    "Magisters' Terrace": ("Magisters' Terrace", "MT"),
-    "Magister's Terrace": ("Magister's Terrace", "MT"),
     "Throne of the Tides": ("Throne of the Tides", "TotT"),
     "The Vortex Pinnacle": ("Vortex Pinnacle", "VP"),
     "Halls of Stone": ("Halls of Stone", "HoS"),
@@ -80,14 +82,14 @@ _DUNGEON_ABBR = {
 }
 
 _DUNGEON_ABBR_BY_ID = {
-    239: ("Seat of the Triumvirate", "SEAT"),
-    556: ("Pit of Saron", "PoS"),
-    161: ("Skyreach", "SR"),
-    557: ("Windrunner Spire", "WS"),
-    558: ("Magister's Terrace", "MT"),
-    559: ("Nexus-Point Xenas", "NPX"),
-    560: ("Maisara Caverns", "MS"),
-    402: ("Algeth'ar Academy", "AA"),
+    588: ("Altar of Fangs", "AOF"),
+    587: ("Murder Row", "MR"),
+    586: ("Den of Nalorakk", "DON"),
+    584: ("The Blinding Vale", "BV"),
+    585: ("Voidscar Arena", "VSA"),
+    249: ("Kings' Rest", "KR"),
+    250: ("Temple of Sethraliss", "TOS"),
+    399: ("Ruby Life Pools", "RLP"),
 }
 
 

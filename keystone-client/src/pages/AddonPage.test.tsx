@@ -179,6 +179,7 @@ describe("AddonPage", () => {
 
     expect(document.querySelector('[data-asset-role="addon-action-reinstall-long-frame"]')).toBeInTheDocument();
     expect(document.querySelector('[data-asset-role="addon-action-reinstall-short-frame"]')).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reinstalar KeystoneSync" })).toHaveClass("addon-primary-action--single");
 
     rerender(
       <AddonPage
@@ -189,6 +190,19 @@ describe("AddonPage", () => {
       />,
     );
     expect(document.querySelector('[data-asset-role="addon-action-install-frame"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Instalar KeystoneSync" })).toHaveClass("addon-primary-action--single");
+  });
+
+  it("does not apply the single-action modifier to the Update and Reinstall pair", () => {
+    renderAddon({
+      ...baseStatus,
+      installed: true,
+      installedVersion: "0.1.16",
+      state: "update-available",
+    });
+
+    expect(screen.getByRole("button", { name: "Actualizar KeystoneSync" })).not.toHaveClass("addon-primary-action--single");
+    expect(screen.getByRole("button", { name: "Reinstalar KeystoneSync" })).not.toHaveClass("addon-primary-action--single");
   });
 
   it("preserves the Poison check artwork and dynamic label while checking", async () => {

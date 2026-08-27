@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { getToken } from '@/lib/auth'
+import { DEFAULT_SEASON_2_CURRENCY_VISIBILITY, migrateSeason2CurrencyVisibility } from '@/lib/season2Currencies'
 
 type SettingsState = {
   summaryBlocks: Record<string, boolean>
@@ -25,15 +26,7 @@ const DEFAULT_SETTINGS: SettingsState = {
     preyHunts: true,
     currencies: true,
   },
-  summaryCurrencies: {
-    heroDawncrest: true,
-    mythDawncrest: true,
-    dawnlightManaflux: true,
-    radiantSparkDust: true,
-    cofferKeyShards: true,
-    restoredCofferKey: true,
-    nebulousVoidcore: true,
-  },
+  summaryCurrencies: { ...DEFAULT_SEASON_2_CURRENCY_VISIBILITY },
   characterOptions: {
     showCharactersWithoutKeystone: true,
     favoritesFirst: false,
@@ -63,7 +56,7 @@ function loadSettings(): SettingsState {
       ...DEFAULT_SETTINGS,
       ...parsed,
       summaryBlocks: { ...DEFAULT_SETTINGS.summaryBlocks, ...(parsed.summaryBlocks ?? {}) },
-      summaryCurrencies: { ...DEFAULT_SETTINGS.summaryCurrencies, ...(parsed.summaryCurrencies ?? {}) },
+      summaryCurrencies: migrateSeason2CurrencyVisibility(parsed.summaryCurrencies),
       characterOptions: { ...DEFAULT_SETTINGS.characterOptions, ...(parsed.characterOptions ?? {}) },
       teamOptions: { ...DEFAULT_SETTINGS.teamOptions, ...(parsed.teamOptions ?? {}) },
       syncOptions: { ...DEFAULT_SETTINGS.syncOptions, ...(parsed.syncOptions ?? {}) },
@@ -168,7 +161,9 @@ export default function SettingsPage() {
       router.push('/login')
       return
     }
-    setSettings(loadSettings())
+    const loadedSettings = loadSettings()
+    setSettings(loadedSettings)
+    saveSettings(loadedSettings)
     setLoaded(true)
   }, [router])
 
@@ -228,13 +223,15 @@ export default function SettingsPage() {
             </Section>
 
             <Section title="Currencies" description="Activa o desactiva currencies concretas en Resumen.">
-              <ToggleRow label="Hero Dawncrest" checked={settings.summaryCurrencies.heroDawncrest} onChange={value => toggleGroup('summaryCurrencies', 'heroDawncrest', value)} />
-              <ToggleRow label="Myth Dawncrest" checked={settings.summaryCurrencies.mythDawncrest} onChange={value => toggleGroup('summaryCurrencies', 'mythDawncrest', value)} />
-              <ToggleRow label="Dawnlight Manaflux" checked={settings.summaryCurrencies.dawnlightManaflux} onChange={value => toggleGroup('summaryCurrencies', 'dawnlightManaflux', value)} />
-              <ToggleRow label="Radiant Spark Dust" checked={settings.summaryCurrencies.radiantSparkDust} onChange={value => toggleGroup('summaryCurrencies', 'radiantSparkDust', value)} />
+              <ToggleRow label="Hero Mistcrest" checked={settings.summaryCurrencies.heroMistcrest} onChange={value => toggleGroup('summaryCurrencies', 'heroMistcrest', value)} />
+              <ToggleRow label="Myth Mistcrest" checked={settings.summaryCurrencies.mythMistcrest} onChange={value => toggleGroup('summaryCurrencies', 'mythMistcrest', value)} />
+              <ToggleRow label="Venomblight Manaflux" checked={settings.summaryCurrencies.venomblightManaflux} onChange={value => toggleGroup('summaryCurrencies', 'venomblightManaflux', value)} />
+              <ToggleRow label="Tidal Spark Dust" checked={settings.summaryCurrencies.tidalSparkDust} onChange={value => toggleGroup('summaryCurrencies', 'tidalSparkDust', value)} />
+              <ToggleRow label="Spark of Tides" checked={settings.summaryCurrencies.sparksOfTides} onChange={value => toggleGroup('summaryCurrencies', 'sparksOfTides', value)} />
               <ToggleRow label="Coffer Key Shards" checked={settings.summaryCurrencies.cofferKeyShards} onChange={value => toggleGroup('summaryCurrencies', 'cofferKeyShards', value)} />
               <ToggleRow label="Restored Coffer Key" checked={settings.summaryCurrencies.restoredCofferKey} onChange={value => toggleGroup('summaryCurrencies', 'restoredCofferKey', value)} />
               <ToggleRow label="Nebulous Voidcore" checked={settings.summaryCurrencies.nebulousVoidcore} onChange={value => toggleGroup('summaryCurrencies', 'nebulousVoidcore', value)} />
+              <ToggleRow label="Trovehunter's Bounty" checked={settings.summaryCurrencies.trovehuntersBounty} onChange={value => toggleGroup('summaryCurrencies', 'trovehuntersBounty', value)} />
             </Section>
 
             <Section title="Personajes" description="Preferencias generales para listas de personajes.">

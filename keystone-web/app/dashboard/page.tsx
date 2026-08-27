@@ -7,6 +7,13 @@ import { apiFetch, getToken, getUsername, hydrateProfile } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
 import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 import WeeklyReset from '@/app/components/WeeklyReset'
+import {
+  compactKeystoneLabel,
+  DUNGEON_ABBR_BY_ID,
+  DUNGEON_ABBR_BY_NAME,
+  DUNGEON_FULL_NAME_BY_ABBR,
+  fullKeystoneLabel,
+} from '@/lib/season2'
 
 interface Keystone {
   level: number | null
@@ -89,41 +96,6 @@ const CLASS_COLORS: Record<string, string> = {
   Warrior: '#C69B6D',
 }
 
-const DUNGEON_ABBR_BY_ID = new Map<number, string>([
-  [557, 'WS'],
-  [556, 'PoS'],
-  [402, 'AA'],
-  [239, 'SEAT'],
-  [161, 'SR'],
-  [560, 'MS'],
-  [559, 'NPX'],
-  [558, 'MT'],
-])
-
-const DUNGEON_ABBR_BY_NAME = new Map<string, string>([
-  ['windrunner spire', 'WS'],
-  ['pit of saron', 'PoS'],
-  ["algeth'ar academy", 'AA'],
-  ['seat of the triumvirate', 'SEAT'],
-  ['skyreach', 'SR'],
-  ['maisara caverns', 'MS'],
-  ['nexus-point xenas', 'NPX'],
-  ['nexus point xenas', 'NPX'],
-  ["magister's terrace", 'MT'],
-  ["magisters' terrace", 'MT'],
-])
-
-const DUNGEON_FULL_NAME_BY_ABBR = new Map<string, string>([
-  ['WS', 'Windrunner Spire'],
-  ['PoS', 'Pit of Saron'],
-  ['AA', "Algeth'ar Academy"],
-  ['SEAT', 'Seat of the Triumvirate'],
-  ['SR', 'Skyreach'],
-  ['MS', 'Maisara Caverns'],
-  ['NPX', 'Nexus-Point Xenas'],
-  ['MT', "Magister's Terrace"],
-])
-
 const COLLAPSED_TEAMS_KEY = 'ks_dashboard_collapsed_teams'
 const COLLAPSED_MEMBERS_KEY = 'ks_dashboard_collapsed_members'
 const TEAM_ORDER_KEY = 'ks_dashboard_team_order'
@@ -143,11 +115,7 @@ function classCardStyle(wowClass: string | null | undefined) {
 }
 
 function keystoneLabel(char: Character) {
-  const key = char.currentKeystone
-  if (!key?.level) return '—'
-  const abbr = key.challengeMapId ? DUNGEON_ABBR_BY_ID.get(key.challengeMapId) : null
-  const nameAbbr = key.dungeon ? DUNGEON_ABBR_BY_NAME.get(key.dungeon.toLowerCase()) : null
-  return `+${key.level} ${abbr ?? nameAbbr ?? key.dungeon ?? `ID ${key.challengeMapId}`}`
+  return compactKeystoneLabel(char.currentKeystone)
 }
 
 function keystoneSearchText(char: Character) {
@@ -225,7 +193,14 @@ function CharacterInfoTooltip({ char }: { char: Character }) {
           </div>
         </div>
         <div className="mt-4 flex flex-shrink-0 items-center gap-2 rounded-lg bg-gray-900/80 px-3 py-2">
-          <img src="/icons/currencies/nebulous-voidcore.jpg" alt="" className="h-5 w-5 rounded border border-gray-700 bg-gray-950 object-cover" />
+          <img
+            src="https://wow.zamimg.com/images/wow/icons/small/inv_1205_voidforge_fluctuatingvoidcores_green.jpg"
+            alt=""
+            aria-hidden="true"
+            width={20}
+            height={20}
+            className="h-5 w-5 rounded border border-gray-700 bg-gray-950 object-cover"
+          />
           <span className="text-sm font-black text-violet-200">{voidcore}</span>
         </div>
       </div>
@@ -287,7 +262,7 @@ function CharacterPill({ char, compact = false, showTooltip = false }: { char: C
       <div
         className={`group relative min-w-0 rounded-xl border px-2.5 py-1.5 shadow-[inset_0_1px_0_var(--class-soft)] transition-shadow duration-200 hover:shadow-[0_0_24px_var(--class-glow),inset_0_1px_0_var(--class-soft)] ${stateClass}`}
         style={classCardStyle(char.wowClass)}
-        title={`${char.name} · ${keystoneLabel(char)} · ${relativeTime(char.currentKeystone?.updatedAt)}`}
+        title={`${char.name} · ${fullKeystoneLabel(char.currentKeystone)} · ${relativeTime(char.currentKeystone?.updatedAt)}`}
       >
         <div className="flex items-center gap-2">
           {char.avatarUrl ? (
@@ -314,7 +289,7 @@ function CharacterPill({ char, compact = false, showTooltip = false }: { char: C
     <div
       className={`group relative flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2 shadow-[inset_0_1px_0_var(--class-soft)] transition-shadow duration-200 hover:shadow-[0_0_24px_var(--class-glow),inset_0_1px_0_var(--class-soft)] ${stateClass}`}
       style={classCardStyle(char.wowClass)}
-      title={`${char.name} · ${keystoneLabel(char)} · ${relativeTime(char.currentKeystone?.updatedAt)}`}
+      title={`${char.name} · ${fullKeystoneLabel(char.currentKeystone)} · ${relativeTime(char.currentKeystone?.updatedAt)}`}
     >
       {char.avatarUrl ? (
         <img src={char.avatarUrl} alt="" className={`${avatarSize} flex-shrink-0 rounded-full border border-gray-700 object-cover`} />
@@ -588,7 +563,7 @@ export default function DashboardPage() {
               <input
                 value={filter}
                 onChange={event => setFilter(event.target.value)}
-                placeholder="AA, MT, PoS, +14..."
+                placeholder="AOF, MR, KR, +14..."
                 className="mt-3 w-full rounded-xl border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
               />
               {filter && (

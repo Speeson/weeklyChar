@@ -118,6 +118,35 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertNotIn("keystoneWeeklyResetKey", post["json"])
         self.assertNotIn("mythicPlusSeasonUpdatedAt", post["json"])
 
+    def test_season2_currency_contract_survives_savedvariables_payload(self):
+        [post] = self.capture_sync_payloads("season2.lua")
+
+        currencies = post["json"]["currencies"]
+        self.assertEqual(currencies["heroMistcrest"]["id"], 3445)
+        self.assertEqual(currencies["mythMistcrest"]["id"], 3446)
+        self.assertEqual(currencies["venomblightManaflux"]["id"], 3465)
+        self.assertEqual(currencies["tidalSparkDust"]["id"], 3509)
+        self.assertEqual(currencies["nebulousVoidcore"]["id"], 3513)
+        self.assertEqual(currencies["sparksOfTides"]["itemID"], 274476)
+        self.assertEqual(currencies["sparksOfTides"]["currencyID"], 3509)
+        self.assertEqual(
+            currencies["trovehuntersBounty"],
+            {
+                "itemID": 274374,
+                "bagCount": 0,
+                "hasBuff": True,
+                "questCompleted": True,
+                "iconFileID": 134269,
+                "iconPath": "Interface\\\\Icons\\\\icon_treasuremap",
+                "weekKey": "2026-08-26",
+            },
+        )
+        self.assertNotIn("heroDawncrest", currencies)
+        self.assertNotIn("radiantSparkDust", currencies)
+        self.assertEqual(post["json"]["avatarUrl"], "https://example.test/avatar.jpg")
+        self.assertEqual(post["json"]["rioScore"], 2510.25)
+        self.assertEqual(post["json"]["wowClass"], "Mage")
+
 
 if __name__ == "__main__":
     unittest.main()

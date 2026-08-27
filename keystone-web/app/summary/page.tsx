@@ -6,6 +6,8 @@ import Navbar from '@/app/components/Navbar'
 import { apiFetch, getToken } from '@/lib/auth'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 import { keystoneColor } from '@/lib/colors'
+import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
+import { formatTrovehunterStatus, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, wowheadHref } from '@/lib/season2Currencies'
 
 interface Keystone {
   level: number | null
@@ -43,6 +45,9 @@ interface CurrencyInfo {
   iconPath?: string | null
   isWeeklyComplete?: boolean
   displayColor?: string | null
+  bagCount?: number
+  hasBuff?: boolean
+  questCompleted?: boolean
 }
 
 interface MoneyInfo {
@@ -137,29 +142,6 @@ function classColumnStyle(char: Character): React.CSSProperties {
   }
 }
 
-const DUNGEONS = [
-  { id: 402, name: "Algeth'ar Academy", abbr: 'AA', spellId: 393273 },
-  { id: 558, name: "Magister's Terrace", abbr: 'MT', spellId: 1254572 },
-  { id: 560, name: 'Maisara Caverns', abbr: 'MS', spellId: 1254559 },
-  { id: 559, name: 'Nexus-Point Xenas', abbr: 'NPX', spellId: 1254563 },
-  { id: 556, name: 'Pit of Saron', abbr: 'PoS', spellId: 1254555 },
-  { id: 239, name: 'Seat of the Triumvirate', abbr: 'SEAT', spellId: 1254551 },
-  { id: 161, name: 'Skyreach', abbr: 'SR', spellId: 159898 },
-  { id: 557, name: 'Windrunner Spire', abbr: 'WS', spellId: 1254400 },
-]
-
-const DUNGEON_ABBR = new Map(DUNGEONS.map(d => [d.id, d.abbr]))
-
-const CURRENCIES = [
-  { key: 'heroDawncrest', label: 'Hero Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3345, iconName: 'inv_120_crest_hero' },
-  { key: 'mythDawncrest', label: 'Myth Dawncrest', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3347, iconName: 'inv_120_crest_myth' },
-  { key: 'dawnlightManaflux', label: 'Dawnlight Manaflux', color: 'text-orange-300', wowheadType: 'currency', wowheadId: 3378, localIcon: 'dawnlight-manaflux.jpg' },
-  { key: 'radiantSparkDust', label: 'Radiant Spark Dust', color: 'text-pink-400', wowheadType: 'currency', wowheadId: 3212, localIcon: 'radiant-spark-dust.jpg' },
-  { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
-  { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
-  { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3418, localIcon: 'nebulous-voidcore.jpg' },
-] as const
-
 const SUMMARY_SECTIONS = ['money', 'dungeons', 'greatVault', 'preyHunts', 'currencies'] as const
 const SUMMARY_COLLAPSED_KEY = 'ks_summary_collapsed_sections'
 const WEB_SETTINGS_KEY = 'ks_web_settings'
@@ -200,6 +182,19 @@ function loadSummaryBlockVisibility(): Record<string, boolean> {
   }
 }
 
+function loadSummaryCurrencyVisibility(): Record<string, boolean> {
+  if (typeof window === 'undefined') return migrateSeason2CurrencyVisibility(null)
+  try {
+    const raw = window.localStorage.getItem(WEB_SETTINGS_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    const summaryCurrencies = migrateSeason2CurrencyVisibility(parsed.summaryCurrencies)
+    window.localStorage.setItem(WEB_SETTINGS_KEY, JSON.stringify({ ...parsed, summaryCurrencies }))
+    return summaryCurrencies
+  } catch {
+    return migrateSeason2CurrencyVisibility(null)
+  }
+}
+
 function dash(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
 }
@@ -207,7 +202,7 @@ function dash(value: unknown) {
 function keystoneLabel(char: Character) {
   const key = char.currentKeystone
   if (!key?.level) return '—'
-  const abbr = key.challengeMapId ? DUNGEON_ABBR.get(key.challengeMapId) : null
+  const abbr = key.challengeMapId ? DUNGEON_ABBR_BY_ID.get(key.challengeMapId) : null
   const dungeon = abbr ?? key.dungeon ?? `ID ${key.challengeMapId}`
   return (
     <span className="inline-flex items-center justify-center gap-1">
@@ -340,14 +335,6 @@ function UpgradeMedal({ upgradeLevel }: { upgradeLevel: number }) {
   )
 }
 
-function wowheadHref(type: string, id: number) {
-  return `https://www.wowhead.com/${type}=${id}`
-}
-
-function wowheadSearchHref(type: string, id: number) {
-  return `https://www.wowhead.com/search?q=${encodeURIComponent(`${type}:${id}`)}`
-}
-
 function WowheadLink({
   children,
   type,
@@ -363,7 +350,7 @@ function WowheadLink({
 }) {
   return (
     <a
-      href={noIcon ? wowheadSearchHref(type, id) : wowheadHref(type, id)}
+      href={wowheadHref(type as 'currency' | 'item' | 'spell', id)}
       data-wowhead={noIcon ? `${type}=${id}&domain=www&icon=false` : 'domain=www'}
       target="_blank"
       rel="noreferrer"
@@ -374,35 +361,44 @@ function WowheadLink({
   )
 }
 
-function WowheadIcon({
-  iconName,
-  localIcon,
-}: {
-  iconName?: string
-  localIcon?: string
-}) {
+function WowheadIcon({ iconName }: { iconName: string }) {
   const [failed, setFailed] = useState(false)
-  if (failed || (!iconName && !localIcon)) return null
-
-  const src = iconName
-    ? `https://wow.zamimg.com/images/wow/icons/small/${iconName}.jpg`
-    : `/icons/currencies/${localIcon}`
+  if (failed) {
+    return <span aria-hidden="true" title="Icon unavailable" className="inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-950" />
+  }
 
   return (
     <img
-      src={src}
+      src={`https://wow.zamimg.com/images/wow/icons/small/${iconName}.jpg`}
       alt=""
+      aria-hidden="true"
+      width={20}
+      height={20}
       onError={() => setFailed(true)}
       className="inline-block h-5 w-5 flex-shrink-0 rounded border border-gray-700 bg-gray-950 object-cover shadow-sm"
     />
   )
 }
 
-function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
+function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRENCIES[number]) {
   const key = currency.key
   const info = char.currencies?.[key]
   if (!info) return <span className="text-gray-600">—</span>
-  const value = info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
+  if (currency.valueType === 'trovehunterStatus') {
+    return (
+      <WowheadLink
+        type={currency.wowheadType}
+        id={currency.wowheadId}
+        className={info.questCompleted ? 'font-bold text-emerald-300' : 'font-semibold text-gray-300'}
+      >
+        <WowheadIcon iconName={currency.iconName} />
+        {formatTrovehunterStatus(info)}
+      </WowheadLink>
+    )
+  }
+  const value = key === 'sparksOfTides'
+    ? (info.itemQuantity ?? info.quantity ?? 0)
+    : (info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0)
   const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
   return (
     <WowheadLink
@@ -410,7 +406,7 @@ function currencyValue(char: Character, currency: typeof CURRENCIES[number]) {
       id={currency.wowheadId}
       className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}
     >
-      <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} localIcon={'localIcon' in currency ? currency.localIcon : undefined} />
+      <WowheadIcon iconName={currency.iconName} />
       {value}
     </WowheadLink>
   )
@@ -511,6 +507,7 @@ export default function SummaryPage() {
   const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
   const [collapsedSections, setCollapsedSections] = useState<CollapsedSections>(loadCollapsedSections)
   const [summaryBlocks, setSummaryBlocks] = useState<Record<string, boolean>>({})
+  const [summaryCurrencies, setSummaryCurrencies] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
 
   function toggleSection(section: SummarySection) {
@@ -527,6 +524,7 @@ export default function SummaryPage() {
       return
     }
     setSummaryBlocks(loadSummaryBlockVisibility())
+    setSummaryCurrencies(loadSummaryCurrencyVisibility())
     apiFetch('/api/me/characters')
       .then(r => {
         if (r.status === 401) {
@@ -611,7 +609,7 @@ export default function SummaryPage() {
                     onToggle={() => toggleSection('dungeons')}
                     colSpan={visibleCharacters.length}
                   />
-                  {!collapsedSections.dungeons && DUNGEONS.map(dungeon => (
+                  {!collapsedSections.dungeons && MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => (
                     <InfoRow
                       key={dungeon.id}
                       label={
@@ -658,12 +656,12 @@ export default function SummaryPage() {
                     onToggle={() => toggleSection('currencies')}
                     colSpan={visibleCharacters.length}
                   />
-                  {!collapsedSections.currencies && CURRENCIES.map(currency => (
+                  {!collapsedSections.currencies && MIDNIGHT_SEASON_2_CURRENCIES.filter(currency => summaryCurrencies[currency.key] !== false).map(currency => (
                     <InfoRow
                       key={currency.key}
                       label={
                         <WowheadLink type={currency.wowheadType} id={currency.wowheadId} className={currency.color}>
-                          <WowheadIcon iconName={'iconName' in currency ? currency.iconName : undefined} localIcon={'localIcon' in currency ? currency.localIcon : undefined} />
+                          <WowheadIcon iconName={currency.iconName} />
                           {currency.label}
                         </WowheadLink>
                       }

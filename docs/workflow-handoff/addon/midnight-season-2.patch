@@ -1,0 +1,248 @@
+diff --git a/.changes/pending/midnight-season-2.json b/.changes/pending/midnight-season-2.json
+new file mode 100644
+index 0000000..fe49484
+--- /dev/null
++++ b/.changes/pending/midnight-season-2.json
+@@ -0,0 +1,10 @@
++{
++  "components": ["addon"],
++  "type": "minor",
++  "category": "changed",
++  "summary": "Actualiza KeystoneSync para Midnight Temporada 2.",
++  "details": [
++    "Sustituye las monedas y la Chispa de Temporada 1 por sus equivalentes de Temporada 2.",
++    "Amplía las misiones de Presa de Pesadilla y registra el estado semanal de Trovehunter's Bounty."
++  ]
++}
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index e4c01d4..b323b3d 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -162 +162,6 @@ jobs:
+-      (needs.impact.outputs.addon_release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main') ||
++      (
++        needs.impact.outputs.addon_release == 'true' &&
++        github.event_name == 'push' &&
++        github.ref == 'refs/heads/main' &&
++        vars.ADDON_RELEASE_ENABLED == 'true'
++      ) ||
+diff --git a/KeystoneSync.lua b/KeystoneSync.lua
+index 7d2ecfb..dabfa5f 100644
+--- a/KeystoneSync.lua
++++ b/KeystoneSync.lua
+@@ -10,7 +10,7 @@ local CURRENCIES = {
+-    { key = "adventurerDawncrest", id = 3383 },
+-    { key = "veteranDawncrest", id = 3341 },
+-    { key = "championDawncrest", id = 3343 },
+-    { key = "heroDawncrest", id = 3345 },
+-    { key = "mythDawncrest", id = 3347 },
+-    { key = "dawnlightManaflux", id = 3378 },
+-    { key = "radiantSparkDust", id = 3212 },
++    { key = "adventurerMistcrest", id = 3442 },
++    { key = "veteranMistcrest", id = 3443 },
++    { key = "championMistcrest", id = 3444 },
++    { key = "heroMistcrest", id = 3445 },
++    { key = "mythMistcrest", id = 3446 },
++    { key = "venomblightManaflux", id = 3465 },
++    { key = "tidalSparkDust", id = 3509 },
+@@ -19 +19 @@ local CURRENCIES = {
+-    { key = "nebulousVoidcore", id = 3418 },
++    { key = "nebulousVoidcore", id = 3513 },
+@@ -22,2 +22,5 @@ local CURRENCIES = {
+-local SPARK_OF_RADIANCE_ITEM_ID = 232875
+-local RADIANT_SPARK_DUST_CURRENCY_ID = 3212
++local SPARK_OF_TIDES_ITEM_ID = 274476
++local TIDAL_SPARK_DUST_CURRENCY_ID = 3509
++local TROVEHUNTERS_BOUNTY_ITEM_ID = 274374
++local TROVEHUNTERS_BOUNTY_QUEST_ID = 86371
++local TROVEHUNTERS_BOUNTY_BUFF_SPELL_ID = 1293799
+@@ -258,0 +262,4 @@ local function GetPreyHunts(prev)
++    table.insert(nightmare, 95021)
++    table.insert(nightmare, 95022)
++    table.insert(nightmare, 95023)
++    table.insert(nightmare, 95024)
+@@ -285 +292 @@ end
+-local function GetCurrencyData()
++local function GetCurrencyData(prev)
+@@ -315,3 +322,3 @@ local function GetCurrencyData()
+-    local sparkDust = result.radiantSparkDust
+-    local sparkInventoryCount = CountItemInBags(SPARK_OF_RADIANCE_ITEM_ID)
+-    local sparkTotalCount = C_Item.GetItemCount(SPARK_OF_RADIANCE_ITEM_ID, true) or 0
++    local sparkDust = result.tidalSparkDust
++    local sparkInventoryCount = CountItemInBags(SPARK_OF_TIDES_ITEM_ID)
++    local sparkTotalCount = C_Item.GetItemCount(SPARK_OF_TIDES_ITEM_ID, true) or 0
+@@ -320,3 +327,3 @@ local function GetCurrencyData()
+-    result.sparksOfRadiance = {
+-        itemID = SPARK_OF_RADIANCE_ITEM_ID,
+-        currencyID = RADIANT_SPARK_DUST_CURRENCY_ID,
++    result.sparksOfTides = {
++        itemID = SPARK_OF_TIDES_ITEM_ID,
++        currencyID = TIDAL_SPARK_DUST_CURRENCY_ID,
+@@ -331,2 +338,41 @@ local function GetCurrencyData()
+-        iconFileID = C_Item.GetItemIconByID(SPARK_OF_RADIANCE_ITEM_ID),
+-        iconPath = GetTexturePath(C_Item.GetItemIconByID(SPARK_OF_RADIANCE_ITEM_ID)),
++        iconFileID = C_Item.GetItemIconByID(SPARK_OF_TIDES_ITEM_ID),
++        iconPath = GetTexturePath(C_Item.GetItemIconByID(SPARK_OF_TIDES_ITEM_ID)),
++    }
++
++    local bagCount = 0
++    local bagCountOK, rawBagCount = pcall(CountItemInBags, TROVEHUNTERS_BOUNTY_ITEM_ID)
++    if bagCountOK and (not issecretvalue or not issecretvalue(rawBagCount)) and type(rawBagCount) == "number" then
++        bagCount = rawBagCount
++    end
++
++    local hasBuff = false
++    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
++        local auraOK, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, TROVEHUNTERS_BOUNTY_BUFF_SPELL_ID)
++        hasBuff = auraOK and aura ~= nil and (not issecretvalue or not issecretvalue(aura))
++    end
++
++    local questCompleted = false
++    local questOK, questValue = pcall(C_QuestLog.IsQuestFlaggedCompleted, TROVEHUNTERS_BOUNTY_QUEST_ID)
++    if questOK and (not issecretvalue or not issecretvalue(questValue)) then
++        questCompleted = questValue == true
++    end
++
++    local weekKey = GetWeeklyResetKey()
++    local previousBounty = prev and prev.currencies and prev.currencies.trovehuntersBounty
++    if not questCompleted and previousBounty and previousBounty.weekKey == weekKey and previousBounty.questCompleted then
++        questCompleted = true
++    end
++
++    local iconFileID = nil
++    local iconOK, rawIconFileID = pcall(C_Item.GetItemIconByID, TROVEHUNTERS_BOUNTY_ITEM_ID)
++    if iconOK and (not issecretvalue or not issecretvalue(rawIconFileID)) and type(rawIconFileID) == "number" then
++        iconFileID = rawIconFileID
++    end
++    result.trovehuntersBounty = {
++        itemID = TROVEHUNTERS_BOUNTY_ITEM_ID,
++        bagCount = bagCount,
++        hasBuff = hasBuff,
++        questCompleted = questCompleted,
++        iconFileID = iconFileID,
++        iconPath = GetTexturePath(iconFileID),
++        weekKey = weekKey,
+@@ -654 +700 @@ local function SaveCharacterData(reason, updateSeason)
+-    KeystoneSyncDB[key].currencies = GetCurrencyData()
++    KeystoneSyncDB[key].currencies = GetCurrencyData(prev)
+diff --git a/KeystoneSync.toc b/KeystoneSync.toc
+index b0fe6aa..bfd8151 100644
+--- a/KeystoneSync.toc
++++ b/KeystoneSync.toc
+@@ -1 +1 @@
+-## Interface: 120005
++## Interface: 120100
+diff --git a/README.md b/README.md
+index e96fc61..7691544 100644
+--- a/README.md
++++ b/README.md
+@@ -18,0 +19 @@ On every login and logout, KeystoneSync writes the current character's keystone
++| `currencies` | Midnight Season 2 Mistcrests, Venomblight Manaflux, Tidal Spark Dust, Spark of Tides, keys, Nebulous Voidcore, and Trovehunter's Bounty bag/buff/weekly completion state |
+@@ -56 +57 @@ This is the file external tools (e.g. [KeystoneClient](https://github.com/Speeso
+-Addon releases are owned by this repository. A release-impacting addon change requires a Spanish changeset under `.changes/pending/*.json`. On qualifying pushes to `main`, GitHub Actions plans the bump, updates `KeystoneSync.toc`, packages `KeystoneSync-vX.Y.Z.zip` with root `KeystoneSync/`, and publishes the GitHub Release under tag `vX.Y.Z`.
++Addon releases are owned by this repository. A release-impacting addon change requires a Spanish changeset under `.changes/pending/*.json`. On qualifying pushes to `main`, GitHub Actions publishes automatically only when the `ADDON_RELEASE_ENABLED` repository variable is `true`. Manual `workflow_dispatch` releases remain available independently of that automatic-release gate. Release automation plans the bump, updates `KeystoneSync.toc`, packages `KeystoneSync-vX.Y.Z.zip` with root `KeystoneSync/`, and publishes the GitHub Release under tag `vX.Y.Z`.
+@@ -66 +67 @@ Release tooling always runs from the current release infrastructure on `main`. W
+-| Interface | 120005 (The War Within, patch 12.0.5) |
++| Interface | 120100 (Midnight, patch 12.1) |
+diff --git a/tests/release/test_workflows.py b/tests/release/test_workflows.py
+index 972b383..7bbbf96 100644
+--- a/tests/release/test_workflows.py
++++ b/tests/release/test_workflows.py
+@@ -57,0 +58,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
++    def test_automatic_release_is_gated_without_blocking_manual_release(self):
++        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
++            encoding="utf-8"
++        )
++
++        self.assertIn("vars.ADDON_RELEASE_ENABLED == 'true'", workflow)
++        self.assertIn(
++            "(github.event_name == 'workflow_dispatch' && inputs.release_mode == 'release')",
++            workflow,
++        )
++
+diff --git a/tests/runtime/test_season2_contract.py b/tests/runtime/test_season2_contract.py
+new file mode 100644
+index 0000000..1f51f76
+--- /dev/null
++++ b/tests/runtime/test_season2_contract.py
+@@ -0,0 +1,80 @@
++import re
++import unittest
++from pathlib import Path
++
++
++ROOT = Path(__file__).resolve().parents[2]
++LUA = (ROOT / "KeystoneSync.lua").read_text(encoding="utf-8")
++TOC = (ROOT / "KeystoneSync.toc").read_text(encoding="utf-8")
++
++
++class Season2ContractTests(unittest.TestCase):
++    def test_interface_and_currency_contract(self):
++        self.assertIn("## Interface: 120100", TOC)
++
++        expected = {
++            "adventurerMistcrest": 3442,
++            "veteranMistcrest": 3443,
++            "championMistcrest": 3444,
++            "heroMistcrest": 3445,
++            "mythMistcrest": 3446,
++            "venomblightManaflux": 3465,
++            "tidalSparkDust": 3509,
++            "cofferKeyShards": 3310,
++            "restoredCofferKey": 3028,
++            "nebulousVoidcore": 3513,
++        }
++        actual = {
++            key: int(currency_id)
++            for key, currency_id in re.findall(
++                r'\{ key = "([^"]+)", id = (\d+) \}', LUA
++            )
++        }
++        self.assertEqual(actual, expected)
++
++        self.assertIn("local SPARK_OF_TIDES_ITEM_ID = 274476", LUA)
++        self.assertIn("local TIDAL_SPARK_DUST_CURRENCY_ID = 3509", LUA)
++        self.assertIn("result.sparksOfTides = {", LUA)
++
++    def test_prey_and_trovehunter_contract(self):
++        for quest_id in (95021, 95022, 95023, 95024):
++            self.assertIn(f"table.insert(nightmare, {quest_id})", LUA)
++
++        self.assertIn("local TROVEHUNTERS_BOUNTY_ITEM_ID = 274374", LUA)
++        self.assertIn("local TROVEHUNTERS_BOUNTY_QUEST_ID = 86371", LUA)
++        self.assertIn("local TROVEHUNTERS_BOUNTY_BUFF_SPELL_ID = 1293799", LUA)
++        self.assertIn("pcall(CountItemInBags, TROVEHUNTERS_BOUNTY_ITEM_ID)", LUA)
++        self.assertIn("local weekKey = GetWeeklyResetKey()", LUA)
++        self.assertIn("previousBounty.weekKey == weekKey", LUA)
++        self.assertIn("previousBounty.questCompleted", LUA)
++        self.assertIn("result.trovehuntersBounty = {", LUA)
++        for field in (
++            "itemID",
++            "bagCount",
++            "hasBuff",
++            "questCompleted",
++            "iconFileID",
++            "iconPath",
++            "weekKey",
++        ):
++            self.assertRegex(LUA, rf"\n\s+{field} = ")
++
++    def test_mythic_plus_pool_remains_dynamic(self):
++        self.assertIn("C_ChallengeMode.GetMapTable()", LUA)
++        self.assertNotRegex(LUA, r"challengeMapId\s*==\s*\d+")
++
++    def test_active_runtime_has_no_season_1_contract(self):
++        for stale_value in (
++            "Dawncrest",
++            "dawnlightManaflux",
++            "radiantSparkDust",
++            "sparksOfRadiance",
++            "SPARK_OF_RADIANCE",
++            "RADIANT_SPARK_DUST",
++            "3418",
++        ):
++            self.assertNotIn(stale_value, LUA)
++
++
++if __name__ == "__main__":
++    unittest.main()

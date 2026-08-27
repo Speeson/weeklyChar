@@ -375,7 +375,7 @@ export function AddonPage({
         {canInstall ? (
           <ThemeAddonButton
             type="button"
-            className="addon-primary-action"
+            className="addon-primary-action addon-primary-action--single"
             frame={installFrame}
             frameRole="addon-action-install-frame"
             icon="download"
@@ -402,7 +402,7 @@ export function AddonPage({
             {canReinstall ? (
               <ThemeAddonButton
                 type="button"
-                className="addon-primary-action"
+                className={`addon-primary-action${canUpdate ? "" : " addon-primary-action--single"}`}
                 frame={canUpdate ? reinstallShortFrame : reinstallLongFrame}
                 frameRole={canUpdate ? "addon-action-reinstall-short-frame" : "addon-action-reinstall-long-frame"}
                 icon="reinstall"

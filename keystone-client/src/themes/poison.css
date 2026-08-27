@@ -669,6 +669,11 @@ html[data-theme="poison"] .addon-primary-actions--single {
   grid-template-columns: minmax(0, 650px);
 }
 
+html[data-theme="poison"] .addon-primary-actions--single,
+html[data-theme="poison"] .addon-screen__main > .addon-primary-action--single {
+  margin-top: 12px;
+}
+
 html[data-theme="poison"] .addon-primary-action.addon-action--artwork {
   --poison-addon-art-width: 430px;
   --poison-addon-art-height: 112px;
@@ -1163,6 +1168,7 @@ html[data-theme="poison"] .ks-user-menu__avatar-image {
   height: 42px;
   border: 1px solid rgb(184 233 80 / 45%);
   box-shadow: 0 0 9px rgb(147 226 47 / 26%);
+  transform: translate(1px, -4px);
 }
 
 html[data-theme="poison"] .ks-user-menu__avatar-frame,

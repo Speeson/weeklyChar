@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
 import { keystoneColor } from '@/lib/colors'
+import { DUNGEON_ABBR_BY_ID, DUNGEON_ABBR_BY_NAME, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
 import Navbar from '@/app/components/Navbar'
 
 interface Keystone {
@@ -72,41 +73,6 @@ const CLASS_ICON_NAMES: Record<string, string> = {
   Warlock: 'classicon_warlock',
   Warrior: 'classicon_warrior',
 }
-
-const DUNGEON_ABBR_BY_ID = new Map<number, string>([
-  [557, 'WS'],
-  [556, 'PoS'],
-  [402, 'AA'],
-  [239, 'SEAT'],
-  [161, 'SR'],
-  [560, 'MS'],
-  [559, 'NPX'],
-  [558, 'MT'],
-])
-
-const DUNGEON_ABBR_BY_NAME = new Map<string, string>([
-  ['windrunner spire', 'WS'],
-  ['pit of saron', 'PoS'],
-  ["algeth'ar academy", 'AA'],
-  ['seat of the triumvirate', 'SEAT'],
-  ['skyreach', 'SR'],
-  ['maisara caverns', 'MS'],
-  ['nexus-point xenas', 'NPX'],
-  ['nexus point xenas', 'NPX'],
-  ["magister's terrace", 'MT'],
-  ["magisters' terrace", 'MT'],
-])
-
-const TEAM_DUNGEONS = [
-  { name: "Algeth'ar Academy", abbr: 'AA' },
-  { name: "Magister's Terrace", abbr: 'MT' },
-  { name: 'Maisara Caverns', abbr: 'MS' },
-  { name: 'Nexus-Point Xenas', abbr: 'NPX' },
-  { name: 'Pit of Saron', abbr: 'PoS' },
-  { name: 'Seat of the Triumvirate', abbr: 'SEAT' },
-  { name: 'Skyreach', abbr: 'SR' },
-  { name: 'Windrunner Spire', abbr: 'WS' },
-]
 
 function formatDate(unix: number | null): string {
   if (!unix) return '-'
@@ -482,7 +448,7 @@ export default function TeamDetailPage() {
                           className="mb-3 w-full rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 outline-none transition focus:border-yellow-500/70"
                         />
                         <div className="grid grid-cols-2 gap-2">
-                          {TEAM_DUNGEONS.map(dungeon => (
+                          {MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => (
                             <label key={dungeon.abbr} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-800 bg-gray-900/70 px-2 py-2 text-xs text-gray-300 transition hover:border-yellow-500/50 hover:text-white">
                               <input
                                 type="checkbox"

@@ -29,7 +29,10 @@ export function setAvatarUrl(url: string) {
 
 export async function hydrateProfile() {
   const res = await apiFetch('/api/me')
-  if (!res.ok) return null
+  if (res.status === 401 || res.status === 403) return null
+  if (!res.ok) {
+    throw new Error(`Profile hydration failed with status ${res.status}`)
+  }
 
   const data = await res.json()
   if (data?.username) setUsername(data.username)

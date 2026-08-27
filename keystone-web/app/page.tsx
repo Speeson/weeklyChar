@@ -1,14 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { clearToken, getToken, hydrateProfile } from '@/lib/auth'
 import { CLIENT_DOWNLOAD_URL } from '@/lib/downloads'
+import { createDashboardRedirect, resolveRootSession } from '@/lib/rootSession'
 import AuthForm from '@/app/components/AuthForm'
 
 const features = [
   ['Piedra actual', 'Nivel, mazmorra y abreviatura sincronizados por personaje.'],
   ['Great Vault', 'Progreso semanal de raid, dungeons y world activities.'],
-  ['Currencies', 'Dawncrests, keys, manaflux y recursos semanales importantes.'],
+  ['Currencies', 'Mistcrests, keys, manaflux y recursos semanales importantes.'],
   ['Mythic+ season', 'Mejores mazmorras, nivel timeado, medalla y rating estimado.'],
   ['Equipos', 'Comparte personajes con tu grupo mediante codigo de invitacion.'],
   ['Raider.IO', 'Avatar, clase, score y datos complementarios desde Raider.IO.'],
@@ -47,16 +50,39 @@ const preyPreviewRows = [
 ]
 
 const currencyPreviewRows = [
-  ['Hero Dawncrest', 'text-purple-300', ['90', '10', '98', '5']],
-  ['Myth Dawncrest', 'text-orange-300', ['92', '58', '47', '33']],
-  ['Dawnlight Manaflux', 'text-orange-300', ['8', '6', '4', '5']],
+  ['Hero Mistcrest', 'text-purple-300', ['90', '10', '98', '5']],
+  ['Myth Mistcrest', 'text-orange-300', ['92', '58', '47', '33']],
+  ['Venomblight Manaflux', 'text-orange-300', ['8', '6', '4', '5']],
   ['Coffer Key Shards', 'text-sky-300', ['188', '714', '16', '530']],
 ]
 
 export default function LandingPage() {
+  const router = useRouter()
   const authRef = useRef<HTMLDivElement | null>(null)
+  const [rootSession, setRootSession] = useState<'checking' | 'landing'>('checking')
   const [authAnchor, setAuthAnchor] = useState<'login' | 'register' | null>(null)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const redirectToDashboard = useMemo(
+    () => createDashboardRedirect(destination => router.replace(destination)),
+    [router],
+  )
+
+  useEffect(() => {
+    let active = true
+
+    void resolveRootSession({ getToken, hydrateProfile, clearToken }).then(destination => {
+      if (!active) return
+      if (destination === 'dashboard') {
+        redirectToDashboard()
+        return
+      }
+      setRootSession('landing')
+    })
+
+    return () => {
+      active = false
+    }
+  }, [redirectToDashboard])
 
   function openAuth(mode: 'login' | 'register') {
     setAuthMode(mode)
@@ -74,6 +100,15 @@ export default function LandingPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [authAnchor])
+
+  const sessionCheckingOverlay = rootSession === 'checking' ? (
+    <div
+      aria-busy="true"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#070d14] text-gray-400"
+    >
+      <p className="text-sm" role="status">Comprobando sesion...</p>
+    </div>
+  ) : null
 
   const authPanel = authAnchor ? (
     <div className="absolute right-0 top-12 z-[100] w-[min(92vw,430px)] overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b121b]/98 p-5 shadow-2xl shadow-black/70 backdrop-blur-xl">
@@ -97,6 +132,7 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#070d14] text-gray-100">
+      {sessionCheckingOverlay}
       <section className="relative min-h-screen">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-35"

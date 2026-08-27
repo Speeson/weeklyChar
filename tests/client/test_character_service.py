@@ -125,13 +125,28 @@ class CharacterServiceTests(unittest.TestCase):
         self.assertIsNone(dto["ilvl"])
         self.assertIsNone(dto["rioScore"])
 
-    def test_keystone_display_preserves_legacy_abbreviations_and_fallbacks(self):
-        self.assertEqual(
-            keystone_display({"level": 8, "challengeMapId": 402, "dungeon": "ignored"}),
-            "+8 Algeth'ar Academy (AA)",
-        )
+    def test_keystone_display_preserves_unknown_dungeon_fallbacks(self):
         self.assertEqual(keystone_display({"level": 4, "dungeon": "Unknown Dungeon"}), "+4 Unknown Dungeon")
         self.assertEqual(keystone_display(None), "—")
+
+    def test_keystone_display_uses_midnight_season_2_metadata(self):
+        expected = {
+            588: ("Altar of Fangs", "AOF"),
+            587: ("Murder Row", "MR"),
+            586: ("Den of Nalorakk", "DON"),
+            584: ("The Blinding Vale", "BV"),
+            585: ("Voidscar Arena", "VSA"),
+            249: ("Kings' Rest", "KR"),
+            250: ("Temple of Sethraliss", "TOS"),
+            399: ("Ruby Life Pools", "RLP"),
+        }
+
+        for challenge_map_id, (name, abbreviation) in expected.items():
+            with self.subTest(challenge_map_id=challenge_map_id):
+                self.assertEqual(
+                    keystone_display({"level": 10, "challengeMapId": challenge_map_id}),
+                    f"+10 {name} ({abbreviation})",
+                )
 
     def test_cached_characters_are_available_before_remote_refresh(self):
         self.config["cached_characters"] = [character()]

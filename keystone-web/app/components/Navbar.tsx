@@ -151,8 +151,8 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className="sticky top-0 z-10 border-b border-gray-800 bg-gray-950/95 backdrop-blur px-8 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <nav className="sticky top-0 z-10 max-w-full overflow-x-auto border-b border-gray-800 bg-gray-950/95 px-3 py-4 backdrop-blur sm:px-8">
+      <div className="mx-auto flex min-w-max max-w-7xl items-center justify-between gap-4 sm:min-w-0">
 
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2 text-yellow-400 font-bold text-xl tracking-tight">

@@ -95,6 +95,54 @@ test('sync update persists character, current keystone, and contract JSON blocks
   assert.deepEqual(characters[0].mythicPlusSeason, payload.mythicPlusSeason)
 })
 
+test('Season 2 currencies and Trovehunter state round-trip through currencies JSON', async () => {
+  const env = makeEnv()
+  const currencies = {
+    adventurerMistcrest: { id: 3442, quantity: 40 },
+    veteranMistcrest: { id: 3443, quantity: 35 },
+    championMistcrest: { id: 3444, quantity: 30 },
+    heroMistcrest: { id: 3445, quantity: 25 },
+    mythMistcrest: { id: 3446, quantity: 20 },
+    venomblightManaflux: { id: 3465, quantity: 1 },
+    tidalSparkDust: { id: 3509, quantity: 4, maxQuantity: 4 },
+    cofferKeyShards: { id: 3310, quantity: 55 },
+    restoredCofferKey: { id: 3028, quantity: 2 },
+    nebulousVoidcore: { id: 3513, quantity: 1 },
+    sparksOfTides: {
+      itemID: 274476,
+      currencyID: 3509,
+      itemQuantity: 2,
+      dustQuantity: 4,
+      dustMaxQuantity: 4,
+      dustTotalEarned: 4,
+      dustTrackedQuantity: 4,
+    },
+    trovehuntersBounty: {
+      itemID: 274374,
+      bagCount: 0,
+      hasBuff: true,
+      questCompleted: true,
+      iconFileID: 134269,
+      iconPath: 'Interface\\Icons\\icon_treasuremap',
+      weekKey: '2026-08-26',
+    },
+  }
+
+  const response = await sync(env, {
+    character: 'Cyra',
+    realm: 'Dawnwatch',
+    region: 'eu',
+    hasKeystone: false,
+    currencies,
+    updatedAt: 2000000200,
+  })
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(JSON.parse(env.DB.characters[0].currencies_json), currencies)
+  const characters = await readCharacters(env)
+  assert.deepEqual(characters[0].currencies, currencies)
+})
+
 test('partial payload defaults region and does not create a keystone without real keystone data', async () => {
   const env = makeEnv()
   const response = await sync(env, {
