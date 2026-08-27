@@ -88,7 +88,7 @@ test("keeps the single addon action close to the path card and feedback directly
   }
 });
 
-test("preserves the two-button Update and Reinstall layout", async ({ page }) => {
+test("keeps split Update and Reinstall actions clear of feedback and the bottom frame", async ({ page }) => {
   await preparePoison(page, "addon-installed");
   const actions = page.locator(".addon-primary-actions .addon-primary-action");
   await expect(actions).toHaveCount(2);
@@ -104,7 +104,7 @@ test("preserves the two-button Update and Reinstall layout", async ({ page }) =>
     });
     return { gap: wrapper.top - pathCard.bottom, actions };
   });
-  expect(geometry.gap).toBe(20);
+  expect(geometry.gap).toBe(12);
   expect(geometry.actions).toEqual([
     { width: 430, height: 106 },
     { width: 430, height: 106 },
@@ -121,15 +121,49 @@ test("preserves the two-button Update and Reinstall layout", async ({ page }) =>
   );
   await expectFeedbackFits(page);
   await capture(page, "addon-update-success.png");
+
+  await addFeedback(
+    page,
+    "No se pudo actualizar KeystoneSync porque la publicación descargada no superó la validación de integridad. Comprueba la conexión, vuelve a buscar actualizaciones y reintenta la instalación.",
+    "error",
+  );
+  await expectFeedbackFits(page);
+  await capture(page, "addon-update-long-error.png");
 });
 
 test("keeps addon feedback and actions readable at the minimum supported viewport", async ({ page }) => {
   await page.setViewportSize({ width: 940, height: 529 });
-  await preparePoison(page, "addon-current");
-  await addFeedback(page, "KeystoneSync se reinstaló correctamente desde el paquete validado y está listo para usarse.", "message");
-  await expect(page.getByRole("button", { name: "Reinstalar KeystoneSync" })).toBeVisible();
-  await expectFeedbackFits(page);
-  await capture(page, "addon-current-minimum-viewport.png");
+  for (const state of [
+    {
+      preview: "addon-installed",
+      buttons: ["Actualizar KeystoneSync", "Reinstalar KeystoneSync"],
+      feedback: "No se pudo actualizar KeystoneSync porque el paquete no superó la validación. Comprueba la conexión y vuelve a intentarlo.",
+      kind: "error",
+      screenshot: "addon-update-minimum-viewport.png",
+    },
+    {
+      preview: "addon-current",
+      buttons: ["Reinstalar KeystoneSync"],
+      feedback: "KeystoneSync se reinstaló correctamente desde el paquete validado y está listo para usarse.",
+      kind: "message",
+      screenshot: "addon-current-minimum-viewport.png",
+    },
+    {
+      preview: "addon-not-installed",
+      buttons: ["Instalar KeystoneSync"],
+      feedback: "KeystoneSync se instaló correctamente desde la publicación oficial validada y está listo para usarse.",
+      kind: "message",
+      screenshot: "addon-not-installed-minimum-viewport.png",
+    },
+  ] as const) {
+    await preparePoison(page, state.preview);
+    await addFeedback(page, state.feedback, state.kind);
+    for (const button of state.buttons) {
+      await expect(page.getByRole("button", { name: button })).toBeVisible();
+    }
+    await expectFeedbackFits(page);
+    await capture(page, state.screenshot);
+  }
 });
 
 test("centers the Poison avatar without changing the empty or dropdown states", async ({ page }) => {

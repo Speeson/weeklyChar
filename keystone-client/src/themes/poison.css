@@ -669,6 +669,7 @@ html[data-theme="poison"] .addon-primary-actions--single {
   grid-template-columns: minmax(0, 650px);
 }
 
+html[data-theme="poison"] .addon-primary-actions:not(.addon-primary-actions--single),
 html[data-theme="poison"] .addon-primary-actions--single,
 html[data-theme="poison"] .addon-screen__main > .addon-primary-action--single {
   margin-top: 12px;
