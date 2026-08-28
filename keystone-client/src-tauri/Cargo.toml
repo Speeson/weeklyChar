@@ -1,6 +1,6 @@
 [package]
 name = "keystone-client"
-version = "0.6.1"
+version = "0.6.2"
 description = "KeystoneClient desktop application"
 authors = ["Speeson"]
 edition = "2021"

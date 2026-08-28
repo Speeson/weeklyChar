@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.1",
+  "version": "0.6.2",
+  "bump": "patch",
+  "tag": "client-v0.6.2",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "poison-hover-glow-polish.json"
+  ]
+}
