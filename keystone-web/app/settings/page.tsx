@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
-import { getToken } from '@/lib/auth'
+import { apiFetch, getToken } from '@/lib/auth'
 import { DEFAULT_SEASON_2_CURRENCY_VISIBILITY, migrateSeason2CurrencyVisibility } from '@/lib/season2Currencies'
 
 type SettingsState = {
@@ -95,14 +95,16 @@ function ToggleRow({
   description,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string
   description?: string
   checked: boolean
   onChange: (checked: boolean) => void
+  disabled?: boolean
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-3 transition hover:border-gray-700">
+    <label className={`flex items-center justify-between gap-4 rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-3 transition ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-gray-700'}`}>
       <span>
         <span className="block text-sm font-medium text-gray-100">{label}</span>
         {description && <span className="mt-0.5 block text-xs text-gray-500">{description}</span>}
@@ -111,6 +113,7 @@ function ToggleRow({
         type="checkbox"
         checked={checked}
         onChange={event => onChange(event.target.checked)}
+        disabled={disabled}
         className="h-4 w-4 flex-shrink-0 accent-yellow-400"
       />
     </label>
@@ -155,6 +158,10 @@ export default function SettingsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS)
   const [loaded, setLoaded] = useState(false)
+  const [shareKeystoneLootWithTeams, setShareKeystoneLootWithTeams] = useState<boolean | null>(null)
+  const [privacyLoading, setPrivacyLoading] = useState(true)
+  const [privacySaving, setPrivacySaving] = useState(false)
+  const [privacyError, setPrivacyError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!getToken()) {
@@ -165,6 +172,33 @@ export default function SettingsPage() {
     setSettings(loadedSettings)
     saveSettings(loadedSettings)
     setLoaded(true)
+
+    const controller = new AbortController()
+    apiFetch('/api/me', { signal: controller.signal })
+      .then(async res => {
+        if (res.status === 401 || res.status === 403) {
+          router.push('/login')
+          return null
+        }
+        if (!res.ok) throw new Error(`Profile request failed with status ${res.status}`)
+        return res.json()
+      })
+      .then(data => {
+        if (!data) return
+        if (typeof data.shareKeystoneLootWithTeams !== 'boolean') {
+          throw new Error('Profile response omitted shareKeystoneLootWithTeams')
+        }
+        setShareKeystoneLootWithTeams(data.shareKeystoneLootWithTeams)
+      })
+      .catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setPrivacyError('No se pudo cargar la preferencia de privacidad.')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPrivacyLoading(false)
+      })
+
+    return () => controller.abort()
   }, [router])
 
   function update(next: SettingsState) {
@@ -184,6 +218,36 @@ export default function SettingsPage() {
 
   function reset() {
     update(DEFAULT_SETTINGS)
+  }
+
+  async function updatePrivacy(nextValue: boolean) {
+    if (shareKeystoneLootWithTeams === null || privacySaving) return
+    const previousValue = shareKeystoneLootWithTeams
+    setShareKeystoneLootWithTeams(nextValue)
+    setPrivacySaving(true)
+    setPrivacyError(null)
+
+    try {
+      const res = await apiFetch('/api/me/preferences', {
+        method: 'PATCH',
+        body: JSON.stringify({ shareKeystoneLootWithTeams: nextValue }),
+      })
+      if (res.status === 401 || res.status === 403) {
+        router.push('/login')
+        throw new Error('Unauthorized preference update')
+      }
+      if (!res.ok) throw new Error(`Preference update failed with status ${res.status}`)
+      const data = await res.json()
+      if (typeof data.shareKeystoneLootWithTeams !== 'boolean') {
+        throw new Error('Preference response omitted shareKeystoneLootWithTeams')
+      }
+      setShareKeystoneLootWithTeams(data.shareKeystoneLootWithTeams)
+    } catch {
+      setShareKeystoneLootWithTeams(previousValue)
+      setPrivacyError('No se pudo guardar. Se ha restaurado el valor anterior.')
+    } finally {
+      setPrivacySaving(false)
+    }
   }
 
   if (!loaded) return (
@@ -214,6 +278,29 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="lg:col-span-2">
+              <Section
+                title="KeystoneLoot y privacidad"
+                description="Controla cómo se usa tu wishlist de KeystoneLoot al planificar piedras con tus equipos."
+              >
+                <ToggleRow
+                  label="Compartir mi wishlist de KeystoneLoot con mis equipos"
+                  description="Permite que KeystoneSync use tus objetivos de KeystoneLoot para recomendar qué personaje y especialización llevar a una piedra. Los objetos de tu wishlist no se muestran directamente a otros miembros."
+                  checked={shareKeystoneLootWithTeams ?? false}
+                  onChange={updatePrivacy}
+                  disabled={privacyLoading || privacySaving || shareKeystoneLootWithTeams === null}
+                />
+                <div className="min-h-5 px-1 text-xs" aria-live="polite">
+                  {privacyLoading && <p className="text-gray-400">Cargando preferencia de cuenta...</p>}
+                  {privacySaving && <p className="text-yellow-300">Guardando en tu cuenta...</p>}
+                  {!privacyLoading && !privacySaving && privacyError && <p role="alert" className="text-red-300">{privacyError}</p>}
+                  {!privacyLoading && !privacySaving && !privacyError && shareKeystoneLootWithTeams !== null && (
+                    <p className="text-gray-500">Guardado en tu cuenta. Restaurar valores solo afecta a las preferencias locales.</p>
+                  )}
+                </div>
+              </Section>
+            </div>
+
             <Section title="Resumen" description="Controla qué bloques aparecen en la tabla de resumen.">
               <ToggleRow label="Mostrar Coins" checked={settings.summaryBlocks.money} onChange={value => toggleGroup('summaryBlocks', 'money', value)} />
               <ToggleRow label="Mostrar Dungeons" checked={settings.summaryBlocks.dungeons} onChange={value => toggleGroup('summaryBlocks', 'dungeons', value)} />

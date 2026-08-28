@@ -31,7 +31,7 @@ Primary files:
 - Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
-- D1 schema: `keystone-worker/migrations/0001_initial.sql`
+- D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -71,6 +71,7 @@ The addon declares:
 | `currencies` | map keyed by currency/item aliases | `C_CurrencyInfo`, bag/item APIs | Missing currency info omits that currency key. | Client, Worker JSON block, Web |
 | `money` | table | `GetMoney()` | Preserves previous money on logout if WoW returns zero and previous copper was positive. | Client, Worker JSON block, Web |
 | `mythicPlusSeason` | table | `C_PlayerInfo`, `C_ChallengeMode`, `C_MythicPlus` | Updated only on delayed login, completed runs, new weekly records, and manual `/ksync`; previous season data can be preserved when the new read is empty/duplicate. | Client, Worker JSON block, Web |
+| `keystoneLoot` | table | Optional `KeystoneLootIntegration.lua` snapshot using KeystoneLoot public API v2 plus read-only Voidcore state | Present only after that character is processed by V1-A; empty `favorites` is authoritative. | Conditional Client transport, validated Worker JSON block, owner read API |
 | `mythicPlusSeasonUpdatedAt` | Unix seconds | `time()` in `UpdateMythicPlusSeason()` | Local-only today; not included in client payload. | Addon local preservation |
 | `updatedAt` | Unix seconds | `time()` in `SaveCharacterData()` | Used by Worker staleness rules for current keystone rows. | Client, Worker, Web |
 | `updatedReason` | string | Event/reason passed into `SaveCharacterData()` | Stored on keystone rows when a real keystone snapshot is inserted. | Client, Worker, Web |
@@ -138,6 +139,27 @@ Each dungeon entry can include `challengeMapId`, `name`, `texture`, `texturePath
 
 The addon includes safeguards to avoid accepting empty or duplicate season snapshots in cases that appear to be transient API reads.
 
+### `keystoneLoot`
+
+The optional V1-A block has one of four states: `not_installed`,
+`installed_not_ready`, `unsupported_api`, or `supported`. Every state includes
+`installed`, `supported`, and `favorites`. State flags must be consistent:
+
+- `not_installed`: `installed=false`, `supported=false`;
+- `installed_not_ready`: `installed=true`, `supported=false`;
+- `unsupported_api`: `installed=true`, `supported=false`;
+- `supported`: `installed=true`, `supported=true`, `apiVersion=2`.
+
+A supported snapshot also includes `addonVersion`, KeystoneLoot `characterKey`,
+`updatedAt`, and `voidcore` with boolean `checked` plus positive integer `usedItems`.
+Favorites use `sourceId`, `specId`, `itemId`, and generic positive integer `tier` as
+identity. Optional known fields are `sourceType`, `slotId`, `icon`, `bonusIds`, `gems`,
+and `enchant`. Numeric tiers are not capped at 5. Localized names are not identity.
+
+The addon writes only the currently processed character and does not backfill historical
+records. A present supported block with `favorites = {}` is a real empty wishlist and
+replaces older favorites.
+
 ## Client Parsing And Payload Contract
 
 `keystone-client/sidecar/sync_worker.py` watches selected SavedVariables files discovered by `keystone-client/sidecar/wow_path.py`.
@@ -182,6 +204,7 @@ Payload sent to `POST /api/keystones/update`:
 | `currencies` | SavedVariables `currencies` |
 | `money` | SavedVariables `money` |
 | `mythicPlusSeason` | SavedVariables `mythicPlusSeason` |
+| `keystoneLoot` | SavedVariables `keystoneLoot`, only when that key exists |
 
 Authentication:
 
@@ -194,6 +217,12 @@ Missing and partial fields:
 - `hasKeystone` defaults to `False`.
 - Addon item level wins over Raider.IO item level when present.
 - Nested blocks are passed as `None` if missing in the decoded entry.
+- `keystoneLoot` is different: a missing SavedVariables key is omitted from the HTTP
+  payload, while a present block is authoritative.
+- `slpp` represents numeric Lua arrays as mappings and cannot distinguish an empty Lua
+  array from an empty object. The Client converts only the known V1-A array fields
+  `favorites`, `voidcore.usedItems`, `bonusIds`, and `gems` from empty or contiguous
+  one-based mappings to JSON arrays. It does not otherwise normalize or enrich the block.
 
 ## Worker Write Contract
 
@@ -222,9 +251,29 @@ Character update behavior:
 
 - Updates scalar enrichment fields with `COALESCE`.
 - For scalar enrichment fields, `null` or omitted values retain the previous stored value.
-- JSON blocks use `payload.<block> === undefined ? null : jsonDump(payload.<block>)` before `COALESCE`.
-- For JSON blocks, omitted values preserve previous JSON; present `null` is serialized to JSON string `"null"` and stored.
+- Existing JSON blocks use `payload.<block> === undefined ? null : jsonDump(payload.<block>)` before `COALESCE`.
+- For those existing blocks, omitted values preserve previous JSON; present `null` is serialized to JSON string `"null"` and stored.
+- KeystoneLoot is stricter: omitted `keystoneLoot` preserves the existing column, a
+  present valid block replaces it authoritatively, and explicit `null` is rejected.
+- KeystoneLoot validation happens before character creation/update, so malformed data
+  cannot partially persist or erase an earlier snapshot.
 - `characters.updated_at` is always set to current Worker time on accepted update.
+
+KeystoneLoot validation accepts additive unknown fields but enforces the known V1-A
+contract. Supported snapshots require API v2, bounded version/character identifiers,
+non-negative integer timestamp, favorites, and Voidcore. Favorites require positive
+integer item/spec IDs, positive integer tiers without a maximum, and numeric or bounded
+string source identity. Known optional item fields are type-checked.
+
+Limits:
+
+- serialized UTF-8 block: 256 KiB;
+- favorites: 2,000;
+- Voidcore used items: 2,000;
+- bonus IDs per favorite: 64;
+- gems per favorite: 64;
+- addon version/source type strings: 64 characters;
+- character key/string source identity: 128 characters.
 
 Current keystone behavior:
 
@@ -249,13 +298,15 @@ Write response:
 
 ## D1 Storage Contract
 
-Schema source: `keystone-worker/migrations/0001_initial.sql`.
+Schema source: `keystone-worker/migrations/0001_initial.sql` plus additive migrations
+`keystone-worker/migrations/0002_keystone_loot.sql` and
+`keystone-worker/migrations/0003_keystone_loot_sharing.sql`.
 
 Tables:
 
 | Table | Role |
 | --- | --- |
-| `users` | Login identity, password hash, sync token, profile and email fields. |
+| `users` | Login identity, password hash, sync token, profile/email fields, and the KeystoneLoot team-sharing preference. |
 | `characters` | Character identity, Raider.IO/profile enrichment, item level, and JSON blocks. |
 | `keystones` | Current keystone snapshots over time. |
 | `teams` | Team records and invite code ownership. |
@@ -278,6 +329,13 @@ Character sync columns:
 - `characters.currencies_json`
 - `characters.money_json`
 - `characters.mythic_plus_season_json`
+- `characters.keystone_loot_json`
+
+KeystoneLoot team sharing is stored as
+`users.share_keystone_loot_with_teams INTEGER NOT NULL DEFAULT 1`. The API converts this
+integer to boolean `shareKeystoneLootWithTeams`: `1` enables recommendation use and `0`
+excludes the user's wishlist from team recommendations, including requests made by that
+same user.
 
 Keystone columns:
 
@@ -297,6 +355,7 @@ JSON storage:
 - `currencies` is stored as `characters.currencies_json`.
 - `money` is stored as `characters.money_json`.
 - `mythicPlusSeason` is stored as `characters.mythic_plus_season_json`.
+- `keystoneLoot` is stored as `characters.keystone_loot_json`.
 
 Design implication: adding a nested key inside an existing JSON block may not require a D1 migration if the Worker can preserve and return it and the Web can tolerate it. Adding a new independently persisted top-level block or queryable field requires a schema/contract decision and may require a migration.
 
@@ -323,6 +382,7 @@ Character response shape:
 | `currencies` | parsed `currencies_json`, or `null` |
 | `money` | parsed `money_json`, or `null` |
 | `mythicPlusSeason` | parsed `mythic_plus_season_json`, or `null` |
+| `keystoneLoot` | owner reads only: parsed `keystone_loot_json`, or `null` |
 
 `currentKeystone` shape:
 
@@ -340,9 +400,45 @@ JSON parsing:
 
 Read endpoints:
 
-- `GET /api/me/characters` returns the current user's character responses.
-- `GET /api/teams/:teamId` returns members, each with `characters` using the same character response helper.
-- `POST /api/me/characters/enrich` can update enrichment and JSON blocks for an existing character through the authenticated Web/client path, but it is not the primary SavedVariables sync endpoint.
+- `GET /api/me/characters` returns the current user's character responses and explicitly
+  enables `keystoneLoot` in response shaping.
+- `GET /api/teams/:teamId` returns member characters through the default response shape,
+  which continues to omit the `keystoneLoot` property entirely.
+- `POST /api/me/characters/enrich` can update its established enrichment/JSON blocks but
+  does not accept or persist KeystoneLoot. The only V1-B write source is SavedVariables
+  sync through `POST /api/keystones/update`.
+
+Privacy and recommendation endpoints:
+
+- `GET /api/me` returns boolean `shareKeystoneLootWithTeams`.
+- `PATCH /api/me/preferences` requires normal user/JWT authentication, accepts
+  `{ "shareKeystoneLootWithTeams": boolean }`, updates only the authenticated user, and
+  rejects sync-token authentication or non-boolean input.
+- `GET /api/teams/:teamId/recommendations?challengeMapId=<positive-safe-integer>` requires
+  live team membership and derives the evaluated member list entirely from D1.
+- Privacy filtering precedes character loading and snapshot parsing. Disabled members
+  return only `sharing_disabled` with `recommended: null`; no wishlist-derived counts,
+  scores, items, or specs are calculated or exposed.
+- Enabled members use only stored JSON that passes the V1-B validator as a supported API
+  v2 snapshot. Missing, malformed, and unavailable snapshots are ignored safely.
+
+Recommendation candidates are `(character, specId)` pairs. A target counts only when
+`sourceId === challengeMapId` by exact numeric identity and `sourceType === "dungeon"`;
+the type is a namespace guard against a raid boss ID collision. Tier weights are explicit: tier 3
+BiS `100`, tier 2 Must `60`, tier 1 Nice `25`, tier 5 Catalyst `15`, and tier 4 Transmog
+`5`; unknown tiers score `0`. Each `itemId` counts once per candidate at its highest
+known weight, while the same item may count independently for another spec. Checked
+Voidcore excludes used items and reports only aggregate `voidcoreExcluded`; unchecked
+Voidcore does not exclude them.
+
+Positive candidates tie-break by score, BiS, Must, Nice, Catalyst, Transmog, item level,
+Raider.IO score, character name, realm, and spec ID. Missing item level/Raider.IO rank
+below real values. Member statuses are `recommended`, `sharing_disabled`,
+`no_keystoneloot`, and `no_targets`.
+
+Recommendation responses contain character display fields, `specId`, score, and summary
+counts only. They never contain favorites, item IDs/modifiers, `voidcore.usedItems`, or
+raw `keystoneLoot`. Owner `/api/me/characters` access is unchanged when sharing is off.
 
 ## Web Consumption Contract
 
@@ -367,6 +463,18 @@ Main consumers:
 - `keystone-web/app/teams/[id]/page.tsx`
   - Fetches `/api/teams/:teamId`.
   - Uses member character lists with `currentKeystone`, identity, class, and avatar fields.
+  - Derives sorted actual-stone choices and requests `/api/teams/:teamId/recommendations`
+    using only the selected stone's `challengeMapId`.
+- `keystone-web/app/settings/page.tsx`
+  - Loads the account-level KeystoneLoot sharing preference from `GET /api/me` and saves
+    it through `PATCH /api/me/preferences` independently of local display settings.
+- `keystone-web/lib/keystoneRecommendations.ts`
+  - Defines the aggregate V1-C response shape and owns presentation-only stone,
+    summary, response-validation, and exact-character-ID helpers. It does not score data.
+
+V1-D renders only privacy-safe recommendation summaries and keeps normal team detail free
+of raw wishlists. It does not consume the owner-only `keystoneLoot` block. V2 remains
+mandatory and pending for actual item/object display.
 
 The Web keeps local TypeScript interfaces in each page rather than a single shared generated API type. Seasonal dungeon/currency display metadata is currently hardcoded in Web pages and should be reviewed during the WoW season phase, not changed here.
 
@@ -389,6 +497,22 @@ Do not fix this gap in documentation-only phases. Future work should decide whet
 - Worker tests cover weekly reset behavior and representative sync write/read behavior using shared Client payload fixtures.
 
 ## Compatibility Expectations
+
+KeystoneLoot V1 compatibility was validated as follows:
+
+| Producer | Consumer | Result |
+| --- | --- | --- |
+| old SavedVariables without `keystoneLoot` | new Client | accepted; payload omits the property |
+| new SavedVariables with `keystoneLoot` | new Client | normalized known Lua arrays and transported semantically unchanged |
+| old Client payload | new Worker | accepted; omitted snapshot preserves stored data |
+| new Client payload without `keystoneLoot` | new Worker | accepted; omitted snapshot preserves stored data |
+| new Client payload with `keystoneLoot` | new Worker | validated and authoritatively persisted |
+| new Client payload with `keystoneLoot` | pre-V1 Worker | accepted; additive field safely ignored |
+| new Worker aggregate data | current Web | preference and recommendations rendered without raw team wishlist data |
+
+Validated production order is addon, Client, migration `0002`, migration `0003`, Worker,
+then Web. The Worker cannot precede its migrations because its SQL references both new
+columns. Web follows Worker because it requires the preference and recommendation routes.
 
 Additive changes:
 

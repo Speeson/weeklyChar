@@ -22,6 +22,7 @@ export type UserRow = {
   email_verification_expires_at: string | null
   password_reset_token_hash: string | null
   password_reset_expires_at: string | null
+  share_keystone_loot_with_teams: number
   created_at: string
 }
 
@@ -41,6 +42,7 @@ export type CharacterRow = {
   currencies_json: string | null
   money_json: string | null
   mythic_plus_season_json: string | null
+  keystone_loot_json: string | null
   created_at: string
   updated_at: string
 }

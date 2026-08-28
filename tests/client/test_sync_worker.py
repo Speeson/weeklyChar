@@ -15,7 +15,7 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures"
 
 sys.path.insert(0, str(CLIENT_ROOT))
 
-from sync_worker import SyncWorker  # noqa: E402
+from sync_worker import SyncWorker, _normalize_ilvl  # noqa: E402
 
 
 class FakeResponse:
@@ -77,6 +77,11 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(character["currencies"]["valorstones"]["quantity"], 1250)
         self.assertEqual(character["money"]["copper"], 12345678)
         self.assertEqual(character["mythicPlusSeason"]["bestRuns"][1]["challengeMapId"], 503)
+
+    def test_raiderio_item_level_normalization_remains_available(self):
+        self.assertEqual(_normalize_ilvl(642.6), 643)
+        self.assertEqual(_normalize_ilvl("640"), 640)
+        self.assertIsNone(_normalize_ilvl("invalid"))
 
     def test_all_savedvariables_fixtures_decode(self):
         for fixture in sorted((FIXTURE_ROOT / "savedvariables").glob("*.lua")):
@@ -146,6 +151,40 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(post["json"]["avatarUrl"], "https://example.test/avatar.jpg")
         self.assertEqual(post["json"]["rioScore"], 2510.25)
         self.assertEqual(post["json"]["wowClass"], "Mage")
+
+    def test_keystoneloot_supported_block_reaches_payload_unchanged(self):
+        [post] = self.capture_sync_payloads("keystoneloot.lua")
+        expected = json.loads(
+            (FIXTURE_ROOT / "client-payload" / "keystoneloot-sync-payload.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(json_normalized(post["json"]), expected)
+
+    def test_keystoneloot_empty_arrays_survive_lua_to_json_transport(self):
+        [post] = self.capture_sync_payloads("keystoneloot-empty.lua")
+
+        snapshot = post["json"]["keystoneLoot"]
+        self.assertEqual(snapshot["favorites"], [])
+        self.assertEqual(snapshot["voidcore"]["usedItems"], [])
+        self.assertFalse(snapshot["voidcore"]["checked"])
+
+    def test_keystoneloot_unavailable_state_survives_transport(self):
+        [post] = self.capture_sync_payloads("keystoneloot-unavailable.lua")
+
+        self.assertEqual(
+            post["json"]["keystoneLoot"],
+            {
+                "state": "installed_not_ready",
+                "installed": True,
+                "supported": False,
+                "favorites": [],
+            },
+        )
+
+    def test_historical_character_without_keystoneloot_omits_payload_property(self):
+        [post] = self.capture_sync_payloads("basic.lua")
+
+        self.assertNotIn("keystoneLoot", post["json"])
 
 
 if __name__ == "__main__":
