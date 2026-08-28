@@ -739,10 +739,16 @@ html[data-theme="poison"] .addon-action--artwork[data-addon-action-role="addon-a
   --poison-addon-letter-spacing: 0;
 }
 
-html[data-theme="poison"] .addon-action--artwork:hover:not(:disabled),
-html[data-theme="poison"] .addon-action--artwork:focus-visible {
+html[data-theme="poison"] :where(.addon-folder-actions button, .addon-check-action).addon-action--artwork:hover:not(:disabled),
+html[data-theme="poison"] :where(.addon-folder-actions button, .addon-check-action).addon-action--artwork:focus-visible {
   background: transparent;
-  filter: drop-shadow(0 0 5px rgb(172 255 61 / 55%)) brightness(1.08);
+  filter: var(--poison-hover-glow-control) brightness(var(--poison-hover-brightness-control));
+}
+
+html[data-theme="poison"] .addon-primary-action.addon-action--artwork:hover:not(:disabled),
+html[data-theme="poison"] .addon-primary-action.addon-action--artwork:focus-visible {
+  background: transparent;
+  filter: var(--poison-hover-glow-primary) brightness(var(--poison-hover-brightness-primary));
 }
 
 html[data-theme="poison"] .addon-action--artwork:active:not(:disabled) {
@@ -970,6 +976,13 @@ html[data-theme="poison"] {
   --poison-tray-button-content-left: 74px;
   --poison-tray-button-content-right: 25px;
   --poison-footer-button-artwork-width: 104%;
+
+  --poison-hover-brightness-subtle: 0.86;
+  --poison-hover-brightness-control: 1.04;
+  --poison-hover-brightness-primary: 1.12;
+  --poison-hover-glow-subtle: drop-shadow(0 5px 8px rgb(0 0 0 / 60%)) drop-shadow(0 0 14px rgb(166 255 63 / 28%));
+  --poison-hover-glow-control: drop-shadow(0 5px 8px rgb(0 0 0 / 60%)) drop-shadow(0 0 18px rgb(166 255 63 / 40%));
+  --poison-hover-glow-primary: drop-shadow(0 5px 8px rgb(0 0 0 / 60%)) drop-shadow(0 0 24px rgb(184 255 79 / 54%));
 }
 
 html[data-theme="poison"] .shell {
@@ -1496,6 +1509,12 @@ html[data-theme="poison"] .ks-footer-action__asset {
   filter: var(--poison-frame-filter);
 }
 
+html[data-theme="poison"] .ks-footer-action--web:hover,
+html[data-theme="poison"] .ks-footer-action--web:focus-visible,
+html[data-theme="poison"] .ks-footer-action--web:active {
+  filter: none;
+}
+
 html[data-theme="poison"] .ks-footer-action--web > span,
 html[data-theme="poison"] .ks-footer-action--tray > span {
   position: relative;
@@ -1507,13 +1526,20 @@ html[data-theme="poison"] .ks-footer-action--tray > span {
 
 html[data-theme="poison"] :is(
   .sync-summary-card,
+  .sync-version-panel,
+  .sync-current-panel
+) {
+  overflow: visible;
+}
+
+html[data-theme="poison"] :is(
+  .sync-summary-card,
   .sync-table-panel,
   .sync-version-panel,
   .sync-current-panel,
   .sync-emblem-panel
 ):hover {
   border: 0;
-  box-shadow: none;
 }
 
 html[data-theme="poison"] :is(
@@ -1521,26 +1547,27 @@ html[data-theme="poison"] :is(
   .sync-version-panel,
   .sync-current-panel
 ):hover .theme-frame-artwork {
-  --poison-artwork-brightness: 0.79;
+  --poison-artwork-brightness: var(--poison-hover-brightness-subtle);
+  --poison-frame-glow: var(--poison-hover-glow-subtle);
 }
 
-html[data-theme="poison"] .sync-primary-action:hover:not(:disabled) {
-  --poison-artwork-brightness: 1.08;
+html[data-theme="poison"] .sync-primary-action:hover:not(:disabled),
+html[data-theme="poison"] .sync-primary-action:focus-visible:not(:disabled) {
+  --poison-artwork-brightness: var(--poison-hover-brightness-primary);
+  --poison-frame-glow: var(--poison-hover-glow-primary);
   border: 0;
-  box-shadow: none;
 }
 
-html[data-theme="poison"] :is(.ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):hover:not(:disabled) {
-  --poison-artwork-brightness: 0.98;
-  filter: none;
+html[data-theme="poison"] :is(.ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):hover:not(:disabled),
+html[data-theme="poison"] :is(.ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):focus-visible:not(:disabled) {
+  --poison-artwork-brightness: var(--poison-hover-brightness-control);
+  --poison-frame-glow: var(--poison-hover-glow-control);
 }
 
-html[data-theme="poison"] :is(.ks-settings-control, .ks-window-button):hover:not(:disabled) img {
-  --poison-artwork-brightness: 0.98;
-}
-
-html[data-theme="poison"] .ks-footer-action:hover:not(:disabled) .ks-footer-action__asset {
-  --poison-artwork-brightness: 0.94;
+html[data-theme="poison"] :is(.ks-settings-control, .ks-window-button, .ks-footer-action):hover:not(:disabled) img,
+html[data-theme="poison"] :is(.ks-settings-control, .ks-window-button, .ks-footer-action):focus-visible:not(:disabled) img {
+  --poison-artwork-brightness: var(--poison-hover-brightness-control);
+  --poison-frame-glow: var(--poison-hover-glow-control);
 }
 
 html[data-theme="poison"] :where(.sync-primary-action, .ks-footer-action, .ks-settings-control, .ks-window-button, .ks-user-menu__trigger):active:not(:disabled) {
