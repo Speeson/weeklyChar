@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.2",
+  "version": "0.6.3",
+  "bump": "patch",
+  "tag": "client-v0.6.3",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "keystoneloot-integration-v1-b.json"
+  ]
+}
