@@ -1,4 +1,6 @@
 import type { CharacterRow, Env, KeystoneRow, TeamInvitationRow, TeamRow, UserRow } from './types'
+import { parseSupportedKeystoneLoot } from './keystoneLoot'
+import type { RecommendationCharacter } from './keystoneRecommendations'
 import { currentEuWeeklyResetUnix } from './weeklyReset'
 
 export async function getUserById(env: Env, id: number): Promise<UserRow | null> {
@@ -109,6 +111,35 @@ export async function charactersForUser(
   return Promise.all(results.map(async character => {
     return characterResponse(character, await latestRealKeystone(env, character.id), options)
   }))
+}
+
+export async function recommendationCharactersForUser(
+  env: Env,
+  userId: number,
+): Promise<RecommendationCharacter[]> {
+  const { results } = await env.DB.prepare(`
+    SELECT * FROM characters
+    WHERE user_id = ?
+    ORDER BY name
+  `).bind(userId).all<CharacterRow>()
+
+  const characters: RecommendationCharacter[] = []
+  for (const character of results) {
+    const snapshot = parseSupportedKeystoneLoot(jsonLoad(character.keystone_loot_json))
+    if (!snapshot) continue
+    characters.push({
+      id: character.id,
+      name: character.name,
+      realm: character.realm,
+      region: character.region,
+      wowClass: character.wow_class,
+      avatarUrl: character.avatar_url,
+      ilvl: character.ilvl,
+      rioScore: character.rio_score,
+      keystoneLoot: snapshot,
+    })
+  }
+  return characters
 }
 
 export async function teamDetailResponse(env: Env, team: TeamRow, currentUserId: number): Promise<Record<string, unknown>> {

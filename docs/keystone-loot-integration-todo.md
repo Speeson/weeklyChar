@@ -2,35 +2,17 @@
 
 ## Objective
 
-Use the wishlist configured in KeystoneLoot as future input for KeystoneSync team
-recommendations while preserving owner privacy and the KeystoneLoot public contract.
+Use KeystoneLoot wishlists for privacy-safe KeystoneSync team recommendations while
+preserving the public KeystoneLoot API boundary and owner access to raw snapshots.
 
 ## V1-A: addon capture — completed
 
 The canonical `Speeson/KeystoneSync` addon uses isolated
-`KeystoneLootIntegration.lua`, declared with `## OptionalDeps: KeystoneLoot` and loaded
-before the normal runtime. Readiness never depends on TOC order: it uses public API v2
-`IsReady()` and `READY`, then listens only for aggregate `FAVORITES_CHANGED`.
+`KeystoneLootIntegration.lua`, public API v2 readiness/events, public favorite/source/item
+methods, and verified read-only Voidcore state. It preserves generic numeric tiers,
+authoritative empty favorites, current-character isolation, and protected normal saves.
 
-Character identity and wishlist data come from public methods:
-
-- `GetCurrentCharacterKey()`;
-- `GetFavorites(characterKey)`;
-- `GetSourceInfo(sourceId)`;
-- `GetItemInfo(itemId)`.
-
-The integration does not read `KeystoneLootDB.favorites`, construct KeystoneLoot keys,
-hardcode four/five tiers, or use localized names as identity. Numeric tiers are preserved
-generically. Direct SavedVariables access is limited to verified read-only
-`KeystoneLootCharDB.voidcore` and `voidcoreChecked` because no public read API exists.
-
-Each character processed by the addon receives an explicit `keystoneLoot` state. A ready
-supported snapshot contains API/addon version, KeystoneLoot character key, timestamp,
-normalized favorites, and Voidcore state. Empty favorites are authoritative. Generation,
-debounce, logout, and dual-character-key checks prevent stale or cross-character writes,
-and all KeystoneLoot calls are protected from the normal save flow.
-
-## V1-B: Client, Worker, D1, and owner read — completed in feature branch
+## V1-B: Client, Worker, D1, and owner read — completed
 
 ```text
 KeystoneSyncDB[key].keystoneLoot
@@ -40,40 +22,48 @@ KeystoneSyncDB[key].keystoneLoot
   -> owner GET /api/me/characters[].keystoneLoot
 ```
 
-The Client omits the HTTP field when the SavedVariables key is absent, preserving any
-existing server snapshot for historical characters and old clients. A present block is
-authoritative, including `favorites: []` and unavailable states. The Client performs only
-the Lua-to-JSON array representation required by `slpp`; it does not enrich or score data.
+Absent Client fields preserve existing D1 data; present valid blocks replace it,
+including empty favorites and unavailable states. Explicit null/malformed blocks are
+rejected. Team detail omits raw `keystoneLoot`, and `/api/me/characters/enrich` is not a
+write surface.
 
-The Worker validates states, flags, supported metadata, favorite identity, generic
-numeric tiers, Voidcore, strings, arrays, and conservative payload limits. Valid present
-blocks replace D1 JSON; omitted blocks preserve it; explicit `null` and malformed blocks
-are rejected before persistence. Migration `0002_keystone_loot.sql` adds only nullable
-`keystone_loot_json TEXT`.
+## V1-C: privacy and recommendations — completed in feature branch
 
-Owner reads return the parsed block or `null`. Team detail responses omit the
-`keystoneLoot` property entirely. `/api/me/characters/enrich` is not a KeystoneLoot write
-surface.
+Migration `0003_keystone_loot_sharing.sql` adds user preference
+`share_keystone_loot_with_teams`, enabled by default. `GET /api/me` exposes boolean
+`shareKeystoneLootWithTeams`; JWT-only `PATCH /api/me/preferences` can toggle only the
+current user. Sync tokens cannot change privacy preferences.
 
-## V1-C: privacy and recommendations — pending
+`GET /api/teams/:teamId/recommendations?challengeMapId=<id>` requires live membership and
+returns one stable result per current team member. Sharing-disabled members are filtered
+before character loading or snapshot parsing. Enabled members use only stored snapshots
+that pass the V1-B validator as supported API v2 data.
 
-Future work must define and implement server-side privacy policy before any team access.
-Only then may the system calculate one recommended character per team member for a chosen
-keystone. Scoring rules, duplicate-item/spec treatment, Voidcore completion handling,
-fallbacks, and user controls remain deliberately undecided in V1-B.
+The pure engine ranks `(character, specId)` candidates for exact numeric dungeon source
+identity. Explicit weights are BiS 100, Must 60, Nice 25, Catalyst 15, and Transmog 5;
+unknown tiers score zero. Items deduplicate by `itemId` within a candidate at their
+highest known weight. Checked Voidcore excludes used items without penalizing unrelated
+pending targets.
 
-Raw owner wishlist data must not be exposed through team endpoints as a shortcut.
+Responses contain display fields, `specId`, score, and aggregate counts only. They never
+expose favorites, item IDs/modifiers, `voidcore.usedItems`, or raw `keystoneLoot`. Owner
+character reads remain available regardless of team-sharing preference.
+
+## V1-D: Web planner and privacy UI — pending
+
+The Web still needs stone selection, recommendation presentation, and the privacy toggle.
+It must consume the privacy-safe V1-C summaries rather than raw team wishlists.
 
 ## V2: item/object display — mandatory future scope
 
-Future visual experiences must resolve and render item/source metadata safely rather than
-depend on localized names captured by the addon. Item names, links, icons, cache loading,
-object presentation, and wishlist UI are not implemented by V1-A or V1-B.
+Future visual experiences must resolve and render actual item/source objects safely.
+Item names, links, icons, cache loading, object presentation, and wishlist UI are not
+implemented by V1-A, V1-B, or V1-C. V2 remains mandatory and must not depend on localized
+names captured by the addon.
 
 ## Release boundaries
 
-- Addon releases remain owned by `Speeson/KeystoneSync` and are independent from Client
-  releases.
-- V1-B changes the Client binary and Worker/D1 contract, so Client build/release plus
-  Worker and DB deployment consideration is required.
+- Addon releases remain owned independently by `Speeson/KeystoneSync`.
+- V1-B has Client/Worker/DB impact.
+- V1-C has Worker/DB impact only; future ordering is `0002`, `0003`, then Worker deploy.
 - Push, release, deployment, and remote D1 migration require separate explicit approval.

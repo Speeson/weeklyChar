@@ -31,7 +31,7 @@ Primary files:
 - Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
-- D1 schema: `keystone-worker/migrations/0001_initial.sql` and `0002_keystone_loot.sql`
+- D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -298,14 +298,15 @@ Write response:
 
 ## D1 Storage Contract
 
-Schema source: `keystone-worker/migrations/0001_initial.sql` plus additive migration
-`keystone-worker/migrations/0002_keystone_loot.sql`.
+Schema source: `keystone-worker/migrations/0001_initial.sql` plus additive migrations
+`keystone-worker/migrations/0002_keystone_loot.sql` and
+`keystone-worker/migrations/0003_keystone_loot_sharing.sql`.
 
 Tables:
 
 | Table | Role |
 | --- | --- |
-| `users` | Login identity, password hash, sync token, profile and email fields. |
+| `users` | Login identity, password hash, sync token, profile/email fields, and the KeystoneLoot team-sharing preference. |
 | `characters` | Character identity, Raider.IO/profile enrichment, item level, and JSON blocks. |
 | `keystones` | Current keystone snapshots over time. |
 | `teams` | Team records and invite code ownership. |
@@ -329,6 +330,12 @@ Character sync columns:
 - `characters.money_json`
 - `characters.mythic_plus_season_json`
 - `characters.keystone_loot_json`
+
+KeystoneLoot team sharing is stored as
+`users.share_keystone_loot_with_teams INTEGER NOT NULL DEFAULT 1`. The API converts this
+integer to boolean `shareKeystoneLootWithTeams`: `1` enables recommendation use and `0`
+excludes the user's wishlist from team recommendations, including requests made by that
+same user.
 
 Keystone columns:
 
@@ -396,10 +403,41 @@ Read endpoints:
 - `GET /api/me/characters` returns the current user's character responses and explicitly
   enables `keystoneLoot` in response shaping.
 - `GET /api/teams/:teamId` returns member characters through the default response shape,
-  which omits the `keystoneLoot` property entirely during V1-B.
+  which continues to omit the `keystoneLoot` property entirely.
 - `POST /api/me/characters/enrich` can update its established enrichment/JSON blocks but
   does not accept or persist KeystoneLoot. The only V1-B write source is SavedVariables
   sync through `POST /api/keystones/update`.
+
+Privacy and recommendation endpoints:
+
+- `GET /api/me` returns boolean `shareKeystoneLootWithTeams`.
+- `PATCH /api/me/preferences` requires normal user/JWT authentication, accepts
+  `{ "shareKeystoneLootWithTeams": boolean }`, updates only the authenticated user, and
+  rejects sync-token authentication or non-boolean input.
+- `GET /api/teams/:teamId/recommendations?challengeMapId=<positive-safe-integer>` requires
+  live team membership and derives the evaluated member list entirely from D1.
+- Privacy filtering precedes character loading and snapshot parsing. Disabled members
+  return only `sharing_disabled` with `recommended: null`; no wishlist-derived counts,
+  scores, items, or specs are calculated or exposed.
+- Enabled members use only stored JSON that passes the V1-B validator as a supported API
+  v2 snapshot. Missing, malformed, and unavailable snapshots are ignored safely.
+
+Recommendation candidates are `(character, specId)` pairs. Only exact numeric
+`sourceId === challengeMapId` dungeon targets count. Tier weights are explicit: tier 3
+BiS `100`, tier 2 Must `60`, tier 1 Nice `25`, tier 5 Catalyst `15`, and tier 4 Transmog
+`5`; unknown tiers score `0`. Each `itemId` counts once per candidate at its highest
+known weight, while the same item may count independently for another spec. Checked
+Voidcore excludes used items and reports only aggregate `voidcoreExcluded`; unchecked
+Voidcore does not exclude them.
+
+Positive candidates tie-break by score, BiS, Must, Nice, Catalyst, Transmog, item level,
+Raider.IO score, character name, realm, and spec ID. Missing item level/Raider.IO rank
+below real values. Member statuses are `recommended`, `sharing_disabled`,
+`no_keystoneloot`, and `no_targets`.
+
+Recommendation responses contain character display fields, `specId`, score, and summary
+counts only. They never contain favorites, item IDs/modifiers, `voidcore.usedItems`, or
+raw `keystoneLoot`. Owner `/api/me/characters` access is unchanged when sharing is off.
 
 ## Web Consumption Contract
 
@@ -425,8 +463,9 @@ Main consumers:
   - Fetches `/api/teams/:teamId`.
   - Uses member character lists with `currentKeystone`, identity, class, and avatar fields.
 
-The owner API now carries `keystoneLoot`, but V1-B adds no Web interface or rendering.
-Team APIs do not expose the raw wishlist. Recommendation/privacy behavior remains V1-C.
+The owner API carries `keystoneLoot`, and V1-C adds a privacy-safe recommendation summary
+API, but no Web rendering exists yet. V1-D remains pending. Normal team detail never
+exposes raw wishlists, and V2 remains mandatory for actual item/object display.
 
 The Web keeps local TypeScript interfaces in each page rather than a single shared generated API type. Seasonal dungeon/currency display metadata is currently hardcoded in Web pages and should be reviewed during the WoW season phase, not changed here.
 

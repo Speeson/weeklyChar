@@ -16,6 +16,7 @@ export class FakeD1Database {
         email_verification_expires_at: null,
         password_reset_token_hash: null,
         password_reset_expires_at: null,
+        share_keystone_loot_with_teams: 1,
         created_at: '2026-08-21T00:00:00.000Z',
       },
     ]
@@ -25,6 +26,7 @@ export class FakeD1Database {
     this.teamMembers = []
     this.nextCharacterId = 1
     this.nextKeystoneId = 1
+    this.characterQueryUserIds = []
   }
 
   prepare(sql) {
@@ -103,6 +105,7 @@ class FakeD1Statement {
     const values = this.values
 
     if (sql.includes('SELECT * FROM characters WHERE user_id = ? ORDER BY name')) {
+      this.db.characterQueryUserIds.push(values[0])
       const results = this.db.characters
         .filter(character => character.user_id === values[0])
         .sort((left, right) => left.name.localeCompare(right.name))
@@ -120,12 +123,35 @@ class FakeD1Statement {
       return { results }
     }
 
+    if (sql.includes('SELECT u.id, u.username, u.share_keystone_loot_with_teams')) {
+      const teamId = values[0]
+      const results = this.db.teamMembers
+        .filter(membership => membership.team_id === teamId)
+        .map(membership => this.db.users.find(user => user.id === membership.user_id))
+        .filter(Boolean)
+        .map(user => ({
+          id: user.id,
+          username: user.username,
+          share_keystone_loot_with_teams: user.share_keystone_loot_with_teams,
+        }))
+        .sort((left, right) => left.username.localeCompare(right.username))
+      return { results }
+    }
+
     throw new Error(`Unhandled FakeD1 all query: ${sql}`)
   }
 
   async run() {
     const sql = this.sql
     const values = this.values
+
+    if (sql === 'UPDATE users SET share_keystone_loot_with_teams = ? WHERE id = ?') {
+      const [enabled, userId] = values
+      const target = this.db.users.find(user => user.id === userId)
+      if (!target) throw new Error(`Missing user ${userId}`)
+      target.share_keystone_loot_with_teams = enabled
+      return { meta: { changes: 1 } }
+    }
 
     if (sql === 'INSERT INTO characters (user_id, name, realm, region) VALUES (?, ?, ?, ?)') {
       const [userId, name, realm, region] = values

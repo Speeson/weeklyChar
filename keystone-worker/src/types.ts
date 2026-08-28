@@ -22,6 +22,7 @@ export type UserRow = {
   email_verification_expires_at: string | null
   password_reset_token_hash: string | null
   password_reset_expires_at: string | null
+  share_keystone_loot_with_teams: number
   created_at: string
 }
 

@@ -1,8 +1,14 @@
 import { Hono } from 'hono'
 import { getCurrentUser } from '../auth'
 import { newInviteCode } from '../crypto'
-import { teamDetailResponse, teamInvitationResponse, teamResponse } from '../db'
+import {
+  recommendationCharactersForUser,
+  teamDetailResponse,
+  teamInvitationResponse,
+  teamResponse,
+} from '../db'
 import { jsonError } from '../http'
+import { recommendKeystoneLootTarget } from '../keystoneRecommendations'
 import type { Env, TeamInvitationRow, TeamRow, UserRow } from '../types'
 
 export const teamRoutes = new Hono<{ Bindings: Env }>()
@@ -17,6 +23,12 @@ type JoinTeamRequest = {
 
 type CreateTeamInviteRequest = {
   username: string
+}
+
+type RecommendationMemberRow = {
+  id: number
+  username: string
+  share_keystone_loot_with_teams: number
 }
 
 function isResponse(value: unknown): value is Response {
@@ -100,6 +112,64 @@ teamRoutes.post('/api/teams/join', async c => {
     .run()
 
   return c.json(await teamResponse(c.env, team, currentUser.id))
+})
+
+teamRoutes.get('/api/teams/:teamId/recommendations', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  const team = await getTeam(c.env, teamId)
+  if (!team) return jsonError(c, 404, 'Equipo no encontrado')
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 403, 'No perteneces a este team')
+  }
+
+  const rawChallengeMapId = c.req.query('challengeMapId')
+  const challengeMapId = Number(rawChallengeMapId)
+  if (rawChallengeMapId === undefined || rawChallengeMapId.trim() === ''
+    || !Number.isSafeInteger(challengeMapId) || challengeMapId <= 0) {
+    return jsonError(c, 400, 'challengeMapId debe ser un entero positivo')
+  }
+
+  const { results: members } = await c.env.DB.prepare(`
+    SELECT u.id, u.username, u.share_keystone_loot_with_teams
+    FROM team_members tm
+    JOIN users u ON u.id = tm.user_id
+    WHERE tm.team_id = ?
+    ORDER BY u.username
+  `).bind(teamId).all<RecommendationMemberRow>()
+
+  const recommendations = await Promise.all(members.map(async member => {
+    if (member.share_keystone_loot_with_teams === 0) {
+      return {
+        userId: member.id,
+        username: member.username,
+        status: 'sharing_disabled',
+        recommended: null,
+      }
+    }
+
+    const characters = await recommendationCharactersForUser(c.env, member.id)
+    if (characters.length === 0) {
+      return {
+        userId: member.id,
+        username: member.username,
+        status: 'no_keystoneloot',
+        recommended: null,
+      }
+    }
+
+    const recommended = recommendKeystoneLootTarget(characters, challengeMapId)
+    return {
+      userId: member.id,
+      username: member.username,
+      status: recommended ? 'recommended' : 'no_targets',
+      recommended,
+    }
+  }))
+
+  return c.json({ teamId, challengeMapId, members: recommendations })
 })
 
 teamRoutes.get('/api/teams/:teamId', async c => {

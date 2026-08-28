@@ -100,8 +100,9 @@ Owns:
 - Authentication and sync-token handling.
 - `POST /api/keystones/update` write handling in `keystone-worker/src/routes/keystones.ts`.
 - Focused KeystoneLoot validation in `keystone-worker/src/keystoneLoot.ts`.
+- Pure KeystoneLoot recommendation scoring in `keystone-worker/src/keystoneRecommendations.ts`.
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
-- Character, profile, team, invitation, auth, and health API behavior.
+- Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
 - Wrangler deployment and D1 migration scripts.
 
 Does not own:
@@ -117,8 +118,8 @@ Current production persistence.
 Owns:
 
 - Durable storage for users, characters, current keystone snapshots, teams, team members, invitations, and rate limits.
-- The schema history in `keystone-worker/migrations/0001_initial.sql` and
-  `0002_keystone_loot.sql`.
+- The schema history in `keystone-worker/migrations/0001_initial.sql`,
+  `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`.
 
 Current database binding:
 
@@ -197,7 +198,8 @@ Local/deployment scripts are in `keystone-worker/package.json`:
 Production persistence is Cloudflare D1 database `keystone-sync`.
 
 The current schema is versioned through `keystone-worker/migrations/0001_initial.sql`
-and additive migration `0002_keystone_loot.sql`.
+and additive migrations `0002_keystone_loot.sql` and
+`0003_keystone_loot_sharing.sql`.
 
 ### Web
 
@@ -270,7 +272,7 @@ Rules:
 SavedVariables discovery: keystone-client/sidecar/wow_path.py
 SavedVariables parse/payload: keystone-client/sidecar/sync_worker.py
 Sync write endpoint: keystone-worker/src/routes/keystones.ts
-D1 schema: keystone-worker/migrations/0001_initial.sql + 0002_keystone_loot.sql
+D1 schema: keystone-worker/migrations/0001_initial.sql + 0002_keystone_loot.sql + 0003_keystone_loot_sharing.sql
 Read response shaping: keystone-worker/src/db.ts
 User character reads: keystone-worker/src/routes/me.ts
 Team character reads: keystone-worker/src/routes/teams.ts
@@ -281,10 +283,16 @@ Web consumers: keystone-web/app/dashboard/page.tsx
                keystone-web/app/teams/[id]/page.tsx
 ```
 
-KeystoneLoot V1-B follows the same write path but has an explicit privacy split at read
-time: `/api/me/characters` includes parsed `keystoneLoot` for the authenticated owner,
-while `/api/teams/:teamId` omits the property. No Web rendering or team recommendation
-logic is part of V1-B.
+KeystoneLoot V1-B follows the normal sync path and keeps an explicit privacy split at
+read time: `/api/me/characters` includes parsed `keystoneLoot` for the authenticated
+owner, while `/api/teams/:teamId` omits it. V1-C adds a default-enabled user sharing
+preference and a separate membership-protected recommendation endpoint. That endpoint
+applies privacy before parsing, validates stored snapshots through the V1-B boundary,
+and returns only one aggregate `(character, specId)` recommendation per member. V1-D Web
+presentation and V2 item/object display remain pending.
+
+Future deployment ordering is strict: apply `0002` if it is not already deployed, apply
+`0003`, then deploy the Worker that reads the new preference column.
 
 ## Removed Historical Components
 

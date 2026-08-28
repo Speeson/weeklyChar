@@ -32,6 +32,10 @@ type ChangePasswordRequest = {
   confirmPassword: string
 }
 
+type PreferencesUpdateRequest = {
+  shareKeystoneLootWithTeams?: unknown
+}
+
 function isResponse(value: unknown): value is Response {
   return value instanceof Response
 }
@@ -50,7 +54,28 @@ meRoutes.get('/api/me', async c => {
     email: currentUser.email,
     dateOfBirth: currentUser.date_of_birth,
     emailVerified: Boolean(currentUser.email_verified),
+    shareKeystoneLootWithTeams: Boolean(currentUser.share_keystone_loot_with_teams),
   })
+})
+
+meRoutes.patch('/api/me/preferences', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const payload = await c.req.json<PreferencesUpdateRequest>().catch(() => null)
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || typeof payload.shareKeystoneLootWithTeams !== 'boolean') {
+    return jsonError(c, 400, 'shareKeystoneLootWithTeams debe ser booleano')
+  }
+
+  const enabled = payload.shareKeystoneLootWithTeams
+  await c.env.DB.prepare(`
+    UPDATE users
+    SET share_keystone_loot_with_teams = ?
+    WHERE id = ?
+  `).bind(enabled ? 1 : 0, currentUser.id).run()
+
+  return c.json({ shareKeystoneLootWithTeams: enabled })
 })
 
 meRoutes.patch('/api/me/avatar', async c => {

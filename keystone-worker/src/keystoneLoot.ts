@@ -12,6 +12,39 @@ export const KEYSTONE_LOOT_LIMITS = {
 
 type JsonObject = Record<string, unknown>
 
+export type KeystoneLootFavorite = {
+  sourceId: number | string
+  sourceType?: string
+  specId: number
+  itemId: number
+  tier: number
+  slotId?: number
+  icon?: number
+  bonusIds?: number[]
+  gems?: number[]
+  enchant?: number
+  [key: string]: unknown
+}
+
+export type KeystoneLootVoidcore = {
+  checked: boolean
+  usedItems: number[]
+  [key: string]: unknown
+}
+
+export type SupportedKeystoneLootSnapshot = {
+  state: 'supported'
+  installed: true
+  supported: true
+  apiVersion: 2
+  addonVersion: string
+  characterKey: string
+  updatedAt: number
+  favorites: KeystoneLootFavorite[]
+  voidcore: KeystoneLootVoidcore
+  [key: string]: unknown
+}
+
 const STATE_FLAGS = {
   not_installed: { installed: false, supported: false },
   installed_not_ready: { installed: true, supported: false },
@@ -172,4 +205,10 @@ export function validateKeystoneLoot(value: unknown): string | null {
   }
 
   return null
+}
+
+export function parseSupportedKeystoneLoot(value: unknown): SupportedKeystoneLootSnapshot | null {
+  if (validateKeystoneLoot(value) !== null) return null
+  if (!isObject(value) || value.state !== 'supported') return null
+  return value as SupportedKeystoneLootSnapshot
 }
