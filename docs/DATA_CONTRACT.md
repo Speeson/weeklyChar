@@ -422,8 +422,9 @@ Privacy and recommendation endpoints:
 - Enabled members use only stored JSON that passes the V1-B validator as a supported API
   v2 snapshot. Missing, malformed, and unavailable snapshots are ignored safely.
 
-Recommendation candidates are `(character, specId)` pairs. Only exact numeric
-`sourceId === challengeMapId` dungeon targets count. Tier weights are explicit: tier 3
+Recommendation candidates are `(character, specId)` pairs. A target counts only when
+`sourceId === challengeMapId` by exact numeric identity and `sourceType === "dungeon"`;
+the type is a namespace guard against a raid boss ID collision. Tier weights are explicit: tier 3
 BiS `100`, tier 2 Must `60`, tier 1 Nice `25`, tier 5 Catalyst `15`, and tier 4 Transmog
 `5`; unknown tiers score `0`. Each `itemId` counts once per candidate at its highest
 known weight, while the same item may count independently for another spec. Checked
@@ -462,10 +463,18 @@ Main consumers:
 - `keystone-web/app/teams/[id]/page.tsx`
   - Fetches `/api/teams/:teamId`.
   - Uses member character lists with `currentKeystone`, identity, class, and avatar fields.
+  - Derives sorted actual-stone choices and requests `/api/teams/:teamId/recommendations`
+    using only the selected stone's `challengeMapId`.
+- `keystone-web/app/settings/page.tsx`
+  - Loads the account-level KeystoneLoot sharing preference from `GET /api/me` and saves
+    it through `PATCH /api/me/preferences` independently of local display settings.
+- `keystone-web/lib/keystoneRecommendations.ts`
+  - Defines the aggregate V1-C response shape and owns presentation-only stone,
+    summary, response-validation, and exact-character-ID helpers. It does not score data.
 
-The owner API carries `keystoneLoot`, and V1-C adds a privacy-safe recommendation summary
-API, but no Web rendering exists yet. V1-D remains pending. Normal team detail never
-exposes raw wishlists, and V2 remains mandatory for actual item/object display.
+V1-D renders only privacy-safe recommendation summaries and keeps normal team detail free
+of raw wishlists. It does not consume the owner-only `keystoneLoot` block. V2 remains
+mandatory and pending for actual item/object display.
 
 The Web keeps local TypeScript interfaces in each page rather than a single shared generated API type. Seasonal dungeon/currency display metadata is currently hardcoded in Web pages and should be reviewed during the WoW season phase, not changed here.
 

@@ -137,6 +137,8 @@ Owns:
 - Authenticated API calls through `keystone-web/lib/auth.ts`.
 - Dashboard, characters, summary, teams, profile, and settings views.
 - Web-local TypeScript shapes for Worker responses.
+- Server-backed KeystoneLoot privacy control and presentation-only actual-team-stone
+  planner using aggregate Worker recommendations.
 
 Does not own:
 
@@ -289,7 +291,10 @@ owner, while `/api/teams/:teamId` omits it. V1-C adds a default-enabled user sha
 preference and a separate membership-protected recommendation endpoint. That endpoint
 applies privacy before parsing, validates stored snapshots through the V1-B boundary,
 and returns only one aggregate `(character, specId)` recommendation per member. V1-D Web
-presentation and V2 item/object display remain pending.
+loads the account preference through the existing `/api/me` contracts, selects one real
+current keystone from team detail, sends only its `challengeMapId`, and renders the
+aggregate response. Web performs no scoring or Voidcore decisions. V2 item/object display
+remains mandatory and pending.
 
 Future deployment ordering is strict: apply `0002` if it is not already deployed, apply
 `0003`, then deploy the Worker that reads the new preference column.

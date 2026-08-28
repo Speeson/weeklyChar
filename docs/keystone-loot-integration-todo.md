@@ -27,7 +27,7 @@ including empty favorites and unavailable states. Explicit null/malformed blocks
 rejected. Team detail omits raw `keystoneLoot`, and `/api/me/characters/enrich` is not a
 write surface.
 
-## V1-C: privacy and recommendations — completed in feature branch
+## V1-C: privacy and recommendations — completed
 
 Migration `0003_keystone_loot_sharing.sql` adds user preference
 `share_keystone_loot_with_teams`, enabled by default. `GET /api/me` exposes boolean
@@ -49,21 +49,36 @@ Responses contain display fields, `specId`, score, and aggregate counts only. Th
 expose favorites, item IDs/modifiers, `voidcore.usedItems`, or raw `keystoneLoot`. Owner
 character reads remain available regardless of team-sharing preference.
 
-## V1-D: Web planner and privacy UI — pending
+## V1-D: Web planner and privacy UI — completed in feature branch
 
-The Web still needs stone selection, recommendation presentation, and the privacy toggle.
-It must consume the privacy-safe V1-C summaries rather than raw team wishlists.
+Settings now loads the account preference from `GET /api/me` and saves it through
+`PATCH /api/me/preferences`; it never stores that value in `ks_web_settings`, and the
+local `Restaurar valores` action does not change it.
+
+The team page derives selectable options only from actual current member keystones,
+preserves duplicate dungeon stones owned by different characters, and sends the selected
+stone's `challengeMapId` to the V1-C recommendation endpoint. The responsive planner
+renders every member status and aggregate explanation, guards rapid stone switches with
+abort/generation checks, and highlights only the exact recommended `characterId` in the
+existing team list. No scoring, tier weights, Voidcore decisions, or raw wishlist data
+exist in Web.
 
 ## V2: item/object display — mandatory future scope
 
 Future visual experiences must resolve and render actual item/source objects safely.
 Item names, links, icons, cache loading, object presentation, and wishlist UI are not
-implemented by V1-A, V1-B, or V1-C. V2 remains mandatory and must not depend on localized
+implemented by V1-A, V1-B, V1-C, or V1-D. V2 remains mandatory and must not depend on localized
 names captured by the addon.
+
+## V3: advanced planner — pending
+
+Role composition, global party optimization, and performance-aware scoring remain future
+scope and are not part of V1-D.
 
 ## Release boundaries
 
 - Addon releases remain owned independently by `Speeson/KeystoneSync`.
 - V1-B has Client/Worker/DB impact.
 - V1-C has Worker/DB impact only; future ordering is `0002`, `0003`, then Worker deploy.
+- V1-D has Web impact only and introduces no migration or Client/addon release requirement.
 - Push, release, deployment, and remote D1 migration require separate explicit approval.
