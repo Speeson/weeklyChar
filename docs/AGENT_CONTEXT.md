@@ -133,3 +133,11 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 ## Next planned milestone
 
 Perform the Midnight Season 2 in-game addon smoke test, then coordinate the separately authorized KeystoneClient v0.6.0 and addon v0.2.0 releases.
+
+KeystoneLoot V2-A is implemented on the isolated `feature/keystoneloot-v2-a` worktree for
+review. Its durable contract uses the existing `shareKeystoneLootWithTeams` preference for
+both recommendations and allowlisted same-team objective visibility, with live membership
+checks on every team request and no second privacy column. V2-A adds owner/team objective
+Worker routes and migration `0004_keystone_loot_item_metadata.sql` for Worker-side Blizzard
+item metadata caching; Web, addon, and Client runtime remain unchanged. V2-B/V2-C/V2-D must
+not start without explicit authorization.

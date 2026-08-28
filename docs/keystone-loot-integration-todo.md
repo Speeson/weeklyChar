@@ -2,8 +2,9 @@
 
 ## Objective
 
-Use KeystoneLoot wishlists for privacy-safe KeystoneSync team recommendations while
-preserving the public KeystoneLoot API boundary and owner access to raw snapshots.
+Use KeystoneLoot wishlists for team-scoped planning and objective inspection while
+preserving the public KeystoneLoot API boundary, owner access, and strict live membership
+authorization.
 
 ## V1-A: addon capture — completed
 
@@ -76,9 +77,9 @@ Compatibility validation also proved that the pre-V1 Worker accepts and safely i
 the new additive Client field, while the new Worker accepts older payloads that omit it.
 V1 is release-ready subject to separately authorized production operations.
 
-## V2: item/object display — mandatory future scope
+## V2-A: Worker objective contracts and metadata — implemented for review
 
-V2 must display actual KeystoneLoot targets. Mandatory scope is:
+V2 must display actual KeystoneLoot targets. Mandatory product scope is:
 
 - item icon;
 - item name;
@@ -90,9 +91,25 @@ V2 must display actual KeystoneLoot targets. Mandatory scope is:
 - per-character wishlist view or drawer;
 - dungeon/spec filtering.
 
-None of this is implemented by V1. V2 must use a deliberate privacy-aware API contract
-that respects the V1-C sharing preference; it must not expose raw team wishlists by
-reusing the owner endpoint or depending on localized names captured by the addon.
+The existing `shareKeystoneLootWithTeams` preference is the single consent boundary. When
+enabled it permits aggregate recommendation use and allowlisted objective visibility only
+between current members of the same requested team. When disabled it permits neither.
+Owner access remains available. No second preference or privacy column exists.
+
+V2-A implements owner and team objective endpoints, live same-team authorization,
+allowlisted DTOs, server-side source/dungeon/spec filtering, stable cursor pagination,
+display deduplication, Voidcore presentation states, Worker-side Blizzard item/media
+enrichment, and D1 migration `0004_keystone_loot_item_metadata.sql`. It does not expose raw
+snapshots or modify V1 scoring.
+
+Remaining phases:
+
+- **V2-B:** owner per-character wishlist drawer and filters.
+- **V2-C:** team objective visibility and stone-comparison UI, `Ver objetivos`, and the
+  Settings text `Compartir mis objetivos de KeystoneLoot con mis equipos` with description
+  `Permite que los miembros de tus equipos usen tus objetivos de KeystoneLoot para
+  planificar piedras y ver qué objetos necesitas en cada mazmorra.`
+- **V2-D:** full local E2E, release readiness, and separately authorized production work.
 
 ## V3: advanced planner — pending
 

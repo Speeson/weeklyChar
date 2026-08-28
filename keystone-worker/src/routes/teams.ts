@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { getCurrentUser } from '../auth'
 import { newInviteCode } from '../crypto'
 import {
@@ -8,6 +9,8 @@ import {
   teamResponse,
 } from '../db'
 import { jsonError } from '../http'
+import { enrichKeystoneLootObjectives } from '../blizzardItemMetadata'
+import { buildKeystoneLootObjectivePage } from '../keystoneObjectives'
 import { recommendKeystoneLootTarget } from '../keystoneRecommendations'
 import type { Env, TeamInvitationRow, TeamRow, UserRow } from '../types'
 
@@ -52,6 +55,33 @@ async function findMembership(env: Env, teamId: number, userId: number): Promise
 
 async function getTeam(env: Env, teamId: number): Promise<TeamRow | null> {
   return env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(teamId).first<TeamRow>()
+}
+
+type ObjectiveCharacterAccessRow = {
+  id: number
+  user_id: number
+  region: string
+}
+
+function positiveInteger(value: string | undefined, field: string): number | undefined {
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  if (value.trim() === '' || !Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${field} debe ser un entero positivo`)
+  }
+  return parsed
+}
+
+function teamObjectiveQuery(c: Context<{ Bindings: Env }>) {
+  const rawLimit = c.req.query('limit')
+  const limit = rawLimit === undefined ? 50 : positiveInteger(rawLimit, 'limit')
+  if (limit === undefined || limit > 100) throw new Error('limit debe estar entre 1 y 100')
+  return {
+    limit,
+    challengeMapId: positiveInteger(c.req.query('challengeMapId'), 'challengeMapId'),
+    specId: positiveInteger(c.req.query('specId'), 'specId'),
+    cursor: c.req.query('cursor'),
+  }
 }
 
 teamRoutes.get('/api/teams', async c => {
@@ -170,6 +200,61 @@ teamRoutes.get('/api/teams/:teamId/recommendations', async c => {
   }))
 
   return c.json({ teamId, challengeMapId, members: recommendations })
+})
+
+teamRoutes.get('/api/teams/:teamId/characters/:characterId/keystone-loot/objectives', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  const characterId = Number(c.req.param('characterId'))
+  if (!Number.isSafeInteger(teamId) || teamId <= 0
+    || !Number.isSafeInteger(characterId) || characterId <= 0) {
+    return jsonError(c, 400, 'teamId y characterId deben ser enteros positivos')
+  }
+  if (!(await getTeam(c.env, teamId))) return jsonError(c, 404, 'Equipo no encontrado')
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 403, 'No perteneces a este team')
+  }
+
+  const character = await c.env.DB.prepare('SELECT id, user_id, region FROM characters WHERE id = ?')
+    .bind(characterId)
+    .first<ObjectiveCharacterAccessRow>()
+  if (!character || !(await findMembership(c.env, teamId, character.user_id))) {
+    return jsonError(c, 404, 'Personaje no encontrado en este team')
+  }
+  const owner = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
+    .bind(character.user_id)
+    .first<UserRow>()
+  if (!owner) return jsonError(c, 404, 'Personaje no encontrado en este team')
+  if (owner.share_keystone_loot_with_teams === 0) {
+    return c.json({ status: 'sharing_disabled' as const })
+  }
+
+  const snapshotRow = await c.env.DB.prepare(`
+    SELECT keystone_loot_json FROM characters
+    WHERE id = ? AND user_id = ?
+  `).bind(character.id, owner.id).first<{ keystone_loot_json: string | null }>()
+  if (!snapshotRow) return jsonError(c, 404, 'Personaje no encontrado en este team')
+
+  try {
+    const page = buildKeystoneLootObjectivePage(snapshotRow.keystone_loot_json, teamObjectiveQuery(c))
+    if (page.status === 'not_installed' || page.status === 'not_ready' || page.status === 'unavailable') {
+      return c.json({ status: 'no_keystoneloot' as const })
+    }
+    if (page.status === 'empty') return c.json({ status: 'no_targets' as const })
+    if (page.status === 'unsupported') return c.json({ status: 'unsupported' as const })
+
+    const objectives = await enrichKeystoneLootObjectives(c.env, character.region, page.objectives)
+    return c.json({
+      status: 'available' as const,
+      updatedAt: page.snapshot?.updatedAt ?? null,
+      objectives,
+      nextCursor: page.nextCursor,
+    })
+  } catch (error) {
+    return jsonError(c, 400, error instanceof Error ? error.message : 'Filtros no válidos')
+  }
 })
 
 teamRoutes.get('/api/teams/:teamId', async c => {

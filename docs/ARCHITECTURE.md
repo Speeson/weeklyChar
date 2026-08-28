@@ -101,6 +101,9 @@ Owns:
 - `POST /api/keystones/update` write handling in `keystone-worker/src/routes/keystones.ts`.
 - Focused KeystoneLoot validation in `keystone-worker/src/keystoneLoot.ts`.
 - Pure KeystoneLoot recommendation scoring in `keystone-worker/src/keystoneRecommendations.ts`.
+- Allowlisted KeystoneLoot objective projection/pagination in
+  `keystone-worker/src/keystoneObjectives.ts` and Blizzard item enrichment/cache in
+  `keystone-worker/src/blizzardItemMetadata.ts`.
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
 - Wrangler deployment and D1 migration scripts.
@@ -293,8 +296,25 @@ applies privacy before parsing, validates stored snapshots through the V1-B boun
 and returns only one aggregate `(character, specId)` recommendation per member. V1-D Web
 loads the account preference through the existing `/api/me` contracts, selects one real
 current keystone from team detail, sends only its `challengeMapId`, and renders the
-aggregate response. Web performs no scoring or Voidcore decisions. V2 item/object display
-remains mandatory and pending.
+aggregate response. Web performs no scoring or Voidcore decisions.
+
+KeystoneLoot V2-A extends the Worker contract without changing the raw team-detail or V1
+recommendation responses. JWT-authenticated owners can request a paginated allowlisted
+objective view for one owned character. A separate team-context endpoint permits the same
+allowlisted view only after fresh D1 checks prove both requester and target owner are
+current members of the requested team and the target owner has
+`shareKeystoneLootWithTeams=true`. Removal from either membership revokes access on the
+next request. The preference now governs both aggregate recommendation participation and
+allowlisted objective visibility inside current shared teams; no second preference exists.
+
+Objective processing validates the stored snapshot, filters by source/dungeon and spec,
+deduplicates with the existing tier-weight helper, sorts and cursor-paginates, then enriches
+only the current page. Item IDs remain canonical. Worker-side Blizzard client-credentials
+OAuth and fixed regional Game Data hosts resolve Spanish item names and official media.
+Migration `0004_keystone_loot_item_metadata.sql` adds a D1 cache keyed by
+`(region, locale, item_id)`. Positive results last 30 days, confirmed 404 results last six
+hours, stale positive data survives upstream failures, and unavailable metadata degrades
+to null display fields.
 
 The validated zero-downtime V1 production order is:
 
