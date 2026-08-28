@@ -352,6 +352,7 @@ function WowheadLink({
     <a
       href={wowheadHref(type as 'currency' | 'item' | 'spell', id)}
       data-wowhead={noIcon ? `${type}=${id}&domain=www&icon=false` : 'domain=www'}
+      data-wh-iconize-link={noIcon ? 'false' : undefined}
       target="_blank"
       rel="noreferrer"
       className={`inline-flex items-center justify-center gap-2 no-underline ${className}`}

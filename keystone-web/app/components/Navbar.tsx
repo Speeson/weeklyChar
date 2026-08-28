@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { apiFetch, clearToken, getToken, getUsername, hydrateProfile, getAvatarUrl, setAvatarUrl } from '@/lib/auth'
@@ -39,6 +40,12 @@ export default function Navbar() {
   const [handlingInvitation, setHandlingInvitation] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
+  const notificationsButtonRef = useRef<HTMLButtonElement>(null)
+  const profileButtonRef = useRef<HTMLButtonElement>(null)
+  const notificationsPanelRef = useRef<HTMLDivElement>(null)
+  const profilePanelRef = useRef<HTMLDivElement>(null)
+  const [notificationsPos, setNotificationsPos] = useState<{ top: number; right: number } | null>(null)
+  const [profilePos, setProfilePos] = useState<{ top: number; right: number } | null>(null)
 
   async function fetchInvitations() {
     try {
@@ -70,16 +77,54 @@ export default function Navbar() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) && !(profilePanelRef.current && profilePanelRef.current.contains(e.target as Node))) {
         setOpen(false)
       }
-      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node) && !(notificationsPanelRef.current && notificationsPanelRef.current.contains(e.target as Node))) {
         setNotificationsOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  useEffect(() => {
+    if (!notificationsOpen || !notificationsButtonRef.current) {
+      setNotificationsPos(null)
+      return
+    }
+    const update = () => {
+      const rect = notificationsButtonRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setNotificationsPos({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [notificationsOpen])
+
+  useEffect(() => {
+    if (!open || !profileButtonRef.current) {
+      setProfilePos(null)
+      return
+    }
+    const update = () => {
+      const rect = profileButtonRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setProfilePos({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open])
 
   function handleOpen(val: boolean) {
     setOpen(val)
@@ -177,6 +222,7 @@ export default function Navbar() {
           <div className="relative" ref={notificationsRef}>
             <button
               type="button"
+              ref={notificationsButtonRef}
               aria-label="Campana de notificaciones"
               onClick={() => setNotificationsOpen(open => !open)}
               className={`relative flex h-9 w-9 items-center justify-center rounded-lg border transition ${
@@ -195,39 +241,41 @@ export default function Navbar() {
               )}
             </button>
 
-            {notificationsOpen && (
-              <div className="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
-                <div className="border-b border-gray-800 px-4 py-3">
-                  <p className="text-sm font-bold text-white">Notificaciones</p>
-                  <p className="text-[11px] text-gray-500">{invitations.length} invitacion{invitations.length !== 1 ? 'es' : ''} pendiente{invitations.length !== 1 ? 's' : ''}</p>
-                </div>
-                {invitations.length === 0 ? (
-                  <p className="px-4 py-5 text-sm text-gray-500">No tienes invitaciones pendientes.</p>
-                ) : (
-                  <div className="max-h-80 overflow-y-auto py-1">
-                    {invitations.map(invitation => (
-                      <button
-                        key={invitation.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedInvitation(invitation)
-                          setNotificationsOpen(false)
-                        }}
-                        className="block w-full px-4 py-3 text-left transition hover:bg-gray-800"
-                      >
-                        <p className="text-sm font-semibold text-yellow-300">{invitation.teamName ?? 'Equipo'}</p>
-                        <p className="mt-0.5 text-xs text-gray-400">Invitado por {invitation.invitedBy ?? 'un miembro'}</p>
-                      </button>
-                    ))}
+              {notificationsOpen && notificationsPos && createPortal(
+                <div ref={notificationsPanelRef} className="w-80 overflow-hidden rounded-xl border border-gray-700 bg-gray-900 shadow-2xl" style={{ position: 'fixed', top: notificationsPos.top, right: notificationsPos.right, zIndex: 40 }}>
+                  <div className="border-b border-gray-800 px-4 py-3">
+                    <p className="text-sm font-bold text-white">Notificaciones</p>
+                    <p className="text-[11px] text-gray-500">{invitations.length} invitacion{invitations.length !== 1 ? 'es' : ''} pendiente{invitations.length !== 1 ? 's' : ''}</p>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                  {invitations.length === 0 ? (
+                    <p className="px-4 py-5 text-sm text-gray-500">No tienes invitaciones pendientes.</p>
+                  ) : (
+                    <div className="max-h-80 overflow-y-auto py-1">
+                      {invitations.map(invitation => (
+                        <button
+                          key={invitation.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedInvitation(invitation)
+                            setNotificationsOpen(false)
+                          }}
+                          className="block w-full px-4 py-3 text-left transition hover:bg-gray-800"
+                        >
+                          <p className="text-sm font-semibold text-yellow-300">{invitation.teamName ?? 'Equipo'}</p>
+                          <p className="mt-0.5 text-xs text-gray-400">Invitado por {invitation.invitedBy ?? 'un miembro'}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>,
+                document.body,
+              )}
+            </div>
 
           {/* Profile dropdown */}
           <div className="relative" ref={dropdownRef}>
           <button
+            ref={profileButtonRef}
             onClick={() => handleOpen(!open)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800 transition"
           >
@@ -253,8 +301,8 @@ export default function Navbar() {
             </svg>
           </button>
 
-          {open && (
-            <div className="absolute right-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+          {open && profilePos && createPortal(
+            <div ref={profilePanelRef} className="w-56 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden" style={{ position: 'fixed', top: profilePos.top, right: profilePos.right, zIndex: 40 }}>
               <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-3">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover border border-gray-600 flex-shrink-0" />
@@ -338,7 +386,8 @@ export default function Navbar() {
                   Cerrar sesión
                 </button>
               </div>
-            </div>
+            </div>,
+            document.body,
           )}
           </div>
         </div>
