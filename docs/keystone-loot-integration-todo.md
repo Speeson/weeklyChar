@@ -1,195 +1,79 @@
-# KeystoneLoot Integration TODO
+# KeystoneLoot Integration
 
-Objetivo: recoger la informacion que el usuario configura en el addon
-[KeystoneLoot](https://github.com/Wolkenschutz/KeystoneLoot) para usarla en la web de KeystoneSync.
+## Objective
 
-La funcionalidad principal a futuro sera sugerir automaticamente un personaje por cada miembro de un equipo cuando se elija una piedra concreta, priorizando los personajes que tienen objetos importantes en esa mazmorra.
+Use the wishlist configured in KeystoneLoot as future input for KeystoneSync team
+recommendations while preserving owner privacy and the KeystoneLoot public contract.
 
-## Contexto Detectado
+## V1-A: addon capture — completed
 
-KeystoneLoot guarda datos en dos SavedVariables:
+The canonical `Speeson/KeystoneSync` addon uses isolated
+`KeystoneLootIntegration.lua`, declared with `## OptionalDeps: KeystoneLoot` and loaded
+before the normal runtime. Readiness never depends on TOC order: it uses public API v2
+`IsReady()` and `READY`, then listens only for aggregate `FAVORITES_CHANGED`.
 
-- `KeystoneLootDB`: global de cuenta.
-- `KeystoneLootCharDB`: por personaje.
+Character identity and wishlist data come from public methods:
 
-Estructura importante de `KeystoneLootDB`:
+- `GetCurrentCharacterKey()`;
+- `GetFavorites(characterKey)`;
+- `GetSourceInfo(sourceId)`;
+- `GetItemInfo(itemId)`.
 
-```lua
-KeystoneLootDB.favorites["Zul'jin-Spee-3"][558][255][251119] = {
-    tier = 3,
-    icon = 7259236,
-}
-```
+The integration does not read `KeystoneLootDB.favorites`, construct KeystoneLoot keys,
+hardcode four/five tiers, or use localized names as identity. Numeric tiers are preserved
+generically. Direct SavedVariables access is limited to verified read-only
+`KeystoneLootCharDB.voidcore` and `voidcoreChecked` because no public read API exists.
 
-Significado:
+Each character processed by the addon receives an explicit `keystoneLoot` state. A ready
+supported snapshot contains API/addon version, KeystoneLoot character key, timestamp,
+normalized favorites, and Voidcore state. Empty favorites are authoritative. Generation,
+debounce, logout, and dual-character-key checks prevent stale or cross-character writes,
+and all KeystoneLoot calls are protected from the normal save flow.
 
-- `Zul'jin-Spee-3`: clave del personaje en formato `realm-character-classId`.
-- `558`: sourceId. En dungeons suele ser el `challengeModeId`.
-- `255`: specId.
-- `251119`: itemId.
-- `tier`: prioridad marcada por el usuario.
-- `icon`: icono del item, opcional.
-- `bonusIds`, `gems`, `enchant`: opcionales si vienen de import/export.
-
-Tiers de KeystoneLoot:
-
-- `1`: Nice to have.
-- `2`: Must have.
-- `3`: Best in Slot.
-- `4`: Transmog.
-
-Estructura importante de `KeystoneLootCharDB`:
-
-```lua
-KeystoneLootCharDB.voidcore = {
-    [251079] = true,
-    [249343] = true,
-}
-```
-
-Esto indica items marcados como obtenidos/usados con Voidcore para ese personaje.
-
-## Datos a Exportar Desde KeystoneSync Addon
-
-Guardar en cada personaje dentro de `KeystoneSyncDB[key]`:
-
-```lua
-keystoneLoot = {
-    installed = true,
-    characterKey = "Zul'jin-Spee-3",
-    classId = 3,
-    favorites = {
-        {
-            sourceId = 558,
-            sourceType = "dungeon",
-            sourceName = "Magister's Terrace",
-            sourceAbbr = "MT",
-            specId = 255,
-            itemId = 251119,
-            tier = 3,
-            icon = 7259236,
-            slotId = 10,
-            bonusIds = nil,
-            gems = nil,
-            enchant = nil,
-            voidcoreUsed = false,
-        }
-    },
-    voidcore = {
-        checked = true,
-        usedItems = { 251079, 249343 }
-    }
-}
-```
-
-## Implementacion Propuesta
-
-### Fase 1: Addon
-
-- Añadir `## OptionalDeps: KeystoneLoot` en `KeystoneSync.toc`.
-- Detectar si `KeystoneLootDB` existe.
-- Detectar si `KeystoneLootCharDB` existe.
-- Construir la clave compatible con KeystoneLoot:
-
-```lua
-realm .. "-" .. character .. "-" .. classId
-```
-
-- Leer `KeystoneLootDB.favorites[characterKey]`.
-- Aplanar favoritos en una lista simple.
-- Leer `KeystoneLootCharDB.voidcore`.
-- Marcar `voidcoreUsed = true` en favoritos cuyo `itemId` este en `KeystoneLootCharDB.voidcore`.
-- Guardar el resultado en `KeystoneSyncDB[key].keystoneLoot`.
-
-Notas:
-
-- No tocar ni modificar datos de KeystoneLoot.
-- Solo leer sus tablas si estan cargadas.
-- Si KeystoneLoot no esta instalado, guardar `installed = false` o no guardar el bloque.
-
-### Fase 2: Cliente
-
-- Leer `entry.get("keystoneLoot")` desde `KeystoneSync.lua`.
-- Enviarlo a la API dentro del payload.
-- No mostrarlo en la UI del cliente por ahora.
-- Al tocar cliente, reconstruir `.exe` e instalador.
-
-### Fase 3: API
-
-- Añadir columna JSON/texto en `characters`, por ejemplo:
+## V1-B: Client, Worker, D1, and owner read — completed in feature branch
 
 ```text
-keystone_loot_json
+KeystoneSyncDB[key].keystoneLoot
+  -> conditional KeystoneClient payload
+  -> POST /api/keystones/update validation
+  -> characters.keystone_loot_json
+  -> owner GET /api/me/characters[].keystoneLoot
 ```
 
-- Añadir `keystoneLoot` al modelo de payload.
-- Guardar el JSON recibido.
-- Devolverlo en `/api/me/characters` y en endpoints de equipos.
+The Client omits the HTTP field when the SavedVariables key is absent, preserving any
+existing server snapshot for historical characters and old clients. A present block is
+authoritative, including `favorites: []` and unavailable states. The Client performs only
+the Lua-to-JSON array representation required by `slpp`; it does not enrich or score data.
 
-### Fase 4: Web
+The Worker validates states, flags, supported metadata, favorite identity, generic
+numeric tiers, Voidcore, strings, arrays, and conservative payload limits. Valid present
+blocks replace D1 JSON; omitted blocks preserve it; explicit `null` and malformed blocks
+are rejected before persistence. Migration `0002_keystone_loot.sql` adds only nullable
+`keystone_loot_json TEXT`.
 
-- Mostrar informacion de KeystoneLoot en vistas futuras.
-- Permitir usar los favoritos en equipos.
-- Añadir opcion de privacidad en ajustes:
+Owner reads return the parsed block or `null`. Team detail responses omit the
+`keystoneLoot` property entirely. `/api/me/characters/enrich` is not a KeystoneLoot write
+surface.
 
-```text
-Compartir wishlist de KeystoneLoot con mis equipos
-```
+## V1-C: privacy and recommendations — pending
 
-Decidir si por defecto va activado o desactivado.
+Future work must define and implement server-side privacy policy before any team access.
+Only then may the system calculate one recommended character per team member for a chosen
+keystone. Scoring rules, duplicate-item/spec treatment, Voidcore completion handling,
+fallbacks, and user controls remain deliberately undecided in V1-B.
 
-## Funcionalidad Objetivo: Sugerir Personajes Para Una Piedra
+Raw owner wishlist data must not be exposed through team endpoints as a shortcut.
 
-Entrada:
+## V2: item/object display — mandatory future scope
 
-- Una piedra seleccionada de un personaje del equipo.
-- Ejemplo: `Magister's Terrace +12`.
+Future visual experiences must resolve and render item/source metadata safely rather than
+depend on localized names captured by the addon. Item names, links, icons, cache loading,
+object presentation, and wishlist UI are not implemented by V1-A or V1-B.
 
-Proceso:
+## Release boundaries
 
-- Obtener `challengeMapId` de esa piedra.
-- Buscar favoritos KeystoneLoot de todos los miembros del equipo para ese `sourceId`.
-- Agrupar resultados por usuario/cuenta.
-- Elegir el mejor personaje de cada miembro.
-
-Sistema de puntuacion sugerido:
-
-```text
-Tier 3, Best in Slot: +100
-Tier 2, Must Have:    +60
-Tier 1, Nice:         +25
-Tier 4, Transmog:     +5
-voidcoreUsed:         -80 o excluir
-```
-
-Reglas:
-
-- Contar un mismo item una sola vez si aparece en varias specs.
-- Priorizar personajes con mas items utiles en esa dungeon.
-- Si un personaje ya tiene todos los items marcados como `voidcoreUsed`, bajarlo de prioridad o excluirlo.
-- Devolver como maximo un personaje recomendado por miembro del equipo.
-
-Salida esperada:
-
-```text
-Piedra elegida: MT +12
-
-Spee:
-- Spee, 3 items BiS en MT
-
-Zeyks:
-- Zeykdh, 2 Must Have en MT
-
-Thestral:
-- Threstank, 1 BiS y 2 Must Have en MT
-```
-
-## Impacto En Releases
-
-Si se implementa esta funcionalidad completa:
-
-- Addon cambia: subir a `Speeson/KeystoneSync` y crear tag, previa confirmacion.
-- Cliente cambia: subir a `Speeson/weeklyChar`, reconstruir instalador y preparar datos de release, previa confirmacion.
-- API/Web cambian: subir a `Speeson/weeklyChar`, previa confirmacion.
-
-No hacer push sin confirmacion explicita.
+- Addon releases remain owned by `Speeson/KeystoneSync` and are independent from Client
+  releases.
+- V1-B changes the Client binary and Worker/D1 contract, so Client build/release plus
+  Worker and DB deployment consideration is required.
+- Push, release, deployment, and remote D1 migration require separate explicit approval.

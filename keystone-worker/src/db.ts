@@ -47,8 +47,16 @@ function keystoneDict(keystone: KeystoneRow | null): Record<string, unknown> | n
   }
 }
 
-export function characterResponse(character: CharacterRow, latest: KeystoneRow | null): Record<string, unknown> {
-  return {
+export type CharacterResponseOptions = {
+  includeKeystoneLoot?: boolean
+}
+
+export function characterResponse(
+  character: CharacterRow,
+  latest: KeystoneRow | null,
+  options: CharacterResponseOptions = {},
+): Record<string, unknown> {
+  const response: Record<string, unknown> = {
     id: character.id,
     name: character.name,
     realm: character.realm,
@@ -65,6 +73,10 @@ export function characterResponse(character: CharacterRow, latest: KeystoneRow |
     money: jsonLoad(character.money_json),
     mythicPlusSeason: jsonLoad(character.mythic_plus_season_json),
   }
+  if (options.includeKeystoneLoot === true) {
+    response.keystoneLoot = jsonLoad(character.keystone_loot_json)
+  }
+  return response
 }
 
 export async function teamResponse(env: Env, team: TeamRow, currentUserId: number): Promise<Record<string, unknown>> {
@@ -83,7 +95,11 @@ export async function teamResponse(env: Env, team: TeamRow, currentUserId: numbe
   }
 }
 
-export async function charactersForUser(env: Env, userId: number): Promise<Array<Record<string, unknown>>> {
+export async function charactersForUser(
+  env: Env,
+  userId: number,
+  options: CharacterResponseOptions = {},
+): Promise<Array<Record<string, unknown>>> {
   const { results } = await env.DB.prepare(`
     SELECT * FROM characters
     WHERE user_id = ?
@@ -91,7 +107,7 @@ export async function charactersForUser(env: Env, userId: number): Promise<Array
   `).bind(userId).all<CharacterRow>()
 
   return Promise.all(results.map(async character => {
-    return characterResponse(character, await latestRealKeystone(env, character.id))
+    return characterResponse(character, await latestRealKeystone(env, character.id), options)
   }))
 }
 

@@ -21,6 +21,8 @@ export class FakeD1Database {
     ]
     this.characters = []
     this.keystones = []
+    this.teams = []
+    this.teamMembers = []
     this.nextCharacterId = 1
     this.nextKeystoneId = 1
   }
@@ -68,6 +70,16 @@ class FakeD1Statement {
       return this.db.characters.find(character => character.id === values[0]) ?? null
     }
 
+    if (sql === 'SELECT id FROM team_members WHERE team_id = ? AND user_id = ?') {
+      const [teamId, userId] = values
+      const membership = this.db.teamMembers.find(row => row.team_id === teamId && row.user_id === userId)
+      return membership ? { id: membership.id } : null
+    }
+
+    if (sql === 'SELECT * FROM teams WHERE id = ?') {
+      return this.db.teams.find(team => team.id === values[0]) ?? null
+    }
+
     if (sql.includes('SELECT * FROM keystones WHERE character_id = ?')) {
       const [characterId, resetUnix] = values
       const rows = this.db.keystones
@@ -97,6 +109,17 @@ class FakeD1Statement {
       return { results }
     }
 
+    if (sql.includes('SELECT u.id, u.username FROM team_members tm JOIN users u ON u.id = tm.user_id')) {
+      const teamId = values[0]
+      const results = this.db.teamMembers
+        .filter(membership => membership.team_id === teamId)
+        .map(membership => this.db.users.find(user => user.id === membership.user_id))
+        .filter(Boolean)
+        .map(user => ({ id: user.id, username: user.username }))
+        .sort((left, right) => left.username.localeCompare(right.username))
+      return { results }
+    }
+
     throw new Error(`Unhandled FakeD1 all query: ${sql}`)
   }
 
@@ -122,6 +145,7 @@ class FakeD1Statement {
         currencies_json: null,
         money_json: null,
         mythic_plus_season_json: null,
+        keystone_loot_json: null,
         created_at: '2026-08-21T00:00:00.000Z',
         updated_at: '2026-08-21T00:00:00.000Z',
       }
@@ -141,12 +165,43 @@ class FakeD1Statement {
         currenciesJson,
         moneyJson,
         mythicPlusSeasonJson,
+        keystoneLootJson,
         characterId,
       ] = values
       const character = this.db.characters.find(row => row.id === characterId)
       if (!character) throw new Error(`Missing character ${characterId}`)
 
       assignIfPresent(character, 'wow_account', wowAccount)
+      assignIfPresent(character, 'avatar_url', avatarUrl)
+      assignIfPresent(character, 'rio_score', rioScore)
+      assignIfPresent(character, 'wow_class', wowClass)
+      assignIfPresent(character, 'ilvl', ilvl)
+      assignIfPresent(character, 'vault_json', vaultJson)
+      assignIfPresent(character, 'prey_hunts_json', preyHuntsJson)
+      assignIfPresent(character, 'currencies_json', currenciesJson)
+      assignIfPresent(character, 'money_json', moneyJson)
+      assignIfPresent(character, 'mythic_plus_season_json', mythicPlusSeasonJson)
+      assignIfPresent(character, 'keystone_loot_json', keystoneLootJson)
+      character.updated_at = '2026-08-21T00:00:00.000Z'
+      return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('UPDATE characters SET avatar_url = COALESCE')) {
+      const [
+        avatarUrl,
+        rioScore,
+        wowClass,
+        ilvl,
+        vaultJson,
+        preyHuntsJson,
+        currenciesJson,
+        moneyJson,
+        mythicPlusSeasonJson,
+        characterId,
+      ] = values
+      const character = this.db.characters.find(row => row.id === characterId)
+      if (!character) throw new Error(`Missing character ${characterId}`)
+
       assignIfPresent(character, 'avatar_url', avatarUrl)
       assignIfPresent(character, 'rio_score', rioScore)
       assignIfPresent(character, 'wow_class', wowClass)

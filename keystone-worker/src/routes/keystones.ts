@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { getUserBySyncToken } from '../auth'
 import { jsonDump, latestRealKeystone } from '../db'
 import { jsonError } from '../http'
+import { validateKeystoneLoot } from '../keystoneLoot'
 import type { CharacterRow, Env } from '../types'
 
 export const keystoneRoutes = new Hono<{ Bindings: Env }>()
@@ -27,6 +28,7 @@ type KeystoneUpdateRequest = {
   currencies?: unknown
   money?: unknown
   mythicPlusSeason?: unknown
+  keystoneLoot?: unknown
 }
 
 function isResponse(value: unknown): value is Response {
@@ -39,8 +41,16 @@ keystoneRoutes.post('/api/keystones/update', async c => {
 
   const payload = await c.req.json<KeystoneUpdateRequest>()
   const region = payload.region ?? 'eu'
+  const hasKeystoneLoot = Object.prototype.hasOwnProperty.call(payload, 'keystoneLoot')
   if (!payload.character || !payload.realm) {
     return jsonError(c, 400, 'Personaje y reino son obligatorios')
+  }
+
+  if (hasKeystoneLoot) {
+    const keystoneLootError = validateKeystoneLoot(payload.keystoneLoot)
+    if (keystoneLootError) {
+      return jsonError(c, 400, `Datos de KeystoneLoot no válidos: ${keystoneLootError}`)
+    }
   }
 
   let character = await c.env.DB.prepare(`
@@ -70,6 +80,7 @@ keystoneRoutes.post('/api/keystones/update', async c => {
         currencies_json = COALESCE(?, currencies_json),
         money_json = COALESCE(?, money_json),
         mythic_plus_season_json = COALESCE(?, mythic_plus_season_json),
+        keystone_loot_json = COALESCE(?, keystone_loot_json),
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE id = ?
   `).bind(
@@ -83,6 +94,7 @@ keystoneRoutes.post('/api/keystones/update', async c => {
     payload.currencies === undefined ? null : jsonDump(payload.currencies),
     payload.money === undefined ? null : jsonDump(payload.money),
     payload.mythicPlusSeason === undefined ? null : jsonDump(payload.mythicPlusSeason),
+    hasKeystoneLoot ? jsonDump(payload.keystoneLoot) : null,
     character.id,
   ).run()
 

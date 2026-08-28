@@ -41,6 +41,7 @@ export type CharacterRow = {
   currencies_json: string | null
   money_json: string | null
   mythic_plus_season_json: string | null
+  keystone_loot_json: string | null
   created_at: string
   updated_at: string
 }

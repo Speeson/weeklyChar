@@ -1,0 +1,60 @@
+{
+  "character": "Makabe",
+  "realm": "Zul'jin",
+  "region": "eu",
+  "hasKeystone": false,
+  "keystoneLevel": null,
+  "keystoneChallengeMapId": null,
+  "keystoneMapId": null,
+  "keystoneDungeon": null,
+  "updatedAt": 1787935692,
+  "updatedReason": "PLAYER_LOGIN",
+  "wowAccount": "ACCOUNT-1",
+  "avatarUrl": "https://example.test/avatar.jpg",
+  "rioScore": 2510.25,
+  "wowClass": "Mage",
+  "ilvl": 700,
+  "vault": null,
+  "preyHunts": null,
+  "currencies": null,
+  "money": null,
+  "mythicPlusSeason": null,
+  "keystoneLoot": {
+    "state": "supported",
+    "installed": true,
+    "supported": true,
+    "apiVersion": 2,
+    "addonVersion": "2.13.1",
+    "characterKey": "Zul'jin-Makabe-11",
+    "updatedAt": 1787935692,
+    "favorites": [
+      {
+        "sourceId": 558,
+        "sourceType": "dungeon",
+        "specId": 255,
+        "itemId": 251119,
+        "tier": 3,
+        "slotId": 10,
+        "icon": 7259236,
+        "bonusIds": [6652, 1498],
+        "gems": [213743],
+        "enchant": 7334
+      },
+      {
+        "sourceId": "catalyst",
+        "sourceType": "catalyst",
+        "specId": 255,
+        "itemId": 251121,
+        "tier": 5,
+        "slotId": 1,
+        "icon": 7259238,
+        "bonusIds": [],
+        "gems": []
+      }
+    ],
+    "voidcore": {
+      "checked": true,
+      "usedItems": [249343, 251079]
+    }
+  }
+}

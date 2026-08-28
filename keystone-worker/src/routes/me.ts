@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { getCurrentUser, getCurrentUserFlexible } from '../auth'
 import { hashPassword, verifyPassword } from '../crypto'
-import { characterResponse, jsonDump, latestRealKeystone } from '../db'
+import { charactersForUser, jsonDump } from '../db'
 import { jsonError } from '../http'
 import type { CharacterRow, Env } from '../types'
 
@@ -93,17 +93,7 @@ meRoutes.get('/api/me/characters', async c => {
   const currentUser = await getCurrentUserFlexible(c)
   if (isResponse(currentUser)) return currentUser
 
-  const { results } = await c.env.DB.prepare(`
-    SELECT * FROM characters
-    WHERE user_id = ?
-    ORDER BY name
-  `).bind(currentUser.id).all<CharacterRow>()
-
-  const responses = await Promise.all(results.map(async character => {
-    return characterResponse(character, await latestRealKeystone(c.env, character.id))
-  }))
-
-  return c.json(responses)
+  return c.json(await charactersForUser(c.env, currentUser.id, { includeKeystoneLoot: true }))
 })
 
 meRoutes.post('/api/me/characters/enrich', async c => {

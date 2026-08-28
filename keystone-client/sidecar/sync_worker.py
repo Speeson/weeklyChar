@@ -21,6 +21,49 @@ def _normalize_ilvl(value):
         return None
 
 
+def _lua_array_for_json(value):
+    if isinstance(value, list):
+        return list(value)
+    if not isinstance(value, dict):
+        return value
+    if not value:
+        return []
+
+    keys = sorted(value) if all(isinstance(key, int) for key in value) else []
+    if keys != list(range(1, len(value) + 1)):
+        return value
+    return [value[index] for index in keys]
+
+
+def _keystone_loot_for_json(value):
+    if not isinstance(value, dict):
+        return value
+
+    snapshot = dict(value)
+    favorites = _lua_array_for_json(snapshot.get("favorites"))
+    if isinstance(favorites, list):
+        copied_favorites = []
+        for favorite in favorites:
+            if not isinstance(favorite, dict):
+                copied_favorites.append(favorite)
+                continue
+            copied_favorite = dict(favorite)
+            for field in ("bonusIds", "gems"):
+                if field in copied_favorite:
+                    copied_favorite[field] = _lua_array_for_json(copied_favorite[field])
+            copied_favorites.append(copied_favorite)
+        snapshot["favorites"] = copied_favorites
+
+    voidcore = snapshot.get("voidcore")
+    if isinstance(voidcore, dict):
+        copied_voidcore = dict(voidcore)
+        if "usedItems" in copied_voidcore:
+            copied_voidcore["usedItems"] = _lua_array_for_json(copied_voidcore["usedItems"])
+        snapshot["voidcore"] = copied_voidcore
+
+    return snapshot
+
+
 class SyncWorker(threading.Thread):
     def __init__(self, config: dict, on_sync: Callable = None, on_error: Callable = None):
         super().__init__(daemon=True)
@@ -153,6 +196,8 @@ class SyncWorker(threading.Thread):
                 "money": entry.get("money"),
                 "mythicPlusSeason": entry.get("mythicPlusSeason"),
             }
+            if "keystoneLoot" in entry:
+                payload["keystoneLoot"] = _keystone_loot_for_json(entry["keystoneLoot"])
             try:
                 r = requests.post(
                     f"{api_url}/api/keystones/update",
