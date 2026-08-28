@@ -49,7 +49,7 @@ Responses contain display fields, `specId`, score, and aggregate counts only. Th
 expose favorites, item IDs/modifiers, `voidcore.usedItems`, or raw `keystoneLoot`. Owner
 character reads remain available regardless of team-sharing preference.
 
-## V1-D: Web planner and privacy UI — completed in feature branch
+## V1-D: Web planner and privacy UI — completed
 
 Settings now loads the account preference from `GET /api/me` and saves it through
 `PATCH /api/me/preferences`; it never stores that value in `ks_web_settings`, and the
@@ -63,12 +63,36 @@ abort/generation checks, and highlights only the exact recommended `characterId`
 existing team list. No scoring, tier weights, Voidcore decisions, or raw wishlist data
 exist in Web.
 
+## V1-E: end-to-end validation and release readiness — completed
+
+The complete V1 chain was validated with the real WoW SavedVariables file through the
+real KeystoneClient parser, a disposable local Worker/D1 with migrations `0001`, `0002`,
+and `0003`, owner reads, privacy enforcement, recommendations, and the actual Web
+Settings/planner UI. Historical entries omit `keystoneLoot` and preserve server data;
+authoritative empty favorites replace stale favorites. Team detail and recommendation UI
+remain free of raw wishlist data.
+
+Compatibility validation also proved that the pre-V1 Worker accepts and safely ignores
+the new additive Client field, while the new Worker accepts older payloads that omit it.
+V1 is release-ready subject to separately authorized production operations.
+
 ## V2: item/object display — mandatory future scope
 
-Future visual experiences must resolve and render actual item/source objects safely.
-Item names, links, icons, cache loading, object presentation, and wishlist UI are not
-implemented by V1-A, V1-B, V1-C, or V1-D. V2 remains mandatory and must not depend on localized
-names captured by the addon.
+V2 must display actual KeystoneLoot targets. Mandatory scope is:
+
+- item icon;
+- item name;
+- tier;
+- dungeon/source;
+- spec;
+- Voidcore state;
+- `Ver objetivos`;
+- per-character wishlist view or drawer;
+- dungeon/spec filtering.
+
+None of this is implemented by V1. V2 must use a deliberate privacy-aware API contract
+that respects the V1-C sharing preference; it must not expose raw team wishlists by
+reusing the owner endpoint or depending on localized names captured by the addon.
 
 ## V3: advanced planner — pending
 
@@ -78,7 +102,11 @@ scope and are not part of V1-D.
 ## Release boundaries
 
 - Addon releases remain owned independently by `Speeson/KeystoneSync`.
-- V1-B has Client/Worker/DB impact.
-- V1-C has Worker/DB impact only; future ordering is `0002`, `0003`, then Worker deploy.
-- V1-D has Web impact only and introduces no migration or Client/addon release requirement.
+- Complete V1 weeklyChar impact is Web, Worker, DB, Client build, and Client release.
+- Standalone V1-A impact is addon build and addon release.
+- Safe production order is addon release, Client release, D1 migration `0002`, D1
+  migration `0003`, Worker deployment, then Web deployment.
+- The early addon/client steps are compatible with the old backend: old Client ignores
+  the additive SavedVariables block and old Worker ignores the additive Client payload
+  field. The new Worker remains compatible with clients that omit `keystoneLoot`.
 - Push, release, deployment, and remote D1 migration require separate explicit approval.

@@ -296,8 +296,24 @@ current keystone from team detail, sends only its `challengeMapId`, and renders 
 aggregate response. Web performs no scoring or Voidcore decisions. V2 item/object display
 remains mandatory and pending.
 
-Future deployment ordering is strict: apply `0002` if it is not already deployed, apply
-`0003`, then deploy the Worker that reads the new preference column.
+The validated zero-downtime V1 production order is:
+
+```text
+1. release the compatible standalone addon
+2. release the compatible KeystoneClient
+3. apply D1 migration 0002_keystone_loot
+4. apply D1 migration 0003_keystone_loot_sharing
+5. deploy the Worker
+6. deploy the Web
+```
+
+The addon may precede the Client because older clients ignore the additive SavedVariables
+block. The new Client may precede the backend because the pre-V1 Worker accepts and
+ignores unknown additive JSON fields. Both migrations may precede the Worker because the
+old Worker ignores the new columns. The Worker must follow both migrations because its
+queries reference both columns, and the Web must follow the Worker because it consumes
+the new preference and recommendation routes. The new Worker remains compatible with
+older clients that omit `keystoneLoot`.
 
 ## Removed Historical Components
 

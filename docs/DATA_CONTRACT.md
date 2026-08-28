@@ -498,6 +498,22 @@ Do not fix this gap in documentation-only phases. Future work should decide whet
 
 ## Compatibility Expectations
 
+KeystoneLoot V1 compatibility was validated as follows:
+
+| Producer | Consumer | Result |
+| --- | --- | --- |
+| old SavedVariables without `keystoneLoot` | new Client | accepted; payload omits the property |
+| new SavedVariables with `keystoneLoot` | new Client | normalized known Lua arrays and transported semantically unchanged |
+| old Client payload | new Worker | accepted; omitted snapshot preserves stored data |
+| new Client payload without `keystoneLoot` | new Worker | accepted; omitted snapshot preserves stored data |
+| new Client payload with `keystoneLoot` | new Worker | validated and authoritatively persisted |
+| new Client payload with `keystoneLoot` | pre-V1 Worker | accepted; additive field safely ignored |
+| new Worker aggregate data | current Web | preference and recommendations rendered without raw team wishlist data |
+
+Validated production order is addon, Client, migration `0002`, migration `0003`, Worker,
+then Web. The Worker cannot precede its migrations because its SQL references both new
+columns. Web follows Worker because it requires the preference and recommendation routes.
+
 Additive changes:
 
 - Prefer additive fields when possible.
