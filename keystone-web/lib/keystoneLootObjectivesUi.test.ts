@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const drawer = readFileSync(new URL('../app/characters/KeystoneLootObjectivesDrawer.tsx', import.meta.url), 'utf8')
 const charactersPage = readFileSync(new URL('../app/characters/page.tsx', import.meta.url), 'utf8')
+const sharedList = readFileSync(new URL('../app/components/KeystoneLootObjectiveList.tsx', import.meta.url), 'utf8')
 
 test('owner drawer uses a labelled modal dialog with close, focus, live and retry behavior', () => {
   assert.match(drawer, /<dialog/u)
@@ -36,9 +37,10 @@ test('Characters page exposes an exact-character dialog trigger without touching
 
 test('drawer renders loading, objective, icon fallback and every recoverable action path', () => {
   assert.match(drawer, /Cargando objetivos/u)
-  assert.match(drawer, /response\.objectives\.map/u)
-  assert.match(drawer, /objective\.iconUrl/u)
-  assert.match(drawer, /<svg/u)
+  assert.match(drawer, /KeystoneLootObjectiveList/u)
+  assert.match(sharedList, /objectives\.map/u)
+  assert.match(sharedList, /objective\.iconUrl/u)
+  assert.match(sharedList, /<svg/u)
   assert.match(drawer, /ownerObjectiveStatusMessage/u)
   assert.match(drawer, /formatObjectiveFreshness/u)
   assert.match(drawer, /response\.nextCursor/u)

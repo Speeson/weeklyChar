@@ -355,6 +355,17 @@ fields are ignored and malformed responses become a recoverable UI error. Dungeo
 filters and cursor pagination are sent back to Worker instead of being reconstructed from a
 bulk raw wishlist.
 
+V2-C consumes the distinct Team envelope from
+`GET /api/teams/:teamId/characters/:characterId/keystone-loot/objectives`. `available`
+contains only `updatedAt`, allowlisted objective DTOs, and `nextCursor`; the privacy/product
+statuses are `sharing_disabled`, `no_keystoneloot`, `unsupported`, and `no_targets`. The same
+strict item parser is reused, but Owner and Team status/envelope parsers remain separate.
+General Team filters send `challengeMapId` and `specId`; planner detail always sends the
+selected stone's challenge map and the recommended spec. Web drops unknown/raw fields and
+never consumes `favorites`, `characterKey`, `usedItems`, modifiers, or recommendation weights.
+On HTTP 403 it clears currently displayed objective rows before reporting membership/access
+loss.
+
 Keystone columns:
 
 - `keystones.character_id`

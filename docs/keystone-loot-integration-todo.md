@@ -102,7 +102,7 @@ display deduplication, Voidcore presentation states, Worker-side Blizzard item/m
 enrichment, and D1 migration `0004_keystone_loot_item_metadata.sql`. It does not expose raw
 snapshots or modify V1 scoring.
 
-## V2-B: owner objective UI — implemented for review
+## V2-B: owner objective UI — completed
 
 The Characters page now exposes `Ver objetivos` for each exact owned character. A native
 responsive dialog consumes only the allowlisted owner objective endpoint, runtime-validates
@@ -111,12 +111,21 @@ freshness data. Dungeon and specialization filters are server-authoritative, pag
 bounded at 50 records, and abort plus request identity guards reject stale character/filter
 responses. This phase does not add Team or Settings UI.
 
-Remaining phases:
+## V2-C: team objective visibility — implemented for review
 
-- **V2-C:** team objective visibility and stone-comparison UI, `Ver objetivos`, and the
-  Settings text `Compartir mis objetivos de KeystoneLoot con mis equipos` with description
-  `Permite que los miembros de tus equipos usen tus objetivos de KeystoneLoot para
-  planificar piedras y ver qué objetos necesitas en cada mazmorra.`
+The Team page now exposes allowlisted objectives for exact current-team characters through
+the Team endpoint. Recommended planner cards can open contextual objectives for the selected
+challenge map and recommended spec inside the existing planner dialog: desktop uses a side
+panel and mobile uses a `Volver` drill-in. General Team character rows use a separate native
+drawer with server-authoritative dungeon/spec filters and pagination.
+
+The existing `shareKeystoneLootWithTeams` field remains the only preference. It governs both
+aggregate recommendation participation and allowlisted objective details for current
+teammates. Web displays Worker-authoritative privacy/product states and clears rows on a 403;
+it does not infer authorization, scoring, identity, or Voidcore decisions.
+
+Remaining phase:
+
 - **V2-D:** full local E2E, release readiness, and separately authorized production work.
 
 ## V3: advanced planner — pending

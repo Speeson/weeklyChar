@@ -20,6 +20,7 @@ import {
   type TeamRecommendationsResponse,
 } from '@/lib/keystoneRecommendations'
 import { specName } from '@/lib/wowSpecs'
+import KeystonePlannerObjectivePanel, { type PlannerObjectiveTarget } from './KeystonePlannerObjectivePanel'
 
 type KeystonePlannerProps = {
   teamId: number
@@ -102,12 +103,22 @@ function StoneOption({
   )
 }
 
-function StatusCard({ member, currentUserId }: { member: MemberRecommendation; currentUserId: number }) {
+function StatusCard({
+  member,
+  currentUserId,
+  selected,
+  onViewObjectives,
+}: {
+  member: MemberRecommendation
+  currentUserId: number
+  selected: boolean
+  onViewObjectives: (member: MemberRecommendation, trigger: HTMLButtonElement) => void
+}) {
   if (member.status === 'recommended' && member.recommended) {
     const recommended = member.recommended
     const summary = formatRecommendationSummary(recommended.summary)
     return (
-      <article className="rounded-xl border border-yellow-500/30 bg-yellow-500/[0.06] p-4 shadow-lg shadow-black/20">
+      <article className={`rounded-xl border bg-yellow-500/[0.06] p-4 shadow-lg shadow-black/20 ${selected ? 'border-yellow-300 ring-1 ring-yellow-300/40' : 'border-yellow-500/30'}`}>
         <p className="text-xs font-bold uppercase tracking-wide text-yellow-300">{member.username}</p>
         <div className="mt-3 flex items-center gap-3">
           <Avatar url={recommended.avatarUrl} name={recommended.character} />
@@ -129,12 +140,20 @@ function StatusCard({ member, currentUserId }: { member: MemberRecommendation; c
               : `${recommended.summary.voidcoreExcluded} objetivos ya completados con Voidcore no cuentan para la recomendación.`}
           </p>
         )}
+        <button
+          type="button"
+          aria-pressed={selected}
+          onClick={event => onViewObjectives(member, event.currentTarget)}
+          className="mt-4 min-h-11 rounded-lg border border-yellow-500/40 px-3 text-xs font-bold text-yellow-200 transition hover:border-yellow-300 hover:bg-yellow-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+        >
+          Ver objetivos
+        </button>
       </article>
     )
   }
 
   const message = member.status === 'sharing_disabled'
-    ? 'Este miembro ha desactivado el uso de su wishlist de KeystoneLoot para equipos.'
+    ? 'Este miembro no comparte sus objetivos de KeystoneLoot con el equipo.'
     : member.status === 'no_keystoneloot'
       ? 'No hay datos compatibles de KeystoneLoot sincronizados para este miembro.'
       : 'No tiene objetivos pendientes de KeystoneLoot para esta mazmorra.'
@@ -170,6 +189,8 @@ export default function KeystonePlanner({
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const requestGeneration = useRef(0)
   const activeRequest = useRef<AbortController | null>(null)
+  const [objectiveTarget, setObjectiveTarget] = useState<PlannerObjectiveTarget | null>(null)
+  const [objectiveTrigger, setObjectiveTrigger] = useState<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -184,6 +205,7 @@ export default function KeystonePlanner({
   }, [])
 
   function closePlanner() {
+    setObjectiveTarget(null)
     setPlannerOpen(false)
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }
@@ -198,6 +220,7 @@ export default function KeystonePlanner({
     activeRequest.current = controller
     const generation = requestGeneration.current + 1
     requestGeneration.current = generation
+    setObjectiveTarget(null)
     setSelectedStone(stone)
     setRecommendations(null)
     onRecommendationsChange(null)
@@ -282,7 +305,7 @@ export default function KeystonePlanner({
             </button>
           </div>
 
-          <section className="mt-5" aria-labelledby="keystone-stones-title">
+          <section className={`mt-5 ${objectiveTarget ? 'hidden lg:block' : ''}`} aria-labelledby="keystone-stones-title">
             <h3 id="keystone-stones-title" className="font-bold text-gray-100">Elige una piedra del equipo</h3>
             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {stones.map(stone => (
@@ -298,7 +321,7 @@ export default function KeystonePlanner({
           </section>
 
           {selectedStone && (
-            <section className="mt-6 rounded-xl border border-gray-800 bg-gray-900/55 p-4" aria-labelledby="selected-stone-title">
+            <section className={`mt-6 rounded-xl border border-gray-800 bg-gray-900/55 p-4 ${objectiveTarget ? 'hidden lg:block' : ''}`} aria-labelledby="selected-stone-title">
               <p id="selected-stone-title" className="text-xs font-bold uppercase tracking-wide text-gray-500">Piedra seleccionada</p>
               <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
@@ -332,18 +355,47 @@ export default function KeystonePlanner({
                 </button>
               </div>
             )}
-            {!recommendationLoading && recommendations && (
-              <section aria-labelledby="recommendations-title">
-                <div className="mb-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-400">Resultado del servidor</p>
-                  <h3 id="recommendations-title" className="mt-1 text-xl font-black text-white">Composición recomendada</h3>
-                </div>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {recommendations.members.map(member => (
-                    <StatusCard key={member.userId} member={member} currentUserId={currentUserId} />
-                  ))}
-                </div>
-              </section>
+            {!recommendationLoading && recommendations && selectedStone && (
+              <div className={objectiveTarget ? 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]' : ''}>
+                <section aria-labelledby="recommendations-title" className={objectiveTarget ? 'hidden lg:block' : ''}>
+                  <div className="mb-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-400">Resultado del servidor</p>
+                    <h3 id="recommendations-title" className="mt-1 text-xl font-black text-white">Composición recomendada</h3>
+                  </div>
+                  <div className={`grid grid-cols-1 gap-3 ${objectiveTarget ? 'xl:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+                    {recommendations.members.map(member => (
+                      <StatusCard
+                        key={member.userId}
+                        member={member}
+                        currentUserId={currentUserId}
+                        selected={objectiveTarget?.characterId === member.recommended?.characterId}
+                        onViewObjectives={(targetMember, trigger) => {
+                          if (targetMember.status !== 'recommended' || !targetMember.recommended) return
+                          setObjectiveTrigger(trigger)
+                          setObjectiveTarget({
+                            memberUsername: targetMember.username,
+                            characterId: targetMember.recommended.characterId,
+                            character: targetMember.recommended.character,
+                            realm: targetMember.recommended.realm,
+                            specId: targetMember.recommended.specId,
+                            challengeMapId: selectedStone.challengeMapId,
+                            dungeonName: stoneDungeonName(selectedStone),
+                          })
+                        }}
+                      />
+                    ))}
+                  </div>
+                </section>
+                {objectiveTarget && (
+                  <KeystonePlannerObjectivePanel
+                    key={`${objectiveTarget.characterId}:${objectiveTarget.challengeMapId}:${objectiveTarget.specId}`}
+                    teamId={teamId}
+                    target={objectiveTarget}
+                    returnFocusElement={objectiveTrigger}
+                    onBack={() => setObjectiveTarget(null)}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>

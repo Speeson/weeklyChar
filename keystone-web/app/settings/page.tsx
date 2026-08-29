@@ -284,8 +284,8 @@ export default function SettingsPage() {
                 description="Controla cómo se usa tu wishlist de KeystoneLoot al planificar piedras con tus equipos."
               >
                 <ToggleRow
-                  label="Compartir mi wishlist de KeystoneLoot con mis equipos"
-                  description="Permite que KeystoneSync use tus objetivos de KeystoneLoot para recomendar qué personaje y especialización llevar a una piedra. Los objetos de tu wishlist no se muestran directamente a otros miembros."
+                  label="Compartir mis objetivos de KeystoneLoot con mis equipos"
+                  description="Permite que los miembros de tus equipos usen tus objetivos de KeystoneLoot para planificar piedras y ver qué objetos necesitas en cada mazmorra."
                   checked={shareKeystoneLootWithTeams ?? false}
                   onChange={updatePrivacy}
                   disabled={privacyLoading || privacySaving || shareKeystoneLootWithTeams === null}

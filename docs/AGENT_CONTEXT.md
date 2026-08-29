@@ -135,11 +135,14 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 Perform the Midnight Season 2 in-game addon smoke test, then coordinate the separately authorized KeystoneClient v0.6.0 and addon v0.2.0 releases.
 
 KeystoneLoot V2-A is committed locally on `feature/keystoneloot-v2-a` as
-`a99cedfa6e293a374cea3bfb77970443851ba975`. Its durable contract uses the existing
+`a99cedfa6e293a374cea3bfb77970443851ba975`; V2-B is committed as
+`d64db656dd7c3ebf513275b89c07416f7a880f7b`. The durable contract uses the existing
 `shareKeystoneLootWithTeams` preference for
 both recommendations and allowlisted same-team objective visibility, with live membership
 checks on every team request and no second privacy column. V2-A adds owner/team objective
 Worker routes and migration `0004_keystone_loot_item_metadata.sql` for Worker-side Blizzard
-item metadata caching. V2-B owner Web UI is implemented but uncommitted for review: the
-Characters page uses the allowlisted owner objective endpoint in a filtered, paginated,
-runtime-validated native dialog. V2-C/V2-D must not start without explicit authorization.
+item metadata caching. V2-B provides the owner drawer. V2-C Team Web UI is implemented but
+uncommitted for review: exact Team characters use the allowlisted Team objective endpoint;
+the existing planner shows contextual item details in the same dialog, and Settings describes
+the single toggle's aggregate-plus-detail sharing semantics. V2-D must not start without
+explicit authorization.

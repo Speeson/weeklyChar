@@ -37,6 +37,24 @@ export type OwnerObjectivesResponse = {
   nextCursor: string | null
 }
 
+export type TeamObjectivesStatus =
+  | 'available'
+  | 'sharing_disabled'
+  | 'no_keystoneloot'
+  | 'unsupported'
+  | 'no_targets'
+
+export type TeamObjectivesAvailableResponse = {
+  status: 'available'
+  updatedAt: number
+  objectives: KeystoneLootObjective[]
+  nextCursor: string | null
+}
+
+export type TeamObjectivesResponse = TeamObjectivesAvailableResponse | {
+  status: Exclude<TeamObjectivesStatus, 'available'>
+}
+
 export type ObjectiveFilters = {
   dungeonId: number | null
   specId: number | null
@@ -51,12 +69,25 @@ export type ObjectiveRequestIdentity = {
   generation: number
 }
 
+export type TeamObjectiveRequestIdentity = {
+  teamId: number
+  characterId: number
+  dungeonId: number | null
+  specId: number | null
+  cursor: string | null
+  generation: number
+}
+
 const STATUSES: readonly OwnerObjectivesStatus[] = [
   'available', 'empty', 'not_installed', 'not_ready', 'unsupported', 'unavailable',
 ]
 
 const VOIDCORE_STATES: readonly KeystoneLootVoidcoreState[] = [
   'pending', 'completed_with_voidcore', 'voidcore_not_checked',
+]
+
+const TEAM_STATUSES: readonly TeamObjectivesStatus[] = [
+  'available', 'sharing_disabled', 'no_keystoneloot', 'unsupported', 'no_targets',
 ]
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -141,6 +172,31 @@ export function parseOwnerObjectivesResponse(value: unknown): OwnerObjectivesRes
   }
 }
 
+export function parseTeamObjectivesResponse(value: unknown): TeamObjectivesResponse | null {
+  if (!isObject(value) || typeof value.status !== 'string'
+    || !TEAM_STATUSES.includes(value.status as TeamObjectivesStatus)) return null
+
+  const status = value.status as TeamObjectivesStatus
+  if (status !== 'available') {
+    if ('updatedAt' in value || 'objectives' in value || 'nextCursor' in value) return null
+    return { status }
+  }
+
+  if (!Number.isSafeInteger(value.updatedAt) || Number(value.updatedAt) < 0
+    || !Array.isArray(value.objectives)
+    || !(value.nextCursor === null || (typeof value.nextCursor === 'string'
+      && value.nextCursor.length > 0 && value.nextCursor.length <= 2048))) return null
+
+  const objectives = value.objectives.map(parseObjective)
+  if (objectives.some(objective => objective === null)) return null
+  return {
+    status: 'available',
+    updatedAt: Number(value.updatedAt),
+    objectives: objectives as KeystoneLootObjective[],
+    nextCursor: value.nextCursor,
+  }
+}
+
 export function tierPresentation(tier: number): { label: string, tone: string } {
   if (tier === 3) return { label: 'Best in Slot', tone: 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200' }
   if (tier === 2) return { label: 'Must have', tone: 'border-red-400/40 bg-red-500/10 text-red-200' }
@@ -186,6 +242,20 @@ export function ownerObjectiveStatusMessage(status: OwnerObjectivesStatus): stri
   return null
 }
 
+export function teamObjectiveStatusMessage(status: TeamObjectivesStatus): string | null {
+  if (status === 'sharing_disabled') return 'Este miembro no comparte sus objetivos de KeystoneLoot con el equipo.'
+  if (status === 'no_keystoneloot') return 'No hay datos de KeystoneLoot disponibles para este personaje.'
+  if (status === 'unsupported') return 'La versión de KeystoneLoot de este personaje no es compatible.'
+  if (status === 'no_targets') return 'No hay objetivos para esta mazmorra y especialización.'
+  return null
+}
+
+export function teamObjectiveRequestErrorMessage(reason: unknown): string {
+  return reason instanceof Error && !(reason instanceof TypeError)
+    ? reason.message
+    : 'No se pudieron cargar los objetivos.'
+}
+
 export function formatObjectiveFreshness(updatedAt: number, now = Math.floor(Date.now() / 1000)) {
   const age = Math.max(0, now - updatedAt)
   const relative = age < 60
@@ -215,6 +285,18 @@ export function buildOwnerObjectivesPath(characterId: number, filters: Objective
   return `/api/me/characters/${characterId}/keystone-loot/objectives?${query.toString()}`
 }
 
+export function buildTeamObjectivesPath(
+  teamId: number,
+  characterId: number,
+  filters: ObjectiveFilters,
+): string {
+  const query = new URLSearchParams({ limit: '50' })
+  if (filters.dungeonId !== null) query.set('challengeMapId', String(filters.dungeonId))
+  if (filters.specId !== null) query.set('specId', String(filters.specId))
+  if (filters.cursor) query.set('cursor', filters.cursor)
+  return `/api/teams/${teamId}/characters/${characterId}/keystone-loot/objectives?${query.toString()}`
+}
+
 export function createObjectiveRequestIdentity(
   characterId: number,
   dungeonId: number | null,
@@ -237,12 +319,45 @@ export function isObjectiveRequestCurrent(
     && request.generation === current.generation
 }
 
+export function createTeamObjectiveRequestIdentity(
+  teamId: number,
+  characterId: number,
+  dungeonId: number | null,
+  specId: number | null,
+  cursor: string | null,
+  generation: number,
+): TeamObjectiveRequestIdentity {
+  return { teamId, characterId, dungeonId, specId, cursor, generation }
+}
+
+export function isTeamObjectiveRequestCurrent(
+  request: TeamObjectiveRequestIdentity,
+  current: TeamObjectiveRequestIdentity | null,
+): boolean {
+  return current !== null
+    && request.teamId === current.teamId
+    && request.characterId === current.characterId
+    && request.dungeonId === current.dungeonId
+    && request.specId === current.specId
+    && request.cursor === current.cursor
+    && request.generation === current.generation
+}
+
 export function mergeObjectivePages(
   previous: OwnerObjectivesResponse | null,
   next: OwnerObjectivesResponse,
   append: boolean,
 ): OwnerObjectivesResponse {
   if (!append || !previous || next.status !== 'available') return next
+  return { ...next, objectives: [...previous.objectives, ...next.objectives] }
+}
+
+export function mergeTeamObjectivePages(
+  previous: TeamObjectivesResponse | null,
+  next: TeamObjectivesResponse,
+  append: boolean,
+): TeamObjectivesResponse {
+  if (!append || previous?.status !== 'available' || next.status !== 'available') return next
   return { ...next, objectives: [...previous.objectives, ...next.objectives] }
 }
 

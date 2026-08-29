@@ -144,6 +144,8 @@ Owns:
   planner using aggregate Worker recommendations.
 - Owner-only per-character KeystoneLoot objective presentation through the allowlisted
   owner endpoint, with Web-local response validation and server-backed filters/pagination.
+- Current-team KeystoneLoot objective presentation through the separate allowlisted Team
+  endpoint, including contextual details inside the existing stone planner dialog.
 
 Does not own:
 
@@ -325,6 +327,16 @@ a native responsive dialog for the exact character ID and calls
 and interaction state, while Worker remains authoritative for filtering, objective identity,
 Voidcore state, metadata enrichment, and authorization. Abort plus exact request identities
 prevent late character, filter, pagination, or closed-dialog responses from updating UI.
+
+KeystoneLoot V2-C adds two Team consumers without moving authorization into Web. Team
+character rows open a filtered/paginated native drawer. Recommended planner cards open the
+same allowlisted item presentation inside the existing planner dialog, constrained to the
+selected `challengeMapId` and recommended `specId`; desktop uses a side panel and mobile a
+drill-in view. Both call only
+`/api/teams/:teamId/characters/:characterId/keystone-loot/objectives`, accept the Team-specific
+status envelope, abort/invalidate stale work, and clear sensitive rows on a refreshed 403.
+The Worker still performs live membership, sharing, filtering, scoring, deduplication,
+Voidcore, metadata, and pagination decisions.
 
 The validated zero-downtime V1 production order is:
 
