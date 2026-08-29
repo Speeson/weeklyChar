@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       base_ref:
-        description: Optional base ref/SHA for changed-file detection.
+        description: Base ref/SHA for changed-file detection; required for manual Client release.
         required: false
         type: string
       head_ref:
@@ -50,9 +50,18 @@ on:
           - patch
           - minor
           - major
+      confirm_release_scope:
+        description: Confirm that base_ref/head_ref cover every change included in a manual Client release.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('keystonesync-validation-pr-{0}', github.event.pull_request.number) || 'keystonesync-production-orchestrator' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   impact:
@@ -66,6 +75,10 @@ jobs:
       client_release: ${{ steps.outputs.outputs.client_release }}
       addon: ${{ steps.outputs.outputs.addon }}
       addon_release: ${{ steps.outputs.outputs.addon_release }}
+      publish_client: ${{ steps.outputs.outputs.publish_client }}
+      deploy_worker: ${{ steps.outputs.outputs.deploy_worker }}
+      run_migrations: ${{ steps.outputs.outputs.run_migrations }}
+      worker_readiness_required: ${{ steps.outputs.outputs.worker_readiness_required }}
       unknown_paths: ${{ steps.outputs.outputs.unknown_paths }}
       changed_files: ${{ steps.outputs.outputs.changed_files }}
     steps:
@@ -125,6 +138,30 @@ jobs:
           python scripts/deploy_impact.py --stdin --json --strict --allow-empty < changed-files.txt > impact.json
           cat impact.json
 
+      - name: Plan release orchestration
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          AUTO_RELEASE_ENABLED: ${{ vars.TAURI_CLIENT_RELEASE_ENABLED == 'true' }}
+          INPUT_BASE_REF: ${{ inputs.base_ref }}
+          CLIENT_RELEASE_MODE: ${{ inputs.client_release_mode || 'auto' }}
+          DEPLOY_WORKER_REQUESTED: ${{ inputs.deploy_worker || false }}
+          RUN_MIGRATIONS_REQUESTED: ${{ inputs.run_migrations || false }}
+          CONFIRM_MANUAL_RELEASE_SCOPE: ${{ inputs.confirm_release_scope || false }}
+        run: |
+          python scripts/release_orchestration.py plan \
+            --impact-file impact.json \
+            --event-name "$EVENT_NAME" \
+            --ref "$EVENT_REF" \
+            --auto-release-enabled "$AUTO_RELEASE_ENABLED" \
+            --base-ref "$INPUT_BASE_REF" \
+            --client-release-mode "$CLIENT_RELEASE_MODE" \
+            --deploy-worker-requested "$DEPLOY_WORKER_REQUESTED" \
+            --run-migrations-requested "$RUN_MIGRATIONS_REQUESTED" \
+            --confirm-manual-release-scope "$CONFIRM_MANUAL_RELEASE_SCOPE" \
+            > orchestration.json
+          cat orchestration.json
+
       - name: Expose outputs
         id: outputs
         shell: bash
@@ -135,6 +172,8 @@ jobs:
 
           with open("impact.json", encoding="utf-8") as handle:
               impact = json.load(handle)
+          with open("orchestration.json", encoding="utf-8") as handle:
+              orchestration = json.load(handle)
           with open("changed-files.txt", encoding="utf-8") as handle:
               changed_files = [line.strip() for line in handle if line.strip()]
 
@@ -142,6 +181,8 @@ jobs:
           with open(output_path, "a", encoding="utf-8") as out:
               for key in ("web", "worker", "db", "client_build", "client_release", "addon", "addon_release"):
                   out.write(f"{key}={str(impact[key]).lower()}\n")
+              for key in ("publish_client", "deploy_worker", "run_migrations", "worker_readiness_required"):
+                  out.write(f"{key}={str(orchestration[key]).lower()}\n")
               out.write(f"unknown_paths={json.dumps(impact['unknown_paths'])}\n")
               out.write(f"changed_files={json.dumps(changed_files)}\n")
           PY
@@ -154,6 +195,10 @@ jobs:
             echo
             echo '```json'
             cat impact.json
+            echo '```'
+            echo
+            echo '```json'
+            cat orchestration.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -168,11 +213,11 @@ jobs:
   worker:
     name: Worker validation/deploy
     needs: impact
-    if: needs.impact.outputs.worker == 'true' || (github.event_name == 'workflow_dispatch' && (inputs.deploy_worker || inputs.run_migrations))
+    if: needs.impact.outputs.worker == 'true' || needs.impact.outputs.deploy_worker == 'true' || needs.impact.outputs.run_migrations == 'true'
     uses: ./.github/workflows/deploy-worker.yml
     with:
-      deploy: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_worker }}
-      run_migrations: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations }}
+      deploy: ${{ needs.impact.outputs.deploy_worker == 'true' }}
+      run_migrations: ${{ needs.impact.outputs.run_migrations == 'true' }}
     secrets: inherit
 
   client-build:
@@ -221,12 +266,36 @@ jobs:
     if: github.event_name == 'pull_request' && needs.impact.outputs.client_release == 'true'
     uses: ./.github/workflows/build-client.yml
 
+  release-gate:
+    name: Client publication backend gate
+    needs:
+      - impact
+      - worker
+    if: always() && needs.impact.result == 'success' && needs.impact.outputs.publish_client == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require backend readiness
+        env:
+          PUBLISH_CLIENT: ${{ needs.impact.outputs.publish_client }}
+          WORKER_READINESS_REQUIRED: ${{ needs.impact.outputs.worker_readiness_required }}
+          WORKER_RESULT: ${{ needs.worker.result }}
+          PRODUCTION_READY: ${{ needs.worker.outputs.production_ready || false }}
+        run: |
+          python scripts/release_orchestration.py require-readiness \
+            --publish-client "$PUBLISH_CLIENT" \
+            --worker-readiness-required "$WORKER_READINESS_REQUIRED" \
+            --worker-result "$WORKER_RESULT" \
+            --production-ready "$PRODUCTION_READY"
+
   client-release:
     name: Client release
-    needs: impact
-    if: >
-      (needs.impact.outputs.client_release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.TAURI_CLIENT_RELEASE_ENABLED == 'true') ||
-      (github.event_name == 'workflow_dispatch' && inputs.client_release_mode == 'release')
+    needs:
+      - impact
+      - release-gate
+    if: always() && needs.impact.outputs.publish_client == 'true' && needs.release-gate.result == 'success'
     permissions:
       contents: write
     uses: ./.github/workflows/release-client.yml
@@ -234,6 +303,7 @@ jobs:
     with:
       mode: release
       version_bump: ${{ inputs.client_version_bump || 'auto' }}
+      release_gate_passed: true
 
   client-release-dry-run:
     name: Client release dry-run
@@ -270,6 +340,7 @@ jobs:
       - client-build
       - client-release-pr
       - client-release-pr-build
+      - release-gate
       - client-release
       - client-release-dry-run
       - addon-impact
@@ -284,6 +355,7 @@ jobs:
           echo "Client build job: ${{ needs.client-build.result }}"
           echo "Client release plan job: ${{ needs.client-release-pr.result }}"
           echo "Client release dry-run build job: ${{ needs.client-release-pr-build.result }}"
+          echo "Client publication backend gate: ${{ needs.release-gate.result }}"
           echo "Client release job: ${{ needs.client-release.result }}"
           echo "Client manual dry-run job: ${{ needs.client-release-dry-run.result }}"
           echo "Addon handoff job: ${{ needs.addon-impact.result }}"

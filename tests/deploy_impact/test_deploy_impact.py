@@ -211,6 +211,7 @@ class DeployImpactTests(unittest.TestCase):
                 ".changes/releases/client-v0.3.0/release-notes.md",
                 ".changes/releases/client-v0.5.0/metadata.json",
                 "scripts/release_changes.py",
+                "scripts/release_orchestration.py",
                 "scripts/release_state.py",
             ],
             set(),

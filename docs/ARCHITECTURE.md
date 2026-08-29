@@ -175,9 +175,29 @@ Primary workflow files:
 
 - `.github/workflows/deploy.yml` - orchestrates impact calculation and selective workflow calls.
 - `.github/workflows/deploy-web.yml` - validates Web build/lint without duplicating Vercel deployment.
-- `.github/workflows/deploy-worker.yml` - validates Worker changes and supports guarded manual deploy/migrations.
+- `.github/workflows/deploy-worker.yml` - validates Worker changes, applies required D1 migrations before deployment, and exposes production readiness only after health and Selector-route smoke checks pass.
 - `.github/workflows/build-client.yml` - builds Client installer artifacts for build-only validation/orchestration with read-only permissions.
-- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and `release` modes; `deploy.yml` calls release mode on qualifying `main` pushes only while `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and gated `release` modes; only `deploy.yml` supplies the publication gate after required backend readiness.
+
+For a qualifying automatic Client release, `scripts/release_orchestration.py` converts the
+Deployment Impact result into explicit actions. Client-only changes remain independent. When the
+same release range includes Worker changes, the Worker must deploy and pass production smoke
+before publication; DB impact additionally forces migrations before deployment:
+
+```text
+D1 migrations (when DB=true)
+  -> Worker deploy
+  -> Worker production health + Selector authentication smoke
+  -> Client release gate
+  -> Client publication
+```
+
+Failure or cancellation before the gate prevents Client publication. Direct dispatch of
+`release-client.yml` cannot publish; manual publication/recovery uses `deploy.yml` from `main`
+with an explicitly confirmed complete impact range. Production `main`/manual orchestrator runs
+share a non-cancelable concurrency group, preventing separate release chains from interleaving;
+PR validation remains independently concurrent. Direct `deploy-worker.yml` dispatch validates
+only, so production migration/deploy/smoke has one orchestrator entrypoint.
 
 Standalone addon workflows are owned by `Speeson/KeystoneSync`. `weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML.
 
@@ -207,14 +227,15 @@ Local/deployment scripts are in `keystone-worker/package.json`:
 Production persistence is Cloudflare D1 database `keystone-sync`.
 
 The current schema is versioned through `keystone-worker/migrations/0001_initial.sql`
-and additive migrations `0002_keystone_loot.sql` and
-`0003_keystone_loot_sharing.sql`.
+and additive migrations `0002_keystone_loot.sql`, `0003_keystone_loot_sharing.sql`,
+`0004_keystone_loot_item_metadata.sql`, and
+`0005_keystone_loot_item_tooltip_metadata.sql`.
 
 ### Web
 
 The Web app consumes `NEXT_PUBLIC_API_URL`, with fallback `https://api-keystonesync.esgarpe.dev` in `keystone-web/lib/auth.ts`.
 
-The Web application is documented as deployed through Vercel. The exact external Vercel Git Integration ownership/configuration is not versioned in this repository.
+The Web application is documented as deployed through Vercel. The exact external Vercel Git Integration ownership/configuration is not versioned in this repository, and no checked-in deployment status, revision endpoint, or workflow output proves that a given Web revision is live. Web production verification therefore remains operational rather than an automatic Client-release dependency.
 
 ### Client
 
@@ -237,7 +258,7 @@ Python domain services
 - React owns update state and presentation through a typed controller; the official Tauri updater plugin owns signed download and installation, and the process plugin owns relaunch. The Python sidecar is not an application updater.
 - Release signing material is injected only in CI. `TAURI_SIGNING_PRIVATE_KEY` and its optional password remain secret; the production public verification key is committed in `keystone-client/src-tauri/tauri.conf.json`.
 - The canonical release assets are `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig`, and `latest.json`. The manifest uses platform key `windows-x86_64` and endpoint `https://github.com/Speeson/weeklyChar/releases/latest/download/latest.json`.
-- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` remains gated by `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, gated `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` remains gated by `TAURI_CLIENT_RELEASE_ENABLED=true` and, when backend impact exists, successful D1/Worker readiness. The Client runtime calls the Worker API directly through its sidecar; it does not require the Web deployment to use Teams or the Stone Selector.
 - `%APPDATA%\KeystoneClient` remains owned by the Python sidecar and is not removed by the Tauri application. The retained NSIS hook supports direct migration from the public Inno 0.3.0 AppId, fails closed if legacy uninstall fails, preserves AppData and migrates legacy autostart.
 
 ### Addon

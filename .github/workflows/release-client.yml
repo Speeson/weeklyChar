@@ -13,6 +13,11 @@ on:
         required: false
         default: auto
         type: string
+      release_gate_passed:
+        description: Set only by Deploy Orchestrator after required backend readiness succeeds.
+        required: false
+        default: false
+        type: boolean
     secrets:
       TAURI_SIGNING_PRIVATE_KEY:
         required: false
@@ -21,14 +26,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: build-only, release-dry-run, or release.
+        description: Direct runs validate only. Publication must run through Deploy Orchestrator.
         required: true
         default: release-dry-run
         type: choice
         options:
           - build-only
           - release-dry-run
-          - release
       version_bump:
         description: auto, patch, minor, or major.
         required: true
@@ -68,6 +72,9 @@ jobs:
           }
           if ("${{ github.event_name }}" -eq "pull_request" -and "${{ inputs.mode }}" -eq "release") {
             throw "Pull requests must never publish releases."
+          }
+          if ("${{ inputs.mode }}" -eq "release" -and "${{ inputs.release_gate_passed }}" -ne "true") {
+            throw "Publication must run through Deploy Orchestrator after backend readiness succeeds."
           }
           if ("${{ inputs.mode }}" -ne "build-only") {
             if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {

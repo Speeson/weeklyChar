@@ -13,23 +13,21 @@ on:
         required: false
         default: false
         type: boolean
+      smoke_base_url:
+        description: Production Worker base URL used after deployment.
+        required: false
+        default: https://api-keystonesync.esgarpe.dev
+        type: string
+    outputs:
+      production_ready:
+        description: True only after the deployed production API passes its smoke checks.
+        value: ${{ jobs.smoke.outputs.production_ready }}
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: false
       CLOUDFLARE_ACCOUNT_ID:
         required: false
   workflow_dispatch:
-    inputs:
-      deploy:
-        description: Deploy the Worker after validation.
-        required: false
-        default: false
-        type: boolean
-      run_migrations:
-        description: Run remote D1 migrations before Worker deploy.
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -126,3 +124,41 @@ jobs:
 
       - name: Deploy Worker
         run: npm run deploy
+
+  smoke:
+    name: Smoke production Worker
+    needs: deploy
+    if: inputs.deploy && always() && needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      production_ready: ${{ steps.ready.outputs.production_ready }}
+    env:
+      WORKER_BASE_URL: ${{ inputs.smoke_base_url }}
+    steps:
+      - name: Verify health and Selector authentication boundary
+        id: ready
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_url="${WORKER_BASE_URL%/}"
+          if [[ "$base_url" != https://* ]]; then
+            echo "Worker smoke URL must use HTTPS." >&2
+            exit 1
+          fi
+
+          health_status="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 --output health.json --write-out '%{http_code}' "$base_url/api/health")"
+          if [[ "$health_status" != "200" ]]; then
+            cat health.json >&2
+            echo "Unexpected Worker health status: $health_status" >&2
+            exit 1
+          fi
+          python -c "import json; payload=json.load(open('health.json', encoding='utf-8')); assert payload.get('status') == 'ok' and payload.get('service') == 'keystone-worker', payload"
+
+          selector_status="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 --output selector.json --write-out '%{http_code}' "$base_url/api/teams/1/keystone-loot/dungeons/249/summary")"
+          if [[ "$selector_status" != "401" ]]; then
+            cat selector.json >&2
+            echo "Selector route was not recognized behind its authentication boundary: $selector_status" >&2
+            exit 1
+          fi
+          python -c "import json; payload=json.load(open('selector.json', encoding='utf-8')); assert isinstance(payload.get('detail'), str) and payload['detail'], payload"
+          echo "production_ready=true" >> "$GITHUB_OUTPUT"

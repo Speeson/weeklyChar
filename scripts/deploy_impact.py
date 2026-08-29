@@ -204,6 +204,7 @@ def is_known_no_impact(path: str) -> bool:
         "scripts/check_addon_sync.py",
         "scripts/deploy_impact.py",
         "scripts/release_changes.py",
+        "scripts/release_orchestration.py",
         "scripts/release_state.py",
         "scripts/sync_addon.py",
         "scripts/validate_addon.py",

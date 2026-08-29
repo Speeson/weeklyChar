@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def workflow_job(workflow: str, job_name: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(job_name)}:\r?\n(.*?)(?=^  [a-zA-Z0-9_-]+:\r?\n|\Z)",
+        workflow,
+    )
+    if match is None:
+        raise AssertionError(f"Workflow job not found: {job_name}")
+    return match.group(0)
 
 
 class TauriWorkflowContractTests(unittest.TestCase):
@@ -183,7 +194,72 @@ class TauriWorkflowContractTests(unittest.TestCase):
         )
         self.assertGreaterEqual(workflow.count("secrets: inherit"), 2)
         self.assertIn("vars.TAURI_CLIENT_RELEASE_ENABLED == 'true'", workflow)
-        self.assertIn("inputs.client_release_mode == 'release'", workflow)
+        self.assertIn("release_orchestration.py plan", workflow)
+
+    def test_deploy_graph_gates_client_publication_on_worker_readiness(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
+            encoding="utf-8"
+        )
+
+        worker = workflow_job(workflow, "worker")
+        release_gate = workflow_job(workflow, "release-gate")
+        client_release = workflow_job(workflow, "client-release")
+
+        self.assertIn("needs.impact.outputs.deploy_worker", worker)
+        self.assertIn("needs:\n      - impact\n      - worker", release_gate)
+        self.assertIn("release_orchestration.py require-readiness", release_gate)
+        self.assertIn("needs.worker.outputs.production_ready", release_gate)
+        self.assertIn("needs:\n      - impact\n      - release-gate", client_release)
+        self.assertIn("release_gate_passed: true", client_release)
+
+    def test_worker_deploy_runs_migration_then_production_smoke(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy-worker.yml").read_text(
+            encoding="utf-8"
+        )
+
+        deploy = workflow_job(workflow, "deploy")
+        smoke = workflow_job(workflow, "smoke")
+
+        self.assertIn("- migrate", deploy)
+        self.assertIn("needs: deploy", smoke)
+        self.assertIn("/api/health", smoke)
+        self.assertIn(
+            "/api/teams/1/keystone-loot/dungeons/249/summary",
+            smoke,
+        )
+        self.assertIn('"401"', smoke)
+        self.assertIn("production_ready=true", smoke)
+
+    def test_direct_client_workflow_cannot_publish_without_orchestrator_gate(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "release-client.yml").read_text(
+            encoding="utf-8"
+        )
+
+        dispatch = workflow.split("workflow_dispatch:", 1)[1].split("permissions:", 1)[0]
+        self.assertNotIn("          - release\n", dispatch)
+        self.assertIn("release_gate_passed", workflow)
+        self.assertIn("Publication must run through Deploy Orchestrator", workflow)
+
+    def test_production_orchestrator_serializes_complete_release_chains(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
+            encoding="utf-8"
+        )
+
+        pre_jobs = workflow.split("jobs:", 1)[0]
+        self.assertIn("keystonesync-production-orchestrator", pre_jobs)
+        self.assertIn("cancel-in-progress:", pre_jobs)
+
+    def test_direct_worker_dispatch_is_validation_only(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy-worker.yml").read_text(
+            encoding="utf-8"
+        )
+
+        call_inputs, dispatch = workflow.split("workflow_dispatch:", 1)
+        dispatch = dispatch.split("permissions:", 1)[0]
+        self.assertIn("deploy:", call_inputs)
+        self.assertIn("run_migrations:", call_inputs)
+        self.assertNotIn("deploy:", dispatch)
+        self.assertNotIn("run_migrations:", dispatch)
 
 
 if __name__ == "__main__":

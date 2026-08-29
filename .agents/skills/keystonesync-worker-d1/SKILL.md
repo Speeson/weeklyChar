@@ -74,6 +74,7 @@ Once Deployment Impact exists, use it to determine whether Worker and/or DB depl
 Versioned workflow:
 
 - `.github/workflows/deploy-worker.yml` validates Worker changes with `npm run typecheck` and `npm test`.
-- Worker production deploy uses `npm run deploy` only behind manual workflow input.
-- Remote D1 migrations use `npm run d1:migrate:remote` only behind manual workflow input and the `production` environment.
+- Direct dispatch of `.github/workflows/deploy-worker.yml` validates only. Production migration/deploy/smoke is requested through `.github/workflows/deploy.yml` so one orchestrator owns ordering and concurrency.
+- Independent Worker operations remain explicit manual inputs on the orchestrator. A qualifying automatic Client release with Worker/DB impact forces D1 migrations, Worker deploy, and production smoke before Client publication.
+- Remote D1 migrations use `npm run d1:migrate:remote` and the `production` environment. The deployed Worker must then pass health plus unauthenticated Selector-route authentication-boundary smoke.
 - Required GitHub secrets are `CLOUDFLARE_API_TOKEN` and, when Wrangler cannot infer it, `CLOUDFLARE_ACCOUNT_ID`.
