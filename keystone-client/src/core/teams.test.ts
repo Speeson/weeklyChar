@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { coreRequest } from "./client";
+import type { KeystoneSelectorObjective } from "./types";
 import {
   getKeystoneSelector,
   getTeam,
@@ -7,12 +8,15 @@ import {
   parseKeystoneSelector,
   parseTeamDetail,
   parseTeamList,
+  groupSelectorObjectives,
+  selectorObjectivesForSpec,
+  teamStoneCounts,
 } from "./teams";
 
 vi.mock("./client", () => ({ coreRequest: vi.fn() }));
 
 const tiers = { bestInSlot: 1, mustHave: 0, niceToHave: 0, catalyst: 0, transmog: 0, other: 1 };
-const objective = {
+const objective: KeystoneSelectorObjective = {
   itemId: 12345, itemName: "Báculo", iconUrl: "https://cdn.test/item.jpg", tier: 99,
   specIds: [62], sourceType: "dungeon", sourceId: 588, slotId: 16, slotName: "Mano principal",
   itemClassName: "Arma", itemSubClassName: "Báculo", statNames: ["Intelecto", "Celeridad"],
@@ -90,5 +94,26 @@ describe("Teams core bridge", () => {
     await expect(listTeams()).rejects.toMatchObject({ code: "INVALID_TEAM_RESPONSE" });
     await expect(getTeam(7)).rejects.toMatchObject({ code: "INVALID_TEAM_RESPONSE" });
     await expect(getKeystoneSelector(7, 588)).rejects.toMatchObject({ code: "INVALID_SELECTOR_RESPONSE" });
+  });
+
+  it("derives Team stone counts without aggregate fan-out", () => {
+    const counts = teamStoneCounts({ id: 7, name: "Raid", members: [{ userId: 1, username: "one", characters: [
+      { characterId: 1, name: "A", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 10, challengeMapId: 399, dungeon: null } },
+      { characterId: 2, name: "B", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 8, challengeMapId: 399, dungeon: null } },
+    ] }] });
+    expect(counts.get(399)).toBe(2);
+    expect(counts.get(585)).toBeUndefined();
+  });
+
+  it("filters specs and separates future tiers from completed Voidcore", () => {
+    const items: KeystoneSelectorObjective[] = [
+      { ...objective, itemId: 1, tier: 3, specIds: [62, 64] },
+      { ...objective, itemId: 2, tier: 99, specIds: [64] },
+      { ...objective, itemId: 3, tier: 2, specIds: [62], voidcoreState: "completed_with_voidcore" },
+    ];
+    expect(selectorObjectivesForSpec(items, 62).map(item => item.itemId)).toEqual([1, 3]);
+    const grouped = groupSelectorObjectives(items);
+    expect(grouped.groups.map(group => group.key)).toEqual(["bestInSlot", "other"]);
+    expect(grouped.completed.map(item => item.itemId)).toEqual([3]);
   });
 });

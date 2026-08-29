@@ -541,6 +541,21 @@ states are rejected. Access and sync tokens, invite codes, WoW account names, va
 KeystoneLoot, `bonusIds`, gems, enchants, and raw error payloads remain below or outside the React
 boundary.
 
+Stone Selector S5 consumes these safe Client DTOs without widening them. `TeamsPage` receives a
+`TeamsDataSource` whose production implementation calls only `teams.list`, `teams.get`, and
+`teams.keystone_selector`; it does not perform browser HTTP or access credentials. The eight
+pre-selection availability counts are a local projection of `teams.get` current keystones keyed by
+`challengeMapId`, so selecting one dungeon produces exactly one aggregate request. Server summary
+values and character order remain authoritative. Local spec filtering deduplicates nothing and
+does not alter top-level totals; completed Voidcore items are only separated for presentation.
+Preview fixtures implement the same safe interface and remain development-only.
+
+The Client tooltip renders only `itemName`, `iconUrl`, slot/class/subclass names, bounded stat
+names, source, spec IDs, tier, and Voidcore state. It omits absent rows, falls back to
+`Objeto #<itemId>` and a generic icon, and never displays numeric stat quantities. Client-local
+Season 2 IDs duplicate the verified Web/Worker display allowlists intentionally; shared-package
+consolidation remains deferred.
+
 The reusable Web item tooltip consumes only the public objective allowlist (`itemName`, `iconUrl`,
 slot/class/subclass names, bounded `statNames`, source, spec IDs, tier, and Voidcore state). Missing
 metadata degrades to `Objeto #<itemId>`, a generic icon, and an explicit unavailable-metadata hint;

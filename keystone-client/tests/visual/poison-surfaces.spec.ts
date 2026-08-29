@@ -103,7 +103,7 @@ test("Poison tabs use only a soft edgeless glow for selected and hover states", 
   await page.goto("/?preview=sync-success");
 
   const selected = page.locator('[data-ui="shell-tab"][data-state="selected"]');
-  const idle = page.locator('[data-ui="shell-tab"][data-state="default"]');
+  const idle = page.getByRole("button", { name: "Addon" });
 
   const readTreatment = (element: HTMLElement) => {
     const styles = getComputedStyle(element);

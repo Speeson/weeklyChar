@@ -5,6 +5,52 @@ import type {
   KeystoneSelectorSpec, KeystoneSelectorStone, KeystoneSelectorTierCounts,
 } from "./types";
 
+export type TeamsDataSource = {
+  listTeams: typeof listTeams;
+  getTeam: typeof getTeam;
+  getKeystoneSelector: typeof getKeystoneSelector;
+};
+
+export const liveTeamsDataSource: TeamsDataSource = { listTeams, getTeam, getKeystoneSelector };
+
+export type SelectorObjectiveGroup = {
+  key: "bestInSlot" | "mustHave" | "niceToHave" | "catalyst" | "transmog" | "other";
+  tier: number | null;
+  objectives: KeystoneSelectorObjective[];
+};
+
+const OBJECTIVE_GROUPS: ReadonlyArray<Omit<SelectorObjectiveGroup, "objectives">> = [
+  { key: "bestInSlot", tier: 3 }, { key: "mustHave", tier: 2 }, { key: "niceToHave", tier: 1 },
+  { key: "catalyst", tier: 5 }, { key: "transmog", tier: 4 }, { key: "other", tier: null },
+];
+
+export function teamStoneCounts(team: ClientTeamDetail): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const member of team.members) for (const character of member.characters) {
+    const id = character.currentKeystone?.challengeMapId;
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function selectorObjectivesForSpec(
+  objectives: readonly KeystoneSelectorObjective[], specId: number | null,
+): KeystoneSelectorObjective[] {
+  return objectives.filter(objective => specId === null || objective.specIds.includes(specId));
+}
+
+export function groupSelectorObjectives(objectives: readonly KeystoneSelectorObjective[]): {
+  groups: SelectorObjectiveGroup[]; completed: KeystoneSelectorObjective[];
+} {
+  const actionable = objectives.filter(objective => objective.voidcoreState !== "completed_with_voidcore");
+  return {
+    groups: OBJECTIVE_GROUPS.map(group => ({ ...group, objectives: actionable.filter(objective =>
+      group.tier === null ? ![1, 2, 3, 4, 5].includes(objective.tier) : objective.tier === group.tier,
+    ) })).filter(group => group.objectives.length > 0),
+    completed: objectives.filter(objective => objective.voidcoreState === "completed_with_voidcore"),
+  };
+}
+
 const VOIDCORE_STATES = ["pending", "completed_with_voidcore", "voidcore_not_checked"] as const;
 
 function error(code: string, message: string): CoreError {

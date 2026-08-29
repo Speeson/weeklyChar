@@ -166,13 +166,29 @@ const previews: Record<string, SystemState> = {
     lastSyncAt: "2026-08-22T12:00:00Z",
     lastError: "No se pudo contactar con KeystoneSync API.",
   }),
+  "teams-default": baseState(),
+  "teams-multiple": baseState(),
+  "teams-empty": baseState(),
+  "teams-selector-full": baseState(),
+  "teams-selector-multispec": baseState(),
+  "teams-selector-empty": baseState(),
+  "teams-selector-loading": baseState(),
+  "teams-selector-error": baseState(),
 };
+
+export function isTeamsPreview(): boolean {
+  return import.meta.env.DEV && new URLSearchParams(window.location.search).get("preview")?.startsWith("teams-") === true;
+}
 
 export function getPreviewState(): SystemState | null {
   if (!import.meta.env.DEV) {
     return null;
   }
 
-  const preview = new URLSearchParams(window.location.search).get("preview");
-  return preview ? previews[preview] ?? null : null;
+  const params = new URLSearchParams(window.location.search);
+  const preview = params.get("preview");
+  const state = preview ? previews[preview] ?? null : null;
+  return state && params.get("lang") === "en"
+    ? { ...state, settings: { ...state.settings, lang: "en" } }
+    : state;
 }

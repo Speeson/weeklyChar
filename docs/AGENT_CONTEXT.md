@@ -149,8 +149,8 @@ route through a strict parser and abort/generation guards, and renders compact s
 character summaries with multi-spec filtering and grouped item grids. A shared portal tooltip
 applies S2 safe metadata to Selector, owner, and Team objective items on hover/focus/click/tap.
 The exposed legacy Team planner UI and its visual components are removed; the disabled
-`Planificar piedra · Próximamente` tab documents the future feature boundary. S4 Client bridge,
-S5 Client Teams UI, and composition planning remain deferred.
+`Planificar piedra · Próximamente` tab documents the future feature boundary. S4 and S5 carry
+the same safe aggregate flow into KeystoneClient; composition planning remains deferred.
 
 Stone Selector S4 adds the Client data/bridge layer only. The additive protocol-v1 commands are
 `teams.list`, `teams.get`, and `teams.keystone_selector`, mapped respectively to the existing
@@ -158,8 +158,18 @@ Worker Team list, Team detail, and aggregate dungeon summary endpoints. Rust kee
 allowlist; the Python sidecar owns the authenticated HTTP session and safe response projection;
 and TypeScript validates the projected DTO again. No token, invite code, raw KeystoneLoot, vault,
 or WoW account field reaches React. The Worker does not expose a member-profile avatar, so the
-Client member DTO intentionally omits it. Preview remains startup-state-only, and all visible
-Teams navigation/presentation remains S5 work.
+Client member DTO intentionally omits it.
+
+Stone Selector S5 adds the first-class Client `Equipos` / `Teams` page. It derives all eight
+Season 2 stone counts from one Team-detail response, requests only the selected dungeon through
+the S4 bridge, rejects stale results by generation, and returns expired sessions to the existing
+login flow. The Poison-aligned page keeps the member dashboard compact, preserves Worker order,
+supports multi-spec filtering and ordered item grids, and separates completed Voidcore items.
+Its body-portal tooltip uses safe S2 metadata only and accounts for the fixed Client scale.
+Deterministic `teams-*` preview data sources cover single/multiple/no Team plus populated,
+multi-spec, empty, loading, and error Selector states. The disabled Planner remains future work.
+Web, Worker, and Client intentionally retain small local Season 2 display allowlists until a
+separate shared-build-boundary decision is approved.
 
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,

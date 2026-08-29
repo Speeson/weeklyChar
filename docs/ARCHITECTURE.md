@@ -362,8 +362,8 @@ semantic tier grids, and a subdued completed-Voidcore disclosure. A shared porta
 `KeystoneLootItemTooltip` now presents the S2 safe metadata on Selector tiles and the existing
 owner/Team objective rows. It supports hover, keyboard focus, click/tap, outside dismissal, and
 Escape without exposing numeric stats. The prior `KeystonePlanner` visual components are removed;
-non-visual recommendation helpers remain isolated for the deferred planner. Client Teams and the
-composition planner remain later phases.
+non-visual recommendation helpers remain isolated for the deferred planner. The Client Teams
+counterpart is implemented in S5; the composition planner remains deferred.
 
 Stone Selector S4 adds the Client data path without adding the Teams UI. React calls the typed
 `teams.list`, `teams.get`, and `teams.keystone_selector` core wrappers; Rust accepts only those
@@ -373,7 +373,24 @@ TypeScript validates them again, so bearer/sync tokens, invite codes, account na
 KeystoneLoot, vault data, and raw error bodies never enter the WebView. The protocol remains at
 version 1 because capability additions are backward-compatible. The Worker Team detail does not
 provide a member-profile avatar, so the Client member DTO intentionally omits one and retains only
-per-character avatars. S5 owns all visible Teams navigation and presentation.
+per-character avatars.
+
+Stone Selector S5 adds `TeamsPage` as a full Client shell route between Sync and Addon. React
+depends on an injected `TeamsDataSource`; production delegates exclusively to the S4 typed bridge,
+while development previews inject deterministic in-memory fixtures from `core/teamsPreview.ts`.
+The page obtains Team list and detail once per selection, derives the eight rail counts locally,
+and requests only the explicitly selected dungeon. Request generations prevent late Team-detail
+or Selector responses from replacing newer state. Session expiration is handed back to `App` and
+the existing login flow.
+
+The fixed-frame layout contains a bounded horizontal member dashboard and an independently
+scrollable Selector panel paired with an eight-entry vertical dungeon rail. The selected dungeon
+and objectives panel remain separate rounded rectangles with a clean gap between them. Character
+cards preserve Worker order and expose optional local spec filters, ordered actionable tier groups,
+and a separate completed-Voidcore disclosure. `TeamItemTooltip` renders through `document.body` to
+avoid scroll clipping and converts fixed-canvas coordinates using the active Client scale. It
+accepts only the safe S2 tooltip projection and never renders numeric stat values. The Planner
+control is visible but disabled and is not connected to recommendations.
 
 KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
 the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local
