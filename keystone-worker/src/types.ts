@@ -5,6 +5,19 @@ export type Env = {
   EMAIL_FROM?: string
   WEB_BASE_URL?: string
   ALLOWED_ORIGINS?: string
+  BLIZZARD_CLIENT_ID?: string
+  BLIZZARD_CLIENT_SECRET?: string
+}
+
+export type WowItemMetadataRow = {
+  region: string
+  locale: string
+  item_id: number
+  name: string | null
+  icon_url: string | null
+  status: string
+  fetched_at: number
+  refresh_after: number
 }
 
 export type UserRow = {

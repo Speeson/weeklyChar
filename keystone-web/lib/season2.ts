@@ -34,7 +34,7 @@ export const DUNGEON_FULL_NAME_BY_ABBR = new Map(
   MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => [dungeon.abbr, dungeon.name]),
 )
 
-const DUNGEON_FULL_NAME_BY_ID = new Map(
+export const DUNGEON_NAME_BY_ID = new Map(
   MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => [dungeon.id, dungeon.name]),
 )
 
@@ -47,6 +47,6 @@ export function compactKeystoneLabel(key: KeystoneLabelInput | null | undefined)
 
 export function fullKeystoneLabel(key: KeystoneLabelInput | null | undefined) {
   if (!key?.level) return '—'
-  const idName = key.challengeMapId ? DUNGEON_FULL_NAME_BY_ID.get(key.challengeMapId) : null
+  const idName = key.challengeMapId ? DUNGEON_NAME_BY_ID.get(key.challengeMapId) : null
   return `+${key.level} ${key.dungeon ?? idName ?? `ID ${key.challengeMapId}`}`
 }

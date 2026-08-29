@@ -31,7 +31,8 @@ Primary files:
 - Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
-- D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`
+- D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`,
+  `0003_keystone_loot_sharing.sql`, and `0004_keystone_loot_item_metadata.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -300,7 +301,8 @@ Write response:
 
 Schema source: `keystone-worker/migrations/0001_initial.sql` plus additive migrations
 `keystone-worker/migrations/0002_keystone_loot.sql` and
-`keystone-worker/migrations/0003_keystone_loot_sharing.sql`.
+`keystone-worker/migrations/0003_keystone_loot_sharing.sql`, and
+`keystone-worker/migrations/0004_keystone_loot_item_metadata.sql`.
 
 Tables:
 
@@ -313,6 +315,7 @@ Tables:
 | `team_members` | User/team memberships. |
 | `team_invitations` | Pending/accepted/declined invitations. |
 | `rate_limits` | Rate-limit attempt JSON by key. |
+| `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced display names and icon URLs. |
 
 Character sync columns:
 
@@ -333,9 +336,35 @@ Character sync columns:
 
 KeystoneLoot team sharing is stored as
 `users.share_keystone_loot_with_teams INTEGER NOT NULL DEFAULT 1`. The API converts this
-integer to boolean `shareKeystoneLootWithTeams`: `1` enables recommendation use and `0`
-excludes the user's wishlist from team recommendations, including requests made by that
-same user.
+integer to boolean `shareKeystoneLootWithTeams`: `1` enables aggregate recommendation use
+and allowlisted objective visibility to current members of the same requested team. `0`
+excludes the user from recommendation calculation and makes the team objective endpoint
+return only `sharing_disabled`. Owner access is unaffected. There is no second
+details-sharing preference or column.
+
+`wow_item_metadata` uses primary key `(region, locale, item_id)` and stores nullable `name`
+and `icon_url`, a cache `status`, and Unix-second `fetched_at`/`refresh_after` values. It
+contains display metadata only; it does not change objective identity or persist team
+authorization.
+
+The V2-B owner Web view consumes the allowlisted
+`GET /api/me/characters/:characterId/keystone-loot/objectives` DTO rather than interpreting
+the raw owner `keystoneLoot` block. Its runtime parser accepts only the documented statuses,
+snapshot shape, objective fields, Voidcore states, and opaque cursor; unknown additive
+fields are ignored and malformed responses become a recoverable UI error. Dungeon/spec
+filters and cursor pagination are sent back to Worker instead of being reconstructed from a
+bulk raw wishlist.
+
+V2-C consumes the distinct Team envelope from
+`GET /api/teams/:teamId/characters/:characterId/keystone-loot/objectives`. `available`
+contains only `updatedAt`, allowlisted objective DTOs, and `nextCursor`; the privacy/product
+statuses are `sharing_disabled`, `no_keystoneloot`, `unsupported`, and `no_targets`. The same
+strict item parser is reused, but Owner and Team status/envelope parsers remain separate.
+General Team filters send `challengeMapId` and `specId`; planner detail always sends the
+selected stone's challenge map and the recommended spec. Web drops unknown/raw fields and
+never consumes `favorites`, `characterKey`, `usedItems`, modifiers, or recommendation weights.
+On HTTP 403 it clears currently displayed objective rows before reporting membership/access
+loss.
 
 Keystone columns:
 
@@ -419,8 +448,59 @@ Privacy and recommendation endpoints:
 - Privacy filtering precedes character loading and snapshot parsing. Disabled members
   return only `sharing_disabled` with `recommended: null`; no wishlist-derived counts,
   scores, items, or specs are calculated or exposed.
-- Enabled members use only stored JSON that passes the V1-B validator as a supported API
-  v2 snapshot. Missing, malformed, and unavailable snapshots are ignored safely.
+- Enabled recommendation members use only stored JSON that passes the V1-B validator as a
+  supported API v2 snapshot. Missing, malformed, and unavailable snapshots are ignored safely.
+
+Objective presentation endpoints:
+
+- `GET /api/me/characters/:characterId/keystone-loot/objectives` requires normal JWT
+  authentication and exact ownership. It remains available when the owner's team-sharing
+  preference is false. Optional `sourceType`, `sourceId`, `specId`, `cursor`, and `limit`
+  filters are server-side; `sourceId` requires an explicit namespace-bearing `sourceType`.
+- `GET /api/teams/:teamId/characters/:characterId/keystone-loot/objectives` requires normal
+  JWT authentication. Every request checks requester membership in `teamId`, resolves the
+  character owner, checks that owner's membership in the same `teamId`, then checks the
+  owner's existing sharing preference before loading/parsing the stored snapshot. Optional
+  `challengeMapId`, `specId`, `cursor`, and `limit` filters are server-side. A challenge map
+  matches only numeric `sourceId` values with `sourceType="dungeon"`.
+- Default page size is 50 and maximum is 100. Cursors are opaque, validated, stable-order
+  offsets bound to the active filters and page size.
+
+The public objective allowlist is:
+
+```ts
+{
+  itemId: number
+  itemName: string | null
+  iconUrl: string | null
+  tier: number
+  specId: number
+  sourceType: string
+  sourceId: number | string
+  slotId: number | null
+  voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
+}
+```
+
+The team route never exposes `keystoneLoot`, `favorites`, `characterKey`, `usedItems`,
+modifiers, unknown additive fields, raw JSON, or recommendation weights. Team statuses are
+`available`, `sharing_disabled`, `no_keystoneloot`, `unsupported`, and `no_targets`.
+Owner statuses are `available`, `empty`, `not_installed`, `not_ready`, `unsupported`, and
+`unavailable`. When Voidcore is unchecked, presentation is always
+`voidcore_not_checked`; it is not inferred to be pending.
+
+Display identity within one character is `(specId, sourceType, sourceId, itemId)`. Exact
+duplicates choose the deterministic best tier using the same exported V1 tier-weight
+helper, without changing recommendation scoring. Different specs and sources remain
+separate.
+
+Blizzard enrichment is Worker-only. Region is restricted to `eu`, `us`, `kr`, or `tw`
+with `eu` fallback; initial locale is `es_ES`; endpoints use `static-{region}`. Only unique
+item IDs from the current page are cache-read/refreshed with at most four concurrent item
+pipelines. Positive metadata has a 30-day TTL, confirmed 404 metadata a six-hour TTL, and
+429 `Retry-After` is bounded and cached. Stale positive metadata remains present on upstream
+failure. Missing credentials, timeouts, malformed/oversized responses, invalid item IDs, or
+unsafe media URLs produce nullable metadata rather than failing the objective response.
 
 Recommendation candidates are `(character, specId)` pairs. A target counts only when
 `sourceId === challengeMapId` by exact numeric identity and `sourceType === "dungeon"`;
@@ -473,8 +553,8 @@ Main consumers:
     summary, response-validation, and exact-character-ID helpers. It does not score data.
 
 V1-D renders only privacy-safe recommendation summaries and keeps normal team detail free
-of raw wishlists. It does not consume the owner-only `keystoneLoot` block. V2 remains
-mandatory and pending for actual item/object display.
+of raw wishlists. V2 adds actual item/object display only through the allowlisted owner/team
+objective routes. No Team Web surface consumes the owner-only raw `keystoneLoot` block.
 
 The Web keeps local TypeScript interfaces in each page rather than a single shared generated API type. Seasonal dungeon/currency display metadata is currently hardcoded in Web pages and should be reviewed during the WoW season phase, not changed here.
 
@@ -513,6 +593,23 @@ KeystoneLoot V1 compatibility was validated as follows:
 Validated production order is addon, Client, migration `0002`, migration `0003`, Worker,
 then Web. The Worker cannot precede its migrations because its SQL references both new
 columns. Web follows Worker because it requires the preference and recommendation routes.
+
+KeystoneLoot V2 remains compatible across deployment boundaries:
+
+| Producer / state | V2 consumer | Result |
+| --- | --- | --- |
+| released V1 addon snapshot | V2 Client/Worker | accepted and projected through the V2 DTO |
+| released V1 Client | V2 Worker | accepted; transport contract is unchanged |
+| old Web | V2 Worker | compatible; existing responses remain additive/unchanged |
+| V2 Web | V2 Worker | owner/team/planner objective routes available |
+| V2 Worker without Blizzard credentials | V2 Web | objectives usable with null metadata, `Objeto #<itemId>`, and the generic icon fallback |
+| V2 Worker with an empty metadata cache | V2 Web | cache miss refreshes when credentials exist; otherwise safe fallback |
+| existing D1 after migration `0004` | old/new Worker | additive cache table is ignored by old Worker and used by new Worker |
+
+For V2, configure the two Blizzard Cloudflare Worker secrets, apply migration `0004`, deploy
+Worker, smoke objective endpoints, then deploy Web. Neither an addon nor a Client release is
+required for V2. Missing Blizzard credentials are an operational quality prerequisite rather
+than a code blocker because item identity and authorization remain intact.
 
 Additive changes:
 

@@ -4,6 +4,7 @@ import { ThemedIcon } from "../components/ThemedIcon";
 import { Button, TextField } from "../components/ui";
 import { login, register } from "../core/auth";
 import { useI18n } from "../core/i18n";
+import { exitApplication, openForgotPassword, openWeb } from "../core/native";
 import type { AuthState, CoreError, RegisterPayload } from "../core/types";
 
 type LoginPageProps = {
@@ -101,6 +102,26 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     }
   }
 
+  async function runNativeAction(action: () => Promise<void>) {
+    setError(null);
+    try {
+      await action();
+    } catch (caught) {
+      setError(formatLoginError(caught, t("login.nativeActionError")));
+    }
+  }
+
+  const unauthenticatedActions = (
+    <div className="auth-global-actions" aria-label={t("login.unauthenticatedActions")}>
+      <button className="auth-global-actions__web" onClick={() => void runNativeAction(openWeb)} type="button">
+        {t("login.openWeb")}
+      </button>
+      <button className="auth-global-actions__exit" onClick={() => void runNativeAction(exitApplication)} type="button">
+        {t("login.exitApplication")}
+      </button>
+    </div>
+  );
+
   if (mode === "register") {
     return (
       <section className="auth-panel auth-panel--register" aria-labelledby="register-title">
@@ -108,6 +129,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
           <h1 id="register-title">{t("register.title")}</h1>
           <p>{t("register.description")}</p>
         </div>
+        {error ? <p className="error" role="alert">{error}</p> : null}
         {success ? (
           <div className="auth-register-success">
             <ThemedIcon name="status-success" />
@@ -185,7 +207,6 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
               <input checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} type="checkbox" />
               <span>{showPassword ? t("login.hidePassword") : t("login.showPassword")}</span>
             </label>
-            {error ? <p className="error" role="alert">{error}</p> : null}
             <div className="auth-register-actions">
               <Button icon={<ThemedIcon name="back" size={18} />} onClick={() => switchMode("login")}>
                 {t("common.cancel")}
@@ -201,6 +222,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
             </div>
           </form>
         )}
+        {unauthenticatedActions}
       </section>
     );
   }
@@ -232,11 +254,18 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
             </button>
           </span>
         </label>
+        <div className="auth-recovery">
+          <span>{t("login.forgotPrompt")}</span>
+          <button onClick={() => void runNativeAction(openForgotPassword)} type="button">
+            {t("login.recoverPassword")}
+          </button>
+        </div>
         {error ? <p className="error" role="alert">{error}</p> : null}
         <Button
           icon={<ThemedIcon name="login" size={18} />}
           type="submit"
           disabled={loading || !username.trim() || !password}
+          variant="primary"
         >
           {loading ? t("login.connecting") : t("login.enter")}
         </Button>
@@ -245,6 +274,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
           {t("login.register")}
         </button>
       </form>
+      {unauthenticatedActions}
     </section>
   );
 }

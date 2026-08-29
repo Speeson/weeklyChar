@@ -8,6 +8,10 @@ export const TIER_WEIGHTS: Record<number, number> = {
   5: 15,
 }
 
+export function keystoneLootTierWeight(tier: number): number {
+  return TIER_WEIGHTS[tier] ?? 0
+}
+
 export type RecommendationSummary = {
   bis: number
   must: number
@@ -140,7 +144,7 @@ function candidatesForCharacter(
       continue
     }
 
-    const weight = TIER_WEIGHTS[favorite.tier] ?? 0
+    const weight = keystoneLootTierWeight(favorite.tier)
     const existing = accumulator.items.get(favorite.itemId)
     if (!existing || weight > existing.weight) {
       accumulator.items.set(favorite.itemId, { tier: favorite.tier, weight })

@@ -6,6 +6,7 @@ use crate::{bridge::CoreBridgeError, state::CoreBridgeState};
 
 const MAIN_WINDOW: &str = "main";
 const WEB_URL: &str = "https://keystonesync.esgarpe.dev";
+const FORGOT_PASSWORD_URL: &str = "https://keystonesync.esgarpe.dev/forgot-password";
 const RELEASES_URL: &str = "https://github.com/Speeson/weeklyChar/releases";
 const RAIDER_IO_BASE_URL: &str = "https://raider.io/characters";
 pub const CLOSE_REQUESTED_EVENT: &str = "keystone://close-requested";
@@ -64,6 +65,15 @@ pub fn open_web(app: &AppHandle) -> Result<(), CoreBridgeError> {
         .map_err(|_| CoreBridgeError {
             code: "OPEN_WEB_FAILED".to_string(),
             message: "Could not open KeystoneSync Web.".to_string(),
+        })
+}
+
+pub fn open_forgot_password(app: &AppHandle) -> Result<(), CoreBridgeError> {
+    app.opener()
+        .open_url(FORGOT_PASSWORD_URL, None::<&str>)
+        .map_err(|_| CoreBridgeError {
+            code: "OPEN_FORGOT_PASSWORD_FAILED".to_string(),
+            message: "Could not open KeystoneSync password recovery.".to_string(),
         })
 }
 
@@ -147,7 +157,7 @@ fn setting_bool(state: &CoreBridgeState, key: &str) -> Result<bool, CoreBridgeEr
 
 #[cfg(test)]
 mod tests {
-    use super::{raiderio_character_url, CLOSE_REQUESTED_EVENT, WEB_URL};
+    use super::{raiderio_character_url, CLOSE_REQUESTED_EVENT, FORGOT_PASSWORD_URL, WEB_URL};
 
     #[test]
     fn packaged_window_is_frameless() {
@@ -169,6 +179,14 @@ mod tests {
     #[test]
     fn web_url_is_scoped_to_keystonesync() {
         assert_eq!(WEB_URL, "https://keystonesync.esgarpe.dev");
+    }
+
+    #[test]
+    fn forgot_password_url_is_fixed_and_scoped_to_keystonesync() {
+        assert_eq!(
+            FORGOT_PASSWORD_URL,
+            "https://keystonesync.esgarpe.dev/forgot-password"
+        );
     }
 
     #[test]

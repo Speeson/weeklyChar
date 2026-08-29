@@ -41,6 +41,26 @@ const SPEC_NAMES: Readonly<Record<number, string>> = {
   1480: 'Devourer',
 }
 
+const SPEC_IDS_BY_CLASS: Readonly<Record<string, readonly number[]>> = {
+  'Death Knight': [250, 251, 252],
+  'Demon Hunter': [577, 581],
+  Druid: [102, 103, 104, 105],
+  Evoker: [1467, 1468, 1473, 1480],
+  Hunter: [253, 254, 255],
+  Mage: [62, 63, 64],
+  Monk: [268, 269, 270],
+  Paladin: [65, 66, 70],
+  Priest: [256, 257, 258],
+  Rogue: [259, 260, 261],
+  Shaman: [262, 263, 264],
+  Warlock: [265, 266, 267],
+  Warrior: [71, 72, 73],
+}
+
 export function specName(specId: number): string {
   return SPEC_NAMES[specId] ?? `Spec ${specId}`
+}
+
+export function specOptionsForClass(wowClass: string | null | undefined): Array<{ id: number, name: string }> {
+  return (SPEC_IDS_BY_CLASS[wowClass ?? ''] ?? []).map(id => ({ id, name: specName(id) }))
 }

@@ -10,6 +10,7 @@ import { recommendedSpecIdForCharacter, type TeamRecommendationsResponse } from 
 import { specName } from '@/lib/wowSpecs'
 import Navbar from '@/app/components/Navbar'
 import KeystonePlanner from './KeystonePlanner'
+import TeamKeystoneLootObjectivesDrawer, { type TeamObjectiveTarget } from './TeamKeystoneLootObjectivesDrawer'
 
 interface Keystone {
   level: number | null
@@ -129,7 +130,15 @@ function matchesDungeon(char: Character, query: string, selectedDungeons: string
   return dungeon.includes(normalized) || level.includes(normalized) || character.includes(normalized)
 }
 
-function CompactCharacterRow({ char, recommendedSpecId }: { char: Character; recommendedSpecId: number | null }) {
+function CompactCharacterRow({
+  char,
+  recommendedSpecId,
+  onViewObjectives,
+}: {
+  char: Character
+  recommendedSpecId: number | null
+  onViewObjectives: (event: React.MouseEvent<HTMLButtonElement>) => void
+}) {
   const classIcon = classIconUrl(char.wowClass)
 
   return (
@@ -156,15 +165,28 @@ function CompactCharacterRow({ char, recommendedSpecId }: { char: Character; rec
         {char.currentKeystone?.level ? <span className="font-bold" style={{ color: keystoneColor(char.currentKeystone.level) }}>+{char.currentKeystone.level}</span> : <span className="text-gray-600">-</span>}
       </td>
       <td className="py-2 pr-4 text-right text-[11px] text-gray-500">{formatDate(char.currentKeystone?.updatedAt ?? null)}</td>
+      <td className="py-2 pr-4 text-right">
+        <button type="button" aria-haspopup="dialog" onClick={onViewObjectives} className="min-h-11 whitespace-nowrap rounded-lg border border-gray-700 px-3 text-[11px] font-bold text-gray-200 hover:border-yellow-500/60 hover:text-yellow-300">
+          Ver objetivos
+        </button>
+      </td>
     </tr>
   )
 }
 
-function CompactCharacterCard({ char, recommendedSpecId }: { char: Character; recommendedSpecId: number | null }) {
+function CompactCharacterCard({
+  char,
+  recommendedSpecId,
+  onViewObjectives,
+}: {
+  char: Character
+  recommendedSpecId: number | null
+  onViewObjectives: (event: React.MouseEvent<HTMLButtonElement>) => void
+}) {
   const classIcon = classIconUrl(char.wowClass)
 
   return (
-    <div className={`grid min-w-0 grid-cols-[minmax(120px,1fr)_minmax(100px,1fr)_44px_70px] items-center gap-2 rounded-lg border px-3 py-2 transition ${recommendedSpecId !== null ? 'border-yellow-500/40 bg-yellow-500/[0.07] shadow-md shadow-yellow-500/5' : 'border-gray-900/90 bg-gray-950/40 hover:bg-gray-900/70'}`}>
+    <div className={`grid min-w-0 grid-cols-2 items-center gap-2 rounded-lg border px-3 py-2 transition sm:grid-cols-[minmax(120px,1fr)_minmax(100px,1fr)_44px_70px_auto] ${recommendedSpecId !== null ? 'border-yellow-500/40 bg-yellow-500/[0.07] shadow-md shadow-yellow-500/5' : 'border-gray-900/90 bg-gray-950/40 hover:bg-gray-900/70'}`}>
       <div className="flex min-w-0 items-center gap-2">
         {char.avatarUrl ? (
           <img src={char.avatarUrl} alt="" className="h-7 w-7 flex-shrink-0 rounded-full border border-gray-700 object-cover" />
@@ -184,6 +206,9 @@ function CompactCharacterCard({ char, recommendedSpecId }: { char: Character; re
         {char.currentKeystone?.level ? <span className="font-bold" style={{ color: keystoneColor(char.currentKeystone.level) }}>+{char.currentKeystone.level}</span> : <span className="text-gray-600">-</span>}
       </span>
       <span className="text-right text-[10px] text-gray-500">{formatDate(char.currentKeystone?.updatedAt ?? null)}</span>
+      <button type="button" aria-haspopup="dialog" onClick={onViewObjectives} className="col-span-2 min-h-11 whitespace-nowrap rounded-lg border border-gray-700 px-3 text-[11px] font-bold text-gray-200 hover:border-yellow-500/60 hover:text-yellow-300 sm:col-span-1">
+        Ver objetivos
+      </button>
     </div>
   )
 }
@@ -199,6 +224,7 @@ function MemberCard({
   onRemove,
   removing,
   recommendations,
+  onViewObjectives,
 }: {
   member: Member
   query: string
@@ -210,6 +236,7 @@ function MemberCard({
   onRemove: () => void
   removing: boolean
   recommendations: TeamRecommendationsResponse | null
+  onViewObjectives: (member: Member, character: Character, trigger: HTMLButtonElement) => void
 }) {
   const characters = member.characters
     .filter(char => matchesDungeon(char, query, selectedDungeons))
@@ -253,6 +280,7 @@ function MemberCard({
                 key={char.id}
                 char={char}
                 recommendedSpecId={recommendedSpecIdForCharacter(recommendations, char.id)}
+                onViewObjectives={event => onViewObjectives(member, char, event.currentTarget)}
               />
             ))}
           </div>
@@ -265,6 +293,7 @@ function MemberCard({
                   <th className="py-2 pr-3 font-medium">Mazmorra</th>
                   <th className="py-2 pr-3 text-center font-medium">Nivel</th>
                   <th className="py-2 pr-4 text-right font-medium">Ultima act.</th>
+                  <th className="py-2 pr-4 text-right font-medium">Objetivos</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,6 +302,7 @@ function MemberCard({
                     key={char.id}
                     char={char}
                     recommendedSpecId={recommendedSpecIdForCharacter(recommendations, char.id)}
+                    onViewObjectives={event => onViewObjectives(member, char, event.currentTarget)}
                   />
                 ))}
               </tbody>
@@ -306,6 +336,8 @@ export default function TeamDetailPage() {
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null)
   const [leavingTeam, setLeavingTeam] = useState(false)
   const [plannerRecommendations, setPlannerRecommendations] = useState<TeamRecommendationsResponse | null>(null)
+  const [objectiveTarget, setObjectiveTarget] = useState<TeamObjectiveTarget | null>(null)
+  const [objectiveTrigger, setObjectiveTrigger] = useState<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!getToken()) {
@@ -593,12 +625,29 @@ export default function TeamDetailPage() {
                   onRemove={() => setMemberToRemove(member)}
                   removing={removingUserId === member.userId}
                   recommendations={plannerRecommendations?.teamId === team.id ? plannerRecommendations : null}
+                  onViewObjectives={(member, char, trigger) => {
+                    setObjectiveTrigger(trigger)
+                    setObjectiveTarget({
+                      memberUsername: member.username,
+                      character: char,
+                    })
+                  }}
                 />
               ))}
             </div>
           )}
         </div>
       </main>
+
+      {objectiveTarget && (
+        <TeamKeystoneLootObjectivesDrawer
+          key={`${team.id}:${objectiveTarget.character.id}`}
+          teamId={team.id}
+          target={objectiveTarget}
+          returnFocusElement={objectiveTrigger}
+          onClose={() => setObjectiveTarget(null)}
+        />
+      )}
 
       {inviteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">

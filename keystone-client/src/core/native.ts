@@ -8,6 +8,10 @@ export function openWeb(): Promise<void> {
   return invoke<void>("open_web");
 }
 
+export function openForgotPassword(): Promise<void> {
+  return invoke<void>("open_forgot_password");
+}
+
 export function openReleases(): Promise<void> {
   return invoke<void>("open_releases");
 }

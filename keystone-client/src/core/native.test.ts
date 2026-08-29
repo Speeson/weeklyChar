@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { minimizeToTray, minimizeWindow, startWindowDragging } from "./native";
+import { minimizeToTray, minimizeWindow, openForgotPassword, startWindowDragging } from "./native";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/window", () => ({
@@ -24,6 +24,14 @@ describe("native window actions", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("hide_to_tray");
     expect(getCurrentWindowMock).not.toHaveBeenCalled();
+  });
+
+  it("opens password recovery through a dedicated argument-free command", async () => {
+    invokeMock.mockResolvedValueOnce(undefined);
+
+    await openForgotPassword();
+
+    expect(invokeMock).toHaveBeenCalledWith("open_forgot_password");
   });
 
   it("keeps taskbar minimization on the current native window", async () => {

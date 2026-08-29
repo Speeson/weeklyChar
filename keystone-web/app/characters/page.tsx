@@ -6,6 +6,7 @@ import { apiFetch, getToken } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 import { keystoneColor } from '@/lib/colors'
+import KeystoneLootObjectivesDrawer from './KeystoneLootObjectivesDrawer'
 
 interface Keystone {
   level: number | null
@@ -94,6 +95,8 @@ export default function Dashboard() {
   const [managing, setManaging] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
   const [loading, setLoading] = useState(true)
+  const [objectiveCharacter, setObjectiveCharacter] = useState<Character | null>(null)
+  const [objectiveTrigger, setObjectiveTrigger] = useState<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!getToken()) { router.push('/login'); return }
@@ -215,10 +218,24 @@ export default function Dashboard() {
               </button>
             </p>
           ) : (
-            <CharacterTable characters={visible} />
+            <CharacterTable
+              characters={visible}
+              onViewObjectives={(character, trigger) => {
+                setObjectiveTrigger(trigger)
+                setObjectiveCharacter(character)
+              }}
+            />
           )}
         </div>
       </main>
+      {objectiveCharacter && (
+        <KeystoneLootObjectivesDrawer
+          key={objectiveCharacter.id}
+          character={objectiveCharacter}
+          returnFocusElement={objectiveTrigger}
+          onClose={() => setObjectiveCharacter(null)}
+        />
+      )}
     </>
   )
 }
@@ -226,7 +243,13 @@ export default function Dashboard() {
 type SortKey = 'name' | 'realm' | 'dungeon' | 'level' | 'updatedAt'
 type SortDir = 'asc' | 'desc'
 
-export function CharacterTable({ characters }: { characters: Character[] }) {
+export function CharacterTable({
+  characters,
+  onViewObjectives,
+}: {
+  characters: Character[]
+  onViewObjectives: (character: Character, trigger: HTMLButtonElement) => void
+}) {
   const [sortKey, setSortKey] = useState<SortKey>('level')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
@@ -284,6 +307,7 @@ export function CharacterTable({ characters }: { characters: Character[] }) {
             <Th col="realm">Reino</Th>
             <Th col="dungeon">Mazmorra</Th>
             <Th col="level">Nivel</Th>
+            <th className="pb-3 pr-6 text-gray-400">Objetivos</th>
             <Th col="updatedAt" last>Última actualización</Th>
           </tr>
         </thead>
@@ -329,6 +353,16 @@ export function CharacterTable({ characters }: { characters: Character[] }) {
                 {char.currentKeystone?.level
                   ? <span className="font-bold" style={{ color: keystoneColor(char.currentKeystone.level) }}>+{char.currentKeystone.level}</span>
                   : <span className="text-gray-600">—</span>}
+              </td>
+              <td className="py-3 pr-6">
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={event => onViewObjectives(char, event.currentTarget)}
+                  className="min-h-11 whitespace-nowrap rounded border border-gray-700 px-3 text-xs text-gray-200 hover:border-yellow-500/60 hover:text-yellow-300"
+                >
+                  Ver objetivos
+                </button>
               </td>
               <td className="py-3 text-gray-400 text-xs">
                 {formatDate(char.currentKeystone?.updatedAt ?? null)}

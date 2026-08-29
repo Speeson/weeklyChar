@@ -27,6 +27,9 @@ export class FakeD1Database {
     this.nextCharacterId = 1
     this.nextKeystoneId = 1
     this.characterQueryUserIds = []
+    this.itemMetadata = []
+    this.metadataReadItemIds = []
+    this.snapshotReadCharacterIds = []
   }
 
   prepare(sql) {
@@ -72,6 +75,21 @@ class FakeD1Statement {
       return this.db.characters.find(character => character.id === values[0]) ?? null
     }
 
+    if (sql === 'SELECT id, user_id, region FROM characters WHERE id = ?') {
+      const character = this.db.characters.find(row => row.id === values[0])
+      return character ? { id: character.id, user_id: character.user_id, region: character.region } : null
+    }
+
+    if (sql === 'SELECT keystone_loot_json FROM characters WHERE id = ? AND user_id = ?') {
+      this.db.snapshotReadCharacterIds.push(values[0])
+      const character = this.db.characters.find(row => row.id === values[0] && row.user_id === values[1])
+      return character ? { keystone_loot_json: character.keystone_loot_json } : null
+    }
+
+    if (sql === 'SELECT * FROM characters WHERE id = ? AND user_id = ?') {
+      return this.db.characters.find(character => character.id === values[0] && character.user_id === values[1]) ?? null
+    }
+
     if (sql === 'SELECT id FROM team_members WHERE team_id = ? AND user_id = ?') {
       const [teamId, userId] = values
       const membership = this.db.teamMembers.find(row => row.team_id === teamId && row.user_id === userId)
@@ -112,6 +130,15 @@ class FakeD1Statement {
       return { results }
     }
 
+    if (sql.includes('FROM wow_item_metadata') && sql.includes('item_id IN')) {
+      const [region, locale, ...itemIds] = values
+      this.db.metadataReadItemIds.push([...itemIds])
+      return {
+        results: this.db.itemMetadata.filter(row =>
+          row.region === region && row.locale === locale && itemIds.includes(row.item_id)),
+      }
+    }
+
     if (sql.includes('SELECT u.id, u.username FROM team_members tm JOIN users u ON u.id = tm.user_id')) {
       const teamId = values[0]
       const results = this.db.teamMembers
@@ -150,6 +177,19 @@ class FakeD1Statement {
       const target = this.db.users.find(user => user.id === userId)
       if (!target) throw new Error(`Missing user ${userId}`)
       target.share_keystone_loot_with_teams = enabled
+      return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('INSERT INTO wow_item_metadata')) {
+      const [region, locale, itemId, name, iconUrl, status, fetchedAt, refreshAfter] = values
+      const existing = this.db.itemMetadata.find(row =>
+        row.region === region && row.locale === locale && row.item_id === itemId)
+      const value = {
+        region, locale, item_id: itemId, name, icon_url: iconUrl,
+        status, fetched_at: fetchedAt, refresh_after: refreshAfter,
+      }
+      if (existing) Object.assign(existing, value)
+      else this.db.itemMetadata.push(value)
       return { meta: { changes: 1 } }
     }
 

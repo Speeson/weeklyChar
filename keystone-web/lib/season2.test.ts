@@ -6,6 +6,7 @@ import {
   DUNGEON_ABBR_BY_ID,
   DUNGEON_ABBR_BY_NAME,
   DUNGEON_FULL_NAME_BY_ABBR,
+  DUNGEON_NAME_BY_ID,
   fullKeystoneLabel,
   MIDNIGHT_SEASON_2_DUNGEONS,
 } from './season2.ts'
@@ -28,6 +29,7 @@ test('derives consistent dungeon lookups for current keystones and filters', () 
     assert.equal(DUNGEON_ABBR_BY_ID.get(dungeon.id), dungeon.abbr)
     assert.equal(DUNGEON_ABBR_BY_NAME.get(dungeon.name.toLowerCase()), dungeon.abbr)
     assert.equal(DUNGEON_FULL_NAME_BY_ABBR.get(dungeon.abbr), dungeon.name)
+    assert.equal(DUNGEON_NAME_BY_ID.get(dungeon.id), dungeon.name)
   }
 })
 

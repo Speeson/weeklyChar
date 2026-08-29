@@ -1,8 +1,11 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { getCurrentUser, getCurrentUserFlexible } from '../auth'
 import { hashPassword, verifyPassword } from '../crypto'
 import { charactersForUser, jsonDump } from '../db'
+import { enrichKeystoneLootObjectives } from '../blizzardItemMetadata'
 import { jsonError } from '../http'
+import { buildKeystoneLootObjectivePage } from '../keystoneObjectives'
 import type { CharacterRow, Env } from '../types'
 
 export const meRoutes = new Hono<{ Bindings: Env }>()
@@ -38,6 +41,43 @@ type PreferencesUpdateRequest = {
 
 function isResponse(value: unknown): value is Response {
   return value instanceof Response
+}
+
+function positiveIntegerQuery(value: string | undefined, field: string): number | undefined {
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  if (value.trim() === '' || !Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${field} debe ser un entero positivo`)
+  }
+  return parsed
+}
+
+function objectiveQuery(c: Context<{ Bindings: Env }>) {
+  const rawLimit = c.req.query('limit')
+  const limit = rawLimit === undefined ? 50 : positiveIntegerQuery(rawLimit, 'limit')
+  if (limit === undefined || limit > 100) throw new Error('limit debe estar entre 1 y 100')
+  const sourceType = c.req.query('sourceType')
+  if (sourceType !== undefined && (sourceType.trim() === '' || sourceType.length > 64)) {
+    throw new Error('sourceType no es válido')
+  }
+  const rawSourceId = c.req.query('sourceId')
+  let sourceId: number | string | undefined
+  if (rawSourceId !== undefined) {
+    if (rawSourceId.trim() === '' || rawSourceId.length > 128) throw new Error('sourceId no es válido')
+    const numeric = Number(rawSourceId)
+    sourceId = Number.isSafeInteger(numeric) && numeric > 0 ? numeric : rawSourceId
+    if (sourceType === 'dungeon' && typeof sourceId !== 'number') {
+      throw new Error('sourceId de dungeon debe ser un entero positivo')
+    }
+    if (sourceType === undefined) throw new Error('sourceId requiere sourceType')
+  }
+  return {
+    limit,
+    sourceType,
+    sourceId,
+    specId: positiveIntegerQuery(c.req.query('specId'), 'specId'),
+    cursor: c.req.query('cursor'),
+  }
 }
 
 meRoutes.get('/api/me', async c => {
@@ -119,6 +159,28 @@ meRoutes.get('/api/me/characters', async c => {
   if (isResponse(currentUser)) return currentUser
 
   return c.json(await charactersForUser(c.env, currentUser.id, { includeKeystoneLoot: true }))
+})
+
+meRoutes.get('/api/me/characters/:characterId/keystone-loot/objectives', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const characterId = Number(c.req.param('characterId'))
+  if (!Number.isSafeInteger(characterId) || characterId <= 0) {
+    return jsonError(c, 400, 'characterId debe ser un entero positivo')
+  }
+  const character = await c.env.DB.prepare('SELECT * FROM characters WHERE id = ? AND user_id = ?')
+    .bind(characterId, currentUser.id)
+    .first<CharacterRow>()
+  if (!character) return jsonError(c, 404, 'Personaje no encontrado')
+
+  try {
+    const page = buildKeystoneLootObjectivePage(character.keystone_loot_json, objectiveQuery(c))
+    page.objectives = await enrichKeystoneLootObjectives(c.env, character.region, page.objectives)
+    return c.json(page)
+  } catch (error) {
+    return jsonError(c, 400, error instanceof Error ? error.message : 'Filtros no válidos')
+  }
 })
 
 meRoutes.post('/api/me/characters/enrich', async c => {

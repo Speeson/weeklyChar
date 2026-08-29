@@ -101,6 +101,9 @@ Owns:
 - `POST /api/keystones/update` write handling in `keystone-worker/src/routes/keystones.ts`.
 - Focused KeystoneLoot validation in `keystone-worker/src/keystoneLoot.ts`.
 - Pure KeystoneLoot recommendation scoring in `keystone-worker/src/keystoneRecommendations.ts`.
+- Allowlisted KeystoneLoot objective projection/pagination in
+  `keystone-worker/src/keystoneObjectives.ts` and Blizzard item enrichment/cache in
+  `keystone-worker/src/blizzardItemMetadata.ts`.
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
 - Wrangler deployment and D1 migration scripts.
@@ -139,6 +142,10 @@ Owns:
 - Web-local TypeScript shapes for Worker responses.
 - Server-backed KeystoneLoot privacy control and presentation-only actual-team-stone
   planner using aggregate Worker recommendations.
+- Owner-only per-character KeystoneLoot objective presentation through the allowlisted
+  owner endpoint, with Web-local response validation and server-backed filters/pagination.
+- Current-team KeystoneLoot objective presentation through the separate allowlisted Team
+  endpoint, including contextual details inside the existing stone planner dialog.
 
 Does not own:
 
@@ -293,8 +300,69 @@ applies privacy before parsing, validates stored snapshots through the V1-B boun
 and returns only one aggregate `(character, specId)` recommendation per member. V1-D Web
 loads the account preference through the existing `/api/me` contracts, selects one real
 current keystone from team detail, sends only its `challengeMapId`, and renders the
-aggregate response. Web performs no scoring or Voidcore decisions. V2 item/object display
-remains mandatory and pending.
+aggregate response. Web performs no scoring or Voidcore decisions.
+
+KeystoneLoot V2-A extends the Worker contract without changing the raw team-detail or V1
+recommendation responses. JWT-authenticated owners can request a paginated allowlisted
+objective view for one owned character. A separate team-context endpoint permits the same
+allowlisted view only after fresh D1 checks prove both requester and target owner are
+current members of the requested team and the target owner has
+`shareKeystoneLootWithTeams=true`. Removal from either membership revokes access on the
+next request. The preference now governs both aggregate recommendation participation and
+allowlisted objective visibility inside current shared teams; no second preference exists.
+
+Objective processing validates the stored snapshot, filters by source/dungeon and spec,
+deduplicates with the existing tier-weight helper, sorts and cursor-paginates, then enriches
+only the current page. Item IDs remain canonical. Worker-side Blizzard client-credentials
+OAuth and fixed regional Game Data hosts resolve Spanish item names and official media.
+Migration `0004_keystone_loot_item_metadata.sql` adds a D1 cache keyed by
+`(region, locale, item_id)`. Positive results last 30 days, confirmed 404 results last six
+hours, stale positive data survives upstream failures, and unavailable metadata degrades
+to null display fields.
+
+KeystoneLoot V2-B adds only an owner-facing Web consumer. Each Characters-row action opens
+a native responsive dialog for the exact character ID and calls
+`/api/me/characters/:characterId/keystone-loot/objectives`; it does not read the raw
+`keystoneLoot` field to render objectives. Web owns labels, fallbacks, relative freshness,
+and interaction state, while Worker remains authoritative for filtering, objective identity,
+Voidcore state, metadata enrichment, and authorization. Abort plus exact request identities
+prevent late character, filter, pagination, or closed-dialog responses from updating UI.
+
+KeystoneLoot V2-C adds two Team consumers without moving authorization into Web. Team
+character rows open a filtered/paginated native drawer. Recommended planner cards open the
+same allowlisted item presentation inside the existing planner dialog, constrained to the
+selected `challengeMapId` and recommended `specId`; desktop uses a side panel and mobile a
+drill-in view. Both call only
+`/api/teams/:teamId/characters/:characterId/keystone-loot/objectives`, accept the Team-specific
+status envelope, abort/invalidate stale work, and clear sensitive rows on a refreshed 403.
+The Worker still performs live membership, sharing, filtering, scoring, deduplication,
+Voidcore, metadata, and pagination decisions.
+
+KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
+the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local
+Worker, and a production-built Web. The owner drawer, team drawer, and contextual planner all
+used their actual Worker routes. The same run covered live membership removal, sharing
+disable/re-enable, authoritative empty and historical snapshots, pagination/filtering, exact
+same-name/different-realm IDs, future tiers, dungeon/raid numeric-ID collisions, Voidcore,
+metadata fallback/cache behavior, and raw team privacy. No V2-D runtime change was required.
+
+V2 production rollout is backend-first:
+
+```text
+1. configure BLIZZARD_CLIENT_ID and BLIZZARD_CLIENT_SECRET as Cloudflare Worker secrets
+2. apply additive D1 migration 0004_keystone_loot_item_metadata.sql
+3. deploy the Worker
+4. smoke owner/team objective endpoints
+5. deploy the Web
+6. smoke Characters, Team drawer, and planner in production
+```
+
+The old Worker ignores migration `0004`; the new Worker needs the cache table before its
+objective routes run; the new Worker remains compatible with the old Web; and V2 Web requires
+the new routes. The Blizzard bindings are optional in `Env`: if absent, authorization and
+objective projection continue to work with nullable metadata, `Objeto #<itemId>`, and the
+generic Web icon fallback.
+Cloudflare owns these runtime secrets; they are not repository or Vercel secrets.
 
 The validated zero-downtime V1 production order is:
 
