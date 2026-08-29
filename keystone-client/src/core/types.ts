@@ -17,6 +17,9 @@ export type CoreCommand =
   | "sync.force"
   | "characters.get"
   | "characters.refresh"
+  | "teams.list"
+  | "teams.get"
+  | "teams.keystone_selector"
   | "addon.get_status"
   | "addon.check"
   | "addon.install"
@@ -140,6 +143,110 @@ export type CharacterState = {
   source: "none" | "cache" | "remote";
   lastRefreshAt: string | null;
   lastError: string | null;
+};
+
+export type ClientTeamSummary = {
+  id: number;
+  name: string;
+  memberCount: number;
+};
+
+export type ClientTeamKeystone = {
+  level: number;
+  challengeMapId: number;
+  dungeon: string | null;
+};
+
+export type ClientTeamCharacter = {
+  characterId: number;
+  name: string;
+  realm: string;
+  region: string;
+  wowClass: string | null;
+  avatarUrl: string | null;
+  ilvl: number | null;
+  rioScore: number | null;
+  currentKeystone: ClientTeamKeystone | null;
+};
+
+export type ClientTeamMember = {
+  userId: number;
+  username: string;
+  characters: ClientTeamCharacter[];
+};
+
+export type ClientTeamDetail = {
+  id: number;
+  name: string;
+  members: ClientTeamMember[];
+};
+
+export type KeystoneSelectorTierCounts = {
+  bestInSlot: number;
+  mustHave: number;
+  niceToHave: number;
+  catalyst: number;
+  transmog: number;
+  other: number;
+};
+
+export type KeystoneSelectorObjective = {
+  itemId: number;
+  itemName: string | null;
+  iconUrl: string | null;
+  tier: number;
+  specIds: number[];
+  sourceType: string;
+  sourceId: number | string;
+  slotId: number | null;
+  slotName: string | null;
+  itemClassName: string | null;
+  itemSubClassName: string | null;
+  statNames: string[];
+  voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
+};
+
+export type KeystoneSelectorStone = {
+  characterId: number;
+  characterName: string;
+  ownerUserId: number;
+  ownerUsername: string;
+  level: number;
+};
+
+export type KeystoneSelectorSpec = {
+  specId: number;
+  objectiveCount: number;
+  tierCounts: KeystoneSelectorTierCounts;
+};
+
+export type KeystoneSelectorCharacter = {
+  userId: number;
+  username: string;
+  characterId: number;
+  characterName: string;
+  realm: string;
+  region: string;
+  wowClass: string | null;
+  avatarUrl: string | null;
+  ilvl: number | null;
+  rioScore: number | null;
+  totalObjectives: number;
+  tierCounts: KeystoneSelectorTierCounts;
+  specs: KeystoneSelectorSpec[];
+  objectives: KeystoneSelectorObjective[];
+};
+
+export type KeystoneSelectorResponse = {
+  teamId: number;
+  challengeMapId: number;
+  availability: { stoneCount: number; stones: KeystoneSelectorStone[] };
+  summary: {
+    charactersWithObjectives: number;
+    totalObjectives: number;
+    tiers: KeystoneSelectorTierCounts;
+  };
+  characters: KeystoneSelectorCharacter[];
 };
 
 export type SyncState = "idle" | "watching" | "syncing" | "success" | "error";

@@ -530,6 +530,17 @@ IDs, gems, enchants, or internal scoring data. Web renders `characters` in serve
 the endpoint's `availability` as authoritative for the selected dungeon. Counts displayed before
 selection come only from current same-week Team-detail keystones.
 
+Stone Selector S4 carries the existing contracts into KeystoneClient through three additive core
+commands. `teams.list` projects only `id`, `name`, and `memberCount`; `teams.get` projects the Team
+identity plus members and compact character dashboard fields; and `teams.keystone_selector`
+projects the S1/S2 aggregate allowlist unchanged. The Worker Team detail has no member avatar, so
+the Client member contract does not invent one. Python validates and allowlists the HTTP response,
+then TypeScript validates the safe DTO again before React consumes it. Additive fields and unknown
+positive tiers are tolerated, while malformed required fields, unsafe URLs, and unknown Voidcore
+states are rejected. Access and sync tokens, invite codes, WoW account names, vault state, raw
+KeystoneLoot, `bonusIds`, gems, enchants, and raw error payloads remain below or outside the React
+boundary.
+
 The reusable Web item tooltip consumes only the public objective allowlist (`itemName`, `iconUrl`,
 slot/class/subclass names, bounded `statNames`, source, spec IDs, tier, and Voidcore state). Missing
 metadata degrades to `Objeto #<itemId>`, a generic icon, and an explicit unavailable-metadata hint;

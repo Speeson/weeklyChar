@@ -1,0 +1,10 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "added",
+  "summary": "Añade el puente seguro de equipos y Selector de piedra al cliente.",
+  "details": [
+    "El cliente puede cargar equipos, personajes y el resumen agregado del Selector sin exponer credenciales a React.",
+    "Las respuestas del servidor se validan y reducen a campos seguros en Python y TypeScript."
+  ]
+}

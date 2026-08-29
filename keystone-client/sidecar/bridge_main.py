@@ -27,6 +27,7 @@ import config as config_module
 import profile_service
 import settings_service
 import sync_service
+import team_service
 import wow_service
 
 
@@ -35,6 +36,7 @@ CHARACTER_SERVICE = character_service.CharacterService()
 SYNC_SERVICE = sync_service.SyncService(on_completed=CHARACTER_SERVICE.schedule_refresh)
 ADDON_SERVICE = addon_service.AddonService()
 PROFILE_SERVICE = profile_service.ProfileService()
+TEAM_SERVICE = team_service.TeamService()
 _STDOUT_LOCK = threading.Lock()
 
 
@@ -216,6 +218,42 @@ def handle_characters_refresh(payload: dict[str, Any]) -> dict[str, Any]:
     return CHARACTER_SERVICE.refresh_async(cfg)
 
 
+def _require_positive_id(payload: dict[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0 or value > 2**53 - 1:
+        raise ProtocolError(ERROR_INVALID_REQUEST, f"{key} must be a positive safe integer.")
+    return value
+
+
+def handle_teams_list(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    try:
+        return TEAM_SERVICE.list_teams(config_module.load())
+    except team_service.TeamServiceError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_teams_get(payload: dict[str, Any]) -> dict[str, Any]:
+    team_id = _require_positive_id(payload, "teamId")
+    if set(payload) != {"teamId"}:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain only teamId.")
+    try:
+        return TEAM_SERVICE.get_team(config_module.load(), team_id)
+    except team_service.TeamServiceError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_teams_keystone_selector(payload: dict[str, Any]) -> dict[str, Any]:
+    team_id = _require_positive_id(payload, "teamId")
+    challenge_map_id = _require_positive_id(payload, "challengeMapId")
+    if set(payload) != {"teamId", "challengeMapId"}:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain only teamId and challengeMapId.")
+    try:
+        return TEAM_SERVICE.get_keystone_selector(config_module.load(), team_id, challenge_map_id)
+    except team_service.TeamServiceError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
 def handle_addon_get_status(payload: dict[str, Any]) -> dict[str, Any]:
     _require_empty_payload(payload)
     return ADDON_SERVICE.get_status(config_module.load())
@@ -272,6 +310,9 @@ COMMANDS: dict[str, Handler] = {
     "sync.force": handle_sync_force,
     "characters.get": handle_characters_get,
     "characters.refresh": handle_characters_refresh,
+    "teams.list": handle_teams_list,
+    "teams.get": handle_teams_get,
+    "teams.keystone_selector": handle_teams_keystone_selector,
     "addon.get_status": handle_addon_get_status,
     "addon.check": handle_addon_check,
     "addon.install": handle_addon_install,

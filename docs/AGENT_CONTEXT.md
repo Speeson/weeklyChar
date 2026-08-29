@@ -152,6 +152,15 @@ The exposed legacy Team planner UI and its visual components are removed; the di
 `Planificar piedra · Próximamente` tab documents the future feature boundary. S4 Client bridge,
 S5 Client Teams UI, and composition planning remain deferred.
 
+Stone Selector S4 adds the Client data/bridge layer only. The additive protocol-v1 commands are
+`teams.list`, `teams.get`, and `teams.keystone_selector`, mapped respectively to the existing
+Worker Team list, Team detail, and aggregate dungeon summary endpoints. Rust keeps an explicit
+allowlist; the Python sidecar owns the authenticated HTTP session and safe response projection;
+and TypeScript validates the projected DTO again. No token, invite code, raw KeystoneLoot, vault,
+or WoW account field reaches React. The Worker does not expose a member-profile avatar, so the
+Client member DTO intentionally omits it. Preview remains startup-state-only, and all visible
+Teams navigation/presentation remains S5 work.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

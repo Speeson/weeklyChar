@@ -365,6 +365,16 @@ Escape without exposing numeric stats. The prior `KeystonePlanner` visual compon
 non-visual recommendation helpers remain isolated for the deferred planner. Client Teams and the
 composition planner remain later phases.
 
+Stone Selector S4 adds the Client data path without adding the Teams UI. React calls the typed
+`teams.list`, `teams.get`, and `teams.keystone_selector` core wrappers; Rust accepts only those
+explicit commands; and the Python sidecar applies the private access token to the existing Worker
+Team list, Team detail, and aggregate Selector endpoints. Python projects allowlisted DTOs and
+TypeScript validates them again, so bearer/sync tokens, invite codes, account names, raw
+KeystoneLoot, vault data, and raw error bodies never enter the WebView. The protocol remains at
+version 1 because capability additions are backward-compatible. The Worker Team detail does not
+provide a member-profile avatar, so the Client member DTO intentionally omits one and retains only
+per-character avatars. S5 owns all visible Teams navigation and presentation.
+
 KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
 the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local
 Worker, and a production-built Web. The owner drawer, team drawer, and contextual planner all
