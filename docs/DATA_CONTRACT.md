@@ -466,6 +466,59 @@ Objective presentation endpoints:
 - Default page size is 50 and maximum is 100. Cursors are opaque, validated, stable-order
   offsets bound to the active filters and page size.
 
+Stone Selector aggregate endpoint:
+
+- `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary` requires normal
+  JWT authentication, positive safe-integer IDs, a challenge map from the Worker-owned
+  Midnight Season 2 allowlist, and live requester membership in the requested Team.
+- Current Team membership and `shareKeystoneLootWithTeams` are read from D1 on every request.
+  Members with sharing disabled are excluded before their character snapshots are loaded or
+  parsed and receive no placeholder or objective-derived count. Team isolation is exact.
+- The response contains all eligible characters with at least one actionable objective, their
+  tier/spec counts, exact allowlisted objectives, and current Team stone availability. It does
+  not select one character per member, score candidates, use Raider.IO for ordering, or build a
+  party composition.
+- Character/global objective identity is `(sourceType, sourceId, itemId)`. Cross-spec duplicates
+  merge sorted unique `specIds` and use the strongest tier according to the existing V1 weight
+  helper. Per-spec counts retain each spec occurrence, so their sum can exceed the deduplicated
+  character total.
+- `totalObjectives` and all tier counts mean actionable objectives. Checked Voidcore completions
+  may remain in an included character's `objectives` array as `completed_with_voidcore`, but do
+  not increment character, spec, or global counters. Unchecked Voidcore remains actionable.
+  Characters with only completed objectives are omitted.
+- `characters` order is total objectives, BiS, and Must descending, then character name, realm,
+  and character ID ascending. Unknown positive tiers increment `other`.
+- Availability is independent of KeystoneLoot sharing. It contains only each current Team
+  character's latest same-week real keystone when its challenge map matches the selected dungeon;
+  stale and superseded rows are excluded. A zero-stone dungeon still returns HTTP 200.
+- S1 reuses the existing Blizzard cache for `itemName` and `iconUrl`. `slotName`,
+  `itemClassName`, and `itemSubClassName` remain `null`, and `statNames` remains empty until S2.
+  Metadata failure never removes an objective.
+
+The Selector objective allowlist is:
+
+```ts
+{
+  itemId: number
+  itemName: string | null
+  iconUrl: string | null
+  tier: number
+  specIds: number[]
+  sourceType: string
+  sourceId: number | string
+  slotId: number | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
+  voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
+}
+```
+
+The Worker and Web intentionally duplicate the verified Season 2 dungeon pool during S1.
+Cross-surface consolidation is deferred to avoid a Web/shared-build boundary change in this
+backend-only phase.
+
 The public objective allowlist is:
 
 ```ts

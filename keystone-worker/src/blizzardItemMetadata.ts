@@ -1,4 +1,3 @@
-import type { KeystoneLootObjectiveDTO } from './keystoneObjectives'
 import type { Env, WowItemMetadataRow } from './types'
 
 const POSITIVE_TTL_SECONDS = 30 * 24 * 60 * 60
@@ -15,6 +14,12 @@ type MetadataOptions = {
   fetch?: FetchLike
   now?: number
   timeoutMs?: number
+}
+
+type KeystoneLootMetadataTarget = {
+  itemId: number
+  itemName: string | null
+  iconUrl: string | null
 }
 
 type BlizzardJson = {
@@ -282,12 +287,12 @@ async function mapWithConcurrency<T>(
   return results
 }
 
-export async function enrichKeystoneLootObjectives(
+export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadataTarget>(
   env: Env,
   characterRegion: string,
-  objectives: KeystoneLootObjectiveDTO[],
+  objectives: T[],
   options: MetadataOptions = {},
-): Promise<KeystoneLootObjectiveDTO[]> {
+): Promise<T[]> {
   if (objectives.length === 0) return objectives
   const region = normalizeBlizzardRegion(characterRegion)
   const now = options.now ?? Math.floor(Date.now() / 1000)

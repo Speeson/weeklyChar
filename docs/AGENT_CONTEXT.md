@@ -132,6 +132,14 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 
 ## Next planned milestone
 
+Stone Selector S1 adds the backend-only aggregate route
+`GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team
+membership and sharing, actionable Voidcore counters, cross-spec canonical deduplication,
+deterministic character ordering, current weekly stone availability, and existing Blizzard
+name/icon enrichment. Tooltip metadata expansion, Web, Client, and composition planning remain
+deferred. The Worker owns a minimal duplicate of the verified Season 2 challenge-map allowlist
+during S1; cross-surface consolidation is intentionally deferred.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

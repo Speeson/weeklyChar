@@ -4,14 +4,19 @@ import { getCurrentUser } from '../auth'
 import { newInviteCode } from '../crypto'
 import {
   recommendationCharactersForUser,
+  selectorCharactersForTeam,
+  selectorStonesForTeam,
   teamDetailResponse,
   teamInvitationResponse,
   teamResponse,
 } from '../db'
 import { jsonError } from '../http'
-import { enrichKeystoneLootObjectives } from '../blizzardItemMetadata'
+import { enrichKeystoneLootObjectives, normalizeBlizzardRegion } from '../blizzardItemMetadata'
 import { buildKeystoneLootObjectivePage } from '../keystoneObjectives'
 import { recommendKeystoneLootTarget } from '../keystoneRecommendations'
+import { buildKeystoneLootDungeonSummary } from '../keystoneSelector'
+import type { KeystoneLootDungeonSummaryDTO } from '../keystoneSelector'
+import { isSupportedSeason2Dungeon } from '../season2'
 import type { Env, TeamInvitationRow, TeamRow, UserRow } from '../types'
 
 export const teamRoutes = new Hono<{ Bindings: Env }>()
@@ -55,6 +60,28 @@ async function findMembership(env: Env, teamId: number, userId: number): Promise
 
 async function getTeam(env: Env, teamId: number): Promise<TeamRow | null> {
   return env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(teamId).first<TeamRow>()
+}
+
+async function enrichSelectorSummary(
+  env: Env,
+  summary: KeystoneLootDungeonSummaryDTO,
+): Promise<KeystoneLootDungeonSummaryDTO> {
+  const byRegion = new Map<string, typeof summary.characters[number]['objectives']>()
+  for (const character of summary.characters) {
+    const region = normalizeBlizzardRegion(character.region)
+    const objectives = byRegion.get(region) ?? []
+    objectives.push(...character.objectives)
+    byRegion.set(region, objectives)
+  }
+
+  for (const [region, objectives] of byRegion) {
+    const enriched = await enrichKeystoneLootObjectives(env, region, objectives)
+    for (let index = 0; index < objectives.length; index += 1) {
+      objectives[index].itemName = enriched[index].itemName
+      objectives[index].iconUrl = enriched[index].iconUrl
+    }
+  }
+  return summary
 }
 
 type ObjectiveCharacterAccessRow = {
@@ -200,6 +227,37 @@ teamRoutes.get('/api/teams/:teamId/recommendations', async c => {
   }))
 
   return c.json({ teamId, challengeMapId, members: recommendations })
+})
+
+teamRoutes.get('/api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  const challengeMapId = Number(c.req.param('challengeMapId'))
+  if (!Number.isSafeInteger(teamId) || teamId <= 0
+    || !Number.isSafeInteger(challengeMapId) || challengeMapId <= 0) {
+    return jsonError(c, 400, 'teamId y challengeMapId deben ser enteros positivos')
+  }
+  if (!isSupportedSeason2Dungeon(challengeMapId)) {
+    return jsonError(c, 400, 'challengeMapId no pertenece al pool actual')
+  }
+  if (!(await getTeam(c.env, teamId))) return jsonError(c, 404, 'Equipo no encontrado')
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 403, 'No perteneces a este team')
+  }
+
+  const [sources, stones] = await Promise.all([
+    selectorCharactersForTeam(c.env, teamId),
+    selectorStonesForTeam(c.env, teamId, challengeMapId),
+  ])
+  const summary = buildKeystoneLootDungeonSummary(
+    teamId,
+    challengeMapId,
+    { stoneCount: stones.length, stones },
+    sources,
+  )
+  return c.json(await enrichSelectorSummary(c.env, summary))
 })
 
 teamRoutes.get('/api/teams/:teamId/characters/:characterId/keystone-loot/objectives', async c => {

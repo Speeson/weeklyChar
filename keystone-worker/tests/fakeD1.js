@@ -130,6 +130,70 @@ class FakeD1Statement {
       return { results }
     }
 
+    if (sql.includes('c.id AS character_id')
+      && sql.includes('u.share_keystone_loot_with_teams <> 0')) {
+      const teamId = values[0]
+      const memberIds = new Set(this.db.teamMembers
+        .filter(membership => membership.team_id === teamId)
+        .map(membership => membership.user_id))
+      const results = this.db.characters
+        .filter(character => memberIds.has(character.user_id))
+        .map(character => {
+          const owner = this.db.users.find(user => user.id === character.user_id)
+          if (!owner || owner.share_keystone_loot_with_teams === 0) return null
+          return {
+            user_id: owner.id,
+            username: owner.username,
+            character_id: character.id,
+            character_name: character.name,
+            realm: character.realm,
+            region: character.region,
+            wow_class: character.wow_class,
+            avatar_url: character.avatar_url,
+            ilvl: character.ilvl,
+            rio_score: character.rio_score,
+            keystone_loot_json: character.keystone_loot_json,
+          }
+        })
+        .filter(Boolean)
+        .sort((left, right) => left.username.localeCompare(right.username)
+          || left.character_name.localeCompare(right.character_name)
+          || left.realm.localeCompare(right.realm)
+          || left.character_id - right.character_id)
+      return { results }
+    }
+
+    if (sql.includes('WITH ranked_keystones AS')) {
+      const [resetUnix, teamId, challengeMapId] = values
+      const memberIds = new Set(this.db.teamMembers
+        .filter(membership => membership.team_id === teamId)
+        .map(membership => membership.user_id))
+      const results = []
+      for (const character of this.db.characters.filter(entry => memberIds.has(entry.user_id))) {
+        const latest = this.db.keystones
+          .filter(entry => entry.character_id === character.id
+            && entry.has_keystone === 1
+            && entry.keystone_level !== null
+            && entry.updated_at >= resetUnix)
+          .sort((left, right) => ((right.updated_at ?? 0) - (left.updated_at ?? 0))
+            || right.id - left.id)[0]
+        if (!latest || latest.keystone_challenge_map_id !== challengeMapId) continue
+        const owner = this.db.users.find(user => user.id === character.user_id)
+        if (!owner) continue
+        results.push({
+          character_id: character.id,
+          character_name: character.name,
+          owner_user_id: owner.id,
+          owner_username: owner.username,
+          keystone_level: latest.keystone_level,
+        })
+      }
+      results.sort((left, right) => left.owner_username.localeCompare(right.owner_username)
+        || left.character_name.localeCompare(right.character_name)
+        || left.character_id - right.character_id)
+      return { results }
+    }
+
     if (sql.includes('FROM wow_item_metadata') && sql.includes('item_id IN')) {
       const [region, locale, ...itemIds] = values
       this.db.metadataReadItemIds.push([...itemIds])
