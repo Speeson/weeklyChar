@@ -142,6 +142,8 @@ Owns:
 - Web-local TypeScript shapes for Worker responses.
 - Server-backed KeystoneLoot privacy control and presentation-only actual-team-stone
   planner using aggregate Worker recommendations.
+- Owner-only per-character KeystoneLoot objective presentation through the allowlisted
+  owner endpoint, with Web-local response validation and server-backed filters/pagination.
 
 Does not own:
 
@@ -315,6 +317,14 @@ Migration `0004_keystone_loot_item_metadata.sql` adds a D1 cache keyed by
 `(region, locale, item_id)`. Positive results last 30 days, confirmed 404 results last six
 hours, stale positive data survives upstream failures, and unavailable metadata degrades
 to null display fields.
+
+KeystoneLoot V2-B adds only an owner-facing Web consumer. Each Characters-row action opens
+a native responsive dialog for the exact character ID and calls
+`/api/me/characters/:characterId/keystone-loot/objectives`; it does not read the raw
+`keystoneLoot` field to render objectives. Web owns labels, fallbacks, relative freshness,
+and interaction state, while Worker remains authoritative for filtering, objective identity,
+Voidcore state, metadata enrichment, and authorization. Abort plus exact request identities
+prevent late character, filter, pagination, or closed-dialog responses from updating UI.
 
 The validated zero-downtime V1 production order is:
 

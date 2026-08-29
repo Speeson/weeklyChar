@@ -347,6 +347,14 @@ and `icon_url`, a cache `status`, and Unix-second `fetched_at`/`refresh_after` v
 contains display metadata only; it does not change objective identity or persist team
 authorization.
 
+The V2-B owner Web view consumes the allowlisted
+`GET /api/me/characters/:characterId/keystone-loot/objectives` DTO rather than interpreting
+the raw owner `keystoneLoot` block. Its runtime parser accepts only the documented statuses,
+snapshot shape, objective fields, Voidcore states, and opaque cursor; unknown additive
+fields are ignored and malformed responses become a recoverable UI error. Dungeon/spec
+filters and cursor pagination are sent back to Worker instead of being reconstructed from a
+bulk raw wishlist.
+
 Keystone columns:
 
 - `keystones.character_id`

@@ -77,7 +77,7 @@ Compatibility validation also proved that the pre-V1 Worker accepts and safely i
 the new additive Client field, while the new Worker accepts older payloads that omit it.
 V1 is release-ready subject to separately authorized production operations.
 
-## V2-A: Worker objective contracts and metadata — implemented for review
+## V2-A: Worker objective contracts and metadata — completed
 
 V2 must display actual KeystoneLoot targets. Mandatory product scope is:
 
@@ -102,9 +102,17 @@ display deduplication, Voidcore presentation states, Worker-side Blizzard item/m
 enrichment, and D1 migration `0004_keystone_loot_item_metadata.sql`. It does not expose raw
 snapshots or modify V1 scoring.
 
+## V2-B: owner objective UI — implemented for review
+
+The Characters page now exposes `Ver objetivos` for each exact owned character. A native
+responsive dialog consumes only the allowlisted owner objective endpoint, runtime-validates
+the response, and presents item, tier, source, specialization, Voidcore, and snapshot
+freshness data. Dungeon and specialization filters are server-authoritative, pagination is
+bounded at 50 records, and abort plus request identity guards reject stale character/filter
+responses. This phase does not add Team or Settings UI.
+
 Remaining phases:
 
-- **V2-B:** owner per-character wishlist drawer and filters.
 - **V2-C:** team objective visibility and stone-comparison UI, `Ver objetivos`, and the
   Settings text `Compartir mis objetivos de KeystoneLoot con mis equipos` with description
   `Permite que los miembros de tus equipos usen tus objetivos de KeystoneLoot para
