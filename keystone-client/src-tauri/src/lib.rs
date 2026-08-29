@@ -34,6 +34,11 @@ fn open_web(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
 }
 
 #[tauri::command]
+fn open_forgot_password(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
+    window::open_forgot_password(&app)
+}
+
+#[tauri::command]
 fn open_releases(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
     window::open_releases(&app)
 }
@@ -85,6 +90,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             core_request,
             open_web,
+            open_forgot_password,
             open_releases,
             open_raiderio_character,
             exit_app,

@@ -191,16 +191,20 @@ function App() {
 
   useEffect(() => {
     if (!isTauri()) {
-      if (import.meta.env.DEV && new URLSearchParams(window.location.search).get("updater") === "available") {
+      const previewParams = new URLSearchParams(window.location.search);
+      if (import.meta.env.DEV && previewParams.get("updater") === "available") {
         setUpdater({
           ...initialUpdater,
           status: "available",
           availableVersion: "0.4.0",
-          notes: "Nuevo instalador Tauri con actualizaciones firmadas.\nMejoras de estabilidad y rendimiento.",
+          notes: "# KeystoneClient 0.4.0\n\n## Cambios\n\n- Nuevo instalador Tauri con actualizaciones firmadas.\n- Mejoras de estabilidad y rendimiento.",
           releaseDate: "2026-08-23T12:00:00Z",
           lastCheckedAt: "2026-08-23T12:00:00Z",
         });
         setUpdateModalOpen(true);
+      }
+      if (import.meta.env.DEV && previewParams.get("changelog") === "post-update") {
+        setPostUpdateChangelog({ version: bundledRelease.version, notes: bundledRelease.notes });
       }
       return;
     }

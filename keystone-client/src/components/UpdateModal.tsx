@@ -1,6 +1,7 @@
 import type { UpdaterSnapshot } from "../core/updater";
 import { useI18n } from "../core/i18n";
 import { ThemedIcon } from "./ThemedIcon";
+import { ReleaseNotesMarkdown } from "./ReleaseNotesMarkdown";
 
 type UpdateModalProps = {
   snapshot: UpdaterSnapshot;
@@ -51,7 +52,7 @@ export function UpdateModal({ snapshot, onClose, onInstall, onRetry }: UpdateMod
               </p>
               <section aria-labelledby="update-notes-title" className="ks-update-modal__notes">
                 <h3 id="update-notes-title">{t("updater.notes")}</h3>
-                <p>{snapshot.notes || t("updater.noNotes")}</p>
+                <ReleaseNotesMarkdown notes={snapshot.notes} fallback={t("updater.noNotes")} />
               </section>
             </>
           )}

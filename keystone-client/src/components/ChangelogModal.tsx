@@ -1,5 +1,6 @@
 import { useI18n } from "../core/i18n";
 import { ThemedIcon } from "./ThemedIcon";
+import { ReleaseNotesMarkdown } from "./ReleaseNotesMarkdown";
 
 type ChangelogModalProps = {
   version: string;
@@ -23,7 +24,7 @@ export function ChangelogModal({ version, notes, onClose }: ChangelogModalProps)
         </div>
         <div className="ks-update-modal__body">
           <section className="ks-update-modal__notes">
-            <p>{notes || t("updater.noNotes")}</p>
+            <ReleaseNotesMarkdown notes={notes} fallback={t("updater.noNotes")} />
           </section>
         </div>
         <div className="ks-update-modal__actions">

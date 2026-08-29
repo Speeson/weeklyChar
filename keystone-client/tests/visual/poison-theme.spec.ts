@@ -36,6 +36,9 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Registrarse" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recuperar contraseña" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
     await expect(page).toHaveScreenshot("poison-login.png", { fullPage: true });
   });
 
@@ -45,6 +48,8 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByRole("heading", { name: "Crear cuenta" })).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
     await expect(page).toHaveScreenshot("poison-registration.png", { fullPage: true });
   });
 
@@ -105,8 +110,21 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     const modal = page.getByRole("dialog", { name: "Actualizacion 0.4.0" });
     await expect(modal).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.4.0" })).toBeVisible();
+    await expect(modal.getByRole("listitem")).toHaveCount(2);
     await expect(modal.getByRole("button", { name: "Instalar y reiniciar" })).toBeVisible();
     await expect(page).toHaveScreenshot("poison-update-available.png", { fullPage: true });
+  });
+
+  test("renders the post-update changelog over Poison", async ({ page }) => {
+    await page.goto("/?preview=sync-success&changelog=post-update");
+
+    await expectPoisonTheme(page);
+    const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
+    await expect(modal).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.6.3" })).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 2, name: "Novedades", exact: true })).toBeVisible();
+    await expect(page).toHaveScreenshot("poison-post-update-changelog.png", { fullPage: true });
   });
 
   test("renders the user menu over the Poison view", async ({ page }) => {

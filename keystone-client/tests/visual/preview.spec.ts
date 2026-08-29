@@ -12,6 +12,9 @@ test.describe("preview states", () => {
     await page.goto("/?preview=login");
     await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Registrarse" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recuperar contraseña" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
     await expect(page).toHaveScreenshot("login.png", { fullPage: true });
   });
 
@@ -20,6 +23,8 @@ test.describe("preview states", () => {
     await page.getByRole("button", { name: "Registrarse" }).click();
     await expect(page.getByRole("heading", { name: "Crear cuenta" })).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
     await expect(page).toHaveScreenshot("registration.png", { fullPage: true });
   });
 
@@ -140,9 +145,20 @@ test.describe("preview states", () => {
 
     const modal = page.getByRole("dialog", { name: "Actualizacion 0.4.0" });
     await expect(modal).toBeVisible();
-    await expect(modal.getByText("Nuevo instalador Tauri con actualizaciones firmadas.")).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.4.0" })).toBeVisible();
+    await expect(modal.getByRole("listitem")).toHaveCount(2);
     await expect(modal.getByRole("button", { name: "Instalar y reiniciar" })).toBeVisible();
     await expect(page).toHaveScreenshot("update-available.png", { fullPage: true });
+  });
+
+  test("renders the post-update changelog Markdown", async ({ page }) => {
+    await page.goto("/?preview=sync-success&changelog=post-update");
+
+    const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
+    await expect(modal).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.6.3" })).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 2, name: "Novedades", exact: true })).toBeVisible();
+    await expect(page).toHaveScreenshot("post-update-changelog.png", { fullPage: true });
   });
 
   test("renders the user menu above the current view", async ({ page }) => {
