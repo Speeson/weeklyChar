@@ -7,6 +7,7 @@ import {
   voidcorePresentation,
   type KeystoneLootObjective,
 } from '@/lib/keystoneLootObjectives'
+import KeystoneLootItemTooltip from './KeystoneLootItemTooltip'
 
 function ItemIcon({ objective }: { objective: KeystoneLootObjective }) {
   if (objective.iconUrl) {
@@ -42,21 +43,26 @@ export default function KeystoneLootObjectiveList({
         const tier = tierPresentation(objective.tier)
         const voidcore = voidcorePresentation(objective.voidcoreState)
         return (
-          <li key={`${objective.itemId}-${objective.specId}-${objective.sourceType}-${objective.sourceId}-${index}`} className="flex gap-3 border-b border-gray-800 px-4 py-4 last:border-0">
-            <ItemIcon objective={objective} />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="min-w-0 break-words font-medium text-gray-100">{objectiveItemName(objective)}</p>
-                <span className={`shrink-0 rounded border px-2 py-0.5 text-xs ${tier.tone}`}>{tier.label}</span>
+          <li key={`${objective.itemId}-${objective.specId}-${objective.sourceType}-${objective.sourceId}-${index}`} className="border-b border-gray-800 last:border-0">
+            <KeystoneLootItemTooltip
+              objective={objective}
+              triggerClassName="flex w-full gap-3 px-4 py-4 text-left hover:bg-gray-800/30"
+            >
+              <ItemIcon objective={objective} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="min-w-0 break-words font-medium text-gray-100">{objectiveItemName(objective)}</p>
+                  <span className={`shrink-0 rounded border px-2 py-0.5 text-xs ${tier.tone}`}>{tier.label}</span>
+                </div>
+                {showContext && (
+                  <p className="mt-1 break-words text-xs text-gray-400">
+                    {objectiveSourceLabel(objective, DUNGEON_NAME_BY_ID)} · {specName(objective.specId)} · objeto {objective.itemId}
+                    {objective.slotId !== null ? ` · ranura ${objective.slotId}` : ''}
+                  </p>
+                )}
+                <p className={`mt-1 text-xs ${voidcore.tone}`}>{voidcore.label}</p>
               </div>
-              {showContext && (
-                <p className="mt-1 break-words text-xs text-gray-400">
-                  {objectiveSourceLabel(objective, DUNGEON_NAME_BY_ID)} · {specName(objective.specId)} · objeto {objective.itemId}
-                  {objective.slotId !== null ? ` · ranura ${objective.slotId}` : ''}
-                </p>
-              )}
-              <p className={`mt-1 text-xs ${voidcore.tone}`}>{voidcore.label}</p>
-            </div>
+            </KeystoneLootItemTooltip>
           </li>
         )
       })}

@@ -12,6 +12,10 @@ export type KeystoneLootObjective = {
   sourceType: string
   sourceId: number | string
   slotId: number | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
   voidcoreState: KeystoneLootVoidcoreState
 }
 
@@ -102,6 +106,12 @@ function nullableString(value: unknown, maximum: number): value is string | null
   return value === null || (typeof value === 'string' && value.length > 0 && value.length <= maximum)
 }
 
+function statNames(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= 32
+    && value.every(name => typeof name === 'string' && name.length > 0 && name.length <= 128)
+    && new Set(value).size === value.length
+}
+
 function parseSnapshot(value: unknown): ObjectiveSnapshot | null {
   if (!isObject(value) || !Number.isSafeInteger(value.updatedAt) || Number(value.updatedAt) < 0
     || typeof value.addonVersion !== 'string' || value.addonVersion.length === 0
@@ -123,6 +133,10 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
     || !(positiveInteger(value.sourceId)
       || (typeof value.sourceId === 'string' && value.sourceId.length > 0 && value.sourceId.length <= 128))
     || !(value.slotId === null || Number.isSafeInteger(value.slotId))
+    || !nullableString(value.slotName, 128)
+    || !nullableString(value.itemClassName, 128)
+    || !nullableString(value.itemSubClassName, 128)
+    || !statNames(value.statNames)
     || typeof value.voidcoreState !== 'string'
     || !VOIDCORE_STATES.includes(value.voidcoreState as KeystoneLootVoidcoreState)) return null
 
@@ -143,6 +157,10 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
     sourceType: value.sourceType,
     sourceId: value.sourceId,
     slotId: value.slotId as number | null,
+    slotName: value.slotName,
+    itemClassName: value.itemClassName,
+    itemSubClassName: value.itemSubClassName,
+    statNames: [...value.statNames],
     voidcoreState: value.voidcoreState as KeystoneLootVoidcoreState,
   }
 }

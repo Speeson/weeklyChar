@@ -522,6 +522,19 @@ The Worker and Web intentionally duplicate the verified Season 2 dungeon pool du
 Cross-surface consolidation is deferred to avoid a Web/shared-build boundary change in this
 backend-only phase.
 
+Stone Selector S3 consumes this aggregate DTO through a strict Web projection. The parser requires
+the requested Team and dungeon identities, validates bounded arrays/counts and safe optional S2
+metadata, ignores additive unknown fields, and rejects malformed required fields as a recoverable
+Selector error. It does not accept raw snapshots, privacy flags, numeric stat quantities, bonus
+IDs, gems, enchants, or internal scoring data. Web renders `characters` in server order and treats
+the endpoint's `availability` as authoritative for the selected dungeon. Counts displayed before
+selection come only from current same-week Team-detail keystones.
+
+The reusable Web item tooltip consumes only the public objective allowlist (`itemName`, `iconUrl`,
+slot/class/subclass names, bounded `statNames`, source, spec IDs, tier, and Voidcore state). Missing
+metadata degrades to `Objeto #<itemId>`, a generic icon, and an explicit unavailable-metadata hint;
+it never turns an otherwise valid objective into a response failure.
+
 The public objective allowlist is:
 
 ```ts

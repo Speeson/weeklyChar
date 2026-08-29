@@ -143,6 +143,15 @@ upgrade lazily at their normal refresh boundary. Web tooltip rendering, Client U
 composition planning remain deferred. The Worker owns a minimal duplicate of the verified
 Season 2 challenge-map allowlist; cross-surface consolidation is intentionally deferred.
 
+Stone Selector S3 adds the Web-only inline Selector on the Team page. It always shows the eight
+canonical Season 2 dungeons (including selectable zero-stone entries), consumes the S1 aggregate
+route through a strict parser and abort/generation guards, and renders compact server-ordered
+character summaries with multi-spec filtering and grouped item grids. A shared portal tooltip
+applies S2 safe metadata to Selector, owner, and Team objective items on hover/focus/click/tap.
+The exposed legacy Team planner UI and its visual components are removed; the disabled
+`Planificar piedra · Próximamente` tab documents the future feature boundary. S4 Client bridge,
+S5 Client Teams UI, and composition planning remain deferred.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

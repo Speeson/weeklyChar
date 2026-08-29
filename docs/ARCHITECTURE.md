@@ -348,6 +348,23 @@ status envelope, abort/invalidate stale work, and clear sensitive rows on a refr
 The Worker still performs live membership, sharing, filtering, scoring, deduplication,
 Voidcore, metadata, and pagination decisions.
 
+Stone Selector S3 replaces the Team header's exposed composition planner with a Web-only,
+inline `Selector de piedra` between the Team header and member cards. The strip always renders
+the eight dungeons from `keystone-web/lib/season2.ts`; counts come from current Team detail and
+the selected dungeon is reconciled with the aggregate response. One strict Web parser and one
+abortable request consume
+`/api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. Response identity prevents
+late dungeon results from replacing a newer selection. Web preserves Worker character order and
+does not score, compose, or reconstruct excluded members.
+
+The inline panel owns compact summary, collapsed character cards, optional multi-spec filtering,
+semantic tier grids, and a subdued completed-Voidcore disclosure. A shared portal-based
+`KeystoneLootItemTooltip` now presents the S2 safe metadata on Selector tiles and the existing
+owner/Team objective rows. It supports hover, keyboard focus, click/tap, outside dismissal, and
+Escape without exposing numeric stats. The prior `KeystonePlanner` visual components are removed;
+non-visual recommendation helpers remain isolated for the deferred planner. Client Teams and the
+composition planner remain later phases.
+
 KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
 the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local
 Worker, and a production-built Web. The owner drawer, team drawer, and contextual planner all

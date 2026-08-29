@@ -21,6 +21,10 @@ const objective = {
   sourceType: 'dungeon',
   sourceId: 250,
   slotId: null,
+  slotName: null,
+  itemClassName: null,
+  itemSubClassName: null,
+  statNames: [],
   voidcoreState: 'voidcore_not_checked',
 }
 
@@ -56,6 +60,9 @@ test('team parser rejects malformed envelopes, DTO fields, timestamps and cursor
     { ...valid, objectives: [{ ...objective, sourceType: '' }] },
     { ...valid, objectives: [{ ...objective, sourceId: 0 }] },
     { ...valid, objectives: [{ ...objective, slotId: '13' }] },
+    { ...valid, objectives: [{ ...objective, itemClassName: 4 }] },
+    { ...valid, objectives: [{ ...objective, statNames: ['x'.repeat(129)] }] },
+    { ...valid, objectives: [{ ...objective, statNames: [819] }] },
     { ...valid, objectives: [{ ...objective, voidcoreState: 'maybe' }] },
     { status: 'available', updatedAt: 1, nextCursor: null },
     { status: 'sharing_disabled', objectives: [] },
