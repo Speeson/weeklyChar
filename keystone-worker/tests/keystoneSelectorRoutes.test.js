@@ -242,6 +242,10 @@ test('selector enriches only selected objective IDs and preserves metadata failu
     status: 'ok',
     fetched_at: 1,
     refresh_after: Number.MAX_SAFE_INTEGER,
+    slot_name: 'Chest',
+    item_class_name: 'Armor',
+    item_subclass_name: 'Cloth',
+    stat_names_json: JSON.stringify(['Haste', 'Intellect']),
   }]
 
   const response = await summary(env)
@@ -253,7 +257,7 @@ test('selector enriches only selected objective IDs and preserves metadata failu
     objective.itemId, objective.itemName, objective.iconUrl,
     objective.slotName, objective.itemClassName, objective.itemSubClassName, objective.statNames,
   ]), [
-    [10, 'Objeto enriquecido', 'https://render.worldofwarcraft.com/eu/icons/56/object.jpg', null, null, null, []],
+    [10, 'Objeto enriquecido', 'https://render.worldofwarcraft.com/eu/icons/56/object.jpg', 'Chest', 'Armor', 'Cloth', ['Haste', 'Intellect']],
     [11, null, null, null, null, null, []],
   ])
 })

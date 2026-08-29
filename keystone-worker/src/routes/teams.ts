@@ -79,6 +79,10 @@ async function enrichSelectorSummary(
     for (let index = 0; index < objectives.length; index += 1) {
       objectives[index].itemName = enriched[index].itemName
       objectives[index].iconUrl = enriched[index].iconUrl
+      objectives[index].slotName = enriched[index].slotName
+      objectives[index].itemClassName = enriched[index].itemClassName
+      objectives[index].itemSubClassName = enriched[index].itemSubClassName
+      objectives[index].statNames = enriched[index].statNames
     }
   }
   return summary

@@ -320,6 +320,16 @@ Migration `0004_keystone_loot_item_metadata.sql` adds a D1 cache keyed by
 hours, stale positive data survives upstream failures, and unavailable metadata degrades
 to null display fields.
 
+Stone Selector S2 extends that same cache through additive migration
+`0005_keystone_loot_item_tooltip_metadata.sql`. The Worker reads localized equipment slot,
+item class, item subclass, and stat names from official Item API fields and exposes them through
+the shared allowlisted objective projection used by owner, Team, and Selector responses. Only
+bounded stat names are stored; numeric quantities and raw Blizzard responses remain outside the
+contract. Pre-S2 positive rows continue serving name/icon data and lazily acquire the new fields
+at their existing refresh boundary, avoiding an immediate cache-wide refresh. Optional malformed
+or unavailable metadata degrades independently without failing an objective. Web and Client
+tooltip rendering remain deferred.
+
 KeystoneLoot V2-B adds only an owner-facing Web consumer. Each Characters-row action opens
 a native responsive dialog for the exact character ID and calls
 `/api/me/characters/:characterId/keystone-loot/objectives`; it does not read the raw

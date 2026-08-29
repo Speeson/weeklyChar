@@ -24,6 +24,10 @@ export type KeystoneLootObjectiveDTO = {
   sourceType: string
   sourceId: number | string
   slotId: number | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
   voidcoreState: KeystoneLootVoidcoreState
 }
 
@@ -195,6 +199,10 @@ export function buildKeystoneLootObjectivePage(
     sourceType: effectiveSourceType(favorite),
     sourceId: favorite.sourceId,
     slotId: favorite.slotId ?? null,
+    slotName: null,
+    itemClassName: null,
+    itemSubClassName: null,
+    statNames: [],
     voidcoreState: !usedItems
       ? 'voidcore_not_checked'
       : usedItems.has(favorite.itemId) ? 'completed_with_voidcore' : 'pending',

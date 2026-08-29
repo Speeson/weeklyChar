@@ -132,13 +132,16 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 
 ## Next planned milestone
 
-Stone Selector S1 adds the backend-only aggregate route
+Stone Selector S1 added the backend-only aggregate route
 `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team
 membership and sharing, actionable Voidcore counters, cross-spec canonical deduplication,
 deterministic character ordering, current weekly stone availability, and existing Blizzard
-name/icon enrichment. Tooltip metadata expansion, Web, Client, and composition planning remain
-deferred. The Worker owns a minimal duplicate of the verified Season 2 challenge-map allowlist
-during S1; cross-surface consolidation is intentionally deferred.
+metadata enrichment. S2 additively extends the Worker-owned item cache and shared safe objective
+projection with localized equipment slot, item class, item subclass, and bounded stat names;
+numeric stat quantities and raw Blizzard payloads remain excluded. Existing positive cache rows
+upgrade lazily at their normal refresh boundary. Web tooltip rendering, Client UI/bridge, and
+composition planning remain deferred. The Worker owns a minimal duplicate of the verified
+Season 2 challenge-map allowlist; cross-surface consolidation is intentionally deferred.
 
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
@@ -150,7 +153,8 @@ column. Owner access remains independent of that preference.
 
 Production rollout remains a separately authorized operation. Before deployment, configure
 Cloudflare Worker secrets `BLIZZARD_CLIENT_ID` and `BLIZZARD_CLIENT_SECRET`, apply additive D1
-migration `0004_keystone_loot_item_metadata.sql`, deploy the backward-compatible Worker, smoke
+migrations `0004_keystone_loot_item_metadata.sql` and
+`0005_keystone_loot_item_tooltip_metadata.sql`, deploy the backward-compatible Worker, smoke
 the owner/team objective routes, and only then deploy Web. Missing Blizzard credentials do not
 break objective routes, but metadata falls back to `Objeto #<itemId>` and the generic icon;
 deployment is technically safe without them, while configuring them first is the recommended

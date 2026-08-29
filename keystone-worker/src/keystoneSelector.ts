@@ -141,10 +141,10 @@ function selectorObjective(
     sourceType: selected.sourceType,
     sourceId: selected.sourceId,
     slotId: selected.slotId,
-    slotName: null,
-    itemClassName: null,
-    itemSubClassName: null,
-    statNames: [],
+    slotName: selected.slotName,
+    itemClassName: selected.itemClassName,
+    itemSubClassName: selected.itemSubClassName,
+    statNames: selected.statNames,
     voidcoreState: selected.voidcoreState,
   }
 }

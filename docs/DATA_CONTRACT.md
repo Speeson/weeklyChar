@@ -32,7 +32,8 @@ Primary files:
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
 - D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`,
-  `0003_keystone_loot_sharing.sql`, and `0004_keystone_loot_item_metadata.sql`
+  `0003_keystone_loot_sharing.sql`, `0004_keystone_loot_item_metadata.sql`, and
+  `0005_keystone_loot_item_tooltip_metadata.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -315,7 +316,7 @@ Tables:
 | `team_members` | User/team memberships. |
 | `team_invitations` | Pending/accepted/declined invitations. |
 | `rate_limits` | Rate-limit attempt JSON by key. |
-| `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced display names and icon URLs. |
+| `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced safe display and tooltip metadata. |
 
 Character sync columns:
 
@@ -342,10 +343,12 @@ excludes the user from recommendation calculation and makes the team objective e
 return only `sharing_disabled`. Owner access is unaffected. There is no second
 details-sharing preference or column.
 
-`wow_item_metadata` uses primary key `(region, locale, item_id)` and stores nullable `name`
-and `icon_url`, a cache `status`, and Unix-second `fetched_at`/`refresh_after` values. It
-contains display metadata only; it does not change objective identity or persist team
-authorization.
+`wow_item_metadata` uses primary key `(region, locale, item_id)` and stores nullable `name`,
+`icon_url`, `slot_name`, `item_class_name`, `item_subclass_name`, and `stat_names_json`, plus
+a cache `status` and Unix-second `fetched_at`/`refresh_after` values. `stat_names_json` is a
+bounded, deduplicated, deterministic JSON string array; numeric stat quantities and raw Blizzard
+payloads are not stored. The table contains display metadata only; it does not change objective
+identity or persist team authorization.
 
 The V2-B owner Web view consumes the allowlisted
 `GET /api/me/characters/:characterId/keystone-loot/objectives` DTO rather than interpreting
@@ -491,9 +494,9 @@ Stone Selector aggregate endpoint:
 - Availability is independent of KeystoneLoot sharing. It contains only each current Team
   character's latest same-week real keystone when its challenge map matches the selected dungeon;
   stale and superseded rows are excluded. A zero-stone dungeon still returns HTTP 200.
-- S1 reuses the existing Blizzard cache for `itemName` and `iconUrl`. `slotName`,
-  `itemClassName`, and `itemSubClassName` remain `null`, and `statNames` remains empty until S2.
-  Metadata failure never removes an objective.
+- S2 enriches the S1-reserved `slotName`, `itemClassName`, `itemSubClassName`, and `statNames`
+  fields through the same Worker cache and safe projection used by owner and Team objective
+  endpoints. Metadata failure never removes an objective.
 
 The Selector objective allowlist is:
 
@@ -531,6 +534,10 @@ The public objective allowlist is:
   sourceType: string
   sourceId: number | string
   slotId: number | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
 ```
@@ -554,6 +561,15 @@ pipelines. Positive metadata has a 30-day TTL, confirmed 404 metadata a six-hour
 429 `Retry-After` is bounded and cached. Stale positive metadata remains present on upstream
 failure. Missing credentials, timeouts, malformed/oversized responses, invalid item IDs, or
 unsafe media URLs produce nullable metadata rather than failing the objective response.
+
+S2 reads localized tooltip-safe values only from official Item API fields
+`inventory_type.name`, `item_class.name`, `item_subclass.name`, and
+`preview_item.stats[].type.name`. It never reads or exposes `preview_item.stats[].value`.
+Existing positive rows created before migration `0005` remain readable and keep their normal
+TTL: they acquire tooltip metadata at their existing `refresh_after` boundary instead of
+causing an immediate rollout request storm. Successful S2 refreshes write a stat-name array,
+including `[]` when no usable names are supplied. Malformed optional fields degrade
+independently to `null` or `[]`, and transient refresh failures preserve stale safe metadata.
 
 Recommendation candidates are `(character, specId)` pairs. A target counts only when
 `sourceId === challengeMapId` by exact numeric identity and `sourceType === "dungeon"`;
@@ -657,7 +673,7 @@ KeystoneLoot V2 remains compatible across deployment boundaries:
 | V2 Web | V2 Worker | owner/team/planner objective routes available |
 | V2 Worker without Blizzard credentials | V2 Web | objectives usable with null metadata, `Objeto #<itemId>`, and the generic icon fallback |
 | V2 Worker with an empty metadata cache | V2 Web | cache miss refreshes when credentials exist; otherwise safe fallback |
-| existing D1 after migration `0004` | old/new Worker | additive cache table is ignored by old Worker and used by new Worker |
+| existing D1 after migrations `0004` and `0005` | old/new Worker | additive cache table/columns are ignored by old Worker and used by new Worker |
 
 For V2, configure the two Blizzard Cloudflare Worker secrets, apply migration `0004`, deploy
 Worker, smoke objective endpoints, then deploy Web. Neither an addon nor a Client release is

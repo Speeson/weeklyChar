@@ -15,6 +15,10 @@ export type WowItemMetadataRow = {
   item_id: number
   name: string | null
   icon_url: string | null
+  slot_name: string | null
+  item_class_name: string | null
+  item_subclass_name: string | null
+  stat_names_json: string | null
   status: string
   fetched_at: number
   refresh_after: number

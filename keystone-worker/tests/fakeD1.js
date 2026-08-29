@@ -245,11 +245,19 @@ class FakeD1Statement {
     }
 
     if (sql.includes('INSERT INTO wow_item_metadata')) {
-      const [region, locale, itemId, name, iconUrl, status, fetchedAt, refreshAfter] = values
+      const [
+        region, locale, itemId, name, iconUrl,
+        slotName, itemClassName, itemSubClassName, statNamesJson,
+        status, fetchedAt, refreshAfter,
+      ] = values
       const existing = this.db.itemMetadata.find(row =>
         row.region === region && row.locale === locale && row.item_id === itemId)
       const value = {
         region, locale, item_id: itemId, name, icon_url: iconUrl,
+        slot_name: slotName,
+        item_class_name: itemClassName,
+        item_subclass_name: itemSubClassName,
+        stat_names_json: statNamesJson,
         status, fetched_at: fetchedAt, refresh_after: refreshAfter,
       }
       if (existing) Object.assign(existing, value)

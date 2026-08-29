@@ -58,18 +58,39 @@ function makeEnv() {
   return { DB, JWT_SECRET: 'test-secret' }
 }
 
+function metadataRow() {
+  return {
+    region: 'eu', locale: 'es_ES', item_id: 12345,
+    name: 'Vestidura segura', icon_url: 'https://render.worldofwarcraft.com/eu/icons/56/object.jpg',
+    slot_name: 'Chest', item_class_name: 'Armor', item_subclass_name: 'Cloth',
+    stat_names_json: JSON.stringify(['Haste', 'Intellect']), status: 'ok',
+    fetched_at: 1, refresh_after: Number.MAX_SAFE_INTEGER,
+  }
+}
+
 async function headers(env, userId) {
   return { Authorization: `Bearer ${await createAccessToken(env.JWT_SECRET, userId)}` }
 }
 
 test('owner objectives require JWT ownership and ignore the sharing toggle', async () => {
   const env = makeEnv()
+  env.DB.itemMetadata = [metadataRow()]
   env.DB.users[0].share_keystone_loot_with_teams = 0
   const own = await app.request('/api/me/characters/10/keystone-loot/objectives', {
     headers: await headers(env, 1),
   }, env)
   assert.equal(own.status, 200)
-  assert.equal((await own.json()).status, 'available')
+  const ownBody = await own.json()
+  assert.equal(ownBody.status, 'available')
+  assert.deepEqual({
+    slotName: ownBody.objectives[0].slotName,
+    itemClassName: ownBody.objectives[0].itemClassName,
+    itemSubClassName: ownBody.objectives[0].itemSubClassName,
+    statNames: ownBody.objectives[0].statNames,
+  }, {
+    slotName: 'Chest', itemClassName: 'Armor', itemSubClassName: 'Cloth',
+    statNames: ['Haste', 'Intellect'],
+  })
 
   const syncToken = await app.request('/api/me/characters/10/keystone-loot/objectives', {
     headers: { Authorization: 'Bearer sync-1' },
@@ -148,14 +169,19 @@ test('objective routes reject invalid limits, cursors and ambiguous source filte
 
 test('authorized teammate receives only the allowlisted objective DTO', async () => {
   const env = makeEnv()
+  env.DB.itemMetadata = [metadataRow()]
   const response = await app.request('/api/teams/1/characters/20/keystone-loot/objectives?challengeMapId=249&specId=102', {
     headers: await headers(env, 1),
   }, env)
   assert.equal(response.status, 200)
   const body = await response.json()
   assert.deepEqual(body.objectives[0], {
-    itemId: 12345, itemName: null, iconUrl: null, tier: 3, specId: 102,
-    sourceType: 'dungeon', sourceId: 249, slotId: 13, voidcoreState: 'pending',
+    itemId: 12345, itemName: 'Vestidura segura',
+    iconUrl: 'https://render.worldofwarcraft.com/eu/icons/56/object.jpg', tier: 3, specId: 102,
+    sourceType: 'dungeon', sourceId: 249, slotId: 13,
+    slotName: 'Chest', itemClassName: 'Armor', itemSubClassName: 'Cloth',
+    statNames: ['Haste', 'Intellect'],
+    voidcoreState: 'pending',
   })
   const serialized = JSON.stringify(body)
   for (const forbidden of ['keystoneLoot', 'favorites', 'characterKey', 'usedItems', 'bonusIds', 'gems', 'enchant', 'secret']) {
