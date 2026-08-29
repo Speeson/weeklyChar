@@ -111,7 +111,7 @@ freshness data. Dungeon and specialization filters are server-authoritative, pag
 bounded at 50 records, and abort plus request identity guards reject stale character/filter
 responses. This phase does not add Team or Settings UI.
 
-## V2-C: team objective visibility — implemented for review
+## V2-C: team objective visibility — completed
 
 The Team page now exposes allowlisted objectives for exact current-team characters through
 the Team endpoint. Recommended planner cards can open contextual objectives for the selected
@@ -124,9 +124,22 @@ aggregate recommendation participation and allowlisted objective details for cur
 teammates. Web displays Worker-authoritative privacy/product states and clears rows on a 403;
 it does not infer authorization, scoring, identity, or Voidcore decisions.
 
-Remaining phase:
+## V2-D: end-to-end release readiness — completed
 
-- **V2-D:** full local E2E, release readiness, and separately authorized production work.
+The current real SavedVariables file passed the canonical Client parser, local Worker/D1
+storage, owner/team objective projection, and production-built Web. Disposable D1 migration
+`0001` through `0004`, live same-team and membership-removal checks, sharing on/off/re-enable,
+authoritative empty and historical records, raw privacy, metadata cache/fallback, owner/team
+pagination and filters, planner contextual filtering, future tiers, Voidcore, dungeon namespace
+collisions, and exact character IDs all passed. Worker, Web, Client, and addon regression suites
+passed; Web lint remained at the pre-existing 13-error/25-warning baseline. No V2-D runtime fix
+was required.
+
+Production remains separately authorized. Required order is: configure the two Blizzard Worker
+secrets, apply additive migration `0004`, deploy/smoke Worker, then deploy/smoke Web. The safe
+metadata fallback permits deployment without credentials by using `Objeto #<itemId>` and the
+generic icon, but configuring them first is recommended. No Client or addon release is part
+of V2.
 
 ## V3: advanced planner — pending
 
@@ -144,3 +157,5 @@ scope and are not part of V1-D.
   the additive SavedVariables block and old Worker ignores the additive Client payload
   field. The new Worker remains compatible with clients that omit `keystoneLoot`.
 - Push, release, deployment, and remote D1 migration require separate explicit approval.
+- Complete V2 impact is Web + Worker + DB only. It requires no Client or addon changeset,
+  version bump, build, or release.

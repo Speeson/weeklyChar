@@ -338,6 +338,32 @@ status envelope, abort/invalidate stale work, and clear sensitive rows on a refr
 The Worker still performs live membership, sharing, filtering, scoring, deduplication,
 Voidcore, metadata, and pagination decisions.
 
+KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
+the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local
+Worker, and a production-built Web. The owner drawer, team drawer, and contextual planner all
+used their actual Worker routes. The same run covered live membership removal, sharing
+disable/re-enable, authoritative empty and historical snapshots, pagination/filtering, exact
+same-name/different-realm IDs, future tiers, dungeon/raid numeric-ID collisions, Voidcore,
+metadata fallback/cache behavior, and raw team privacy. No V2-D runtime change was required.
+
+V2 production rollout is backend-first:
+
+```text
+1. configure BLIZZARD_CLIENT_ID and BLIZZARD_CLIENT_SECRET as Cloudflare Worker secrets
+2. apply additive D1 migration 0004_keystone_loot_item_metadata.sql
+3. deploy the Worker
+4. smoke owner/team objective endpoints
+5. deploy the Web
+6. smoke Characters, Team drawer, and planner in production
+```
+
+The old Worker ignores migration `0004`; the new Worker needs the cache table before its
+objective routes run; the new Worker remains compatible with the old Web; and V2 Web requires
+the new routes. The Blizzard bindings are optional in `Env`: if absent, authorization and
+objective projection continue to work with nullable metadata, `Objeto #<itemId>`, and the
+generic Web icon fallback.
+Cloudflare owns these runtime secrets; they are not repository or Vercel secrets.
+
 The validated zero-downtime V1 production order is:
 
 ```text

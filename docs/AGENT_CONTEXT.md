@@ -64,9 +64,9 @@ Main implementation points:
 
 Verified from checked-out files:
 
-- Canonical addon repo `Speeson/KeystoneSync` at verified `main`/`v0.1.16`: `Version: 0.1.16`, `Interface: 120005`
-- Canonical Windows client `keystone-client/VERSION`: `0.4.0`
-- Current public Tauri release: `0.4.0`, tag `client-v0.4.0`, cut over at commit `b927d6721ab68272413f1035e583886927caf5ae`
+- Canonical addon repo `Speeson/KeystoneSync` at verified `main`/`v0.2.3`: `Version: 0.2.3`, `Interface: 120100`
+- Canonical Windows client `keystone-client/VERSION`: `0.6.3`
+- Current public Tauri release: `0.6.3`, tag `client-v0.6.3`, at commit `e1eadbdecc673b81220f8aab9601af6fc26e3552`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
@@ -128,21 +128,22 @@ Verified from checked-out files:
 
 ## Current WoW patch / season status
 
-The application layers use the verified Midnight Season 2 pool (challenge map IDs 588, 587, 586, 584, 585, 249, 250, and 399) and canonical Season 2 currency keys. The standalone addon implements Interface 120100, Season 2 currencies, Prey quest IDs, and Trovehunter's Bounty and has passed its automated, changeset, package, and deployment-impact validation. An in-game smoke test is still required before release.
+The application layers use the verified Midnight Season 2 pool (challenge map IDs 588, 587, 586, 584, 585, 249, 250, and 399) and canonical Season 2 currency keys. The standalone addon release `v0.2.3` implements Interface 120100, Season 2 currencies, Prey quest IDs, Trovehunter's Bounty, and the compatible KeystoneLoot V1 snapshot contract.
 
 ## Next planned milestone
 
-Perform the Midnight Season 2 in-game addon smoke test, then coordinate the separately authorized KeystoneClient v0.6.0 and addon v0.2.0 releases.
+KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
+on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
+`d64db656dd7c3ebf513275b89c07416f7a880f7b`, and
+`bf1b83e865ee29440ac3cf455fa82bc879577b0c`. The durable contract uses the existing
+`shareKeystoneLootWithTeams` preference for both recommendations and allowlisted same-team
+objective visibility, with live membership checks on every team request and no second privacy
+column. Owner access remains independent of that preference.
 
-KeystoneLoot V2-A is committed locally on `feature/keystoneloot-v2-a` as
-`a99cedfa6e293a374cea3bfb77970443851ba975`; V2-B is committed as
-`d64db656dd7c3ebf513275b89c07416f7a880f7b`. The durable contract uses the existing
-`shareKeystoneLootWithTeams` preference for
-both recommendations and allowlisted same-team objective visibility, with live membership
-checks on every team request and no second privacy column. V2-A adds owner/team objective
-Worker routes and migration `0004_keystone_loot_item_metadata.sql` for Worker-side Blizzard
-item metadata caching. V2-B provides the owner drawer. V2-C Team Web UI is implemented but
-uncommitted for review: exact Team characters use the allowlisted Team objective endpoint;
-the existing planner shows contextual item details in the same dialog, and Settings describes
-the single toggle's aggregate-plus-detail sharing semantics. V2-D must not start without
-explicit authorization.
+Production rollout remains a separately authorized operation. Before deployment, configure
+Cloudflare Worker secrets `BLIZZARD_CLIENT_ID` and `BLIZZARD_CLIENT_SECRET`, apply additive D1
+migration `0004_keystone_loot_item_metadata.sql`, deploy the backward-compatible Worker, smoke
+the owner/team objective routes, and only then deploy Web. Missing Blizzard credentials do not
+break objective routes, but metadata falls back to `Objeto #<itemId>` and the generic icon;
+deployment is technically safe without them, while configuring them first is the recommended
+product rollout.

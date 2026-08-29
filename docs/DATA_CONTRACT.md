@@ -553,8 +553,8 @@ Main consumers:
     summary, response-validation, and exact-character-ID helpers. It does not score data.
 
 V1-D renders only privacy-safe recommendation summaries and keeps normal team detail free
-of raw wishlists. It does not consume the owner-only `keystoneLoot` block. V2 remains
-mandatory and pending for actual item/object display.
+of raw wishlists. V2 adds actual item/object display only through the allowlisted owner/team
+objective routes. No Team Web surface consumes the owner-only raw `keystoneLoot` block.
 
 The Web keeps local TypeScript interfaces in each page rather than a single shared generated API type. Seasonal dungeon/currency display metadata is currently hardcoded in Web pages and should be reviewed during the WoW season phase, not changed here.
 
@@ -593,6 +593,23 @@ KeystoneLoot V1 compatibility was validated as follows:
 Validated production order is addon, Client, migration `0002`, migration `0003`, Worker,
 then Web. The Worker cannot precede its migrations because its SQL references both new
 columns. Web follows Worker because it requires the preference and recommendation routes.
+
+KeystoneLoot V2 remains compatible across deployment boundaries:
+
+| Producer / state | V2 consumer | Result |
+| --- | --- | --- |
+| released V1 addon snapshot | V2 Client/Worker | accepted and projected through the V2 DTO |
+| released V1 Client | V2 Worker | accepted; transport contract is unchanged |
+| old Web | V2 Worker | compatible; existing responses remain additive/unchanged |
+| V2 Web | V2 Worker | owner/team/planner objective routes available |
+| V2 Worker without Blizzard credentials | V2 Web | objectives usable with null metadata, `Objeto #<itemId>`, and the generic icon fallback |
+| V2 Worker with an empty metadata cache | V2 Web | cache miss refreshes when credentials exist; otherwise safe fallback |
+| existing D1 after migration `0004` | old/new Worker | additive cache table is ignored by old Worker and used by new Worker |
+
+For V2, configure the two Blizzard Cloudflare Worker secrets, apply migration `0004`, deploy
+Worker, smoke objective endpoints, then deploy Web. Neither an addon nor a Client release is
+required for V2. Missing Blizzard credentials are an operational quality prerequisite rather
+than a code blocker because item identity and authorization remain intact.
 
 Additive changes:
 
