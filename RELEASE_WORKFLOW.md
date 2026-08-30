@@ -58,7 +58,7 @@ Estado actual verificado:
 - Si se modifica `keystone-worker`, primero validar con los scripts locales relevantes.
 - `.github/workflows/deploy-worker.yml` ejecuta `npm run typecheck` y `npm test`.
 - El dispatch directo de `deploy-worker.yml` es solo de validacion. Migracion, deploy y smoke de produccion se solicitan desde `deploy.yml` para conservar un unico orquestador.
-- El smoke de produccion envia `X-KeystoneSync-Smoke-Token` desde el secreto de entorno `WORKER_SMOKE_BYPASS_TOKEN`. Cloudflare debe aceptar esa cabecera solo para `/api/health` y la ruta Selector usada por el smoke, omitiendo unicamente la mitigacion que presenta el browser challenge; el resto del dominio conserva sus protecciones.
+- El smoke de produccion usa `keystone-sync-api.estebangperez77.workers.dev` para no atravesar Bot Fight Mode del dominio publico. El propio Worker bloquea ese hostname con `404` salvo para los dos `GET` de smoke que presentan `X-KeystoneSync-Smoke-Token` y coinciden con el secreto Worker `WORKER_SMOKE_BYPASS_TOKEN`; las preview URLs permanecen deshabilitadas. El dominio personalizado y sus protecciones no cambian.
 - `npm run deploy` ejecuta `wrangler deploy`; en CI se ejecuta por entrada manual o como dependencia obligatoria de un release Client cuyo impacto incluye Worker.
 - `npm run d1:migrate:remote` aplica migraciones remotas de D1; usa el entorno `production` y se ejecuta antes del deploy cuando el rango que se va a publicar incluye DB.
 - Tras `wrangler deploy`, el workflow exige `GET /api/health = 200` y que la ruta Selector protegida responda `401 Token invalido` sin credenciales. Esto prueba alcance, registro de la ruta y frontera de autenticacion sin crear ni modificar datos.

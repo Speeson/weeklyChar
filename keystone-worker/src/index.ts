@@ -6,9 +6,11 @@ import { healthRoutes } from './routes/health'
 import { keystoneRoutes } from './routes/keystones'
 import { meRoutes } from './routes/me'
 import { teamRoutes } from './routes/teams'
+import { workersDevSmokeGuard } from './workersDevSmokeGuard'
 
 const app = new Hono<{ Bindings: Env }>()
 
+app.use('*', workersDevSmokeGuard)
 app.use('*', corsMiddleware)
 app.route('/', authRoutes)
 app.route('/', healthRoutes)

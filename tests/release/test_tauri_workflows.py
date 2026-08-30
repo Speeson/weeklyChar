@@ -233,6 +233,13 @@ class TauriWorkflowContractTests(unittest.TestCase):
         self.assertIn("inputs.run_smoke", smoke)
         self.assertIn("WORKER_SMOKE_BYPASS_TOKEN", smoke)
         self.assertIn("X-KeystoneSync-Smoke-Token", smoke)
+        self.assertIn("https://keystone-sync-api.estebangperez77.workers.dev", workflow)
+
+        wrangler = (REPO_ROOT / "keystone-worker" / "wrangler.jsonc").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"workers_dev": true', wrangler)
+        self.assertIn('"preview_urls": false', wrangler)
 
     def test_guarded_recovery_smokes_without_migration_or_deploy(self):
         workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(

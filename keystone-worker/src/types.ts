@@ -7,6 +7,7 @@ export type Env = {
   ALLOWED_ORIGINS?: string
   BLIZZARD_CLIENT_ID?: string
   BLIZZARD_CLIENT_SECRET?: string
+  WORKER_SMOKE_BYPASS_TOKEN?: string
 }
 
 export type WowItemMetadataRow = {
