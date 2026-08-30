@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.7",
+  "version": "0.6.8",
+  "bump": "patch",
+  "tag": "client-v0.6.8",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-teams-lifecycle-localized-tooltips.json"
+  ]
+}
