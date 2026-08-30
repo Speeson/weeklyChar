@@ -133,6 +133,13 @@ function statNamesFromJson(value: string | null): string[] {
   return normalized === null ? [] : JSON.parse(normalized) as string[]
 }
 
+function needsTooltipBootstrap(row: WowItemMetadataRow): boolean {
+  return (row.status === 'ok' || row.status === 'partial')
+    && row.name !== null
+    && row.icon_url !== null
+    && row.stat_names_json === null
+}
+
 function emptyTooltipColumns(): Pick<WowItemMetadataRow,
   'slot_name' | 'item_class_name' | 'item_subclass_name' | 'stat_names_json'> {
   return {
@@ -385,18 +392,32 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
   const cached = await readCachedMetadata(env, region, itemIds)
   const refreshIds = itemIds.filter(itemId => {
     const row = cached.get(itemId)
-    return !row || row.refresh_after <= now
+    return !row || row.refresh_after <= now || needsTooltipBootstrap(row)
   })
 
   if (env.BLIZZARD_CLIENT_ID && env.BLIZZARD_CLIENT_SECRET) {
-    const refreshed = await mapWithConcurrency(refreshIds, MAX_CONCURRENCY, itemId =>
-      fetchMetadata(env, region, itemId, fetchImpl, now, timeoutMs))
-    for (const row of refreshed) {
-      if (!row) continue
-      const existing = cached.get(row.item_id)
+    const refreshed = await mapWithConcurrency(refreshIds, MAX_CONCURRENCY, async itemId => ({
+      itemId,
+      row: await fetchMetadata(env, region, itemId, fetchImpl, now, timeoutMs),
+    }))
+    for (const result of refreshed) {
+      const existing = cached.get(result.itemId)
+      if (!result.row) {
+        if (existing && existing.status !== 'not_found' && existing.status !== 'rate_limited') {
+          const backedOff = {
+            ...existing,
+            stat_names_json: existing.stat_names_json ?? '[]',
+            refresh_after: now + NEGATIVE_TTL_SECONDS,
+          }
+          cached.set(result.itemId, backedOff)
+          await writeMetadata(env, backedOff)
+        }
+        continue
+      }
+      const row = result.row
       const stored = row.status === 'rate_limited' && existing
         && existing.status !== 'not_found' && existing.status !== 'rate_limited'
-        ? { ...existing, refresh_after: row.refresh_after }
+        ? { ...existing, stat_names_json: existing.stat_names_json ?? '[]', refresh_after: row.refresh_after }
         : row
       cached.set(stored.item_id, stored)
       await writeMetadata(env, stored)

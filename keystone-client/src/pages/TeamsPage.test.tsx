@@ -252,7 +252,7 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByText("Lit keystones are currently available.")).toBeInTheDocument();
     expect(screen.getByText("You can also inspect dungeons without a keystone.")).toBeInTheDocument();
     expect(screen.getByLabelText("Member filters")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Filter by Speeson, 2 characters" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Filter by Speeson, 2 characters" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Filter by Ana con un nombre largo, 1 character" })).toBeInTheDocument();
   });
 });

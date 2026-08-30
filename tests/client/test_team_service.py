@@ -100,6 +100,35 @@ class TeamServiceTests(unittest.TestCase):
             TeamService(session=FakeSession([FakeResponse([{"id": 0, "name": "Raid", "memberCount": 2}])])).list_teams(self.cfg)
         self.assertEqual(caught.exception.code, "INVALID_TEAM_RESPONSE")
 
+    def test_team_keystone_map_id_preserves_nullable_worker_contract(self):
+        character = {"id": 10, "name": "Auralis", "realm": "Zul'jin", "region": "eu",
+                     "wowClass": None, "avatarUrl": None, "ilvl": None, "rioScore": None}
+
+        def payload(current):
+            return {"id": 7, "name": "Raid", "members": [{"userId": 2, "username": "ana",
+                    "characters": [{**character, "currentKeystone": current}]}]}
+
+        accepted = [None, {"level": 10, "challengeMapId": 588, "dungeon": None},
+                    {"level": 10, "challengeMapId": None, "dungeon": None}]
+        for current in accepted:
+            with self.subTest(current=current):
+                detail = TeamService(session=FakeSession([FakeResponse(payload(current))])).get_team(self.cfg, 7)
+                self.assertEqual(detail["members"][0]["characters"][0]["currentKeystone"], current)
+
+        for malformed in ("588", 0, -1, 1.5):
+            with self.subTest(malformed=malformed):
+                service = TeamService(session=FakeSession([FakeResponse(payload(
+                    {"level": 10, "challengeMapId": malformed, "dungeon": None}
+                ))]))
+                with self.assertRaises(TeamServiceError) as caught:
+                    service.get_team(self.cfg, 7)
+                self.assertEqual(caught.exception.code, "INVALID_TEAM_RESPONSE")
+
+        with self.assertRaises(TeamServiceError):
+            TeamService(session=FakeSession([FakeResponse(payload(
+                {"level": 10, "dungeon": None}
+            ))])).get_team(self.cfg, 7)
+
 
 if __name__ == "__main__":
     unittest.main()

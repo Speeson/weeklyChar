@@ -81,8 +81,11 @@ def sanitize_team_list(value: Any) -> list[dict[str, Any]] | None:
 def _keystone(value: Any) -> dict[str, Any] | None | Ellipsis:
     if value is None:
         return None
+    challenge_map_id = value.get("challengeMapId") if isinstance(value, dict) else None
     if not isinstance(value, dict) or not _positive(value.get("level")) \
-            or not _positive(value.get("challengeMapId")) or not _nullable_text(value.get("dungeon"), 256):
+            or "challengeMapId" not in value \
+            or not (challenge_map_id is None or _positive(challenge_map_id)) \
+            or not _nullable_text(value.get("dungeon"), 256):
         return Ellipsis
     return {"level": value["level"], "challengeMapId": value["challengeMapId"], "dungeon": value["dungeon"]}
 
