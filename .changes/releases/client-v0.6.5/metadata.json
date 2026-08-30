@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.4",
+  "version": "0.6.5",
+  "bump": "patch",
+  "tag": "client-v0.6.5",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-stone-selector-teams-bridge.json"
+  ]
+}
