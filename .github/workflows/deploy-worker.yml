@@ -21,7 +21,7 @@ on:
       smoke_base_url:
         description: Production Worker base URL used after deployment.
         required: false
-        default: https://api-keystonesync.esgarpe.dev
+        default: https://keystone-sync-api.estebangperez77.workers.dev
         type: string
     outputs:
       production_ready:
