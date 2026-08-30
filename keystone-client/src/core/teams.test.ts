@@ -20,6 +20,8 @@ const objective: KeystoneSelectorObjective = {
   itemId: 12345, itemName: "Báculo", iconUrl: "https://cdn.test/item.jpg", tier: 99,
   specIds: [62], sourceType: "dungeon", sourceId: 588, slotId: 16, slotName: "Mano principal",
   itemClassName: "Arma", itemSubClassName: "Báculo", statNames: ["Intelecto", "Celeridad"],
+  primaryStatNames: ["Intelecto"], secondaryStatNames: ["Celeridad"], otherStatNames: [],
+  qualityType: "EPIC",
   voidcoreState: "pending",
 };
 const selector = {
@@ -104,11 +106,15 @@ describe("Teams core bridge", () => {
     expect(parsed?.characters[0].objectives[0]).toMatchObject({
       tier: 99, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Báculo",
       statNames: ["Intelecto", "Celeridad"], voidcoreState: "pending",
+      primaryStatNames: ["Intelecto"], secondaryStatNames: ["Celeridad"], otherStatNames: [],
+      qualityType: "EPIC",
     });
     expect(JSON.stringify(parsed)).not.toMatch(/bonusIds|gems|enchant|keystoneLoot/);
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, voidcoreState: "unknown" }] }] }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, challengeMapId: 587 }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, statNames: [42] }] }] }, 7, 588)).toBeNull();
+    expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, qualityType: "MYTHIC" }] }] }, 7, 588)).toBeNull();
+    expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, primaryStatNames: ["Celeridad"] }] }] }, 7, 588)).toBeNull();
   });
 
   it("rejects malformed bridge results with structured CoreErrors", async () => {

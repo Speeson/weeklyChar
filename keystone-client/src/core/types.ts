@@ -190,6 +190,8 @@ export type KeystoneSelectorTierCounts = {
   other: number;
 };
 
+export type ItemQualityType = "POOR" | "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY" | "ARTIFACT" | "HEIRLOOM";
+
 export type KeystoneSelectorObjective = {
   itemId: number;
   itemName: string | null;
@@ -203,6 +205,10 @@ export type KeystoneSelectorObjective = {
   itemClassName: string | null;
   itemSubClassName: string | null;
   statNames: string[];
+  primaryStatNames: string[];
+  secondaryStatNames: string[];
+  otherStatNames: string[];
+  qualityType: ItemQualityType | null;
   voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
 };
 

@@ -28,6 +28,13 @@ test('Selector renders canonical dungeons, selectable zero-count controls and on
   assert.doesNotMatch(selector, /<dialog/u)
 })
 
+test('selected dungeon is green while available dungeons retain the gold treatment', () => {
+  assert.match(selector, /selected[\s\S]*border-emerald-400[\s\S]*bg-emerald-500\/15/u)
+  assert.match(selector, /available[\s\S]*border-yellow-500\/45[\s\S]*bg-yellow-500/u)
+  assert.match(selector, /selected \? 'border-emerald-400/u)
+  assert.match(selector, /selected && <span[^>]*bg-emerald-400/u)
+})
+
 test('Selector protects requests and exposes loading, access, retry and empty states locally', () => {
   assert.match(selector, /AbortController/u)
   assert.match(selector, /activeController\.current\?\.abort\(\)/u)

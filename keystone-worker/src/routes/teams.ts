@@ -83,6 +83,10 @@ async function enrichSelectorSummary(
       objectives[index].itemClassName = enriched[index].itemClassName
       objectives[index].itemSubClassName = enriched[index].itemSubClassName
       objectives[index].statNames = enriched[index].statNames
+      objectives[index].primaryStatNames = enriched[index].primaryStatNames
+      objectives[index].secondaryStatNames = enriched[index].secondaryStatNames
+      objectives[index].otherStatNames = enriched[index].otherStatNames
+      objectives[index].qualityType = enriched[index].qualityType
     }
   }
   return summary

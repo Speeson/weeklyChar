@@ -64,6 +64,8 @@ function metadataRow() {
     name: 'Vestidura segura', icon_url: 'https://render.worldofwarcraft.com/eu/icons/56/object.jpg',
     slot_name: 'Chest', item_class_name: 'Armor', item_subclass_name: 'Cloth',
     stat_names_json: JSON.stringify(['Haste', 'Intellect']), status: 'ok',
+    stat_groups_json: JSON.stringify({ primary: ['Intellect'], secondary: ['Haste'], other: [] }),
+    quality_type: 'EPIC',
     fetched_at: 1, refresh_after: Number.MAX_SAFE_INTEGER,
   }
 }
@@ -87,9 +89,15 @@ test('owner objectives require JWT ownership and ignore the sharing toggle', asy
     itemClassName: ownBody.objectives[0].itemClassName,
     itemSubClassName: ownBody.objectives[0].itemSubClassName,
     statNames: ownBody.objectives[0].statNames,
+    primaryStatNames: ownBody.objectives[0].primaryStatNames,
+    secondaryStatNames: ownBody.objectives[0].secondaryStatNames,
+    otherStatNames: ownBody.objectives[0].otherStatNames,
+    qualityType: ownBody.objectives[0].qualityType,
   }, {
     slotName: 'Chest', itemClassName: 'Armor', itemSubClassName: 'Cloth',
     statNames: ['Haste', 'Intellect'],
+    primaryStatNames: ['Intellect'], secondaryStatNames: ['Haste'], otherStatNames: [],
+    qualityType: 'EPIC',
   })
 
   const syncToken = await app.request('/api/me/characters/10/keystone-loot/objectives', {
@@ -181,6 +189,8 @@ test('authorized teammate receives only the allowlisted objective DTO', async ()
     sourceType: 'dungeon', sourceId: 249, slotId: 13,
     slotName: 'Chest', itemClassName: 'Armor', itemSubClassName: 'Cloth',
     statNames: ['Haste', 'Intellect'],
+    primaryStatNames: ['Intellect'], secondaryStatNames: ['Haste'], otherStatNames: [],
+    qualityType: 'EPIC',
     voidcoreState: 'pending',
   })
   const serialized = JSON.stringify(body)

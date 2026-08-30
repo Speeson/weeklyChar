@@ -142,7 +142,9 @@ deterministic character ordering, current weekly stone availability, and existin
 metadata enrichment. S2 additively extends the Worker-owned item cache and shared safe objective
 projection with localized equipment slot, item class, item subclass, and bounded stat names;
 numeric stat quantities and raw Blizzard payloads remain excluded. Existing positive cache rows
-upgrade lazily at their normal refresh boundary. Web tooltip rendering, Client UI/bridge, and
+missing quality/classified-stat fields bootstrap through a bounded refresh with six-hour failure
+backoff. Item rarity comes from Blizzard quality type, and stat classification uses stable
+Blizzard stat type identifiers rather than localized names. Web tooltip rendering, Client UI/bridge, and
 composition planning remain deferred. The Worker owns a minimal duplicate of the verified
 Season 2 challenge-map allowlist; cross-surface consolidation is intentionally deferred.
 
@@ -185,7 +187,8 @@ column. Owner access remains independent of that preference.
 Production rollout remains a separately authorized operation. Before deployment, configure
 Cloudflare Worker secrets `BLIZZARD_CLIENT_ID` and `BLIZZARD_CLIENT_SECRET`, apply additive D1
 migrations `0004_keystone_loot_item_metadata.sql` and
-`0005_keystone_loot_item_tooltip_metadata.sql`, deploy the backward-compatible Worker, smoke
+`0005_keystone_loot_item_tooltip_metadata.sql`, then
+`0006_keystone_loot_item_quality_and_stat_groups.sql`, deploy the backward-compatible Worker, smoke
 the owner/team objective routes, and only then deploy Web. Missing Blizzard credentials do not
 break objective routes, but metadata falls back to `Objeto #<itemId>` and the generic icon;
 deployment is technically safe without them, while configuring them first is the recommended

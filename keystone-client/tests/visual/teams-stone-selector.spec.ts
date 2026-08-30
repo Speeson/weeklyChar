@@ -69,6 +69,34 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await expect(ruby).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
   await expect(page.getByTestId("selector-character")).toHaveCount(8);
+  const firstSummary = page.getByTestId("selector-character").first().locator(".teams-character-row__summary");
+  const summaryTypography = await firstSummary.evaluate(element => {
+    const styleSize = (selector: string) => Number.parseFloat(getComputedStyle(element.querySelector(selector)!).fontSize);
+    const counter = document.querySelector<HTMLElement>('.teams-dungeon[aria-pressed="true"] b')!;
+    const counterBox = counter.getBoundingClientRect();
+    return {
+      character: styleSize(".teams-character-row__identity strong"),
+      details: styleSize(".teams-character-row__details"),
+      objectives: styleSize(".teams-objective-count"),
+      tiers: styleSize(".teams-tier-line"),
+      expandText: element.querySelector(".teams-expand")?.textContent?.trim(),
+      counterFont: Number.parseFloat(getComputedStyle(counter).fontSize),
+      counterHeight: counterBox.height,
+      counterWidth: counterBox.width,
+      counterShadow: getComputedStyle(counter).boxShadow,
+    };
+  });
+  expect(summaryTypography).toMatchObject({
+    character: 17,
+    details: 13,
+    objectives: 15,
+    tiers: 12,
+    expandText: "",
+    counterFont: 16,
+    counterHeight: 30,
+    counterWidth: 30,
+  });
+  expect(summaryTypography.counterShadow).not.toBe("none");
   await capture(page, "06-populated-summary.png");
 
   const firstCard = page.getByTestId("selector-character").first();

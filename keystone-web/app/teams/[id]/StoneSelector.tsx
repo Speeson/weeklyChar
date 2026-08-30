@@ -302,15 +302,15 @@ export default function StoneSelector({ teamId, members }: Props) {
                 aria-label={`${option.name}, ${countCopy(option.stoneCount, 'piedra', 'piedras')}`}
                 onClick={() => void loadDungeon(option.id)}
                 className={`relative min-h-20 rounded-xl border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 motion-reduce:transition-none ${selected
-                  ? 'border-yellow-300 bg-yellow-500/15 shadow-lg shadow-yellow-500/15'
+                  ? 'border-emerald-400 bg-emerald-500/15 shadow-lg shadow-emerald-500/20'
                   : available
                     ? 'border-yellow-500/45 bg-yellow-500/[0.07] hover:border-yellow-300 hover:bg-yellow-500/10'
                     : 'border-gray-800 bg-gray-900/45 text-gray-500 hover:border-gray-600 hover:text-gray-300'}`}
               >
-                <span className={`block text-[11px] font-black uppercase tracking-[0.12em] ${selected || available ? 'text-yellow-300' : 'text-gray-500'}`}>{option.abbr}</span>
+                <span className={`block text-[11px] font-black uppercase tracking-[0.12em] ${selected ? 'text-emerald-300' : available ? 'text-yellow-300' : 'text-gray-500'}`}>{option.abbr}</span>
                 <span className="mt-1 block truncate text-xs font-semibold text-gray-200">{option.name}</span>
-                <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-black tabular-nums ${available ? 'border-yellow-400/50 bg-yellow-400/10 text-yellow-200' : 'border-gray-700 bg-gray-950 text-gray-500'}`}>×{option.stoneCount}</span>
-                {selected && <span aria-hidden="true" className="absolute -bottom-[3px] left-4 right-4 h-1 rounded-full bg-yellow-300 shadow shadow-yellow-300/50" />}
+                <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-black tabular-nums ${selected ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-200' : available ? 'border-yellow-400/50 bg-yellow-400/10 text-yellow-200' : 'border-gray-700 bg-gray-950 text-gray-500'}`}>×{option.stoneCount}</span>
+                {selected && <span aria-hidden="true" className="absolute -bottom-[3px] left-4 right-4 h-1 rounded-full bg-emerald-400 shadow shadow-emerald-400/50" />}
               </button>
             )
           })}

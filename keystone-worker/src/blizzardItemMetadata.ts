@@ -9,6 +9,18 @@ const MAX_TOOLTIP_NAME_LENGTH = 128
 const MAX_STAT_NAMES = 32
 const LOCALE = 'es_ES'
 const REGIONS = new Set(['eu', 'us', 'kr', 'tw'])
+const QUALITY_TYPES = new Set([
+  'POOR', 'COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'ARTIFACT', 'HEIRLOOM',
+])
+const PRIMARY_STAT_TYPES = new Set([
+  'STRENGTH', 'AGILITY', 'INTELLECT', 'STAMINA',
+  'STRENGTH_AGILITY_INTELLECT', 'STRENGTH_OR_AGILITY', 'STRENGTH_OR_INTELLECT',
+  'AGILITY_OR_INTELLECT',
+])
+const SECONDARY_STAT_TYPES = new Set([
+  'HASTE_RATING', 'CRIT_RATING', 'MASTERY', 'MASTERY_RATING',
+  'VERSATILITY', 'VERSATILITY_RATING',
+])
 
 type FetchLike = typeof fetch
 
@@ -26,6 +38,16 @@ type KeystoneLootMetadataTarget = {
   itemClassName: string | null
   itemSubClassName: string | null
   statNames: string[]
+  primaryStatNames: string[]
+  secondaryStatNames: string[]
+  otherStatNames: string[]
+  qualityType: string | null
+}
+
+type StatGroups = {
+  primary: string[]
+  secondary: string[]
+  other: string[]
 }
 
 type BlizzardJson = {
@@ -109,12 +131,37 @@ function orderedStatNames(values: unknown[]): string[] {
   return [...names].sort((left, right) => left < right ? -1 : left > right ? 1 : 0)
 }
 
-function itemStatNames(value: unknown): string[] {
-  if (!isRecord(value) || !Array.isArray(value.stats)) return []
-  return orderedStatNames(value.stats.map(stat => {
-    if (!isRecord(stat) || !isRecord(stat.type)) return null
-    return stat.type.name
-  }))
+function itemStatGroups(value: unknown): StatGroups {
+  const empty = { primary: [], secondary: [], other: [] }
+  if (!isRecord(value) || !Array.isArray(value.stats)) return empty
+  const byName = new Map<string, string>()
+  for (const stat of value.stats) {
+    if (!isRecord(stat) || !isRecord(stat.type)) continue
+    const name = safeTooltipName(stat.type.name)
+    const type = typeof stat.type.type === 'string' ? stat.type.type : ''
+    if (name && !byName.has(name)) byName.set(name, type)
+  }
+  const names = orderedStatNames([...byName.keys()])
+  return names.reduce<StatGroups>((groups, name) => {
+    const type = byName.get(name) ?? ''
+    if (PRIMARY_STAT_TYPES.has(type)) groups.primary.push(name)
+    else if (SECONDARY_STAT_TYPES.has(type)) groups.secondary.push(name)
+    else groups.other.push(name)
+    return groups
+  }, { primary: [], secondary: [], other: [] })
+}
+
+function allStatNames(groups: StatGroups): string[] {
+  return orderedStatNames([...groups.primary, ...groups.secondary, ...groups.other])
+}
+
+function safeQualityType(value: unknown): string | null {
+  return typeof value === 'string' && QUALITY_TYPES.has(value) ? value : null
+}
+
+function itemQualityType(value: unknown): string {
+  if (!isRecord(value) || !isRecord(value.quality)) return 'UNKNOWN'
+  return safeQualityType(value.quality.type) ?? 'UNKNOWN'
 }
 
 function safeStatNamesJson(value: unknown): string | null {
@@ -133,20 +180,52 @@ function statNamesFromJson(value: string | null): string[] {
   return normalized === null ? [] : JSON.parse(normalized) as string[]
 }
 
+function safeStatGroupsJson(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!isRecord(parsed)) return null
+    const primary = Array.isArray(parsed.primary) ? orderedStatNames(parsed.primary) : null
+    const secondary = Array.isArray(parsed.secondary) ? orderedStatNames(parsed.secondary) : null
+    const other = Array.isArray(parsed.other) ? orderedStatNames(parsed.other) : null
+    const combined = primary && secondary && other ? [...primary, ...secondary, ...other] : []
+    if (!primary || !secondary || !other || combined.length > MAX_STAT_NAMES
+      || new Set(combined).size !== combined.length) return null
+    return JSON.stringify({ primary, secondary, other })
+  } catch {
+    return null
+  }
+}
+
+function statGroupsFromJson(value: string | null, expectedNames: string[]): StatGroups {
+  const normalized = safeStatGroupsJson(value)
+  if (normalized !== null) {
+    const parsed = JSON.parse(normalized) as StatGroups
+    const classified = allStatNames(parsed)
+    if (classified.length === expectedNames.length && classified.every(name => expectedNames.includes(name))) {
+      return parsed
+    }
+  }
+  return { primary: [], secondary: [], other: expectedNames }
+}
+
 function needsTooltipBootstrap(row: WowItemMetadataRow): boolean {
   return (row.status === 'ok' || row.status === 'partial')
     && row.name !== null
     && row.icon_url !== null
-    && row.stat_names_json === null
+    && (row.stat_names_json === null || row.stat_groups_json === null || row.quality_type === null)
 }
 
 function emptyTooltipColumns(): Pick<WowItemMetadataRow,
-  'slot_name' | 'item_class_name' | 'item_subclass_name' | 'stat_names_json'> {
+  'slot_name' | 'item_class_name' | 'item_subclass_name' | 'stat_names_json'
+  | 'stat_groups_json' | 'quality_type'> {
   return {
     slot_name: null,
     item_class_name: null,
     item_subclass_name: null,
     stat_names_json: null,
+    stat_groups_json: null,
+    quality_type: null,
   }
 }
 
@@ -280,6 +359,7 @@ async function fetchMetadata(
       if (isRecord(icon)) iconUrl = safeIconUrl(icon.value)
     }
 
+    const statGroups = itemStatGroups(item.value.preview_item)
     return {
       region,
       locale: LOCALE,
@@ -289,7 +369,9 @@ async function fetchMetadata(
       slot_name: nestedName(item.value.inventory_type),
       item_class_name: nestedName(item.value.item_class),
       item_subclass_name: nestedName(item.value.item_subclass),
-      stat_names_json: JSON.stringify(itemStatNames(item.value.preview_item)),
+      stat_names_json: JSON.stringify(allStatNames(statGroups)),
+      stat_groups_json: JSON.stringify(statGroups),
+      quality_type: itemQualityType(item.value),
       status: iconUrl ? 'ok' : 'partial',
       fetched_at: now,
       refresh_after: now + (iconUrl ? POSITIVE_TTL_SECONDS : NEGATIVE_TTL_SECONDS),
@@ -309,6 +391,7 @@ async function readCachedMetadata(
   const { results } = await env.DB.prepare(`
     SELECT region, locale, item_id, name, icon_url,
       slot_name, item_class_name, item_subclass_name, stat_names_json,
+      stat_groups_json, quality_type,
       status, fetched_at, refresh_after
     FROM wow_item_metadata
     WHERE region = ? AND locale = ? AND item_id IN (${placeholders})
@@ -333,6 +416,8 @@ async function readCachedMetadata(
     item_class_name: safeTooltipName(row.item_class_name),
     item_subclass_name: safeTooltipName(row.item_subclass_name),
     stat_names_json: safeStatNamesJson(row.stat_names_json),
+    stat_groups_json: safeStatGroupsJson(row.stat_groups_json),
+    quality_type: row.quality_type === 'UNKNOWN' ? 'UNKNOWN' : safeQualityType(row.quality_type),
   }]))
 }
 
@@ -341,8 +426,8 @@ async function writeMetadata(env: Env, row: WowItemMetadataRow): Promise<void> {
     INSERT INTO wow_item_metadata (
       region, locale, item_id, name, icon_url,
       slot_name, item_class_name, item_subclass_name, stat_names_json,
-      status, fetched_at, refresh_after
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      stat_groups_json, quality_type, status, fetched_at, refresh_after
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(region, locale, item_id) DO UPDATE SET
       name = excluded.name,
       icon_url = excluded.icon_url,
@@ -350,12 +435,15 @@ async function writeMetadata(env: Env, row: WowItemMetadataRow): Promise<void> {
       item_class_name = excluded.item_class_name,
       item_subclass_name = excluded.item_subclass_name,
       stat_names_json = excluded.stat_names_json,
+      stat_groups_json = excluded.stat_groups_json,
+      quality_type = excluded.quality_type,
       status = excluded.status,
       fetched_at = excluded.fetched_at,
       refresh_after = excluded.refresh_after
   `).bind(
     row.region, row.locale, row.item_id, row.name, row.icon_url,
     row.slot_name, row.item_class_name, row.item_subclass_name, row.stat_names_json,
+    row.stat_groups_json, row.quality_type,
     row.status, row.fetched_at, row.refresh_after,
   ).run()
 }
@@ -407,6 +495,8 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
           const backedOff = {
             ...existing,
             stat_names_json: existing.stat_names_json ?? '[]',
+            stat_groups_json: existing.stat_groups_json ?? JSON.stringify({ primary: [], secondary: [], other: [] }),
+            quality_type: existing.quality_type ?? 'UNKNOWN',
             refresh_after: now + NEGATIVE_TTL_SECONDS,
           }
           cached.set(result.itemId, backedOff)
@@ -415,10 +505,19 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
         continue
       }
       const row = result.row
-      const stored = row.status === 'rate_limited' && existing
-        && existing.status !== 'not_found' && existing.status !== 'rate_limited'
-        ? { ...existing, stat_names_json: existing.stat_names_json ?? '[]', refresh_after: row.refresh_after }
+      const refreshed = row.status === 'partial' && row.icon_url === null && existing?.icon_url
+        ? { ...row, icon_url: existing.icon_url, status: 'ok' }
         : row
+      const stored = refreshed.status === 'rate_limited' && existing
+        && existing.status !== 'not_found' && existing.status !== 'rate_limited'
+        ? {
+            ...existing,
+            stat_names_json: existing.stat_names_json ?? '[]',
+            stat_groups_json: existing.stat_groups_json ?? JSON.stringify({ primary: [], secondary: [], other: [] }),
+            quality_type: existing.quality_type ?? 'UNKNOWN',
+            refresh_after: refreshed.refresh_after,
+          }
+        : refreshed
       cached.set(stored.item_id, stored)
       await writeMetadata(env, stored)
     }
@@ -427,6 +526,8 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
   return objectives.map(objective => {
     const metadata = cached.get(objective.itemId)
     if (!metadata || metadata.status === 'not_found' || metadata.status === 'rate_limited') return objective
+    const statNames = statNamesFromJson(metadata.stat_names_json)
+    const statGroups = statGroupsFromJson(metadata.stat_groups_json, statNames)
     return {
       ...objective,
       itemName: metadata.name,
@@ -434,7 +535,11 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
       slotName: metadata.slot_name,
       itemClassName: metadata.item_class_name,
       itemSubClassName: metadata.item_subclass_name,
-      statNames: statNamesFromJson(metadata.stat_names_json),
+      statNames,
+      primaryStatNames: statGroups.primary,
+      secondaryStatNames: statGroups.secondary,
+      otherStatNames: statGroups.other,
+      qualityType: safeQualityType(metadata.quality_type),
     }
   })
 }

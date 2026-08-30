@@ -28,6 +28,10 @@ export type KeystoneLootObjectiveDTO = {
   itemClassName: string | null
   itemSubClassName: string | null
   statNames: string[]
+  primaryStatNames: string[]
+  secondaryStatNames: string[]
+  otherStatNames: string[]
+  qualityType: string | null
   voidcoreState: KeystoneLootVoidcoreState
 }
 
@@ -203,6 +207,10 @@ export function buildKeystoneLootObjectivePage(
     itemClassName: null,
     itemSubClassName: null,
     statNames: [],
+    primaryStatNames: [],
+    secondaryStatNames: [],
+    otherStatNames: [],
+    qualityType: null,
     voidcoreState: !usedItems
       ? 'voidcore_not_checked'
       : usedItems.has(favorite.itemId) ? 'completed_with_voidcore' : 'pending',
