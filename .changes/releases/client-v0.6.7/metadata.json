@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.6",
+  "version": "0.6.7",
+  "bump": "patch",
+  "tag": "client-v0.6.7",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-stone-selector-ui-refinement.json"
+  ]
+}

@@ -1,0 +1,7 @@
+# KeystoneClient 0.6.7
+
+## Cambios
+
+- Mejorada la lectura visual del selector de piedra y de los objetos del equipo.
+  - Las mazmorras muestran su nombre completo y arte local, y las filas de personaje se despliegan desde toda su superficie.
+  - Los objetos distinguen la prioridad, la calidad real y los atributos primarios y secundarios en su tooltip.
