@@ -56,6 +56,7 @@ export function TeamItemTooltip({ objective }: { objective: KeystoneSelectorObje
   }, [open]);
 
   const source = typeof objective.sourceId === "number" ? SEASON_2_DUNGEON_BY_ID.get(objective.sourceId)?.name : String(objective.sourceId);
+  const quality = objective.qualityType ?? "UNKNOWN";
   return <>
     <button
       aria-label={name}
@@ -77,14 +78,19 @@ export function TeamItemTooltip({ objective }: { objective: KeystoneSelectorObje
     {open ? createPortal(
       <div
         className="teams-tooltip"
+        data-quality={quality}
         ref={tooltipRef}
         role="tooltip"
         style={{ left: position.left, top: position.top, "--teams-tooltip-scale": position.scale } as CSSProperties}
       >
-        <strong>{name}</strong>
+        <strong className={`teams-tooltip__name teams-tooltip__name--quality-${quality.toLowerCase()}`}>{name}</strong>
         {[objective.slotName, objective.itemClassName, objective.itemSubClassName].filter(Boolean).length > 0
           ? <p>{[objective.slotName, objective.itemClassName, objective.itemSubClassName].filter(Boolean).join(" · ")}</p> : null}
-        {objective.statNames.length > 0 ? <ul>{objective.statNames.map(stat => <li key={stat}>{stat}</li>)}</ul> : null}
+        {objective.statNames.length > 0 ? <ul className="teams-tooltip__stats">
+          {objective.primaryStatNames.map(stat => <li className="teams-tooltip__primary-stat" key={stat}>{stat}</li>)}
+          {objective.secondaryStatNames.map(stat => <li className="teams-tooltip__secondary-stat" key={stat}>{stat}</li>)}
+          {objective.otherStatNames.map(stat => <li className="teams-tooltip__other-stat" key={stat}>{stat}</li>)}
+        </ul> : null}
         <div className="teams-tooltip__meta">
           {source ? <span>{t("teams.source")}: {source}</span> : null}
           <span>{t("teams.spec")}: {objective.specIds.map(specName).join(" · ")}</span>

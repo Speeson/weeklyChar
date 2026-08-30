@@ -20,6 +20,7 @@ INVALID_SELECTOR_RESPONSE = "INVALID_SELECTOR_RESPONSE"
 
 _VOIDCORE_STATES = {"pending", "completed_with_voidcore", "voidcore_not_checked"}
 _TIER_KEYS = ("bestInSlot", "mustHave", "niceToHave", "catalyst", "transmog", "other")
+_QUALITY_TYPES = {"POOR", "COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "ARTIFACT", "HEIRLOOM"}
 
 
 class TeamServiceError(Exception):
@@ -58,6 +59,11 @@ def _nullable_https(value: Any) -> bool:
         return False
     parsed = urlparse(value)
     return parsed.scheme == "https" and bool(parsed.netloc) and not parsed.username and not parsed.password
+
+
+def _stat_names(value: Any) -> bool:
+    return isinstance(value, list) and len(value) <= 32 \
+        and all(_text(stat, 128) for stat in value) and len(set(value)) == len(value)
 
 
 def _tiers(value: Any) -> dict[str, int] | None:
@@ -132,17 +138,27 @@ def _objective(value: Any) -> dict[str, Any] | None:
     source_id = value.get("sourceId")
     slot_id = value.get("slotId")
     stats = value.get("statNames")
+    primary_stats = value.get("primaryStatNames")
+    secondary_stats = value.get("secondaryStatNames")
+    other_stats = value.get("otherStatNames")
+    quality_type = value.get("qualityType")
+    classified_stats = [*primary_stats, *secondary_stats, *other_stats] \
+        if all(isinstance(group, list) for group in (primary_stats, secondary_stats, other_stats)) else []
     if not (_positive(source_id) or _text(source_id, 128)) \
             or not (slot_id is None or (isinstance(slot_id, int) and not isinstance(slot_id, bool) and abs(slot_id) <= 2**53 - 1)) \
             or not _nullable_text(value.get("slotName"), 128) \
             or not _nullable_text(value.get("itemClassName"), 128) \
             or not _nullable_text(value.get("itemSubClassName"), 128) \
-            or not isinstance(stats, list) or len(stats) > 32 or not all(_text(stat, 128) for stat in stats) \
-            or len(set(stats)) != len(stats) or value.get("voidcoreState") not in _VOIDCORE_STATES:
+            or not _stat_names(stats) or not _stat_names(primary_stats) or not _stat_names(secondary_stats) \
+            or not _stat_names(other_stats) or len(classified_stats) != len(stats) \
+            or set(classified_stats) != set(stats) \
+            or not (quality_type is None or (isinstance(quality_type, str) and quality_type in _QUALITY_TYPES)) \
+            or value.get("voidcoreState") not in _VOIDCORE_STATES:
         return None
     return {key: value[key] for key in (
         "itemId", "itemName", "iconUrl", "tier", "specIds", "sourceType", "sourceId", "slotId",
-        "slotName", "itemClassName", "itemSubClassName", "statNames", "voidcoreState",
+        "slotName", "itemClassName", "itemSubClassName", "statNames", "primaryStatNames",
+        "secondaryStatNames", "otherStatNames", "qualityType", "voidcoreState",
     )}
 
 

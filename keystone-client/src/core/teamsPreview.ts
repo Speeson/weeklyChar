@@ -11,7 +11,9 @@ const tiers = (overrides: Partial<KeystoneSelectorTierCounts> = {}): KeystoneSel
 const objective = (itemId: number, tier: number, overrides: Partial<KeystoneSelectorObjective> = {}): KeystoneSelectorObjective => ({
   itemId, itemName: `Echo de Medianoche ${itemId}`, iconUrl: null, tier, specIds: [62], sourceType: "dungeon",
   sourceId: 399, slotId: 16, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Báculo",
-  statNames: ["Intelecto", "Aguante", "Celeridad", "Maestría"], voidcoreState: "pending", ...overrides,
+  statNames: ["Intelecto", "Aguante", "Celeridad", "Maestría"],
+  primaryStatNames: ["Intelecto", "Aguante"], secondaryStatNames: ["Celeridad", "Maestría"],
+  otherStatNames: [], qualityType: "EPIC", voidcoreState: "pending", ...overrides,
 });
 
 const primaryTeam: ClientTeamSummary = { id: 7, name: "Mythiqueros 2.0", memberCount: 8 };
@@ -57,7 +59,7 @@ const characterObjectives = [
   objective(231005, 1, { specIds: [62] }), objective(231006, 5, { specIds: [64] }),
   objective(231007, 4, { specIds: [62, 64] }), objective(231008, 99, { specIds: [62] }),
   objective(231009, 3, { specIds: [62, 64], voidcoreState: "completed_with_voidcore" }),
-  objective(231010, 2, { specIds: [64], voidcoreState: "voidcore_not_checked", slotName: null, itemClassName: null, itemSubClassName: null, statNames: [] }),
+  objective(231010, 2, { specIds: [64], voidcoreState: "voidcore_not_checked", slotName: null, itemClassName: null, itemSubClassName: null, statNames: [], primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null }),
 ];
 
 const fullSelector: KeystoneSelectorResponse = {
@@ -73,7 +75,7 @@ const fullSelector: KeystoneSelectorResponse = {
       { specId: 64, objectiveCount: 6, tierCounts: tiers({ bestInSlot: 2, mustHave: 3, catalyst: 1 }) },
     ], objectives: characterObjectives },
     { userId: 2, username: "GuardianaDeLosSecretosDelVacío", characterId: 12, characterName: "Auralisdelaluzeterna", realm: "Dun Modr", region: "eu", wowClass: "Paladin", avatarUrl: null, ilvl: 312, rioScore: 2990, totalObjectives: 5, tierCounts: tiers({ bestInSlot: 1, mustHave: 1, niceToHave: 1, catalyst: 1, other: 1 }), specs: [{ specId: 70, objectiveCount: 5, tierCounts: tiers({ bestInSlot: 1, mustHave: 1, niceToHave: 1, catalyst: 1, other: 1 }) }], objectives: [objective(232001, 3, { specIds: [70] }), objective(232002, 2, { specIds: [70] }), objective(232003, 1, { specIds: [70] }), objective(232004, 5, { specIds: [70] }), objective(232005, 88, { specIds: [70] })] },
-    { userId: 3, username: "Ana", characterId: 13, characterName: "Leafsong", realm: "Sanguino", region: "eu", wowClass: "Druid", avatarUrl: null, ilvl: 309, rioScore: 2800, totalObjectives: 2, tierCounts: tiers({ bestInSlot: 1, other: 1 }), specs: [{ specId: 102, objectiveCount: 2, tierCounts: tiers({ bestInSlot: 1, other: 1 }) }], objectives: [objective(233001, 3, { specIds: [102] }), objective(233002, 77, { specIds: [102], itemName: null, slotName: null, itemClassName: null, itemSubClassName: null, statNames: [] })] },
+    { userId: 3, username: "Ana", characterId: 13, characterName: "Leafsong", realm: "Sanguino", region: "eu", wowClass: "Druid", avatarUrl: null, ilvl: 309, rioScore: 2800, totalObjectives: 2, tierCounts: tiers({ bestInSlot: 1, other: 1 }), specs: [{ specId: 102, objectiveCount: 2, tierCounts: tiers({ bestInSlot: 1, other: 1 }) }], objectives: [objective(233001, 3, { specIds: [102] }), objective(233002, 77, { specIds: [102], itemName: null, slotName: null, itemClassName: null, itemSubClassName: null, statNames: [], primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null })] },
     { userId: 4, username: "Voidwalker", characterId: 14, characterName: "Umbrael", realm: "Minahonda", region: "eu", wowClass: "Warlock", avatarUrl: null, ilvl: 305, rioScore: 2600, totalObjectives: 4, tierCounts: tiers({ bestInSlot: 1, mustHave: 2, catalyst: 1 }), specs: [{ specId: 267, objectiveCount: 4, tierCounts: tiers({ bestInSlot: 1, mustHave: 2, catalyst: 1 }) }], objectives: [objective(234001, 3, { specIds: [267] }), objective(234002, 2, { specIds: [267] }), objective(234003, 2, { specIds: [267] }), objective(234004, 5, { specIds: [267] })] },
     { userId: 5, username: "Frostbyte", characterId: 15, characterName: "Glaciera", realm: "Exodar", region: "eu", wowClass: "Shaman", avatarUrl: null, ilvl: 303, rioScore: 2500, totalObjectives: 3, tierCounts: tiers({ bestInSlot: 1, mustHave: 1, niceToHave: 1 }), specs: [{ specId: 262, objectiveCount: 3, tierCounts: tiers({ bestInSlot: 1, mustHave: 1, niceToHave: 1 }) }], objectives: [objective(235001, 3, { specIds: [262] }), objective(235002, 2, { specIds: [262] }), objective(235003, 1, { specIds: [262] })] },
     { userId: 6, username: "Nightshift", characterId: 16, characterName: "Nocturna", realm: "C'Thun", region: "eu", wowClass: "Priest", avatarUrl: null, ilvl: 301, rioScore: 2420, totalObjectives: 2, tierCounts: tiers({ bestInSlot: 1, other: 1 }), specs: [{ specId: 258, objectiveCount: 2, tierCounts: tiers({ bestInSlot: 1, other: 1 }) }], objectives: [objective(236001, 3, { specIds: [258] }), objective(236002, 88, { specIds: [258] })] },

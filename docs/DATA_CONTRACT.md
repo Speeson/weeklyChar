@@ -497,6 +497,10 @@ Stone Selector aggregate endpoint:
 - S2 enriches the S1-reserved `slotName`, `itemClassName`, `itemSubClassName`, and `statNames`
   fields through the same Worker cache and safe projection used by owner and Team objective
   endpoints. Metadata failure never removes an objective.
+- Migration `0006_keystone_loot_item_quality_and_stat_groups.sql` additively caches Blizzard's
+  stable item-quality type and three name-only stat groups. Classification uses Blizzard stat
+  type identifiers, never localized display names, and unknown stat types remain safe `other`
+  entries.
 
 The Selector objective allowlist is:
 
@@ -514,6 +518,10 @@ The Selector objective allowlist is:
   itemClassName: string | null
   itemSubClassName: string | null
   statNames: string[]
+  primaryStatNames: string[]
+  secondaryStatNames: string[]
+  otherStatNames: string[]
+  qualityType: 'POOR' | 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'ARTIFACT' | 'HEIRLOOM' | null
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
 ```
@@ -550,8 +558,9 @@ values and character order remain authoritative. Local spec filtering deduplicat
 does not alter top-level totals; completed Voidcore items are only separated for presentation.
 Preview fixtures implement the same safe interface and remain development-only.
 
-The Client tooltip renders only `itemName`, `iconUrl`, slot/class/subclass names, bounded stat
-names, source, spec IDs, tier, and Voidcore state. It omits absent rows, falls back to
+The Client tooltip renders only `itemName`, `iconUrl`, slot/class/subclass names, bounded and
+classified stat names, Blizzard item quality, source, spec IDs, tier, and Voidcore state. It
+omits absent rows, falls back to
 `Objeto #<itemId>` and a generic icon, and never displays numeric stat quantities. Client-local
 Season 2 IDs duplicate the verified Web/Worker display allowlists intentionally; shared-package
 consolidation remains deferred.
@@ -603,12 +612,14 @@ unsafe media URLs produce nullable metadata rather than failing the objective re
 
 S2 reads localized tooltip-safe values only from official Item API fields
 `inventory_type.name`, `item_class.name`, `item_subclass.name`, and
-`preview_item.stats[].type.name`. It never reads or exposes `preview_item.stats[].value`.
-Existing positive rows created before migration `0005` remain readable and keep their normal
-TTL: they acquire tooltip metadata at their existing `refresh_after` boundary instead of
-causing an immediate rollout request storm. Successful S2 refreshes write a stat-name array,
-including `[]` when no usable names are supplied. Malformed optional fields degrade
-independently to `null` or `[]`, and transient refresh failures preserve stale safe metadata.
+`preview_item.stats[].type.name`; classification uses the corresponding stable
+`preview_item.stats[].type.type`, and rarity uses `quality.type`. It never reads or exposes
+`preview_item.stats[].value`. Positive rows missing the migration `0006` fields enter one
+controlled bootstrap enrichment even before their old positive TTL expires. Success, including
+a legitimate absence of optional metadata, marks those fields complete and resumes the 30-day
+positive TTL. Transient failures preserve the existing name/icon and apply a six-hour retry
+backoff, preventing request-time refresh storms. Malformed optional fields degrade independently
+to `null` or `[]`.
 
 Recommendation candidates are `(character, specId)` pairs. A target counts only when
 `sourceId === challengeMapId` by exact numeric identity and `sourceType === "dungeon"`;

@@ -11,7 +11,9 @@ const tiers = { bestInSlot: 1, mustHave: 1, niceToHave: 1, catalyst: 1, transmog
 const objective = (itemId: number, tier: number, overrides: Partial<KeystoneSelectorObjective> = {}): KeystoneSelectorObjective => ({
   itemId, itemName: `Objeto ${itemId}`, iconUrl: null, tier, specIds: [62], sourceType: "dungeon", sourceId: 399,
   slotId: 16, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Báculo",
-  statNames: ["Intelecto", "Celeridad"], voidcoreState: "pending", ...overrides,
+  statNames: ["Intelecto", "Celeridad"], primaryStatNames: ["Intelecto"],
+  secondaryStatNames: ["Celeridad"], otherStatNames: [], qualityType: "EPIC",
+  voidcoreState: "pending", ...overrides,
 });
 
 const detail: ClientTeamDetail = {
@@ -72,7 +74,9 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByText("2 personajes")).toBeInTheDocument();
     expect(screen.getByText("1 personaje")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Seleccionar/u })).toHaveLength(8);
-    expect(screen.getByRole("button", { name: /Ruby Life Pools.*2 piedras/u })).toHaveTextContent("2");
+    const ruby = screen.getByRole("button", { name: /Ruby Life Pools.*2 piedras/u });
+    expect(ruby).toHaveTextContent("Ruby Life Pools");
+    expect(ruby.querySelector(".teams-dungeon__art")).toHaveAttribute("src", expect.stringContaining("ruby-life-pools"));
     expect(screen.getByRole("button", { name: /Voidscar Arena.*0 piedras/u })).toBeEnabled();
     expect(screen.getByText("Selecciona una mazmorra para ver los objetivos del equipo.")).toBeInTheDocument();
     expect(screen.getByText("Las piedras iluminadas están disponibles actualmente.")).toBeInTheDocument();
@@ -188,15 +192,15 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
-    expect(screen.getByText("Ruby Life Pools")).toBeInTheDocument();
-    expect(screen.getByText("Ruby Life Pools").closest(".teams-dungeon-context")).not.toBeNull();
+    expect(screen.getAllByText("Ruby Life Pools")).toHaveLength(2);
+    expect(document.querySelector(".teams-dungeon-context")).toHaveTextContent("Ruby Life Pools");
     expect(screen.getByText("2 piedras · Bakuhatsu + Spee")).toBeInTheDocument();
     expect(screen.getByText("2 personajes · 7 objetivos")).toHaveClass("teams-summary-total");
     expect(within(rows[0]).getByText("#1")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Bakuhatsu")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Spee")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Planificar piedra/u })).toBeDisabled();
-    const expand = within(rows[0]).getByRole("button", { name: "Ver objetos" });
+    const expand = within(rows[0]).getByRole("button", { name: /Ver objetos.*Bakuhatsu/u });
     await user.click(expand);
     expect(rows[0]).toHaveAttribute("data-expanded", "true");
     expect(within(rows[0]).getByText("Bakuhatsu")).toBeInTheDocument();
@@ -205,17 +209,26 @@ describe("TeamsPage compact ranking", () => {
     expect(within(rows[0]).getByText("BEST IN SLOT · 1")).toBeInTheDocument();
     expect(within(rows[0]).getByText("OTHER · 1")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Completados con Voidcore · 1")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("BEST IN SLOT · 1").closest(".teams-objective-group")).toHaveAttribute("data-category", "bestInSlot");
+    expand.focus();
+    await user.keyboard("{Enter}");
+    expect(rows[0]).toHaveAttribute("data-expanded", "false");
+    await user.keyboard(" ");
+    expect(rows[0]).toHaveAttribute("data-expanded", "true");
   });
 
   it("opens the existing safe tooltip from the compact grid and dismisses it with Escape", async () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
-    await user.click(within(rows[0]).getByRole("button", { name: "Ver objetos" }));
+    await user.click(within(rows[0]).getByRole("button", { name: /Ver objetos.*Bakuhatsu/u }));
     await user.click(within(rows[0]).getByRole("button", { name: "Objeto #1" }));
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent("Mano principal · Arma · Báculo");
     expect(tooltip).toHaveTextContent("Intelecto");
+    expect(tooltip).toHaveAttribute("data-quality", "EPIC");
+    expect(within(tooltip).getByText("Intelecto")).toHaveClass("teams-tooltip__primary-stat");
+    expect(within(tooltip).getByText("Celeridad")).toHaveClass("teams-tooltip__secondary-stat");
     expect(tooltip).not.toHaveTextContent(/\+\d/u);
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();

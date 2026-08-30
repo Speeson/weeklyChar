@@ -24,6 +24,10 @@ export type KeystoneLootSelectorObjectiveDTO = {
   itemClassName: string | null
   itemSubClassName: string | null
   statNames: string[]
+  primaryStatNames: string[]
+  secondaryStatNames: string[]
+  otherStatNames: string[]
+  qualityType: string | null
   voidcoreState: KeystoneLootVoidcoreState
 }
 
@@ -145,6 +149,10 @@ function selectorObjective(
     itemClassName: selected.itemClassName,
     itemSubClassName: selected.itemSubClassName,
     statNames: selected.statNames,
+    primaryStatNames: selected.primaryStatNames,
+    secondaryStatNames: selected.secondaryStatNames,
+    otherStatNames: selected.otherStatNames,
+    qualityType: selected.qualityType,
     voidcoreState: selected.voidcoreState,
   }
 }

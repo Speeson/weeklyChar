@@ -247,7 +247,7 @@ class FakeD1Statement {
     if (sql.includes('INSERT INTO wow_item_metadata')) {
       const [
         region, locale, itemId, name, iconUrl,
-        slotName, itemClassName, itemSubClassName, statNamesJson,
+        slotName, itemClassName, itemSubClassName, statNamesJson, statGroupsJson, qualityType,
         status, fetchedAt, refreshAfter,
       ] = values
       const existing = this.db.itemMetadata.find(row =>
@@ -258,6 +258,8 @@ class FakeD1Statement {
         item_class_name: itemClassName,
         item_subclass_name: itemSubClassName,
         stat_names_json: statNamesJson,
+        stat_groups_json: statGroupsJson,
+        quality_type: qualityType,
         status, fetched_at: fetchedAt, refresh_after: refreshAfter,
       }
       if (existing) Object.assign(existing, value)

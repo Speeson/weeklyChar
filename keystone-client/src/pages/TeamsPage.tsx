@@ -46,7 +46,7 @@ function ObjectiveGroups({ character, specId }: { character: KeystoneSelectorCha
   const { t } = useI18n();
   const { groups, completed } = groupSelectorObjectives(selectorObjectivesForSpec(character.objectives, specId));
   return <div className="teams-objectives">
-    {groups.map(group => <section className="teams-objective-group" key={group.key}>
+    {groups.map(group => <section className="teams-objective-group" data-category={group.key} key={group.key}>
       <h4>{GROUP_LABELS[group.key]} · {group.objectives.length}</h4>
       <div className="teams-item-grid">{group.objectives.map(objective => <TeamItemTooltip key={`${objective.itemId}:${objective.sourceType}:${objective.sourceId}`} objective={objective} />)}</div>
     </section>)}
@@ -63,20 +63,19 @@ function SelectorCharacterRow({ character, muted, rank }: { character: KeystoneS
   const [specId, setSpecId] = useState<number | null>(null);
   const controls = `teams-character-${character.characterId}`;
   const oneSpec = character.specs.length === 1 ? character.specs[0] : null;
+  const specLabel = character.specs.map(spec => specName(spec.specId)).join(" / ");
   return <article className="teams-character-row" data-emphasis={muted ? "muted" : "full"} data-expanded={expanded} data-owner-id={character.userId} data-testid="selector-character">
-    <div className="teams-character-row__summary">
+    <button aria-controls={controls} aria-expanded={expanded} aria-label={`${expanded ? t("teams.hideItems") : t("teams.showItems")} · ${character.characterName}`} className="teams-character-row__summary" onClick={() => setExpanded(value => !value)} type="button">
       <span className="teams-rank" aria-label={t("teams.rank", { rank })}>#{rank}</span>
       <Portrait avatarUrl={character.avatarUrl} name={character.characterName} wowClass={character.wowClass} />
       <div className="teams-character-row__identity">
         <strong style={{ color: classColor(character.wowClass) }}>{character.characterName}</strong>
-        <span>{oneSpec ? `${specName(oneSpec.specId)} · ` : ""}{character.username} · {character.realm}</span>
+        <span className="teams-character-row__details"><span>{specLabel}</span><span>{character.realm}</span><span>{character.username}</span></span>
       </div>
       <strong className="teams-objective-count">{t("teams.objectiveCountShort", { count: character.totalObjectives })}</strong>
       <TierSummary counts={character.tierCounts} />
-      <button aria-controls={controls} aria-expanded={expanded} className="teams-expand" onClick={() => setExpanded(value => !value)} type="button">
-        {expanded ? t("teams.hideItems") : t("teams.showItems")} <ChevronDown aria-hidden="true" />
-      </button>
-    </div>
+      <span aria-hidden="true" className="teams-expand"><ChevronDown /></span>
+    </button>
     {expanded ? <div className="teams-character-row__content" id={controls}>
       {character.specs.length > 1 ? <div aria-label={t("teams.specFilter")} className="teams-specs" role="group">
         <button aria-pressed={specId === null} onClick={() => setSpecId(null)} type="button">{t("teams.allSpecs")} · {character.totalObjectives}</button>
@@ -216,7 +215,8 @@ export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessi
         {MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => {
           const count = counts.get(dungeon.id) ?? 0; const selected = dungeonId === dungeon.id;
           return <button aria-label={t("teams.selectDungeon", { name: dungeon.name, count })} aria-pressed={selected} className="teams-dungeon" data-available={count > 0} disabled={!detail} key={dungeon.id} onClick={() => selectDungeon(dungeon.id)} title={dungeon.name} type="button">
-            <Gem aria-hidden="true" /><span>{dungeon.abbr}</span><b>{count}</b>
+            <img alt="" aria-hidden="true" className="teams-dungeon__art" src={dungeon.teleportIconUrl} />
+            <span>{dungeon.name}</span><b>{count}</b>
           </button>;
         })}
       </nav>

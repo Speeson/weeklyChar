@@ -10,7 +10,7 @@ import requests
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "keystone-client" / "sidecar"))
 
-from team_service import TeamService, TeamServiceError  # noqa: E402
+from team_service import TeamService, TeamServiceError, _objective  # noqa: E402
 
 
 class FakeResponse:
@@ -61,6 +61,33 @@ class TeamServiceTests(unittest.TestCase):
         self.assertTrue(all(call[1]["timeout"] == 10 for call in session.calls))
         self.assertNotIn("access-secret", str((listed, detail, selected)))
         self.assertNotIn("SECRET", str((listed, detail, selected)))
+
+    def test_selector_objective_projects_allowlisted_quality_and_classified_stats(self):
+        objective = {
+            "itemId": 10, "itemName": "Báculo", "iconUrl": None, "tier": 3,
+            "specIds": [62], "sourceType": "dungeon", "sourceId": 399, "slotId": 16,
+            "slotName": "Mano principal", "itemClassName": "Arma", "itemSubClassName": "Báculo",
+            "statNames": ["Intelecto", "Celeridad", "Evitación"],
+            "primaryStatNames": ["Intelecto"], "secondaryStatNames": ["Celeridad"],
+            "otherStatNames": ["Evitación"], "qualityType": "EPIC",
+            "voidcoreState": "pending", "numericStats": {"Intelecto": 9999},
+        }
+
+        projected = _objective(objective)
+
+        self.assertEqual(projected["qualityType"], "EPIC")
+        self.assertEqual(projected["primaryStatNames"], ["Intelecto"])
+        self.assertEqual(projected["secondaryStatNames"], ["Celeridad"])
+        self.assertEqual(projected["otherStatNames"], ["Evitación"])
+        self.assertNotIn("numericStats", projected)
+        for malformed in (
+            {**objective, "qualityType": "MYTHIC"},
+            {**objective, "primaryStatNames": [42]},
+            {**objective, "secondaryStatNames": ["Intelecto"]},
+            {**objective, "otherStatNames": [], "statNames": ["Intelecto", "Celeridad", "Evitación"]},
+        ):
+            with self.subTest(malformed=malformed):
+                self.assertIsNone(_objective(malformed))
 
     def test_status_codes_map_to_stable_safe_errors(self):
         expected = {400: "INVALID_TEAM_REQUEST", 401: "SESSION_EXPIRED", 403: "TEAM_ACCESS_DENIED", 404: "TEAM_NOT_FOUND", 429: "API_THROTTLED", 503: "API_UNAVAILABLE"}

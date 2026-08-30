@@ -138,6 +138,10 @@ test('selector dedupes top-level objectives across specs while preserving action
     itemClassName: null,
     itemSubClassName: null,
     statNames: [],
+    primaryStatNames: [],
+    secondaryStatNames: [],
+    otherStatNames: [],
+    qualityType: null,
     voidcoreState: 'pending',
   })
   assert.equal(multi.objectives.find(objective => objective.itemId === 11).voidcoreState, 'completed_with_voidcore')

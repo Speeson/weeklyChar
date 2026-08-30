@@ -246,6 +246,8 @@ test('selector enriches only selected objective IDs and preserves metadata failu
     item_class_name: 'Armor',
     item_subclass_name: 'Cloth',
     stat_names_json: JSON.stringify(['Haste', 'Intellect']),
+    stat_groups_json: JSON.stringify({ primary: ['Intellect'], secondary: ['Haste'], other: [] }),
+    quality_type: 'EPIC',
   }]
 
   const response = await summary(env)

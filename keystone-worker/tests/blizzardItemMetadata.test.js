@@ -14,6 +14,7 @@ function objective(itemId) {
     itemId, itemName: null, iconUrl: null, tier: 3, specId: 102,
     sourceType: 'dungeon', sourceId: 249, slotId: 13,
     slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
+    primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null,
     voidcoreState: 'pending',
   }
 }
@@ -209,6 +210,33 @@ test('bad media URLs are discarded while the validated name is cached as partial
   assert.equal(testEnv.DB.itemMetadata[0].status, 'partial')
 })
 
+test('a transient media failure preserves a stale positive icon with bounded retry', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre anterior',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10-old.jpg', status: 'ok',
+    fetched_at: NOW - 100, refresh_after: NOW - 1,
+    slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: '[]',
+    stat_groups_json: JSON.stringify({ primary: [], secondary: [], other: [] }),
+    quality_type: 'UNKNOWN',
+  })
+  const fetchMediaFailure = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) return json({ error: 'down' }, 503)
+    return json({ id: 10, name: 'Nombre actualizado', preview_item: { stats: [] } })
+  }
+
+  const result = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: fetchMediaFailure,
+  })
+
+  assert.equal(result[0].itemName, 'Nombre actualizado')
+  assert.equal(result[0].iconUrl, 'https://render.worldofwarcraft.com/eu/icons/10-old.jpg')
+  assert.equal(testEnv.DB.itemMetadata[0].status, 'ok')
+  assert.equal(testEnv.DB.itemMetadata[0].refresh_after, NOW + 6 * 60 * 60)
+})
+
 test('duplicate IDs fetch once per cache key and external concurrency never exceeds four', async () => {
   resetBlizzardTokenCacheForTests()
   const testEnv = env()
@@ -251,6 +279,7 @@ test('official Item fields produce bounded deterministic tooltip metadata withou
     return json({
       id: 10,
       name: 'Vestidura oficial',
+      quality: { type: 'EPIC', name: 'Epic' },
       inventory_type: { type: 'ROBE', name: 'Chest' },
       item_class: { id: 4, name: 'Armor' },
       item_subclass: { id: 1, name: 'Cloth' },
@@ -276,11 +305,21 @@ test('official Item fields produce bounded deterministic tooltip metadata withou
   assert.equal(result[0].slotName, 'Chest')
   assert.equal(result[0].itemClassName, 'Armor')
   assert.equal(result[0].itemSubClassName, 'Cloth')
+  assert.equal(result[0].qualityType, 'EPIC')
+  assert.deepEqual(result[0].primaryStatNames, ['Intellect'])
+  assert.deepEqual(result[0].secondaryStatNames, ['Haste', 'Mastery'])
+  assert.deepEqual(result[0].otherStatNames.slice(0, 2), ['Stat 00', 'Stat 01'])
   assert.equal(result[0].statNames.length, 32)
   assert.deepEqual(result[0].statNames.slice(0, 3), ['Haste', 'Intellect', 'Mastery'])
   assert.equal(result[0].statNames.at(-1), 'Stat 28')
   assert.equal(result[0].statNames.includes('Stat 29'), false)
   assert.deepEqual(JSON.parse(testEnv.DB.itemMetadata[0].stat_names_json), result[0].statNames)
+  assert.equal(testEnv.DB.itemMetadata[0].quality_type, 'EPIC')
+  assert.deepEqual(JSON.parse(testEnv.DB.itemMetadata[0].stat_groups_json), {
+    primary: ['Intellect'],
+    secondary: ['Haste', 'Mastery'],
+    other: result[0].otherStatNames,
+  })
   assert.equal(JSON.stringify(result).includes('9999'), false)
   assert.equal(JSON.stringify(result).includes('value'), false)
 })
@@ -304,10 +343,11 @@ test('fresh pre-S2 rows immediately enrich tooltip metadata once', async () => {
     return json({
       id: 10,
       name: 'Nombre actualizado',
+      quality: { type: 'RARE', name: 'Rare' },
       inventory_type: { name: 'Chest' },
       item_class: { name: 'Armor' },
       item_subclass: { name: 'Cloth' },
-      preview_item: { stats: [] },
+      preview_item: { stats: [{ type: { type: 'STAMINA', name: 'Stamina' }, value: 42 }] },
     })
   }
 
@@ -317,13 +357,52 @@ test('fresh pre-S2 rows immediately enrich tooltip metadata once', async () => {
   assert.equal(itemCalls, 1)
   assert.equal(fresh[0].itemName, 'Nombre actualizado')
   assert.equal(fresh[0].slotName, 'Chest')
-  assert.deepEqual(fresh[0].statNames, [])
-  assert.equal(testEnv.DB.itemMetadata[0].stat_names_json, '[]')
+  assert.equal(fresh[0].qualityType, 'RARE')
+  assert.deepEqual(fresh[0].primaryStatNames, ['Stamina'])
+  assert.equal(testEnv.DB.itemMetadata[0].stat_names_json, '["Stamina"]')
+  assert.equal(testEnv.DB.itemMetadata[0].quality_type, 'RARE')
 
   await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
     now: NOW + 1, fetch: fetchTooltip,
   })
   assert.equal(itemCalls, 1)
+})
+
+test('fresh positive rows missing only classified metadata bootstrap immediately', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre anterior',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 30 * 24 * 60 * 60,
+    slot_name: 'Chest', item_class_name: 'Armor', item_subclass_name: 'Cloth',
+    stat_names_json: '["Haste"]', stat_groups_json: null, quality_type: null,
+  })
+  let itemCalls = 0
+  const fetchTooltip = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) {
+      return json({ id: 10, assets: [{ key: 'icon', value: 'https://render.worldofwarcraft.com/eu/icons/10.jpg' }] })
+    }
+    itemCalls += 1
+    return json({
+      id: 10,
+      name: 'Nombre actualizado',
+      quality: { type: 'EPIC', name: 'Epic' },
+      preview_item: { stats: [{ type: { type: 'HASTE_RATING', name: 'Haste' }, value: 99 }] },
+    })
+  }
+
+  const result = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: fetchTooltip,
+  })
+
+  assert.equal(itemCalls, 1)
+  assert.equal(result[0].qualityType, 'EPIC')
+  assert.deepEqual(result[0].secondaryStatNames, ['Haste'])
+  assert.deepEqual(JSON.parse(testEnv.DB.itemMetadata[0].stat_groups_json), {
+    primary: [], secondary: ['Haste'], other: [],
+  })
 })
 
 test('failed legacy tooltip enrichment preserves positives and applies bounded backoff', async () => {
@@ -353,6 +432,10 @@ test('failed legacy tooltip enrichment preserves positives and applies bounded b
   assert.equal(first[0].itemName, 'Nombre anterior')
   assert.equal(second[0].iconUrl, 'https://render.worldofwarcraft.com/eu/icons/10.jpg')
   assert.equal(testEnv.DB.itemMetadata[0].refresh_after, NOW + 6 * 60 * 60)
+  assert.equal(testEnv.DB.itemMetadata[0].quality_type, 'UNKNOWN')
+  assert.deepEqual(JSON.parse(testEnv.DB.itemMetadata[0].stat_groups_json), {
+    primary: [], secondary: [], other: [],
+  })
 })
 
 test('legitimate empty tooltip metadata is cached and not immediately refetched', async () => {
@@ -379,6 +462,10 @@ test('legitimate empty tooltip metadata is cached and not immediately refetched'
 
   assert.equal(itemCalls, 1)
   assert.equal(testEnv.DB.itemMetadata[0].stat_names_json, '[]')
+  assert.equal(testEnv.DB.itemMetadata[0].quality_type, 'UNKNOWN')
+  assert.deepEqual(JSON.parse(testEnv.DB.itemMetadata[0].stat_groups_json), {
+    primary: [], secondary: [], other: [],
+  })
 })
 
 test('fully enriched fresh rows make zero Blizzard calls', async () => {
@@ -389,6 +476,8 @@ test('fully enriched fresh rows make zero Blizzard calls', async () => {
     icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
     fetched_at: NOW - 10, refresh_after: NOW + 10,
     slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: '[]',
+    stat_groups_json: JSON.stringify({ primary: [], secondary: [], other: [] }),
+    quality_type: 'UNKNOWN',
   })
   let calls = 0
   await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
@@ -421,6 +510,7 @@ test('malformed optional Blizzard and cached tooltip fields degrade independentl
     if (String(url).includes('/media/item/')) return json({ id: 10, assets: [] })
     return json({
       id: 10,
+      quality: { type: 'FUTURE_MYTHIC', name: 'Future' },
       name: 'Nombre remoto válido',
       inventory_type: { name: 123 },
       item_class: { name: 'x'.repeat(200) },
@@ -438,4 +528,6 @@ test('malformed optional Blizzard and cached tooltip fields degrade independentl
   assert.equal(remote[0].itemClassName, null)
   assert.equal(remote[0].itemSubClassName, null)
   assert.deepEqual(remote[0].statNames, ['Valid Stat'])
+  assert.deepEqual(remote[0].otherStatNames, ['Valid Stat'])
+  assert.equal(remote[0].qualityType, null)
 })

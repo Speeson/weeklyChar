@@ -52,6 +52,7 @@ export function groupSelectorObjectives(objectives: readonly KeystoneSelectorObj
 }
 
 const VOIDCORE_STATES = ["pending", "completed_with_voidcore", "voidcore_not_checked"] as const;
+const ITEM_QUALITY_TYPES = ["POOR", "COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "ARTIFACT", "HEIRLOOM"] as const;
 
 function error(code: string, message: string): CoreError {
   return { code, message };
@@ -136,6 +137,17 @@ function parseTiers(value: unknown): KeystoneSelectorTierCounts | null {
     ? Object.fromEntries(keys.map(key => [key, value[key]])) as KeystoneSelectorTierCounts : null;
 }
 
+function statNameArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= 32 && value.every(name => text(name, 128))
+    && new Set(value).size === value.length;
+}
+
+function validStatGroups(all: string[], primary: string[], secondary: string[], other: string[]): boolean {
+  const classified = [...primary, ...secondary, ...other];
+  return classified.length === all.length && new Set(classified).size === classified.length
+    && classified.every(name => all.includes(name));
+}
+
 function parseObjective(value: unknown): KeystoneSelectorObjective | null {
   if (!object(value) || !positive(value.itemId) || !nullableText(value.itemName, 512)
     || !nullableHttps(value.iconUrl) || !positive(value.tier) || !Array.isArray(value.specIds)
@@ -144,13 +156,21 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     || !(positive(value.sourceId) || text(value.sourceId, 128))
     || !(value.slotId === null || Number.isSafeInteger(value.slotId)) || !nullableText(value.slotName, 128)
     || !nullableText(value.itemClassName, 128) || !nullableText(value.itemSubClassName, 128)
-    || !Array.isArray(value.statNames) || value.statNames.length > 32 || !value.statNames.every(name => text(name, 128))
-    || new Set(value.statNames).size !== value.statNames.length || typeof value.voidcoreState !== "string"
+    || !statNameArray(value.statNames) || !statNameArray(value.primaryStatNames)
+    || !statNameArray(value.secondaryStatNames) || !statNameArray(value.otherStatNames)
+    || !validStatGroups(value.statNames, value.primaryStatNames, value.secondaryStatNames, value.otherStatNames)
+    || !(value.qualityType === null || (typeof value.qualityType === "string"
+      && ITEM_QUALITY_TYPES.includes(value.qualityType as typeof ITEM_QUALITY_TYPES[number])))
+    || typeof value.voidcoreState !== "string"
     || !VOIDCORE_STATES.includes(value.voidcoreState as typeof VOIDCORE_STATES[number])) return null;
   return { itemId: value.itemId, itemName: value.itemName, iconUrl: value.iconUrl, tier: value.tier,
     specIds: [...value.specIds] as number[], sourceType: value.sourceType, sourceId: value.sourceId,
     slotId: value.slotId as number | null, slotName: value.slotName, itemClassName: value.itemClassName,
     itemSubClassName: value.itemSubClassName, statNames: [...value.statNames] as string[],
+    primaryStatNames: [...value.primaryStatNames] as string[],
+    secondaryStatNames: [...value.secondaryStatNames] as string[],
+    otherStatNames: [...value.otherStatNames] as string[],
+    qualityType: value.qualityType as KeystoneSelectorObjective["qualityType"],
     voidcoreState: value.voidcoreState as KeystoneSelectorObjective["voidcoreState"] };
 }
 
