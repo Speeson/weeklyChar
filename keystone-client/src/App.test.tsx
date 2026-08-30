@@ -257,6 +257,36 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Estado del addon" })).toBeInTheDocument();
   });
 
+  it("opens Teams as a first-class page and loads it through the bridge commands", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+    coreRequestMock
+      .mockResolvedValueOnce([{ id: 7, name: "Mythiqueros 2.0", memberCount: 1 }])
+      .mockResolvedValueOnce({ id: 7, name: "Mythiqueros 2.0", members: [] });
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Equipos" }));
+
+    expect(screen.getByRole("button", { name: "Equipos" })).toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toHaveAttribute("aria-haspopup", "listbox");
+    expect(coreRequestMock).toHaveBeenNthCalledWith(3, "teams.list");
+    expect(coreRequestMock).toHaveBeenNthCalledWith(4, "teams.get", { teamId: 7 });
+  });
+
+  it("returns to the existing login flow when the Teams bridge reports an expired session", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+    coreRequestMock.mockRejectedValueOnce({ code: "SESSION_EXPIRED", message: "Caducada" });
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Equipos" }));
+
+    expect(await screen.findByRole("heading", { name: /Iniciar sesi/u })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Equipos" })).not.toBeInTheDocument();
+  });
+
   it("updates the addon summary from core events", async () => {
     let eventHandler: (event: CoreEvent) => void = () => undefined;
     listenCoreEventsMock.mockImplementationOnce(async (handler) => {
@@ -495,7 +525,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Configuracion" }));
     await user.click(await screen.findByRole("button", { name: "English" }));
 
-    expect(screen.getByRole("button", { name: "Synchronization" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sync" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Web" })).toBeInTheDocument();
   });

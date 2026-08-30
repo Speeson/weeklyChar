@@ -156,6 +156,9 @@ class BridgeProcessTests(unittest.TestCase):
                 "sync.force",
                 "characters.get",
                 "characters.refresh",
+                "teams.list",
+                "teams.get",
+                "teams.keystone_selector",
                 "addon.get_status",
                 "addon.check",
                 "addon.install",
@@ -526,6 +529,26 @@ class BridgeProcessTests(unittest.TestCase):
         )
         self.assertFalse(refresh["ok"])
         self.assertEqual(refresh["error"]["code"], "CHARACTER_NOT_AUTHENTICATED")
+
+    def test_team_commands_validate_identifiers_before_network_access(self):
+        invalid_team = self.bridge.send(
+            {"protocolVersion": 1, "id": "team-bad", "command": "teams.get", "payload": {"teamId": 0}}
+        )
+        invalid_selector = self.bridge.send(
+            {"protocolVersion": 1, "id": "selector-bad", "command": "teams.keystone_selector", "payload": {"teamId": 7, "challengeMapId": True}}
+        )
+        self.assertFalse(invalid_team["ok"])
+        self.assertEqual(invalid_team["error"]["code"], "INVALID_REQUEST")
+        self.assertFalse(invalid_selector["ok"])
+        self.assertEqual(invalid_selector["error"]["code"], "INVALID_REQUEST")
+
+    def test_team_commands_return_structured_expired_session_without_tokens(self):
+        response = self.bridge.send(
+            {"protocolVersion": 1, "id": "teams-auth", "command": "teams.list", "payload": {}}
+        )
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], "SESSION_EXPIRED")
+        self.assertNotIn("token", json.dumps(response).lower())
 
     def test_addon_commands_return_safe_status_and_use_cache_fixture(self):
         wow = make_wow_tree(Path(self.temp_dir.name))

@@ -1,6 +1,10 @@
 import type { CharacterRow, Env, KeystoneRow, TeamInvitationRow, TeamRow, UserRow } from './types'
 import { parseSupportedKeystoneLoot } from './keystoneLoot'
 import type { RecommendationCharacter } from './keystoneRecommendations'
+import type {
+  KeystoneLootSelectorCharacterSource,
+  KeystoneLootSelectorStoneDTO,
+} from './keystoneSelector'
 import { currentEuWeeklyResetUnix } from './weeklyReset'
 
 export async function getUserById(env: Env, id: number): Promise<UserRow | null> {
@@ -140,6 +144,111 @@ export async function recommendationCharactersForUser(
     })
   }
   return characters
+}
+
+type SelectorCharacterRow = {
+  user_id: number
+  username: string
+  character_id: number
+  character_name: string
+  realm: string
+  region: string
+  wow_class: string | null
+  avatar_url: string | null
+  ilvl: number | null
+  rio_score: number | null
+  keystone_loot_json: string | null
+}
+
+export async function selectorCharactersForTeam(
+  env: Env,
+  teamId: number,
+): Promise<KeystoneLootSelectorCharacterSource[]> {
+  const { results } = await env.DB.prepare(`
+    SELECT
+      u.id AS user_id,
+      u.username,
+      c.id AS character_id,
+      c.name AS character_name,
+      c.realm,
+      c.region,
+      c.wow_class,
+      c.avatar_url,
+      c.ilvl,
+      c.rio_score,
+      c.keystone_loot_json
+    FROM team_members tm
+    JOIN users u ON u.id = tm.user_id
+    JOIN characters c ON c.user_id = u.id
+    WHERE tm.team_id = ?
+      AND u.share_keystone_loot_with_teams <> 0
+    ORDER BY u.username, c.name, c.realm, c.id
+  `).bind(teamId).all<SelectorCharacterRow>()
+
+  return results.map(row => ({
+    userId: row.user_id,
+    username: row.username,
+    characterId: row.character_id,
+    characterName: row.character_name,
+    realm: row.realm,
+    region: row.region,
+    wowClass: row.wow_class,
+    avatarUrl: row.avatar_url,
+    ilvl: row.ilvl,
+    rioScore: row.rio_score,
+    keystoneLoot: jsonLoad(row.keystone_loot_json),
+  }))
+}
+
+type SelectorStoneRow = {
+  character_id: number
+  character_name: string
+  owner_user_id: number
+  owner_username: string
+  keystone_level: number
+}
+
+export async function selectorStonesForTeam(
+  env: Env,
+  teamId: number,
+  challengeMapId: number,
+): Promise<KeystoneLootSelectorStoneDTO[]> {
+  const resetUnix = currentEuWeeklyResetUnix()
+  const { results } = await env.DB.prepare(`
+    WITH ranked_keystones AS (
+      SELECT
+        k.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY k.character_id
+          ORDER BY COALESCE(k.updated_at, 0) DESC, k.id DESC
+        ) AS keystone_rank
+      FROM keystones k
+      WHERE k.has_keystone = 1
+        AND k.keystone_level IS NOT NULL
+        AND k.updated_at >= ?
+    )
+    SELECT
+      c.id AS character_id,
+      c.name AS character_name,
+      u.id AS owner_user_id,
+      u.username AS owner_username,
+      rk.keystone_level
+    FROM team_members tm
+    JOIN users u ON u.id = tm.user_id
+    JOIN characters c ON c.user_id = u.id
+    JOIN ranked_keystones rk ON rk.character_id = c.id AND rk.keystone_rank = 1
+    WHERE tm.team_id = ?
+      AND rk.keystone_challenge_map_id = ?
+    ORDER BY u.username, c.name, c.id
+  `).bind(resetUnix, teamId, challengeMapId).all<SelectorStoneRow>()
+
+  return results.map(row => ({
+    characterId: row.character_id,
+    characterName: row.character_name,
+    ownerUserId: row.owner_user_id,
+    ownerUsername: row.owner_username,
+    level: row.keystone_level,
+  }))
 }
 
 export async function teamDetailResponse(env: Env, team: TeamRow, currentUserId: number): Promise<Record<string, unknown>> {

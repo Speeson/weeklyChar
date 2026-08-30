@@ -20,7 +20,9 @@ import {
   openWeb,
   startWindowDragging,
 } from "./core/native";
-import { getPreviewState } from "./core/preview";
+import { getPreviewState, isTeamsPreview } from "./core/preview";
+import { liveTeamsDataSource, type TeamsDataSource } from "./core/teams";
+import { getTeamsPreviewDataSource } from "./core/teamsPreview";
 import { setProfileAvatar } from "./core/profile";
 import { tauriUpdaterAdapter } from "./core/tauriUpdater";
 import { UpdateController, type UpdaterSnapshot } from "./core/updater";
@@ -43,6 +45,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SyncPage } from "./pages/SyncPage";
+import { TeamsPage } from "./pages/TeamsPage";
 import { WowPage } from "./pages/WowPage";
 
 type BridgeStatus = "loading" | "ready" | "error";
@@ -102,6 +105,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [currentView, setCurrentView] = useState<KeystoneView>("sync");
+  const [teamsDataSource] = useState<TeamsDataSource>(() => getTeamsPreviewDataSource() ?? liveTeamsDataSource);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
@@ -164,6 +168,7 @@ function App() {
 
         applySystemState(state);
         setPreviewMode(previewState !== null);
+        if (previewState && isTeamsPreview()) setCurrentView("teams");
         setBridgeStatus(firstPing.pong ? "ready" : "error");
         setError(null);
         document.title = `KeystoneClient - ${state.bridge}`;
@@ -268,6 +273,13 @@ function App() {
 
   const handleSettingsChanged = useCallback((nextSettings: ClientSettings) => {
     setSettings(nextSettings);
+  }, []);
+
+  const handleSessionExpired = useCallback(() => {
+    setAuth({ authenticated: false, username: null, avatarUrl: null });
+    setCharacters(current => current ? { ...current, characters: [], source: "none", lastRefreshAt: null, lastError: null } : current);
+    setCurrentView("sync");
+    setError(null);
   }, []);
 
   const handleWowChanged = useCallback((nextWow: WowState) => {
@@ -392,6 +404,12 @@ function App() {
               initialSync={sync}
               initialWow={wow}
               preview={previewMode}
+            />
+          ) : currentView === "teams" ? (
+            <TeamsPage
+              dataSource={teamsDataSource}
+              onOpenWeb={() => void runNativeAction(openWeb)}
+              onSessionExpired={handleSessionExpired}
             />
           ) : (
             <AddonPage

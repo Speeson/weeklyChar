@@ -12,7 +12,9 @@ const NOW = 1_800_000_000
 function objective(itemId) {
   return {
     itemId, itemName: null, iconUrl: null, tier: 3, specId: 102,
-    sourceType: 'dungeon', sourceId: 249, slotId: 13, voidcoreState: 'pending',
+    sourceType: 'dungeon', sourceId: 249, slotId: 13,
+    slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
+    voidcoreState: 'pending',
   }
 }
 
@@ -236,4 +238,135 @@ test('duplicate IDs fetch once per cache key and external concurrency never exce
   assert.equal(itemCalls.get(1), 1)
   assert.ok(maximum <= 4, `maximum concurrency ${maximum}`)
   assert.equal(oauthCalls, 1)
+})
+
+test('official Item fields produce bounded deterministic tooltip metadata without stat quantities', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  const fetchTooltip = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) {
+      return json({ id: 10, assets: [{ key: 'icon', value: 'https://render.worldofwarcraft.com/eu/icons/10.jpg' }] })
+    }
+    return json({
+      id: 10,
+      name: 'Vestidura oficial',
+      inventory_type: { type: 'ROBE', name: 'Chest' },
+      item_class: { id: 4, name: 'Armor' },
+      item_subclass: { id: 1, name: 'Cloth' },
+      preview_item: {
+        stats: [
+          { type: { type: 'MASTERY_RATING', name: 'Mastery' }, value: 9999 },
+          { type: { type: 'INTELLECT', name: 'Intellect' }, value: 8888 },
+          { type: { type: 'HASTE_RATING', name: 'Haste' }, value: 7777 },
+          { type: { type: 'HASTE_RATING', name: 'Haste' }, value: 6666 },
+          ...Array.from({ length: 40 }, (_, index) => ({
+            type: { type: `STAT_${index}`, name: `Stat ${String(index).padStart(2, '0')}` },
+            value: 5000 + index,
+          })),
+        ],
+      },
+    })
+  }
+
+  const result = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: fetchTooltip,
+  })
+
+  assert.equal(result[0].slotName, 'Chest')
+  assert.equal(result[0].itemClassName, 'Armor')
+  assert.equal(result[0].itemSubClassName, 'Cloth')
+  assert.equal(result[0].statNames.length, 32)
+  assert.deepEqual(result[0].statNames.slice(0, 3), ['Haste', 'Intellect', 'Mastery'])
+  assert.equal(result[0].statNames.at(-1), 'Stat 28')
+  assert.equal(result[0].statNames.includes('Stat 29'), false)
+  assert.deepEqual(JSON.parse(testEnv.DB.itemMetadata[0].stat_names_json), result[0].statNames)
+  assert.equal(JSON.stringify(result).includes('9999'), false)
+  assert.equal(JSON.stringify(result).includes('value'), false)
+})
+
+test('fresh pre-S2 rows keep name and icon then lazily gain tooltip metadata at normal expiry', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre anterior',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 10,
+    slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: null,
+  })
+  let itemCalls = 0
+  const fetchTooltip = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) {
+      return json({ id: 10, assets: [{ key: 'icon', value: 'https://render.worldofwarcraft.com/eu/icons/10.jpg' }] })
+    }
+    itemCalls += 1
+    return json({
+      id: 10,
+      name: 'Nombre actualizado',
+      inventory_type: { name: 'Chest' },
+      item_class: { name: 'Armor' },
+      item_subclass: { name: 'Cloth' },
+      preview_item: { stats: [] },
+    })
+  }
+
+  const fresh = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: fetchTooltip,
+  })
+  assert.equal(itemCalls, 0)
+  assert.equal(fresh[0].itemName, 'Nombre anterior')
+  assert.equal(fresh[0].slotName, null)
+
+  const refreshed = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW + 11, fetch: fetchTooltip,
+  })
+  assert.equal(itemCalls, 1)
+  assert.equal(refreshed[0].itemName, 'Nombre actualizado')
+  assert.equal(refreshed[0].slotName, 'Chest')
+  assert.deepEqual(refreshed[0].statNames, [])
+  assert.equal(testEnv.DB.itemMetadata[0].stat_names_json, '[]')
+})
+
+test('malformed optional Blizzard and cached tooltip fields degrade independently to safe fallbacks', async () => {
+  resetBlizzardTokenCacheForTests()
+  const cachedEnv = env(false)
+  cachedEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre válido',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 10,
+    slot_name: 123, item_class_name: 'x'.repeat(200), item_subclass_name: '',
+    stat_names_json: '{bad',
+  })
+  const cached = await enrichKeystoneLootObjectives(cachedEnv, 'eu', [objective(10)], { now: NOW })
+  assert.equal(cached[0].itemName, 'Nombre válido')
+  assert.equal(cached[0].slotName, null)
+  assert.equal(cached[0].itemClassName, null)
+  assert.equal(cached[0].itemSubClassName, null)
+  assert.deepEqual(cached[0].statNames, [])
+
+  resetBlizzardTokenCacheForTests()
+  const remoteEnv = env()
+  const fetchMalformed = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) return json({ id: 10, assets: [] })
+    return json({
+      id: 10,
+      name: 'Nombre remoto válido',
+      inventory_type: { name: 123 },
+      item_class: { name: 'x'.repeat(200) },
+      item_subclass: null,
+      preview_item: {
+        stats: [null, { value: 123 }, { type: { name: '' } }, { type: { name: 'Valid Stat' } }],
+      },
+    })
+  }
+  const remote = await enrichKeystoneLootObjectives(remoteEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: fetchMalformed,
+  })
+  assert.equal(remote[0].itemName, 'Nombre remoto válido')
+  assert.equal(remote[0].slotName, null)
+  assert.equal(remote[0].itemClassName, null)
+  assert.equal(remote[0].itemSubClassName, null)
+  assert.deepEqual(remote[0].statNames, ['Valid Stat'])
 })

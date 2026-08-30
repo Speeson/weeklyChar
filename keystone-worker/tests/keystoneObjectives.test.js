@@ -56,19 +56,27 @@ test('display DTOs dedupe deterministically with V1 weights and derive Voidcore 
   assert.deepEqual(page.objectives, [
     {
       itemId: 10, itemName: null, iconUrl: null, tier: 3, specId: 102,
-      sourceType: 'dungeon', sourceId: 249, slotId: 15, voidcoreState: 'pending',
+      sourceType: 'dungeon', sourceId: 249, slotId: 15,
+      slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
+      voidcoreState: 'pending',
     },
     {
       itemId: 11, itemName: null, iconUrl: null, tier: 2, specId: 102,
-      sourceType: 'dungeon', sourceId: 249, slotId: 13, voidcoreState: 'completed_with_voidcore',
+      sourceType: 'dungeon', sourceId: 249, slotId: 13,
+      slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
+      voidcoreState: 'completed_with_voidcore',
     },
     {
       itemId: 10, itemName: null, iconUrl: null, tier: 2, specId: 102,
-      sourceType: 'dungeon', sourceId: 250, slotId: 13, voidcoreState: 'pending',
+      sourceType: 'dungeon', sourceId: 250, slotId: 13,
+      slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
+      voidcoreState: 'pending',
     },
     {
       itemId: 12, itemName: null, iconUrl: null, tier: 5, specId: 103,
-      sourceType: 'dungeon', sourceId: 249, slotId: 13, voidcoreState: 'pending',
+      sourceType: 'dungeon', sourceId: 249, slotId: 13,
+      slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
+      voidcoreState: 'pending',
     },
   ])
   assert.equal(JSON.stringify(page).includes('bonusIds'), false)

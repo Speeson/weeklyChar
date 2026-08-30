@@ -27,6 +27,10 @@ const objective = {
   sourceType: 'dungeon',
   sourceId: 249,
   slotId: 13,
+  slotName: 'Chest',
+  itemClassName: 'Armor',
+  itemSubClassName: 'Cloth',
+  statNames: ['Haste', 'Intellect'] as string[],
   voidcoreState: 'pending',
 } as const
 
@@ -69,6 +73,9 @@ test('runtime parser fails closed for malformed DTOs and responses', () => {
     { ...available(), objectives: [{ ...objective, sourceType: '' }] },
     { ...available(), objectives: [{ ...objective, itemName: 123 }] },
     { ...available(), objectives: [{ ...objective, slotId: '13' }] },
+    { ...available(), objectives: [{ ...objective, slotName: 13 }] },
+    { ...available(), objectives: [{ ...objective, statNames: ['x'.repeat(129)] }] },
+    { ...available(), objectives: [{ ...objective, statNames: [2732] }] },
     { ...available(), nextCursor: 123 },
     { ...available(), snapshot: { ...snapshot, apiVersion: 3 } },
     { status: 'available', snapshot, nextCursor: null },

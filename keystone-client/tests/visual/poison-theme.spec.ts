@@ -122,8 +122,8 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
     await expect(modal).toBeVisible();
-    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.6.3" })).toBeVisible();
-    await expect(modal.getByRole("heading", { level: 2, name: "Novedades", exact: true })).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.6.4" })).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 2, name: "Correcciones", exact: true })).toBeVisible();
     await expect(page).toHaveScreenshot("poison-post-update-changelog.png", { fullPage: true });
   });
 

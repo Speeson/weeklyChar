@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "test": "node --test lib/*.test.ts",
+    "test": "node --import ./tests/registerExtensionResolver.mjs --test lib/*.test.ts",
+    "test:visual": "playwright test",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -16,6 +17,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

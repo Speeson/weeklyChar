@@ -64,6 +64,16 @@ class DeployImpactTests(unittest.TestCase):
         impact = self.assertImpact(["keystone-web/README.md"], set())
         self.assertEqual(impact.known_no_impact_paths, ["keystone-web/README.md"])
 
+    def test_web_test_harness_paths_are_no_product_impact(self):
+        paths = [
+            "keystone-web/.gitignore",
+            "keystone-web/playwright.config.ts",
+            "keystone-web/playwright/stone-selector.spec.ts",
+            "keystone-web/tests/registerExtensionResolver.mjs",
+        ]
+        impact = self.assertImpact(paths, set())
+        self.assertEqual(impact.known_no_impact_paths, paths)
+
     def test_worker_source_impacts_worker(self):
         self.assertImpact(["keystone-worker/src/index.ts"], {"worker"})
 
@@ -201,6 +211,7 @@ class DeployImpactTests(unittest.TestCase):
                 ".changes/releases/client-v0.3.0/release-notes.md",
                 ".changes/releases/client-v0.5.0/metadata.json",
                 "scripts/release_changes.py",
+                "scripts/release_orchestration.py",
                 "scripts/release_state.py",
             ],
             set(),

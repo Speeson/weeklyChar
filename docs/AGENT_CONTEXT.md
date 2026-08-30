@@ -65,8 +65,8 @@ Main implementation points:
 Verified from checked-out files:
 
 - Canonical addon repo `Speeson/KeystoneSync` at verified `main`/`v0.2.3`: `Version: 0.2.3`, `Interface: 120100`
-- Canonical Windows client `keystone-client/VERSION`: `0.6.3`
-- Current public Tauri release: `0.6.3`, tag `client-v0.6.3`, at commit `e1eadbdecc673b81220f8aab9601af6fc26e3552`
+- Canonical Windows client `keystone-client/VERSION`: `0.6.4`
+- Current public Tauri release: `0.6.4`, tag `client-v0.6.4`, at commit `585d266`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
@@ -82,7 +82,7 @@ Verified from checked-out files:
 - Production Tauri cutover: KeystoneClient 0.4.0 was released and verified from commit `b927d6721ab68272413f1035e583886927caf5ae` with tag `client-v0.4.0`, the canonical installer/signature assets and public `latest.json`.
 - Inno-to-NSIS migration: the Tauri installer uses machine-wide scope to match the public Inno client and a minimal preinstall hook for legacy AppId `{B5D12F8B-FC43-4E22-A3E1-4B2D84A4C910}`. The hook runs the registered Inno uninstaller silently and aborts the NSIS installation if removal fails. The exact public `0.3.0` installer to CI-built `0.4.0` path preserved auth/config, WoW path, selected accounts, language/settings, addon cache and cached characters; it migrated an enabled legacy auto-start entry to the new executable, left one installation and one shortcut set, and retained AppData across uninstall/reinstall.
 - Tauri updater signatures are not Windows Authenticode signatures. Authenticode remains unconfigured as a separate future concern.
-- The Client workflows preserve `build-only`, `release-dry-run`, `release`, changeset planning, resume state and atomic tag/release publication. Automatic publication from a qualifying `main` push requires repository variable `TAURI_CLIENT_RELEASE_ENABLED=true`; manual `release` remains an explicit operation.
+- The Client workflows preserve `build-only`, `release-dry-run`, gated `release`, changeset planning, resume state and atomic tag/release publication. Automatic publication from a qualifying `main` push requires repository variable `TAURI_CLIENT_RELEASE_ENABLED=true`. Backend-dependent releases are ordered by `scripts/release_orchestration.py`; manual publication/recovery runs through the orchestrator from `main` with a confirmed complete impact range.
 - Addon: changes go to canonical `Speeson/KeystoneSync` with version tags after explicit confirmation. Standalone addon releases use tag `vX.Y.Z`, asset `KeystoneSync-vX.Y.Z.zip`, and ZIP root `KeystoneSync/`. KeystoneClient checks these releases automatically in the background and installs/updates only after explicit user action.
 - Client addon cache: `%APPDATA%\KeystoneClient\addon-cache\` stores the last successfully downloaded and validated addon ZIP for recovery. It is not canonical and must not cause automatic downgrade.
 - Deterministic deployment-impact script: `scripts/deploy_impact.py`.
@@ -92,9 +92,12 @@ Verified from checked-out files:
 - Unknown or outside-repository paths are reported by the impact script; `--strict` exits non-zero for them.
 - CI/CD orchestrator: `.github/workflows/deploy.yml` calculates Deployment Impact in strict mode and calls relevant reusable workflows.
 - Web workflow: `.github/workflows/deploy-web.yml` validates build and lint. Build is blocking; lint is temporarily non-blocking because of the documented Phase 8 baseline. Web production deployment remains documented as externally Vercel-managed.
-- Worker workflow: `.github/workflows/deploy-worker.yml` validates `npm run typecheck` and `npm test`; Worker deploy and remote D1 migrations are guarded behind manual inputs and `production` environment.
+- Worker workflow: `.github/workflows/deploy-worker.yml` validates `npm run typecheck` and `npm test`; independent production operations remain guarded, while a backend-dependent Client release forces impacted D1 migrations, then Worker deploy, then a non-destructive production smoke of `/api/health` and the authenticated Selector route.
 - Client build workflow: `.github/workflows/build-client.yml` builds the Windows installer on `windows-latest` with read-only permissions and uploads `KeystoneClientSetup.exe` as a workflow artifact for validation/orchestration.
-- Client release workflow: `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run`, and `release`; PRs do not publish, while qualifying `main` pushes publish only when Deployment Impact reports `CLIENT_RELEASE=true` and `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- Client release workflow: `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run`, and orchestrator-gated `release`; direct dispatch cannot publish. PRs do not publish. A qualifying `main` push publishes only when Deployment Impact reports `CLIENT_RELEASE=true`, `TAURI_CLIENT_RELEASE_ENABLED=true`, and every required backend gate succeeds. Client-only releases do not wait for Worker.
+- Guaranteed backend release order: impacted D1 migrations -> Worker deploy -> Worker production smoke -> Client publication. Migration, deploy, smoke, cancellation, or Worker validation failure blocks publication.
+- Production pushes/manual orchestrator runs are serialized through one non-cancelable concurrency group so separate deploy/release chains cannot interleave. Direct Worker and Client workflow dispatches validate/build only; production and manual recovery enter through `deploy.yml`.
+- Web production remains externally Vercel-managed. No checked-in machine-readable revision/readiness proof exists, so Web production verification is an operational step. KeystoneClient Teams/Selector calls the Worker directly and is not runtime-coupled to Web readiness.
 - Client release tag convention: `client-vX.Y.Z`, derived from `keystone-client/VERSION`.
 - Addon workflows: authoritative addon CI/CD lives in the standalone `Speeson/KeystoneSync` repository. `weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML. weeklyChar must not publish addon releases.
 - GitHub Actions operational status: user confirmed the required GitHub-side configuration was added and validation workflows passed. Required external configuration includes `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and the GitHub `production` environment. Secret values and exact external settings are not versioned in this repository.
@@ -132,6 +135,45 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 
 ## Next planned milestone
 
+Stone Selector S1 added the backend-only aggregate route
+`GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team
+membership and sharing, actionable Voidcore counters, cross-spec canonical deduplication,
+deterministic character ordering, current weekly stone availability, and existing Blizzard
+metadata enrichment. S2 additively extends the Worker-owned item cache and shared safe objective
+projection with localized equipment slot, item class, item subclass, and bounded stat names;
+numeric stat quantities and raw Blizzard payloads remain excluded. Existing positive cache rows
+upgrade lazily at their normal refresh boundary. Web tooltip rendering, Client UI/bridge, and
+composition planning remain deferred. The Worker owns a minimal duplicate of the verified
+Season 2 challenge-map allowlist; cross-surface consolidation is intentionally deferred.
+
+Stone Selector S3 adds the Web-only inline Selector on the Team page. It always shows the eight
+canonical Season 2 dungeons (including selectable zero-stone entries), consumes the S1 aggregate
+route through a strict parser and abort/generation guards, and renders compact server-ordered
+character summaries with multi-spec filtering and grouped item grids. A shared portal tooltip
+applies S2 safe metadata to Selector, owner, and Team objective items on hover/focus/click/tap.
+The exposed legacy Team planner UI and its visual components are removed; the disabled
+`Planificar piedra · Próximamente` tab documents the future feature boundary. S4 and S5 carry
+the same safe aggregate flow into KeystoneClient; composition planning remains deferred.
+
+Stone Selector S4 adds the Client data/bridge layer only. The additive protocol-v1 commands are
+`teams.list`, `teams.get`, and `teams.keystone_selector`, mapped respectively to the existing
+Worker Team list, Team detail, and aggregate dungeon summary endpoints. Rust keeps an explicit
+allowlist; the Python sidecar owns the authenticated HTTP session and safe response projection;
+and TypeScript validates the projected DTO again. No token, invite code, raw KeystoneLoot, vault,
+or WoW account field reaches React. The Worker does not expose a member-profile avatar, so the
+Client member DTO intentionally omits it.
+
+Stone Selector S5 adds the first-class Client `Equipos` / `Teams` page. It derives all eight
+Season 2 stone counts from one Team-detail response, requests only the selected dungeon through
+the S4 bridge, rejects stale results by generation, and returns expired sessions to the existing
+login flow. The Poison-aligned page keeps the member dashboard compact, preserves Worker order,
+supports multi-spec filtering and ordered item grids, and separates completed Voidcore items.
+Its body-portal tooltip uses safe S2 metadata only and accounts for the fixed Client scale.
+Deterministic `teams-*` preview data sources cover single/multiple/no Team plus populated,
+multi-spec, empty, loading, and error Selector states. The disabled Planner remains future work.
+Web, Worker, and Client intentionally retain small local Season 2 display allowlists until a
+separate shared-build-boundary decision is approved.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and
@@ -142,7 +184,8 @@ column. Owner access remains independent of that preference.
 
 Production rollout remains a separately authorized operation. Before deployment, configure
 Cloudflare Worker secrets `BLIZZARD_CLIENT_ID` and `BLIZZARD_CLIENT_SECRET`, apply additive D1
-migration `0004_keystone_loot_item_metadata.sql`, deploy the backward-compatible Worker, smoke
+migrations `0004_keystone_loot_item_metadata.sql` and
+`0005_keystone_loot_item_tooltip_metadata.sql`, deploy the backward-compatible Worker, smoke
 the owner/team objective routes, and only then deploy Web. Missing Blizzard credentials do not
 break objective routes, but metadata falls back to `Objeto #<itemId>` and the generic icon;
 deployment is technically safe without them, while configuring them first is the recommended

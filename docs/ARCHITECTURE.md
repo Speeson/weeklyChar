@@ -175,9 +175,29 @@ Primary workflow files:
 
 - `.github/workflows/deploy.yml` - orchestrates impact calculation and selective workflow calls.
 - `.github/workflows/deploy-web.yml` - validates Web build/lint without duplicating Vercel deployment.
-- `.github/workflows/deploy-worker.yml` - validates Worker changes and supports guarded manual deploy/migrations.
+- `.github/workflows/deploy-worker.yml` - validates Worker changes, applies required D1 migrations before deployment, and exposes production readiness only after health and Selector-route smoke checks pass.
 - `.github/workflows/build-client.yml` - builds Client installer artifacts for build-only validation/orchestration with read-only permissions.
-- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and `release` modes; `deploy.yml` calls release mode on qualifying `main` pushes only while `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- `.github/workflows/release-client.yml` - supports Client `build-only`, `release-dry-run`, and gated `release` modes; only `deploy.yml` supplies the publication gate after required backend readiness.
+
+For a qualifying automatic Client release, `scripts/release_orchestration.py` converts the
+Deployment Impact result into explicit actions. Client-only changes remain independent. When the
+same release range includes Worker changes, the Worker must deploy and pass production smoke
+before publication; DB impact additionally forces migrations before deployment:
+
+```text
+D1 migrations (when DB=true)
+  -> Worker deploy
+  -> Worker production health + Selector authentication smoke
+  -> Client release gate
+  -> Client publication
+```
+
+Failure or cancellation before the gate prevents Client publication. Direct dispatch of
+`release-client.yml` cannot publish; manual publication/recovery uses `deploy.yml` from `main`
+with an explicitly confirmed complete impact range. Production `main`/manual orchestrator runs
+share a non-cancelable concurrency group, preventing separate release chains from interleaving;
+PR validation remains independently concurrent. Direct `deploy-worker.yml` dispatch validates
+only, so production migration/deploy/smoke has one orchestrator entrypoint.
 
 Standalone addon workflows are owned by `Speeson/KeystoneSync`. `weeklyChar/docs/workflow-handoff/addon/` is only a pointer and must not contain active duplicate addon workflow YAML.
 
@@ -207,14 +227,15 @@ Local/deployment scripts are in `keystone-worker/package.json`:
 Production persistence is Cloudflare D1 database `keystone-sync`.
 
 The current schema is versioned through `keystone-worker/migrations/0001_initial.sql`
-and additive migrations `0002_keystone_loot.sql` and
-`0003_keystone_loot_sharing.sql`.
+and additive migrations `0002_keystone_loot.sql`, `0003_keystone_loot_sharing.sql`,
+`0004_keystone_loot_item_metadata.sql`, and
+`0005_keystone_loot_item_tooltip_metadata.sql`.
 
 ### Web
 
 The Web app consumes `NEXT_PUBLIC_API_URL`, with fallback `https://api-keystonesync.esgarpe.dev` in `keystone-web/lib/auth.ts`.
 
-The Web application is documented as deployed through Vercel. The exact external Vercel Git Integration ownership/configuration is not versioned in this repository.
+The Web application is documented as deployed through Vercel. The exact external Vercel Git Integration ownership/configuration is not versioned in this repository, and no checked-in deployment status, revision endpoint, or workflow output proves that a given Web revision is live. Web production verification therefore remains operational rather than an automatic Client-release dependency.
 
 ### Client
 
@@ -237,7 +258,7 @@ Python domain services
 - React owns update state and presentation through a typed controller; the official Tauri updater plugin owns signed download and installation, and the process plugin owns relaunch. The Python sidecar is not an application updater.
 - Release signing material is injected only in CI. `TAURI_SIGNING_PRIVATE_KEY` and its optional password remain secret; the production public verification key is committed in `keystone-client/src-tauri/tauri.conf.json`.
 - The canonical release assets are `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig`, and `latest.json`. The manifest uses platform key `windows-x86_64` and endpoint `https://github.com/Speeson/weeklyChar/releases/latest/download/latest.json`.
-- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` remains gated by `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- The release workflow retains Client changesets, `client-vX.Y.Z`, `build-only`, `release-dry-run`, gated `release`, resume/idempotency and atomic commit/tag publication. Automatic release on `main` remains gated by `TAURI_CLIENT_RELEASE_ENABLED=true` and, when backend impact exists, successful D1/Worker readiness. The Client runtime calls the Worker API directly through its sidecar; it does not require the Web deployment to use Teams or the Stone Selector.
 - `%APPDATA%\KeystoneClient` remains owned by the Python sidecar and is not removed by the Tauri application. The retained NSIS hook supports direct migration from the public Inno 0.3.0 AppId, fails closed if legacy uninstall fails, preserves AppData and migrates legacy autostart.
 
 ### Addon
@@ -320,6 +341,16 @@ Migration `0004_keystone_loot_item_metadata.sql` adds a D1 cache keyed by
 hours, stale positive data survives upstream failures, and unavailable metadata degrades
 to null display fields.
 
+Stone Selector S2 extends that same cache through additive migration
+`0005_keystone_loot_item_tooltip_metadata.sql`. The Worker reads localized equipment slot,
+item class, item subclass, and stat names from official Item API fields and exposes them through
+the shared allowlisted objective projection used by owner, Team, and Selector responses. Only
+bounded stat names are stored; numeric quantities and raw Blizzard responses remain outside the
+contract. Pre-S2 positive rows continue serving name/icon data and lazily acquire the new fields
+at their existing refresh boundary, avoiding an immediate cache-wide refresh. Optional malformed
+or unavailable metadata degrades independently without failing an objective. Web and Client
+tooltip rendering remain deferred.
+
 KeystoneLoot V2-B adds only an owner-facing Web consumer. Each Characters-row action opens
 a native responsive dialog for the exact character ID and calls
 `/api/me/characters/:characterId/keystone-loot/objectives`; it does not read the raw
@@ -337,6 +368,50 @@ drill-in view. Both call only
 status envelope, abort/invalidate stale work, and clear sensitive rows on a refreshed 403.
 The Worker still performs live membership, sharing, filtering, scoring, deduplication,
 Voidcore, metadata, and pagination decisions.
+
+Stone Selector S3 replaces the Team header's exposed composition planner with a Web-only,
+inline `Selector de piedra` between the Team header and member cards. The strip always renders
+the eight dungeons from `keystone-web/lib/season2.ts`; counts come from current Team detail and
+the selected dungeon is reconciled with the aggregate response. One strict Web parser and one
+abortable request consume
+`/api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. Response identity prevents
+late dungeon results from replacing a newer selection. Web preserves Worker character order and
+does not score, compose, or reconstruct excluded members.
+
+The inline panel owns compact summary, collapsed character cards, optional multi-spec filtering,
+semantic tier grids, and a subdued completed-Voidcore disclosure. A shared portal-based
+`KeystoneLootItemTooltip` now presents the S2 safe metadata on Selector tiles and the existing
+owner/Team objective rows. It supports hover, keyboard focus, click/tap, outside dismissal, and
+Escape without exposing numeric stats. The prior `KeystonePlanner` visual components are removed;
+non-visual recommendation helpers remain isolated for the deferred planner. The Client Teams
+counterpart is implemented in S5; the composition planner remains deferred.
+
+Stone Selector S4 adds the Client data path without adding the Teams UI. React calls the typed
+`teams.list`, `teams.get`, and `teams.keystone_selector` core wrappers; Rust accepts only those
+explicit commands; and the Python sidecar applies the private access token to the existing Worker
+Team list, Team detail, and aggregate Selector endpoints. Python projects allowlisted DTOs and
+TypeScript validates them again, so bearer/sync tokens, invite codes, account names, raw
+KeystoneLoot, vault data, and raw error bodies never enter the WebView. The protocol remains at
+version 1 because capability additions are backward-compatible. The Worker Team detail does not
+provide a member-profile avatar, so the Client member DTO intentionally omits one and retains only
+per-character avatars.
+
+Stone Selector S5 adds `TeamsPage` as a full Client shell route between Sync and Addon. React
+depends on an injected `TeamsDataSource`; production delegates exclusively to the S4 typed bridge,
+while development previews inject deterministic in-memory fixtures from `core/teamsPreview.ts`.
+The page obtains Team list and detail once per selection, derives the eight rail counts locally,
+and requests only the explicitly selected dungeon. Request generations prevent late Team-detail
+or Selector responses from replacing newer state. Session expiration is handed back to `App` and
+the existing login flow.
+
+The fixed-frame layout contains a bounded horizontal member dashboard and an independently
+scrollable Selector panel paired with an eight-entry vertical dungeon rail. The selected dungeon
+and objectives panel remain separate rounded rectangles with a clean gap between them. Character
+cards preserve Worker order and expose optional local spec filters, ordered actionable tier groups,
+and a separate completed-Voidcore disclosure. `TeamItemTooltip` renders through `document.body` to
+avoid scroll clipping and converts fixed-canvas coordinates using the active Client scale. It
+accepts only the safe S2 tooltip projection and never renders numeric stat values. The Planner
+control is visible but disabled and is not connected to recommendations.
 
 KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
 the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local

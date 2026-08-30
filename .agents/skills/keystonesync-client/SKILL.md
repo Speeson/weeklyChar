@@ -48,7 +48,7 @@ Public artifacts are:
 - `KeystoneClientSetup.exe.sig`
 - `latest.json`
 
-`.github/workflows/build-client.yml` provides read-only build validation. `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run` and `release`, retains changeset planning and resume/repair behavior, and uses `client-vX.Y.Z` tags. Tauri updater signing is Minisign-based and separate from Windows Authenticode.
+`.github/workflows/build-client.yml` provides read-only build validation. `.github/workflows/release-client.yml` supports `build-only`, `release-dry-run` and orchestrator-gated `release`, retains changeset planning and resume/repair behavior, and uses `client-vX.Y.Z` tags. Direct dispatch cannot publish; manual recovery and automatic publication enter through `.github/workflows/deploy.yml`, which gates backend-dependent releases on required D1/Worker readiness. Tauri updater signing is Minisign-based and separate from Windows Authenticode.
 
 ## Validation
 

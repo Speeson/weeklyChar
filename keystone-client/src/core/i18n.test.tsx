@@ -16,10 +16,17 @@ describe("i18n", () => {
     expect(translate("en", "shell.userMenu", { name: "player" })).toBe("User menu for player");
   });
 
+  it("keeps singular and plural Team member copy explicit in both languages", () => {
+    expect(translate("es", "teams.characterCountOne", { count: 1 })).toBe("1 personaje");
+    expect(translate("es", "teams.characterCount", { count: 2 })).toBe("2 personajes");
+    expect(translate("en", "teams.characterCountOne", { count: 1 })).toBe("1 character");
+    expect(translate("en", "teams.characterCount", { count: 2 })).toBe("2 characters");
+  });
+
   it("updates consumers when language changes", () => {
     const view = render(<I18nProvider language="es"><Probe /></I18nProvider>);
     expect(screen.getByText("Sincronizacion")).toBeInTheDocument();
     view.rerender(<I18nProvider language="en"><Probe /></I18nProvider>);
-    expect(screen.getByText("Synchronization")).toBeInTheDocument();
+    expect(screen.getByText("Sync")).toBeInTheDocument();
   });
 });

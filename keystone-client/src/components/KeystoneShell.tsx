@@ -22,7 +22,7 @@ function getClientScale() {
   return Math.min(window.innerWidth / CLIENT_WIDTH, window.innerHeight / CLIENT_HEIGHT);
 }
 
-export type KeystoneView = "sync" | "addon";
+export type KeystoneView = "sync" | "teams" | "addon";
 
 type KeystoneShellProps = {
   auth: AuthState;
@@ -183,6 +183,21 @@ function KeystoneHeader({
         >
           <span className="ks-tab__label">{t("shell.sync")}</span>
           {currentView === "sync" ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
+          ) : inactiveTabIndicator ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
+          ) : null}
+        </button>
+        <button
+          aria-current={currentView === "teams" ? "page" : undefined}
+          className="ks-tab"
+          data-state={currentView === "teams" ? "selected" : "default"}
+          data-ui="shell-tab"
+          onClick={() => onNavigate("teams")}
+          type="button"
+        >
+          <span className="ks-tab__label">{t("shell.teams")}</span>
+          {currentView === "teams" ? (
             <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
           ) : inactiveTabIndicator ? (
             <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />

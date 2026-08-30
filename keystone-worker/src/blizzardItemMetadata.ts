@@ -1,4 +1,3 @@
-import type { KeystoneLootObjectiveDTO } from './keystoneObjectives'
 import type { Env, WowItemMetadataRow } from './types'
 
 const POSITIVE_TTL_SECONDS = 30 * 24 * 60 * 60
@@ -6,6 +5,8 @@ const NEGATIVE_TTL_SECONDS = 6 * 60 * 60
 const MAX_RESPONSE_BYTES = 64 * 1024
 const DEFAULT_TIMEOUT_MS = 5000
 const MAX_CONCURRENCY = 4
+const MAX_TOOLTIP_NAME_LENGTH = 128
+const MAX_STAT_NAMES = 32
 const LOCALE = 'es_ES'
 const REGIONS = new Set(['eu', 'us', 'kr', 'tw'])
 
@@ -15,6 +16,16 @@ type MetadataOptions = {
   fetch?: FetchLike
   now?: number
   timeoutMs?: number
+}
+
+type KeystoneLootMetadataTarget = {
+  itemId: number
+  itemName: string | null
+  iconUrl: string | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
 }
 
 type BlizzardJson = {
@@ -74,6 +85,62 @@ async function timedFetch(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function safeTooltipName(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim()
+  if (normalized.length === 0 || normalized.length > MAX_TOOLTIP_NAME_LENGTH) return null
+  return normalized
+}
+
+function nestedName(value: unknown): string | null {
+  return isRecord(value) ? safeTooltipName(value.name) : null
+}
+
+function orderedStatNames(values: unknown[]): string[] {
+  const names = new Set<string>()
+  for (const value of values) {
+    const name = safeTooltipName(value)
+    if (!name) continue
+    names.add(name)
+    if (names.size >= MAX_STAT_NAMES) break
+  }
+  return [...names].sort((left, right) => left < right ? -1 : left > right ? 1 : 0)
+}
+
+function itemStatNames(value: unknown): string[] {
+  if (!isRecord(value) || !Array.isArray(value.stats)) return []
+  return orderedStatNames(value.stats.map(stat => {
+    if (!isRecord(stat) || !isRecord(stat.type)) return null
+    return stat.type.name
+  }))
+}
+
+function safeStatNamesJson(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!Array.isArray(parsed)) return null
+    return JSON.stringify(orderedStatNames(parsed))
+  } catch {
+    return null
+  }
+}
+
+function statNamesFromJson(value: string | null): string[] {
+  const normalized = safeStatNamesJson(value)
+  return normalized === null ? [] : JSON.parse(normalized) as string[]
+}
+
+function emptyTooltipColumns(): Pick<WowItemMetadataRow,
+  'slot_name' | 'item_class_name' | 'item_subclass_name' | 'stat_names_json'> {
+  return {
+    slot_name: null,
+    item_class_name: null,
+    item_subclass_name: null,
+    stat_names_json: null,
+  }
 }
 
 async function getAccessToken(
@@ -179,6 +246,7 @@ async function fetchMetadata(
     if (item.status === 404) {
       return {
         region, locale: LOCALE, item_id: itemId, name: null, icon_url: null,
+        ...emptyTooltipColumns(),
         status: 'not_found', fetched_at: now, refresh_after: now + NEGATIVE_TTL_SECONDS,
       }
     }
@@ -189,6 +257,7 @@ async function fetchMetadata(
         : 60
       return {
         region, locale: LOCALE, item_id: itemId, name: null, icon_url: null,
+        ...emptyTooltipColumns(),
         status: 'rate_limited', fetched_at: now, refresh_after: now + retrySeconds,
       }
     }
@@ -210,6 +279,10 @@ async function fetchMetadata(
       item_id: itemId,
       name: item.value.name,
       icon_url: iconUrl,
+      slot_name: nestedName(item.value.inventory_type),
+      item_class_name: nestedName(item.value.item_class),
+      item_subclass_name: nestedName(item.value.item_subclass),
+      stat_names_json: JSON.stringify(itemStatNames(item.value.preview_item)),
       status: iconUrl ? 'ok' : 'partial',
       fetched_at: now,
       refresh_after: now + (iconUrl ? POSITIVE_TTL_SECONDS : NEGATIVE_TTL_SECONDS),
@@ -227,7 +300,9 @@ async function readCachedMetadata(
   if (itemIds.length === 0) return new Map()
   const placeholders = itemIds.map(() => '?').join(', ')
   const { results } = await env.DB.prepare(`
-    SELECT region, locale, item_id, name, icon_url, status, fetched_at, refresh_after
+    SELECT region, locale, item_id, name, icon_url,
+      slot_name, item_class_name, item_subclass_name, stat_names_json,
+      status, fetched_at, refresh_after
     FROM wow_item_metadata
     WHERE region = ? AND locale = ? AND item_id IN (${placeholders})
   `).bind(region, LOCALE, ...itemIds).all<WowItemMetadataRow>()
@@ -245,22 +320,35 @@ async function readCachedMetadata(
     if (row.icon_url !== null && safeIconUrl(row.icon_url) === null) return false
     return true
   })
-  return new Map(validated.map(row => [row.item_id, row]))
+  return new Map(validated.map(row => [row.item_id, {
+    ...row,
+    slot_name: safeTooltipName(row.slot_name),
+    item_class_name: safeTooltipName(row.item_class_name),
+    item_subclass_name: safeTooltipName(row.item_subclass_name),
+    stat_names_json: safeStatNamesJson(row.stat_names_json),
+  }]))
 }
 
 async function writeMetadata(env: Env, row: WowItemMetadataRow): Promise<void> {
   await env.DB.prepare(`
     INSERT INTO wow_item_metadata (
-      region, locale, item_id, name, icon_url, status, fetched_at, refresh_after
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      region, locale, item_id, name, icon_url,
+      slot_name, item_class_name, item_subclass_name, stat_names_json,
+      status, fetched_at, refresh_after
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(region, locale, item_id) DO UPDATE SET
       name = excluded.name,
       icon_url = excluded.icon_url,
+      slot_name = excluded.slot_name,
+      item_class_name = excluded.item_class_name,
+      item_subclass_name = excluded.item_subclass_name,
+      stat_names_json = excluded.stat_names_json,
       status = excluded.status,
       fetched_at = excluded.fetched_at,
       refresh_after = excluded.refresh_after
   `).bind(
     row.region, row.locale, row.item_id, row.name, row.icon_url,
+    row.slot_name, row.item_class_name, row.item_subclass_name, row.stat_names_json,
     row.status, row.fetched_at, row.refresh_after,
   ).run()
 }
@@ -282,12 +370,12 @@ async function mapWithConcurrency<T>(
   return results
 }
 
-export async function enrichKeystoneLootObjectives(
+export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadataTarget>(
   env: Env,
   characterRegion: string,
-  objectives: KeystoneLootObjectiveDTO[],
+  objectives: T[],
   options: MetadataOptions = {},
-): Promise<KeystoneLootObjectiveDTO[]> {
+): Promise<T[]> {
   if (objectives.length === 0) return objectives
   const region = normalizeBlizzardRegion(characterRegion)
   const now = options.now ?? Math.floor(Date.now() / 1000)
@@ -318,6 +406,14 @@ export async function enrichKeystoneLootObjectives(
   return objectives.map(objective => {
     const metadata = cached.get(objective.itemId)
     if (!metadata || metadata.status === 'not_found' || metadata.status === 'rate_limited') return objective
-    return { ...objective, itemName: metadata.name, iconUrl: metadata.icon_url }
+    return {
+      ...objective,
+      itemName: metadata.name,
+      iconUrl: metadata.icon_url,
+      slotName: metadata.slot_name,
+      itemClassName: metadata.item_class_name,
+      itemSubClassName: metadata.item_subclass_name,
+      statNames: statNamesFromJson(metadata.stat_names_json),
+    }
   })
 }

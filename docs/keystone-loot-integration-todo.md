@@ -146,6 +146,19 @@ of V2.
 Role composition, global party optimization, and performance-aware scoring remain future
 scope and are not part of V1-D.
 
+## Stone Selector S3: Web Selector — implemented, pending review
+
+The Team page now has an inline `Selector de piedra` in normal document flow. It shows all eight
+Season 2 dungeons and current stone counts, keeps zero-count entries selectable, consumes the
+single S1 aggregate endpoint with stale-response protection, and displays server-ordered character
+cards, multi-spec filters, semantic item grids, and a separate completed-Voidcore disclosure.
+
+The old exposed `Composición recomendada` planner UI is removed. Its future product space remains a
+disabled `Planificar piedra · Próximamente` tab. A shared portal tooltip now covers Selector and
+existing owner/Team objective surfaces using only S2 allowlisted metadata. Client bridge/UI work
+and composition planning remain pending; S3 does not authorize deployment or complete the overall
+Stone Selector project.
+
 ## Release boundaries
 
 - Addon releases remain owned independently by `Speeson/KeystoneSync`.

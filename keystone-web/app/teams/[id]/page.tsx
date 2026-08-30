@@ -4,12 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
-import { keystoneColor } from '@/lib/colors'
+import { keystoneColor, wowClassColor } from '@/lib/colors'
 import { DUNGEON_ABBR_BY_ID, DUNGEON_ABBR_BY_NAME, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
-import { recommendedSpecIdForCharacter, type TeamRecommendationsResponse } from '@/lib/keystoneRecommendations'
-import { specName } from '@/lib/wowSpecs'
 import Navbar from '@/app/components/Navbar'
-import KeystonePlanner from './KeystonePlanner'
+import StoneSelector from './StoneSelector'
 import TeamKeystoneLootObjectivesDrawer, { type TeamObjectiveTarget } from './TeamKeystoneLootObjectivesDrawer'
 
 interface Keystone {
@@ -46,22 +44,6 @@ interface TeamDetail {
   members: Member[]
 }
 
-const CLASS_COLORS: Record<string, string> = {
-  'Death Knight': '#C41E3A',
-  'Demon Hunter': '#A330C9',
-  Druid: '#FF7C0A',
-  Evoker: '#33937F',
-  Hunter: '#AAD372',
-  Mage: '#3FC7EB',
-  Monk: '#00FF98',
-  Paladin: '#F48CBA',
-  Priest: '#FFFFFF',
-  Rogue: '#FFF468',
-  Shaman: '#0070DD',
-  Warlock: '#8788EE',
-  Warrior: '#C69B6D',
-}
-
 const CLASS_ICON_NAMES: Record<string, string> = {
   'Death Knight': 'classicon_deathknight',
   'Demon Hunter': 'classicon_demonhunter',
@@ -89,7 +71,7 @@ function formatDate(unix: number | null): string {
 }
 
 function classColor(wowClass: string | null | undefined) {
-  return CLASS_COLORS[wowClass ?? ''] ?? '#E5E7EB'
+  return wowClassColor(wowClass)
 }
 
 function classIconUrl(wowClass: string | null | undefined) {
@@ -132,17 +114,15 @@ function matchesDungeon(char: Character, query: string, selectedDungeons: string
 
 function CompactCharacterRow({
   char,
-  recommendedSpecId,
   onViewObjectives,
 }: {
   char: Character
-  recommendedSpecId: number | null
   onViewObjectives: (event: React.MouseEvent<HTMLButtonElement>) => void
 }) {
   const classIcon = classIconUrl(char.wowClass)
 
   return (
-    <tr className={`border-t transition ${recommendedSpecId !== null ? 'border-yellow-500/30 bg-yellow-500/[0.07] hover:bg-yellow-500/10' : 'border-gray-900/90 hover:bg-gray-900/70'}`}>
+    <tr className="border-t border-gray-900/90 transition hover:bg-gray-900/70">
       <td className="py-2 pl-4 pr-3">
         <div className="flex items-center gap-2">
           {char.avatarUrl ? (
@@ -156,7 +136,6 @@ function CompactCharacterRow({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold" style={{ color: classColor(char.wowClass) }}>{char.name}</p>
             <p className="truncate text-[11px] text-gray-500">{char.realm}</p>
-            {recommendedSpecId !== null && <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-300">Recomendado · {specName(recommendedSpecId)}</p>}
           </div>
         </div>
       </td>
@@ -176,17 +155,15 @@ function CompactCharacterRow({
 
 function CompactCharacterCard({
   char,
-  recommendedSpecId,
   onViewObjectives,
 }: {
   char: Character
-  recommendedSpecId: number | null
   onViewObjectives: (event: React.MouseEvent<HTMLButtonElement>) => void
 }) {
   const classIcon = classIconUrl(char.wowClass)
 
   return (
-    <div className={`grid min-w-0 grid-cols-2 items-center gap-2 rounded-lg border px-3 py-2 transition sm:grid-cols-[minmax(120px,1fr)_minmax(100px,1fr)_44px_70px_auto] ${recommendedSpecId !== null ? 'border-yellow-500/40 bg-yellow-500/[0.07] shadow-md shadow-yellow-500/5' : 'border-gray-900/90 bg-gray-950/40 hover:bg-gray-900/70'}`}>
+    <div className="grid min-w-0 grid-cols-2 items-center gap-2 rounded-lg border border-gray-900/90 bg-gray-950/40 px-3 py-2 transition hover:bg-gray-900/70 sm:grid-cols-[minmax(120px,1fr)_minmax(100px,1fr)_44px_70px_auto]">
       <div className="flex min-w-0 items-center gap-2">
         {char.avatarUrl ? (
           <img src={char.avatarUrl} alt="" className="h-7 w-7 flex-shrink-0 rounded-full border border-gray-700 object-cover" />
@@ -198,7 +175,6 @@ function CompactCharacterCard({
         )}
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold" style={{ color: classColor(char.wowClass) }}>{char.name}</p>
-          {recommendedSpecId !== null && <p className="truncate text-[10px] font-bold uppercase tracking-wide text-yellow-300">Recomendado · {specName(recommendedSpecId)}</p>}
         </div>
       </div>
       <span className="truncate text-xs text-gray-300">{dungeonLabelWithAbbr(char)}</span>
@@ -223,7 +199,6 @@ function MemberCard({
   canRemove,
   onRemove,
   removing,
-  recommendations,
   onViewObjectives,
 }: {
   member: Member
@@ -235,7 +210,6 @@ function MemberCard({
   canRemove: boolean
   onRemove: () => void
   removing: boolean
-  recommendations: TeamRecommendationsResponse | null
   onViewObjectives: (member: Member, character: Character, trigger: HTMLButtonElement) => void
 }) {
   const characters = member.characters
@@ -279,7 +253,6 @@ function MemberCard({
               <CompactCharacterCard
                 key={char.id}
                 char={char}
-                recommendedSpecId={recommendedSpecIdForCharacter(recommendations, char.id)}
                 onViewObjectives={event => onViewObjectives(member, char, event.currentTarget)}
               />
             ))}
@@ -301,7 +274,6 @@ function MemberCard({
                   <CompactCharacterRow
                     key={char.id}
                     char={char}
-                    recommendedSpecId={recommendedSpecIdForCharacter(recommendations, char.id)}
                     onViewObjectives={event => onViewObjectives(member, char, event.currentTarget)}
                   />
                 ))}
@@ -335,7 +307,6 @@ export default function TeamDetailPage() {
   const [removingUserId, setRemovingUserId] = useState<number | null>(null)
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null)
   const [leavingTeam, setLeavingTeam] = useState(false)
-  const [plannerRecommendations, setPlannerRecommendations] = useState<TeamRecommendationsResponse | null>(null)
   const [objectiveTarget, setObjectiveTarget] = useState<TeamObjectiveTarget | null>(null)
   const [objectiveTrigger, setObjectiveTrigger] = useState<HTMLButtonElement | null>(null)
 
@@ -349,7 +320,6 @@ export default function TeamDetailPage() {
       .then(data => {
         if (data) {
           setTeam(data)
-          setPlannerRecommendations(null)
         } else {
           router.push('/teams')
         }
@@ -452,7 +422,6 @@ export default function TeamDetailPage() {
         return
       }
       setTeam(prev => prev ? { ...prev, members: prev.members.filter(item => item.userId !== member.userId) } : prev)
-      setPlannerRecommendations(null)
       setMemberToRemove(null)
     } finally {
       setRemovingUserId(null)
@@ -571,14 +540,6 @@ export default function TeamDetailPage() {
 
               <div className="flex flex-col justify-between gap-2 lg:items-end">
                 <div className="flex flex-wrap justify-end gap-2">
-                  <KeystonePlanner
-                    key={team.id}
-                    teamId={team.id}
-                    teamName={team.name}
-                    currentUserId={team.currentUserId}
-                    members={team.members}
-                    onRecommendationsChange={setPlannerRecommendations}
-                  />
                   <button
                     type="button"
                     onClick={() => {
@@ -608,6 +569,8 @@ export default function TeamDetailPage() {
             <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{teamActionError}</p>
           )}
 
+          <StoneSelector key={team.id} teamId={team.id} members={team.members} />
+
           {allCharacters.length === 0 ? (
             <p className="mt-8 text-sm text-gray-500">Ningun miembro tiene personajes registrados todavia.</p>
           ) : (
@@ -624,7 +587,6 @@ export default function TeamDetailPage() {
                   canRemove={team.isOwner && member.userId !== team.currentUserId}
                   onRemove={() => setMemberToRemove(member)}
                   removing={removingUserId === member.userId}
-                  recommendations={plannerRecommendations?.teamId === team.id ? plannerRecommendations : null}
                   onViewObjectives={(member, char, trigger) => {
                     setObjectiveTrigger(trigger)
                     setObjectiveTarget({

@@ -32,7 +32,8 @@ Primary files:
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
 - D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`,
-  `0003_keystone_loot_sharing.sql`, and `0004_keystone_loot_item_metadata.sql`
+  `0003_keystone_loot_sharing.sql`, `0004_keystone_loot_item_metadata.sql`, and
+  `0005_keystone_loot_item_tooltip_metadata.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -315,7 +316,7 @@ Tables:
 | `team_members` | User/team memberships. |
 | `team_invitations` | Pending/accepted/declined invitations. |
 | `rate_limits` | Rate-limit attempt JSON by key. |
-| `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced display names and icon URLs. |
+| `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced safe display and tooltip metadata. |
 
 Character sync columns:
 
@@ -342,10 +343,12 @@ excludes the user from recommendation calculation and makes the team objective e
 return only `sharing_disabled`. Owner access is unaffected. There is no second
 details-sharing preference or column.
 
-`wow_item_metadata` uses primary key `(region, locale, item_id)` and stores nullable `name`
-and `icon_url`, a cache `status`, and Unix-second `fetched_at`/`refresh_after` values. It
-contains display metadata only; it does not change objective identity or persist team
-authorization.
+`wow_item_metadata` uses primary key `(region, locale, item_id)` and stores nullable `name`,
+`icon_url`, `slot_name`, `item_class_name`, `item_subclass_name`, and `stat_names_json`, plus
+a cache `status` and Unix-second `fetched_at`/`refresh_after` values. `stat_names_json` is a
+bounded, deduplicated, deterministic JSON string array; numeric stat quantities and raw Blizzard
+payloads are not stored. The table contains display metadata only; it does not change objective
+identity or persist team authorization.
 
 The V2-B owner Web view consumes the allowlisted
 `GET /api/me/characters/:characterId/keystone-loot/objectives` DTO rather than interpreting
@@ -466,6 +469,98 @@ Objective presentation endpoints:
 - Default page size is 50 and maximum is 100. Cursors are opaque, validated, stable-order
   offsets bound to the active filters and page size.
 
+Stone Selector aggregate endpoint:
+
+- `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary` requires normal
+  JWT authentication, positive safe-integer IDs, a challenge map from the Worker-owned
+  Midnight Season 2 allowlist, and live requester membership in the requested Team.
+- Current Team membership and `shareKeystoneLootWithTeams` are read from D1 on every request.
+  Members with sharing disabled are excluded before their character snapshots are loaded or
+  parsed and receive no placeholder or objective-derived count. Team isolation is exact.
+- The response contains all eligible characters with at least one actionable objective, their
+  tier/spec counts, exact allowlisted objectives, and current Team stone availability. It does
+  not select one character per member, score candidates, use Raider.IO for ordering, or build a
+  party composition.
+- Character/global objective identity is `(sourceType, sourceId, itemId)`. Cross-spec duplicates
+  merge sorted unique `specIds` and use the strongest tier according to the existing V1 weight
+  helper. Per-spec counts retain each spec occurrence, so their sum can exceed the deduplicated
+  character total.
+- `totalObjectives` and all tier counts mean actionable objectives. Checked Voidcore completions
+  may remain in an included character's `objectives` array as `completed_with_voidcore`, but do
+  not increment character, spec, or global counters. Unchecked Voidcore remains actionable.
+  Characters with only completed objectives are omitted.
+- `characters` order is total objectives, BiS, and Must descending, then character name, realm,
+  and character ID ascending. Unknown positive tiers increment `other`.
+- Availability is independent of KeystoneLoot sharing. It contains only each current Team
+  character's latest same-week real keystone when its challenge map matches the selected dungeon;
+  stale and superseded rows are excluded. A zero-stone dungeon still returns HTTP 200.
+- S2 enriches the S1-reserved `slotName`, `itemClassName`, `itemSubClassName`, and `statNames`
+  fields through the same Worker cache and safe projection used by owner and Team objective
+  endpoints. Metadata failure never removes an objective.
+
+The Selector objective allowlist is:
+
+```ts
+{
+  itemId: number
+  itemName: string | null
+  iconUrl: string | null
+  tier: number
+  specIds: number[]
+  sourceType: string
+  sourceId: number | string
+  slotId: number | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
+  voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
+}
+```
+
+The Worker and Web intentionally duplicate the verified Season 2 dungeon pool during S1.
+Cross-surface consolidation is deferred to avoid a Web/shared-build boundary change in this
+backend-only phase.
+
+Stone Selector S3 consumes this aggregate DTO through a strict Web projection. The parser requires
+the requested Team and dungeon identities, validates bounded arrays/counts and safe optional S2
+metadata, ignores additive unknown fields, and rejects malformed required fields as a recoverable
+Selector error. It does not accept raw snapshots, privacy flags, numeric stat quantities, bonus
+IDs, gems, enchants, or internal scoring data. Web renders `characters` in server order and treats
+the endpoint's `availability` as authoritative for the selected dungeon. Counts displayed before
+selection come only from current same-week Team-detail keystones.
+
+Stone Selector S4 carries the existing contracts into KeystoneClient through three additive core
+commands. `teams.list` projects only `id`, `name`, and `memberCount`; `teams.get` projects the Team
+identity plus members and compact character dashboard fields; and `teams.keystone_selector`
+projects the S1/S2 aggregate allowlist unchanged. The Worker Team detail has no member avatar, so
+the Client member contract does not invent one. Python validates and allowlists the HTTP response,
+then TypeScript validates the safe DTO again before React consumes it. Additive fields and unknown
+positive tiers are tolerated, while malformed required fields, unsafe URLs, and unknown Voidcore
+states are rejected. Access and sync tokens, invite codes, WoW account names, vault state, raw
+KeystoneLoot, `bonusIds`, gems, enchants, and raw error payloads remain below or outside the React
+boundary.
+
+Stone Selector S5 consumes these safe Client DTOs without widening them. `TeamsPage` receives a
+`TeamsDataSource` whose production implementation calls only `teams.list`, `teams.get`, and
+`teams.keystone_selector`; it does not perform browser HTTP or access credentials. The eight
+pre-selection availability counts are a local projection of `teams.get` current keystones keyed by
+`challengeMapId`, so selecting one dungeon produces exactly one aggregate request. Server summary
+values and character order remain authoritative. Local spec filtering deduplicates nothing and
+does not alter top-level totals; completed Voidcore items are only separated for presentation.
+Preview fixtures implement the same safe interface and remain development-only.
+
+The Client tooltip renders only `itemName`, `iconUrl`, slot/class/subclass names, bounded stat
+names, source, spec IDs, tier, and Voidcore state. It omits absent rows, falls back to
+`Objeto #<itemId>` and a generic icon, and never displays numeric stat quantities. Client-local
+Season 2 IDs duplicate the verified Web/Worker display allowlists intentionally; shared-package
+consolidation remains deferred.
+
+The reusable Web item tooltip consumes only the public objective allowlist (`itemName`, `iconUrl`,
+slot/class/subclass names, bounded `statNames`, source, spec IDs, tier, and Voidcore state). Missing
+metadata degrades to `Objeto #<itemId>`, a generic icon, and an explicit unavailable-metadata hint;
+it never turns an otherwise valid objective into a response failure.
+
 The public objective allowlist is:
 
 ```ts
@@ -478,6 +573,10 @@ The public objective allowlist is:
   sourceType: string
   sourceId: number | string
   slotId: number | null
+  slotName: string | null
+  itemClassName: string | null
+  itemSubClassName: string | null
+  statNames: string[]
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
 ```
@@ -501,6 +600,15 @@ pipelines. Positive metadata has a 30-day TTL, confirmed 404 metadata a six-hour
 429 `Retry-After` is bounded and cached. Stale positive metadata remains present on upstream
 failure. Missing credentials, timeouts, malformed/oversized responses, invalid item IDs, or
 unsafe media URLs produce nullable metadata rather than failing the objective response.
+
+S2 reads localized tooltip-safe values only from official Item API fields
+`inventory_type.name`, `item_class.name`, `item_subclass.name`, and
+`preview_item.stats[].type.name`. It never reads or exposes `preview_item.stats[].value`.
+Existing positive rows created before migration `0005` remain readable and keep their normal
+TTL: they acquire tooltip metadata at their existing `refresh_after` boundary instead of
+causing an immediate rollout request storm. Successful S2 refreshes write a stat-name array,
+including `[]` when no usable names are supplied. Malformed optional fields degrade
+independently to `null` or `[]`, and transient refresh failures preserve stale safe metadata.
 
 Recommendation candidates are `(character, specId)` pairs. A target counts only when
 `sourceId === challengeMapId` by exact numeric identity and `sourceType === "dungeon"`;
@@ -604,7 +712,7 @@ KeystoneLoot V2 remains compatible across deployment boundaries:
 | V2 Web | V2 Worker | owner/team/planner objective routes available |
 | V2 Worker without Blizzard credentials | V2 Web | objectives usable with null metadata, `Objeto #<itemId>`, and the generic icon fallback |
 | V2 Worker with an empty metadata cache | V2 Web | cache miss refreshes when credentials exist; otherwise safe fallback |
-| existing D1 after migration `0004` | old/new Worker | additive cache table is ignored by old Worker and used by new Worker |
+| existing D1 after migrations `0004` and `0005` | old/new Worker | additive cache table/columns are ignored by old Worker and used by new Worker |
 
 For V2, configure the two Blizzard Cloudflare Worker secrets, apply migration `0004`, deploy
 Worker, smoke objective endpoints, then deploy Web. Neither an addon nor a Client release is

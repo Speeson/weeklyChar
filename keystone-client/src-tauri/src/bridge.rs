@@ -451,6 +451,9 @@ pub fn is_command_allowed(command: &str) -> bool {
             | "sync.force"
             | "characters.get"
             | "characters.refresh"
+            | "teams.list"
+            | "teams.get"
+            | "teams.keystone_selector"
             | "addon.get_status"
             | "addon.check"
             | "addon.install"
@@ -812,6 +815,8 @@ fn send_trailing_line(buffer: &mut Vec<u8>, sender: &Sender<String>) {
 mod tests {
     use serde_json::json;
     use std::fs;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
     use std::sync::{
         atomic::AtomicBool,
         mpsc::{channel, Receiver},
@@ -872,6 +877,9 @@ mod tests {
         assert!(is_command_allowed("sync.force"));
         assert!(is_command_allowed("characters.get"));
         assert!(is_command_allowed("characters.refresh"));
+        assert!(is_command_allowed("teams.list"));
+        assert!(is_command_allowed("teams.get"));
+        assert!(is_command_allowed("teams.keystone_selector"));
         assert!(is_command_allowed("addon.get_status"));
         assert!(is_command_allowed("addon.check"));
         assert!(is_command_allowed("addon.install"));
@@ -1103,7 +1111,7 @@ mod tests {
             CoreEventPayload {
                 protocol_version: 1,
                 event: "system.ready".to_string(),
-                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
+                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","teams.keystone_selector","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
             }
         );
 
@@ -1133,6 +1141,48 @@ mod tests {
             updated_settings,
             json!({"startMinimized": true, "minimizeOnClose": false, "lang": "en"})
         );
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let worker = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = Vec::new();
+            let mut chunk = [0_u8; 1024];
+            loop {
+                let count = stream.read(&mut chunk).unwrap();
+                request.extend_from_slice(&chunk[..count]);
+                if count == 0 || request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let request = String::from_utf8(request).unwrap();
+            assert!(request
+                .to_ascii_lowercase()
+                .contains("authorization: bearer bridge-secret"));
+            assert!(request.starts_with("GET /api/teams HTTP/1.1"));
+            let body = r#"[{"id":7,"name":"Raid","memberCount":2,"inviteCode":"must-not-cross"}]"#;
+            write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).unwrap();
+        });
+        fs::write(
+            launcher.appdata_dir.join("KeystoneClient").join("config.json"),
+            json!({
+                "api_url": format!("http://{}", address),
+                "access_token": "bridge-secret",
+                "sync_token": "bridge-sync-secret",
+                "login_at": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                "start_minimized": true,
+                "lang": "en"
+            }).to_string(),
+        ).unwrap();
+
+        let teams = bridge.request("teams.list".to_string(), json!({})).unwrap();
+        worker.join().unwrap();
+        assert_eq!(teams, json!([{"id": 7, "name": "Raid", "memberCount": 2}]));
+        assert!(!teams.to_string().contains("bridge-secret"));
+        assert!(!teams.to_string().contains("must-not-cross"));
+        bridge
+            .request("auth.logout".to_string(), json!({}))
+            .unwrap();
 
         let wow_root = launcher.appdata_dir.join("World of Warcraft");
         let retail = wow_root.join("_retail_");
