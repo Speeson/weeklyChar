@@ -44,10 +44,10 @@ describe("Teams core bridge", () => {
       .mockResolvedValueOnce([{ id: 7, name: "Raid", memberCount: 2 }])
       .mockResolvedValueOnce({ id: 7, name: "Raid", members: [] })
       .mockResolvedValueOnce(selector);
-    await listTeams(); await getTeam(7); await getKeystoneSelector(7, 588);
+    await listTeams(); await getTeam(7); await getKeystoneSelector(7, 588, "en_US");
     expect(coreRequest).toHaveBeenNthCalledWith(1, "teams.list");
     expect(coreRequest).toHaveBeenNthCalledWith(2, "teams.get", { teamId: 7 });
-    expect(coreRequest).toHaveBeenNthCalledWith(3, "teams.keystone_selector", { teamId: 7, challengeMapId: 588 });
+    expect(coreRequest).toHaveBeenNthCalledWith(3, "teams.keystone_selector", { teamId: 7, challengeMapId: 588, locale: "en_US" });
     await expect(getTeam(0)).rejects.toMatchObject({ code: "INVALID_REQUEST" });
     await expect(getKeystoneSelector(7, Number.MAX_SAFE_INTEGER + 1)).rejects.toMatchObject({ code: "INVALID_REQUEST" });
     expect(coreRequest).toHaveBeenCalledTimes(3);

@@ -11,7 +11,7 @@ import {
   teamResponse,
 } from '../db'
 import { jsonError } from '../http'
-import { enrichKeystoneLootObjectives, normalizeBlizzardRegion } from '../blizzardItemMetadata'
+import { enrichKeystoneLootObjectives, normalizeBlizzardLocale, normalizeBlizzardRegion } from '../blizzardItemMetadata'
 import { buildKeystoneLootObjectivePage } from '../keystoneObjectives'
 import { recommendKeystoneLootTarget } from '../keystoneRecommendations'
 import { buildKeystoneLootDungeonSummary } from '../keystoneSelector'
@@ -65,6 +65,7 @@ async function getTeam(env: Env, teamId: number): Promise<TeamRow | null> {
 async function enrichSelectorSummary(
   env: Env,
   summary: KeystoneLootDungeonSummaryDTO,
+  locale: string,
 ): Promise<KeystoneLootDungeonSummaryDTO> {
   const byRegion = new Map<string, typeof summary.characters[number]['objectives']>()
   for (const character of summary.characters) {
@@ -75,7 +76,7 @@ async function enrichSelectorSummary(
   }
 
   for (const [region, objectives] of byRegion) {
-    const enriched = await enrichKeystoneLootObjectives(env, region, objectives)
+    const enriched = await enrichKeystoneLootObjectives(env, region, objectives, { locale })
     for (let index = 0; index < objectives.length; index += 1) {
       objectives[index].itemName = enriched[index].itemName
       objectives[index].iconUrl = enriched[index].iconUrl
@@ -250,6 +251,9 @@ teamRoutes.get('/api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summar
   if (!isSupportedSeason2Dungeon(challengeMapId)) {
     return jsonError(c, 400, 'challengeMapId no pertenece al pool actual')
   }
+  const requestedLocale = c.req.query('locale') ?? 'es_ES'
+  const locale = normalizeBlizzardLocale(requestedLocale)
+  if (locale !== requestedLocale) return jsonError(c, 400, 'locale no es valido')
   if (!(await getTeam(c.env, teamId))) return jsonError(c, 404, 'Equipo no encontrado')
   if (!(await findMembership(c.env, teamId, currentUser.id))) {
     return jsonError(c, 403, 'No perteneces a este team')
@@ -265,7 +269,7 @@ teamRoutes.get('/api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summar
     { stoneCount: stones.length, stones },
     sources,
   )
-  return c.json(await enrichSelectorSummary(c.env, summary))
+  return c.json(await enrichSelectorSummary(c.env, summary, locale))
 })
 
 teamRoutes.get('/api/teams/:teamId/characters/:characterId/keystone-loot/objectives', async c => {

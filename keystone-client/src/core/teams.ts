@@ -236,9 +236,9 @@ export async function getTeam(teamId: number): Promise<ClientTeamDetail> {
   return parsed;
 }
 
-export async function getKeystoneSelector(teamId: number, challengeMapId: number): Promise<KeystoneSelectorResponse> {
+export async function getKeystoneSelector(teamId: number, challengeMapId: number, locale: "es_ES" | "en_US" = "es_ES"): Promise<KeystoneSelectorResponse> {
   requireId(teamId); requireId(challengeMapId);
-  const parsed = parseKeystoneSelector(await coreRequest<unknown>("teams.keystone_selector", { teamId, challengeMapId }), teamId, challengeMapId);
+  const parsed = parseKeystoneSelector(await coreRequest<unknown>("teams.keystone_selector", { teamId, challengeMapId, locale }), teamId, challengeMapId);
   if (!parsed) throw error("INVALID_SELECTOR_RESPONSE", "La respuesta del selector no es válida.");
   return parsed;
 }

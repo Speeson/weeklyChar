@@ -551,7 +551,9 @@ boundary.
 
 Stone Selector S5 consumes these safe Client DTOs without widening them. `TeamsPage` receives a
 `TeamsDataSource` whose production implementation calls only `teams.list`, `teams.get`, and
-`teams.keystone_selector`; it does not perform browser HTTP or access credentials. The eight
+`teams.keystone_selector`; it does not perform browser HTTP or access credentials. Selector calls
+also carry the allowlisted Blizzard metadata locale (`es_ES` or `en_US`) selected by the Client;
+older callers default to `es_ES`. The eight
 pre-selection availability counts are a local projection of `teams.get` current keystones keyed by
 `challengeMapId`, so selecting one dungeon produces exactly one aggregate request. Server summary
 values and character order remain authoritative. Local spec filtering deduplicates nothing and
@@ -603,7 +605,9 @@ helper, without changing recommendation scoring. Different specs and sources rem
 separate.
 
 Blizzard enrichment is Worker-only. Region is restricted to `eu`, `us`, `kr`, or `tw`
-with `eu` fallback; initial locale is `es_ES`; endpoints use `static-{region}`. Only unique
+with `eu` fallback. Locale is restricted to `es_ES` or `en_US`, and cache rows remain isolated by
+the existing `(region, locale, item_id)` key; callers without a locale retain the `es_ES` default.
+Endpoints use `static-{region}`. Only unique
 item IDs from the current page are cache-read/refreshed with at most four concurrent item
 pipelines. Positive metadata has a 30-day TTL, confirmed 404 metadata a six-hour TTL, and
 429 `Retry-After` is bounded and cached. Stale positive metadata remains present on upstream

@@ -53,10 +53,11 @@ class TeamServiceTests(unittest.TestCase):
         service = TeamService(session=session)
         listed = service.list_teams(self.cfg)
         detail = service.get_team(self.cfg, 7)
-        selected = service.get_keystone_selector(self.cfg, 7, 588)
+        selected = service.get_keystone_selector(self.cfg, 7, 588, "en_US")
         self.assertEqual(listed, [{"id": 7, "name": "Raid", "memberCount": 2}])
         self.assertEqual(detail, {"id": 7, "name": "Raid", "members": []})
         self.assertEqual(selected["teamId"], 7)
+        self.assertTrue(session.calls[2][0].endswith("/api/teams/7/keystone-loot/dungeons/588/summary?locale=en_US"))
         self.assertTrue(all(call[1]["headers"] == {"Authorization": "Bearer access-secret"} for call in session.calls))
         self.assertTrue(all(call[1]["timeout"] == 10 for call in session.calls))
         self.assertNotIn("access-secret", str((listed, detail, selected)))
@@ -120,6 +121,13 @@ class TeamServiceTests(unittest.TestCase):
         with self.assertRaises(TeamServiceError) as caught:
             TeamService(session=session).list_teams({"api_url": "https://api.test"})
         self.assertEqual(caught.exception.code, "SESSION_EXPIRED")
+        self.assertEqual(session.calls, [])
+
+    def test_selector_rejects_unknown_blizzard_locale_before_network(self):
+        session = FakeSession([])
+        with self.assertRaises(TeamServiceError) as caught:
+            TeamService(session=session).get_keystone_selector(self.cfg, 7, 588, "fr_FR")
+        self.assertEqual(caught.exception.code, "INVALID_TEAM_REQUEST")
         self.assertEqual(session.calls, [])
 
     def test_malformed_success_payloads_are_rejected(self):

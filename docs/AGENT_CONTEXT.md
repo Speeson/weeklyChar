@@ -176,6 +176,14 @@ multi-spec, empty, loading, and error Selector states. The disabled Planner rema
 Web, Worker, and Client intentionally retain small local Season 2 display allowlists until a
 separate shared-build-boundary decision is approved.
 
+The Client Teams page keeps its last valid Team/detail UI during event-driven list revalidation on
+picker open, window focus, and visibility restoration. Concurrent Team-list and per-dungeon
+Selector requests are deduplicated; Selector cache identity is `(teamId, challengeMapId, locale)`
+and cached results revalidate without blanking the panel. The Client passes `es_ES` or `en_US`
+through its existing bridge to the Worker so Blizzard tooltip metadata follows the Client language;
+the existing D1 locale key prevents cross-language cache reuse. This refinement does not change the
+addon SavedVariables contract.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

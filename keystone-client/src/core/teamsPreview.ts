@@ -55,7 +55,7 @@ const secondDetail: ClientTeamDetail = { id: 8, name: secondTeam.name, members: 
 const characterObjectives = [
   objective(231001, 3, { specIds: [62, 64], itemName: null }),
   objective(231002, 3, { specIds: [62] }), objective(231003, 2, { specIds: [62, 64] }),
-  objective(231004, 2, { specIds: [64], iconUrl: "https://render.worldofwarcraft.com/eu/icons/56/inv_staff_2h_etherealraid_d_01.jpg" }),
+  objective(231004, 2, { specIds: [64], iconUrl: "https://render.worldofwarcraft.com/eu/icons/56/inv_staff_2h_etherealraid_d_01.jpg", qualityType: "RARE" }),
   objective(231005, 1, { specIds: [62] }), objective(231006, 5, { specIds: [64] }),
   objective(231007, 4, { specIds: [62, 64] }), objective(231008, 99, { specIds: [62] }),
   objective(231009, 3, { specIds: [62, 64], voidcoreState: "completed_with_voidcore" }),

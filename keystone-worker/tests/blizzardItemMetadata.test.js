@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   enrichKeystoneLootObjectives,
+  normalizeBlizzardLocale,
   normalizeBlizzardRegion,
   resetBlizzardTokenCacheForTests,
 } from '../.tmp-test/blizzardItemMetadata.js'
@@ -51,6 +52,35 @@ test('region is allowlisted and unknown values fall back to eu', () => {
   assert.equal(normalizeBlizzardRegion('US'), 'us')
   assert.equal(normalizeBlizzardRegion('cn'), 'eu')
   assert.equal(normalizeBlizzardRegion('https://evil.test'), 'eu')
+})
+
+test('locale is allowlisted and cache entries remain isolated by locale', async () => {
+  assert.equal(normalizeBlizzardLocale('en_US'), 'en_US')
+  assert.equal(normalizeBlizzardLocale('fr_FR'), 'es_ES')
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Objeto espaÃ±ol', icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg',
+    slot_name: 'Cabeza', item_class_name: 'Armadura', item_subclass_name: 'Tela', stat_names_json: '[]',
+    stat_groups_json: '{"primary":[],"secondary":[],"other":[]}', quality_type: 'EPIC', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 100,
+  })
+  const calls = []
+  const englishFetch = async (url, init = {}) => {
+    calls.push({ url: String(url), init })
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) return json({ id: 10, assets: [{ key: 'icon', value: 'https://render.worldofwarcraft.com/eu/icons/10.jpg' }] })
+    return json({ id: 10, name: 'English item', quality: { type: 'RARE' }, inventory_type: { name: 'Head' }, item_class: { name: 'Armor' }, item_subclass: { name: 'Cloth' }, preview_item: { stats: [] } })
+  }
+
+  const [english] = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], { now: NOW, locale: 'en_US', fetch: englishFetch })
+
+  assert.equal(english.itemName, 'English item')
+  assert.equal(english.slotName, 'Head')
+  assert.equal(english.qualityType, 'RARE')
+  assert.equal(testEnv.DB.itemMetadata.length, 2)
+  assert.deepEqual(new Set(testEnv.DB.itemMetadata.map(row => row.locale)), new Set(['es_ES', 'en_US']))
+  assert.ok(calls.some(call => call.url.includes('locale=en_US')))
 })
 
 test('fresh cache hits require no Blizzard credentials or network call', async () => {

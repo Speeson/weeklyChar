@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { bundledRelease } from "../../src/generated/release";
+import { expectStableReleaseScreenshot, releaseSectionHeading } from "./release-visual-fixture";
 
 const THEME_STORAGE_KEY = "keystone-client.theme";
 
@@ -39,7 +41,7 @@ test.describe("Poison visual states", () => {
     await expect(page.getByRole("button", { name: "Recuperar contraseña" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-login.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-login.png");
   });
 
   test("renders Poison registration inside the client", async ({ page }) => {
@@ -50,7 +52,7 @@ test.describe("Poison visual states", () => {
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-registration.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-registration.png");
   });
 
   test("renders the Poison first-run WoW install step", async ({ page }) => {
@@ -58,7 +60,7 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByRole("heading", { name: "Ubicación de World of Warcraft" })).toBeVisible();
     await expect(page.getByPlaceholder("World of Warcraft no detectado")).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-wow-onboarding.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-wow-onboarding.png");
   });
 
   test("renders the Poison first-run account selector", async ({ page }) => {
@@ -67,7 +69,7 @@ test.describe("Poison visual states", () => {
     await expect(page.getByRole("heading", { name: "Cuentas de World of Warcraft" })).toBeVisible();
     await expect(page.getByText("WOW_ACCOUNT_1")).toBeVisible();
     await expect(page.getByText("WOW_ACCOUNT_2")).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-account-selector.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-account-selector.png");
   });
 
   test("renders the Poison north-star synchronization composition", async ({ page }) => {
@@ -76,7 +78,7 @@ test.describe("Poison visual states", () => {
     await expect(page.getByText("Makabe")).toBeVisible();
     await expect(page.getByLabel("Estado de sincronizacion").getByText("Sincronizacion completada")).toBeVisible();
     await expectImagesReady(page);
-    await expect(page).toHaveScreenshot("poison-sync-success.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-sync-success.png");
   });
 
   test("shows Poison navigation hover beside the selected tab", async ({ page }) => {
@@ -89,7 +91,7 @@ test.describe("Poison visual states", () => {
     await addonTab.hover();
     await expect(addonTab).not.toHaveAttribute("aria-current", "page");
     await expectImagesReady(page);
-    await expect(page).toHaveScreenshot("poison-navigation-hover-selected.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-navigation-hover-selected.png");
   });
 
   test("renders Poison Settings with the visible selector", async ({ page }) => {
@@ -101,7 +103,7 @@ test.describe("Poison visual states", () => {
     const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
     await expect(themeSelector).toHaveValue("poison");
     await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison"]);
-    await expect(page).toHaveScreenshot("poison-settings-theme-selector.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-settings-theme-selector.png");
   });
 
   test("renders the signed update confirmation over Poison", async ({ page }) => {
@@ -113,7 +115,7 @@ test.describe("Poison visual states", () => {
     await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.4.0" })).toBeVisible();
     await expect(modal.getByRole("listitem")).toHaveCount(2);
     await expect(modal.getByRole("button", { name: "Instalar y reiniciar" })).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-update-available.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-update-available.png");
   });
 
   test("renders the post-update changelog over Poison", async ({ page }) => {
@@ -122,9 +124,9 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
     await expect(modal).toBeVisible();
-    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.6.5" })).toBeVisible();
-    await expect(modal.getByRole("heading", { level: 2, name: "Novedades", exact: true })).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-post-update-changelog.png", { fullPage: true });
+    await expect(modal.getByRole("heading", { level: 1, name: `KeystoneClient ${bundledRelease.version}` })).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 2, name: releaseSectionHeading(bundledRelease.notes), exact: true })).toBeVisible();
+    await expectStableReleaseScreenshot(page, "poison-post-update-changelog.png");
   });
 
   test("renders the user menu over the Poison view", async ({ page }) => {
@@ -134,7 +136,7 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByRole("menu")).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Cerrar sesion" })).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-user-menu.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-user-menu.png");
   });
 
   test("renders the avatar picker over the Poison view", async ({ page }) => {
@@ -145,7 +147,7 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByRole("dialog", { name: "Cambiar avatar" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Makabe/ })).toBeDisabled();
-    await expect(page).toHaveScreenshot("poison-avatar-picker.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-avatar-picker.png");
   });
 
   test("renders the controlled close choices over Poison", async ({ page }) => {
@@ -155,7 +157,7 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cerrar KeystoneClient" })).toBeVisible();
-    await expect(page).toHaveScreenshot("poison-close-choices.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-close-choices.png");
   });
 
   test("renders the current Addon summary under Poison", async ({ page }) => {
@@ -163,7 +165,7 @@ test.describe("Poison visual states", () => {
     await expectPoisonTheme(page);
     await expect(page.getByLabel("Addon: Actualizado")).toBeVisible();
     await expectImagesReady(page);
-    await expect(page).toHaveScreenshot("poison-addon-current.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "poison-addon-current.png");
   });
 
   for (const addonState of [
@@ -189,7 +191,7 @@ test.describe("Poison visual states", () => {
       await expect(page.getByText(addonState.status)).toBeVisible();
       await expect(page.getByRole("button", { name: addonState.action })).toBeVisible();
       await expectImagesReady(page);
-      await expect(page).toHaveScreenshot(addonState.snapshot, { fullPage: true });
+      await expectStableReleaseScreenshot(page, addonState.snapshot);
     });
   }
 
@@ -200,7 +202,7 @@ test.describe("Poison visual states", () => {
       await expect(page.getByLabel("Addon: No instalado")).toBeVisible();
       await expect(page.getByLabel(`Estado actual: ${state.label}`)).toBeVisible();
       await expectImagesReady(page);
-      await expect(page).toHaveScreenshot(state.snapshot, { fullPage: true });
+      await expectStableReleaseScreenshot(page, state.snapshot);
     });
   }
 });

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { useEffect } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { I18nProvider, translate, translations, useI18n } from "./i18n";
 
 function Probe() {
@@ -28,5 +29,19 @@ describe("i18n", () => {
     expect(screen.getByText("Sincronizacion")).toBeInTheDocument();
     view.rerender(<I18nProvider language="en"><Probe /></I18nProvider>);
     expect(screen.getByText("Sync")).toBeInTheDocument();
+  });
+
+  it("keeps the translator identity stable across unrelated provider rerenders", () => {
+    const observed = vi.fn();
+    function IdentityProbe() {
+      const { t } = useI18n();
+      useEffect(() => observed(t), [t]);
+      return null;
+    }
+    const view = render(<I18nProvider language="es"><IdentityProbe /><span>one</span></I18nProvider>);
+    view.rerender(<I18nProvider language="es"><IdentityProbe /><span>two</span></I18nProvider>);
+    expect(observed).toHaveBeenCalledOnce();
+    view.rerender(<I18nProvider language="en"><IdentityProbe /></I18nProvider>);
+    expect(observed).toHaveBeenCalledTimes(2);
   });
 });

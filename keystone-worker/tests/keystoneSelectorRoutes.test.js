@@ -112,9 +112,9 @@ async function bearer(env, userId = 1) {
   return { Authorization: `Bearer ${await createAccessToken(env.JWT_SECRET, userId)}` }
 }
 
-async function summary(env, teamId = 1, challengeMapId = 249, userId = 1) {
+async function summary(env, teamId = 1, challengeMapId = 249, userId = 1, locale = 'es_ES') {
   return app.request(
-    `/api/teams/${teamId}/keystone-loot/dungeons/${challengeMapId}/summary`,
+    `/api/teams/${teamId}/keystone-loot/dungeons/${challengeMapId}/summary?locale=${locale}`,
     { headers: await bearer(env, userId) },
     env,
   )
@@ -143,6 +143,7 @@ test('selector route validates authentication, IDs, supported pool and live requ
 
   assert.equal((await summary(env, 999, 249)).status, 404)
   assert.equal((await summary(env, 1, 249, 2)).status, 403)
+  assert.equal((await summary(env, 1, 249, 1, 'fr_FR')).status, 400)
 
   env.DB.teamMembers = []
   assert.equal((await summary(env)).status, 403)

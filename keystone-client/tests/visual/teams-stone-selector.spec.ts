@@ -4,12 +4,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 const reviewDirectory = path.resolve(process.cwd(), ".tmp", "teams-stone-selector-review");
 
-async function openTeams(page: Page, preview: string, language: "es" | "en" = "es") {
+async function openTeams(page: Page, preview: string, language: "es" | "en" = "es", theme: "poison" | "keystone" = "poison") {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.addInitScript(() => localStorage.setItem("keystone-client.theme", "poison"));
+  await page.addInitScript(selectedTheme => localStorage.setItem("keystone-client.theme", selectedTheme), theme);
   await page.goto(`/?preview=${preview}&lang=${language}`);
   await expect(page.getByRole("button", { name: language === "en" ? "Teams" : "Equipos" })).toHaveAttribute("aria-current", "page");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "poison");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 }
 
 async function capture(page: Page, name: string) {
@@ -160,4 +160,46 @@ test("reviews zero-stone, loading, empty objectives, API error and English", asy
   await expect(page.getByRole("button", { name: "Teams" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("button", { name: "Sync" })).toBeVisible();
   await capture(page, "14-english.png");
+});
+
+test("reviews lifecycle stability, themed empty prompt, cached navigation and rarity tooltips in both themes", async ({ page }) => {
+  for (const theme of ["poison", "keystone"] as const) {
+    await openTeams(page, "teams-default", "es", theme);
+    const promptIcon = page.locator(".teams-selector-panel__prompt > img");
+    await expect(promptIcon).toBeVisible();
+    await expect(promptIcon).toHaveAttribute("src", new RegExp(theme === "poison" ? "app-badge" : "app-icon"));
+    await capture(page, `15-${theme}-empty-prompt.png`);
+
+    await page.getByRole("button", { name: "Configuracion" }).click();
+    await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
+    await capture(page, `16-${theme}-settings-open.png`);
+    await page.getByRole("button", { name: "Cerrar configuracion" }).click();
+    await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
+    await capture(page, `17-${theme}-settings-closed-stable.png`);
+
+    await openTeams(page, "teams-multiple", "es", theme);
+    await page.getByRole("button", { name: "Mythiqueros 2.0" }).click();
+    await expect(page.getByRole("option", { name: "Exploradores de la Medianoche" })).toBeVisible();
+    await capture(page, `18-${theme}-team-picker.png`);
+
+    await openTeams(page, "teams-selector-full", "es", theme);
+    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
+    await page.getByRole("button", { name: /Temple of Sethraliss/u }).click();
+    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
+    await capture(page, `19-${theme}-cached-dungeon.png`);
+
+    const firstCard = page.getByTestId("selector-character").first();
+    await firstCard.getByRole("button", { name: /Ver objetos/u }).click();
+    await capture(page, `20-${theme}-expanded-character.png`);
+
+    await firstCard.getByRole("button", { name: "Echo de Medianoche 231002" }).focus();
+    await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "EPIC");
+    await capture(page, `21-${theme}-tooltip-epic.png`);
+    await page.keyboard.press("Escape");
+    await firstCard.getByRole("button", { name: "Echo de Medianoche 231004" }).focus();
+    await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "RARE");
+    await capture(page, `22-${theme}-tooltip-rare.png`);
+  }
 });

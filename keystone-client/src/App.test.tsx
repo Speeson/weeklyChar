@@ -274,6 +274,28 @@ describe("App", () => {
     expect(coreRequestMock).toHaveBeenNthCalledWith(4, "teams.get", { teamId: 7 });
   });
 
+  it("keeps Teams rendered without refetching when Settings opens and closes", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+    getSettingsMock.mockResolvedValueOnce(authenticatedState.settings);
+    coreRequestMock
+      .mockResolvedValueOnce([{ id: 7, name: "Mythiqueros 2.0", memberCount: 1 }])
+      .mockResolvedValueOnce({ id: 7, name: "Mythiqueros 2.0", members: [] });
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Equipos" }));
+    expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Configuracion" }));
+    expect(screen.getByRole("dialog", { name: "Ajustes" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cerrar configuracion" }));
+    expect(screen.queryByRole("dialog", { name: "Ajustes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.list")).toHaveLength(1);
+    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.get")).toHaveLength(1);
+  });
+
   it("returns to the existing login flow when the Teams bridge reports an expired session", async () => {
     const user = userEvent.setup();
     mockStartup(authenticatedState);

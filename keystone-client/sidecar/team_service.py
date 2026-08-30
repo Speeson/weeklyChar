@@ -21,6 +21,7 @@ INVALID_SELECTOR_RESPONSE = "INVALID_SELECTOR_RESPONSE"
 _VOIDCORE_STATES = {"pending", "completed_with_voidcore", "voidcore_not_checked"}
 _TIER_KEYS = ("bestInSlot", "mustHave", "niceToHave", "catalyst", "transmog", "other")
 _QUALITY_TYPES = {"POOR", "COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "ARTIFACT", "HEIRLOOM"}
+_BLIZZARD_LOCALES = {"es_ES", "en_US"}
 
 
 class TeamServiceError(Exception):
@@ -263,8 +264,8 @@ class TeamService:
             raise TeamServiceError(INVALID_TEAM_REQUEST, "El identificador de equipo no es válido.")
         return self._get(cfg, f"/api/teams/{team_id}", lambda raw: sanitize_team_detail(raw, team_id), INVALID_TEAM_RESPONSE)
 
-    def get_keystone_selector(self, cfg: dict[str, Any], team_id: int, challenge_map_id: int) -> dict[str, Any]:
-        if not _positive(team_id) or not _positive(challenge_map_id):
+    def get_keystone_selector(self, cfg: dict[str, Any], team_id: int, challenge_map_id: int, locale: str = "es_ES") -> dict[str, Any]:
+        if not _positive(team_id) or not _positive(challenge_map_id) or locale not in _BLIZZARD_LOCALES:
             raise TeamServiceError(INVALID_TEAM_REQUEST, "Los identificadores del selector no son válidos.")
-        path = f"/api/teams/{team_id}/keystone-loot/dungeons/{challenge_map_id}/summary"
+        path = f"/api/teams/{team_id}/keystone-loot/dungeons/{challenge_map_id}/summary?locale={locale}"
         return self._get(cfg, path, lambda raw: sanitize_selector(raw, team_id, challenge_map_id), INVALID_SELECTOR_RESPONSE)

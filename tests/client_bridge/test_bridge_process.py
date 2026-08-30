@@ -537,10 +537,15 @@ class BridgeProcessTests(unittest.TestCase):
         invalid_selector = self.bridge.send(
             {"protocolVersion": 1, "id": "selector-bad", "command": "teams.keystone_selector", "payload": {"teamId": 7, "challengeMapId": True}}
         )
+        invalid_locale = self.bridge.send(
+            {"protocolVersion": 1, "id": "selector-locale", "command": "teams.keystone_selector", "payload": {"teamId": 7, "challengeMapId": 588, "locale": "fr_FR"}}
+        )
         self.assertFalse(invalid_team["ok"])
         self.assertEqual(invalid_team["error"]["code"], "INVALID_REQUEST")
         self.assertFalse(invalid_selector["ok"])
         self.assertEqual(invalid_selector["error"]["code"], "INVALID_REQUEST")
+        self.assertFalse(invalid_locale["ok"])
+        self.assertEqual(invalid_locale["error"]["code"], "INVALID_REQUEST")
 
     def test_team_commands_return_structured_expired_session_without_tokens(self):
         response = self.bridge.send(

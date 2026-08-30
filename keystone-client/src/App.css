@@ -3113,8 +3113,9 @@ select {
 .teams-selector-empty { padding: 18px; }
 .teams-selector-panel__prompt { gap: 13px; }
 .teams-selector-panel__prompt > div { display: grid; justify-items: center; gap: 7px; }
-.teams-selector-panel__prompt p { margin: 0; }
-.teams-selector-panel__prompt small { display: grid; color: var(--theme-text-muted); font-size: 11px; line-height: 1.55; text-align: center; }
+.teams-selector-panel__prompt > img { width: clamp(76px, 7vw, 112px); height: clamp(76px, 7vw, 112px); object-fit: contain; filter: drop-shadow(0 8px 18px rgb(0 0 0 / 42%)); }
+.teams-selector-panel__prompt p { margin: 0; color: var(--theme-text-bright); font-size: clamp(17px, 1.35vw, 23px); font-weight: 800; line-height: 1.25; }
+.teams-selector-panel__prompt small { display: grid; color: var(--theme-text-muted); font-size: clamp(12px, 0.9vw, 15px); line-height: 1.6; text-align: center; }
 .teams-selector-empty small { color: var(--theme-text-muted); font-size: 11px; }
 
 @media (max-width: 1000px) {

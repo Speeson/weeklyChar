@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { bundledRelease } from "../../src/generated/release";
+import { expectStableReleaseScreenshot, releaseSectionHeading } from "./release-visual-fixture";
 
 const synchronizationStates = [
   { preview: "sync-idle", snapshot: "sync-idle.png", label: "Esperando sincronizacion" },
@@ -15,7 +17,7 @@ test.describe("preview states", () => {
     await expect(page.getByRole("button", { name: "Recuperar contraseña" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
-    await expect(page).toHaveScreenshot("login.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "login.png");
   });
 
   test("renders registration inside the client", async ({ page }) => {
@@ -25,7 +27,7 @@ test.describe("preview states", () => {
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByRole("button", { name: "Acceder a la web" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cerrar aplicación" })).toBeVisible();
-    await expect(page).toHaveScreenshot("registration.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "registration.png");
   });
 
   test("keeps registration contained at the minimum client size", async ({ page }) => {
@@ -43,7 +45,7 @@ test.describe("preview states", () => {
     await page.goto("/?preview=wow-onboarding");
     await expect(page.getByRole("heading", { name: "Ubicación de World of Warcraft" })).toBeVisible();
     await expect(page.getByPlaceholder("World of Warcraft no detectado")).toBeVisible();
-    await expect(page).toHaveScreenshot("wow-onboarding.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "wow-onboarding.png");
   });
 
   test("renders the first-run account selector", async ({ page }) => {
@@ -51,7 +53,7 @@ test.describe("preview states", () => {
     await expect(page.getByRole("heading", { name: "Cuentas de World of Warcraft" })).toBeVisible();
     await expect(page.getByText("WOW_ACCOUNT_1")).toBeVisible();
     await expect(page.getByText("WOW_ACCOUNT_2")).toBeVisible();
-    await expect(page).toHaveScreenshot("account-selector.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "account-selector.png");
   });
 
   test("renders synchronization success preview", async ({ page }) => {
@@ -73,7 +75,7 @@ test.describe("preview states", () => {
       scrollHeight: 941,
       scrollWidth: 1672,
     });
-    await expect(page).toHaveScreenshot("sync-success.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "sync-success.png");
   });
 
   test("keeps navigation hover blue and the selected tab softly gold", async ({ page }) => {
@@ -119,7 +121,7 @@ test.describe("preview states", () => {
     expect(frame!.x).toBeGreaterThanOrEqual(-0.5);
     expect(frame!.y).toBeGreaterThanOrEqual(-0.5);
 
-    await expect(page).toHaveScreenshot("sync-success-small.png", {
+    await expectStableReleaseScreenshot(page, "sync-success-small.png", {
       fullPage: true,
       maxDiffPixels: 30,
     });
@@ -137,7 +139,7 @@ test.describe("preview states", () => {
     await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison"]);
     await expect(page.getByRole("heading", { name: "Seleccion de cuentas" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Aplicacion" })).toBeVisible();
-    await expect(page).toHaveScreenshot("settings-theme-selector.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "settings-theme-selector.png");
   });
 
   test("renders the signed update confirmation above the client", async ({ page }) => {
@@ -148,7 +150,7 @@ test.describe("preview states", () => {
     await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.4.0" })).toBeVisible();
     await expect(modal.getByRole("listitem")).toHaveCount(2);
     await expect(modal.getByRole("button", { name: "Instalar y reiniciar" })).toBeVisible();
-    await expect(page).toHaveScreenshot("update-available.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "update-available.png");
   });
 
   test("renders the post-update changelog Markdown", async ({ page }) => {
@@ -156,9 +158,9 @@ test.describe("preview states", () => {
 
     const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
     await expect(modal).toBeVisible();
-    await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.6.5" })).toBeVisible();
-    await expect(modal.getByRole("heading", { level: 2, name: "Novedades", exact: true })).toBeVisible();
-    await expect(page).toHaveScreenshot("post-update-changelog.png", { fullPage: true });
+    await expect(modal.getByRole("heading", { level: 1, name: `KeystoneClient ${bundledRelease.version}` })).toBeVisible();
+    await expect(modal.getByRole("heading", { level: 2, name: releaseSectionHeading(bundledRelease.notes), exact: true })).toBeVisible();
+    await expectStableReleaseScreenshot(page, "post-update-changelog.png");
   });
 
   test("renders the user menu above the current view", async ({ page }) => {
@@ -180,7 +182,7 @@ test.describe("preview states", () => {
     });
     expect(menuIsTopLayer).toBe(true);
 
-    await expect(page).toHaveScreenshot("user-menu.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "user-menu.png");
   });
 
   test("renders the avatar picker above the current view", async ({ page }) => {
@@ -191,7 +193,7 @@ test.describe("preview states", () => {
     await expect(page.getByRole("dialog", { name: "Cambiar avatar" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Makabe/ })).toBeDisabled();
     await expect(page.locator('.ks-avatar-choice[aria-pressed="true"]')).toHaveCount(0);
-    await expect(page).toHaveScreenshot("avatar-picker.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "avatar-picker.png");
   });
 
   test("renders the controlled close choices", async ({ page }) => {
@@ -200,14 +202,14 @@ test.describe("preview states", () => {
 
     await expect(page.getByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cerrar KeystoneClient" })).toBeVisible();
-    await expect(page).toHaveScreenshot("close-choices.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "close-choices.png");
   });
 
   test("renders current addon status in the summary", async ({ page }) => {
     await page.goto("/?preview=addon-current");
     await expect(page.getByLabel("Addon: Actualizado")).toBeVisible();
     await page.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
-    await expect(page).toHaveScreenshot("addon-current.png", { fullPage: true });
+    await expectStableReleaseScreenshot(page, "addon-current.png");
   });
 
   for (const addonState of [
@@ -236,7 +238,7 @@ test.describe("preview states", () => {
       await expect(page.getByRole("button", { name: "Acceder a la Web" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Minimizar a la bandeja" })).toBeVisible();
       await page.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
-      await expect(page).toHaveScreenshot(addonState.snapshot, { fullPage: true });
+      await expectStableReleaseScreenshot(page, addonState.snapshot);
     });
   }
 
@@ -246,7 +248,7 @@ test.describe("preview states", () => {
       await expect(page.getByLabel("Addon: No instalado")).toBeVisible();
       await expect(page.getByLabel(`Estado actual: ${state.label}`)).toBeVisible();
       await page.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
-      await expect(page).toHaveScreenshot(state.snapshot, { fullPage: true });
+      await expectStableReleaseScreenshot(page, state.snapshot);
     });
   }
 });

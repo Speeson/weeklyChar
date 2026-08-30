@@ -246,10 +246,11 @@ def handle_teams_get(payload: dict[str, Any]) -> dict[str, Any]:
 def handle_teams_keystone_selector(payload: dict[str, Any]) -> dict[str, Any]:
     team_id = _require_positive_id(payload, "teamId")
     challenge_map_id = _require_positive_id(payload, "challengeMapId")
-    if set(payload) != {"teamId", "challengeMapId"}:
-        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain only teamId and challengeMapId.")
+    locale = payload.get("locale", "es_ES")
+    if set(payload) - {"teamId", "challengeMapId", "locale"} or locale not in {"es_ES", "en_US"}:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain valid teamId, challengeMapId and locale values.")
     try:
-        return TEAM_SERVICE.get_keystone_selector(config_module.load(), team_id, challenge_map_id)
+        return TEAM_SERVICE.get_keystone_selector(config_module.load(), team_id, challenge_map_id, locale)
     except team_service.TeamServiceError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
 

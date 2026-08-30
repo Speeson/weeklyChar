@@ -7,7 +7,8 @@ const DEFAULT_TIMEOUT_MS = 5000
 const MAX_CONCURRENCY = 4
 const MAX_TOOLTIP_NAME_LENGTH = 128
 const MAX_STAT_NAMES = 32
-const LOCALE = 'es_ES'
+const DEFAULT_LOCALE = 'es_ES'
+const LOCALES = new Set(['es_ES', 'en_US'])
 const REGIONS = new Set(['eu', 'us', 'kr', 'tw'])
 const QUALITY_TYPES = new Set([
   'POOR', 'COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'ARTIFACT', 'HEIRLOOM',
@@ -28,6 +29,7 @@ type MetadataOptions = {
   fetch?: FetchLike
   now?: number
   timeoutMs?: number
+  locale?: string
 }
 
 type KeystoneLootMetadataTarget = {
@@ -72,6 +74,10 @@ export function resetBlizzardTokenCacheForTests(): void {
 export function normalizeBlizzardRegion(region: string | null | undefined): string {
   const normalized = region?.toLowerCase()
   return normalized && REGIONS.has(normalized) ? normalized : 'eu'
+}
+
+export function normalizeBlizzardLocale(locale: string | null | undefined): string {
+  return locale && LOCALES.has(locale) ? locale : DEFAULT_LOCALE
 }
 
 async function readBoundedJson(response: Response): Promise<unknown> {
@@ -284,10 +290,11 @@ async function gameDataJson(
   fetchImpl: FetchLike,
   now: number,
   timeoutMs: number,
+  locale: string,
 ): Promise<BlizzardJson | null> {
   let token = await getAccessToken(env, region, fetchImpl, now, timeoutMs)
   if (!token) return null
-  const url = `https://${region}.api.blizzard.com${path}?namespace=static-${region}&locale=${LOCALE}`
+  const url = `https://${region}.api.blizzard.com${path}?namespace=static-${region}&locale=${locale}`
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const response = await timedFetch(fetchImpl, url, {
@@ -325,13 +332,14 @@ async function fetchMetadata(
   fetchImpl: FetchLike,
   now: number,
   timeoutMs: number,
+  locale: string,
 ): Promise<WowItemMetadataRow | null> {
   try {
-    const item = await gameDataJson(env, region, `/data/wow/item/${itemId}`, fetchImpl, now, timeoutMs)
+    const item = await gameDataJson(env, region, `/data/wow/item/${itemId}`, fetchImpl, now, timeoutMs, locale)
     if (!item) return null
     if (item.status === 404) {
       return {
-        region, locale: LOCALE, item_id: itemId, name: null, icon_url: null,
+        region, locale, item_id: itemId, name: null, icon_url: null,
         ...emptyTooltipColumns(),
         status: 'not_found', fetched_at: now, refresh_after: now + NEGATIVE_TTL_SECONDS,
       }
@@ -342,7 +350,7 @@ async function fetchMetadata(
         ? Math.min(3600, Math.max(1, Math.floor(retryAfter)))
         : 60
       return {
-        region, locale: LOCALE, item_id: itemId, name: null, icon_url: null,
+        region, locale, item_id: itemId, name: null, icon_url: null,
         ...emptyTooltipColumns(),
         status: 'rate_limited', fetched_at: now, refresh_after: now + retrySeconds,
       }
@@ -351,7 +359,7 @@ async function fetchMetadata(
       || !isRecord(item.value) || item.value.id !== itemId || typeof item.value.name !== 'string'
       || item.value.name.length === 0 || item.value.name.length > 512) return null
 
-    const media = await gameDataJson(env, region, `/data/wow/media/item/${itemId}`, fetchImpl, now, timeoutMs)
+    const media = await gameDataJson(env, region, `/data/wow/media/item/${itemId}`, fetchImpl, now, timeoutMs, locale)
     let iconUrl: string | null = null
     if (media && media.status >= 200 && media.status < 300 && isRecord(media.value)
       && media.value.id === itemId && Array.isArray(media.value.assets)) {
@@ -362,7 +370,7 @@ async function fetchMetadata(
     const statGroups = itemStatGroups(item.value.preview_item)
     return {
       region,
-      locale: LOCALE,
+      locale,
       item_id: itemId,
       name: item.value.name,
       icon_url: iconUrl,
@@ -385,6 +393,7 @@ async function readCachedMetadata(
   env: Env,
   region: string,
   itemIds: number[],
+  locale: string,
 ): Promise<Map<number, WowItemMetadataRow>> {
   if (itemIds.length === 0) return new Map()
   const placeholders = itemIds.map(() => '?').join(', ')
@@ -395,11 +404,11 @@ async function readCachedMetadata(
       status, fetched_at, refresh_after
     FROM wow_item_metadata
     WHERE region = ? AND locale = ? AND item_id IN (${placeholders})
-  `).bind(region, LOCALE, ...itemIds).all<WowItemMetadataRow>()
+  `).bind(region, locale, ...itemIds).all<WowItemMetadataRow>()
   const allowedStatuses = new Set(['ok', 'partial', 'not_found', 'rate_limited'])
   const requested = new Set(itemIds)
   const validated = results.filter(row => {
-    if (row.region !== region || row.locale !== LOCALE || !requested.has(row.item_id)
+    if (row.region !== region || row.locale !== locale || !requested.has(row.item_id)
       || !Number.isSafeInteger(row.item_id) || row.item_id <= 0
       || !allowedStatuses.has(row.status)
       || !Number.isSafeInteger(row.fetched_at) || row.fetched_at < 0
@@ -476,8 +485,9 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
   const now = options.now ?? Math.floor(Date.now() / 1000)
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const fetchImpl = options.fetch ?? fetch
+  const locale = normalizeBlizzardLocale(options.locale)
   const itemIds = [...new Set(objectives.map(objective => objective.itemId))]
-  const cached = await readCachedMetadata(env, region, itemIds)
+  const cached = await readCachedMetadata(env, region, itemIds, locale)
   const refreshIds = itemIds.filter(itemId => {
     const row = cached.get(itemId)
     return !row || row.refresh_after <= now || needsTooltipBootstrap(row)
@@ -486,7 +496,7 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
   if (env.BLIZZARD_CLIENT_ID && env.BLIZZARD_CLIENT_SECRET) {
     const refreshed = await mapWithConcurrency(refreshIds, MAX_CONCURRENCY, async itemId => ({
       itemId,
-      row: await fetchMetadata(env, region, itemId, fetchImpl, now, timeoutMs),
+      row: await fetchMetadata(env, region, itemId, fetchImpl, now, timeoutMs, locale),
     }))
     for (const result of refreshed) {
       const existing = cached.get(result.itemId)

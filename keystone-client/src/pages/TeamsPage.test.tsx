@@ -66,7 +66,8 @@ async function selectRuby(user: ReturnType<typeof userEvent.setup>) {
 
 describe("TeamsPage compact ranking", () => {
   it("renders the compact Team trigger, member strip, eight locally-derived stone counts and minimal initial state", async () => {
-    renderPage();
+    const dataSource = source();
+    renderPage(dataSource);
     expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toHaveAttribute("aria-haspopup", "listbox");
     expect(screen.getByLabelText("Filtros de miembros")).toHaveClass("teams-member-strip");
     expect(await screen.findByRole("button", { name: "Filtrar por Speeson, 2 personajes" })).toBeInTheDocument();
@@ -79,8 +80,89 @@ describe("TeamsPage compact ranking", () => {
     expect(ruby.querySelector(".teams-dungeon__art")).toHaveAttribute("src", expect.stringContaining("ruby-life-pools"));
     expect(screen.getByRole("button", { name: /Voidscar Arena.*0 piedras/u })).toBeEnabled();
     expect(screen.getByText("Selecciona una mazmorra para ver los objetivos del equipo.")).toBeInTheDocument();
+    expect(document.querySelector(".teams-selector-panel__prompt > img")).toHaveAttribute("src", expect.stringContaining("app-icon"));
     expect(screen.getByText("Las piedras iluminadas están disponibles actualmente.")).toBeInTheDocument();
     expect(screen.getByText("También puedes consultar mazmorras sin piedra.")).toBeInTheDocument();
+    expect(dataSource.getKeystoneSelector).not.toHaveBeenCalled();
+  });
+
+  it("keeps rendered Teams data stable across unrelated parent rerenders", async () => {
+    const dataSource = source();
+    const onSessionExpired = vi.fn();
+    const view = renderPage(dataSource, "es", onSessionExpired);
+    expect(await screen.findByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(dataSource.listTeams).toHaveBeenCalledOnce();
+    expect(dataSource.getTeam).toHaveBeenCalledOnce();
+
+    view.rerender(<I18nProvider language="es"><TeamsPage dataSource={dataSource} onOpenWeb={vi.fn()} onSessionExpired={onSessionExpired} /></I18nProvider>);
+
+    expect(screen.getByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando equipos")).not.toBeInTheDocument();
+    expect(dataSource.listTeams).toHaveBeenCalledOnce();
+    expect(dataSource.getTeam).toHaveBeenCalledOnce();
+  });
+
+  it("opens with one cached Team and revalidation discovers a newly-created Team", async () => {
+    const user = userEvent.setup();
+    const lists = [
+      [{ id: 7, name: detail.name, memberCount: 2 }],
+      [{ id: 7, name: detail.name, memberCount: 2 }, { id: 8, name: "New Team", memberCount: 1 }],
+    ];
+    const dataSource = source({ listTeams: vi.fn(async () => lists.shift() ?? lists[0] ?? []) });
+    renderPage(dataSource);
+    const trigger = await screen.findByRole("button", { name: detail.name });
+
+    await user.click(trigger);
+
+    expect(screen.getByRole("listbox", { name: "Tus equipos" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "New Team" })).toBeInTheDocument();
+    expect(dataSource.getTeam).toHaveBeenCalledOnce();
+  });
+
+  it("deduplicates concurrent Team refreshes and preserves the active Team", async () => {
+    const user = userEvent.setup();
+    let resolveRefresh!: (value: Array<{ id: number; name: string; memberCount: number }>) => void;
+    const refresh = new Promise<Array<{ id: number; name: string; memberCount: number }>>(resolve => { resolveRefresh = resolve; });
+    const listTeams = vi.fn()
+      .mockResolvedValueOnce([{ id: 7, name: detail.name, memberCount: 2 }])
+      .mockReturnValue(refresh);
+    renderPage(source({ listTeams }));
+    const trigger = await screen.findByRole("button", { name: detail.name });
+
+    await user.click(trigger);
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(listTeams).toHaveBeenCalledTimes(2);
+    await act(async () => resolveRefresh([
+      { id: 7, name: detail.name, memberCount: 2 }, { id: 8, name: "New Team", memberCount: 1 },
+    ]));
+
+    expect(screen.getByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "New Team" })).toBeInTheDocument();
+  });
+
+  it("refreshes on visibility restoration, preserves data on failure, and falls back when the active Team disappears", async () => {
+    const user = userEvent.setup();
+    const second: ClientTeamDetail = { id: 8, name: "Second Team", members: [] };
+    const listTeams = vi.fn()
+      .mockResolvedValueOnce([{ id: 7, name: detail.name, memberCount: 2 }, { id: 8, name: second.name, memberCount: 0 }])
+      .mockRejectedValueOnce(new Error("temporary"))
+      .mockResolvedValueOnce([{ id: 8, name: second.name, memberCount: 0 }]);
+    const dataSource = source({
+      listTeams,
+      getTeam: vi.fn(async id => id === 7 ? detail : second),
+    });
+    renderPage(dataSource);
+    const trigger = await screen.findByRole("button", { name: detail.name });
+
+    await user.click(trigger);
+    await waitFor(() => expect(listTeams).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(await screen.findByRole("button", { name: second.name })).toBeInTheDocument();
+    await waitFor(() => expect(dataSource.getTeam).toHaveBeenCalledWith(8));
   });
 
   it("opens the Team popover, marks the active Team, closes with Escape and outside click", async () => {
@@ -171,6 +253,55 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.queryByText(/7 objetivos/u)).not.toBeInTheDocument();
   });
 
+  it("renders a cached dungeon immediately, revalidates it, and deduplicates its in-flight request", async () => {
+    const user = userEvent.setup();
+    let resolveRefresh!: (value: KeystoneSelectorResponse) => void;
+    const refresh = new Promise<KeystoneSelectorResponse>(resolve => { resolveRefresh = resolve; });
+    const getKeystoneSelector = vi.fn()
+      .mockResolvedValueOnce(selector)
+      .mockResolvedValueOnce({ ...selector, challengeMapId: 250 })
+      .mockReturnValueOnce(refresh);
+    renderPage(source({ getKeystoneSelector }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
+    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+
+    expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando objetivos")).not.toBeInTheDocument();
+    expect(getKeystoneSelector).toHaveBeenCalledTimes(3);
+    await act(async () => resolveRefresh({ ...selector, summary: { ...selector.summary, totalObjectives: 8 } }));
+    expect(await screen.findByText("2 personajes · 8 objetivos")).toBeInTheDocument();
+  });
+
+  it("keeps cached Selector data after a background refresh error and isolates cache by Team", async () => {
+    const user = userEvent.setup();
+    const second: ClientTeamDetail = { id: 8, name: "Second Team", members: detail.members };
+    const getKeystoneSelector = vi.fn()
+      .mockResolvedValueOnce(selector)
+      .mockResolvedValueOnce({ ...selector, challengeMapId: 250 })
+      .mockRejectedValueOnce(new Error("temporary"))
+      .mockResolvedValueOnce({ ...selector, teamId: 8, summary: { ...selector.summary, totalObjectives: 19 } });
+    const dataSource = source({
+      listTeams: vi.fn(async () => [{ id: 7, name: detail.name, memberCount: 2 }, { id: 8, name: second.name, memberCount: 2 }]),
+      getTeam: vi.fn(async id => id === 7 ? detail : second),
+      getKeystoneSelector,
+    });
+    renderPage(dataSource);
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
+    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    expect(await screen.findByText("2 personajes · 7 objetivos")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: detail.name }));
+    await user.click(screen.getByRole("option", { name: second.name }));
+    await screen.findByRole("button", { name: second.name });
+    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    expect(await screen.findByText("2 personajes · 19 objetivos")).toBeInTheDocument();
+    expect(getKeystoneSelector).toHaveBeenLastCalledWith(8, 399, "es_ES");
+  });
+
   it("ignores an older Team detail response after switching Teams", async () => {
     const user = userEvent.setup();
     const second: ClientTeamDetail = { id: 8, name: "Second Team", members: [{ userId: 9, username: "Newest", characters: [] }] };
@@ -227,6 +358,7 @@ describe("TeamsPage compact ranking", () => {
     expect(tooltip).toHaveTextContent("Mano principal · Arma · Báculo");
     expect(tooltip).toHaveTextContent("Intelecto");
     expect(tooltip).toHaveAttribute("data-quality", "EPIC");
+    expect(within(tooltip).getByText("Objeto #1")).toHaveClass("teams-tooltip__name--quality-epic");
     expect(within(tooltip).getByText("Intelecto")).toHaveClass("teams-tooltip__primary-stat");
     expect(within(tooltip).getByText("Celeridad")).toHaveClass("teams-tooltip__secondary-stat");
     expect(tooltip).not.toHaveTextContent(/\+\d/u);
@@ -260,12 +392,23 @@ describe("TeamsPage compact ranking", () => {
   });
 
   it("renders the redesigned controls in English", async () => {
-    renderPage(source(), "en");
+    const dataSource = source();
+    renderPage(dataSource, "en");
     expect(await screen.findByText("Select a dungeon to see the Team's objectives.")).toBeInTheDocument();
     expect(screen.getByText("Lit keystones are currently available.")).toBeInTheDocument();
     expect(screen.getByText("You can also inspect dungeons without a keystone.")).toBeInTheDocument();
     expect(screen.getByLabelText("Member filters")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Filter by Speeson, 2 characters" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Filter by Ana con un nombre largo, 1 character" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    expect(dataSource.getKeystoneSelector).toHaveBeenCalledWith(7, 399, "en_US");
+    const firstRow = (await screen.findAllByTestId("selector-character"))[0];
+    await userEvent.click(within(firstRow).getByRole("button", { name: /Show items/u }));
+    await userEvent.click(within(firstRow).getByRole("button", { name: "Item #1" }));
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent("Source: Ruby Life Pools");
+    expect(tooltip).toHaveTextContent("Specialization: Arcane");
+    expect(tooltip).toHaveTextContent("Tier: 3");
+    expect(tooltip).toHaveTextContent("Voidcore pending");
   });
 });
