@@ -143,6 +143,8 @@ def _objective(value: Any) -> dict[str, Any] | None:
     secondary_stats = value.get("secondaryStatNames")
     other_stats = value.get("otherStatNames")
     quality_type = value.get("qualityType")
+    item_level = value.get("itemLevel")
+    variant_key = value.get("variantKey", "base")
     classified_stats = [*primary_stats, *secondary_stats, *other_stats] \
         if all(isinstance(group, list) for group in (primary_stats, secondary_stats, other_stats)) else []
     if not (_positive(source_id) or _text(source_id, 128)) \
@@ -154,13 +156,16 @@ def _objective(value: Any) -> dict[str, Any] | None:
             or not _stat_names(other_stats) or len(classified_stats) != len(stats) \
             or set(classified_stats) != set(stats) \
             or not (quality_type is None or (isinstance(quality_type, str) and quality_type in _QUALITY_TYPES)) \
+            or not (item_level is None or _positive(item_level)) \
+            or not _text(variant_key, 1024) \
             or value.get("voidcoreState") not in _VOIDCORE_STATES:
         return None
-    return {key: value[key] for key in (
+    result = {key: value[key] for key in (
         "itemId", "itemName", "iconUrl", "tier", "specIds", "sourceType", "sourceId", "slotId",
         "slotName", "itemClassName", "itemSubClassName", "statNames", "primaryStatNames",
         "secondaryStatNames", "otherStatNames", "qualityType", "voidcoreState",
     )}
+    return {**result, "itemLevel": item_level, "variantKey": variant_key}
 
 
 def _stone(value: Any) -> dict[str, Any] | None:

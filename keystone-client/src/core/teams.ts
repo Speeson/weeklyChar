@@ -149,6 +149,8 @@ function validStatGroups(all: string[], primary: string[], secondary: string[], 
 }
 
 function parseObjective(value: unknown): KeystoneSelectorObjective | null {
+  const itemLevel = object(value) && value.itemLevel === undefined ? null : object(value) ? value.itemLevel : undefined;
+  const variantKey = object(value) && value.variantKey === undefined ? "base" : object(value) ? value.variantKey : undefined;
   if (!object(value) || !positive(value.itemId) || !nullableText(value.itemName, 512)
     || !nullableHttps(value.iconUrl) || !positive(value.tier) || !Array.isArray(value.specIds)
     || value.specIds.length === 0 || value.specIds.length > 64 || !value.specIds.every(positive)
@@ -161,6 +163,7 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     || !validStatGroups(value.statNames, value.primaryStatNames, value.secondaryStatNames, value.otherStatNames)
     || !(value.qualityType === null || (typeof value.qualityType === "string"
       && ITEM_QUALITY_TYPES.includes(value.qualityType as typeof ITEM_QUALITY_TYPES[number])))
+    || !(itemLevel === null || positive(itemLevel)) || !text(variantKey, 1024)
     || typeof value.voidcoreState !== "string"
     || !VOIDCORE_STATES.includes(value.voidcoreState as typeof VOIDCORE_STATES[number])) return null;
   return { itemId: value.itemId, itemName: value.itemName, iconUrl: value.iconUrl, tier: value.tier,
@@ -171,6 +174,7 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     secondaryStatNames: [...value.secondaryStatNames] as string[],
     otherStatNames: [...value.otherStatNames] as string[],
     qualityType: value.qualityType as KeystoneSelectorObjective["qualityType"],
+    itemLevel: itemLevel as number | null, variantKey: variantKey as string,
     voidcoreState: value.voidcoreState as KeystoneSelectorObjective["voidcoreState"] };
 }
 

@@ -15,7 +15,7 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures"
 
 sys.path.insert(0, str(CLIENT_ROOT))
 
-from sync_worker import SyncWorker, _normalize_ilvl  # noqa: E402
+from sync_worker import SyncWorker, _keystone_loot_for_json, _normalize_ilvl  # noqa: E402
 
 
 class FakeResponse:
@@ -167,6 +167,21 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(snapshot["favorites"], [])
         self.assertEqual(snapshot["voidcore"]["usedItems"], [])
         self.assertFalse(snapshot["voidcore"]["checked"])
+
+    def test_exact_favorite_variant_metadata_survives_json_normalization(self):
+        snapshot = _keystone_loot_for_json({
+            "favorites": {1: {
+                "itemId": 251119,
+                "bonusIds": {1: 6652, 2: 1498},
+                "variantKey": "bonus:1498,6652",
+                "itemLevel": 402,
+                "qualityType": "EPIC",
+            }},
+        })
+
+        self.assertEqual(snapshot["favorites"][0]["itemLevel"], 402)
+        self.assertEqual(snapshot["favorites"][0]["qualityType"], "EPIC")
+        self.assertEqual(snapshot["favorites"][0]["variantKey"], "bonus:1498,6652")
 
     def test_keystoneloot_unavailable_state_survives_transport(self):
         [post] = self.capture_sync_payloads("keystoneloot-unavailable.lua")

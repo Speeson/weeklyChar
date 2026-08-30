@@ -142,6 +142,8 @@ test('selector dedupes top-level objectives across specs while preserving action
     secondaryStatNames: [],
     otherStatNames: [],
     qualityType: null,
+    itemLevel: null,
+    variantKey: 'base',
     voidcoreState: 'pending',
   })
   assert.equal(multi.objectives.find(objective => objective.itemId === 11).voidcoreState, 'completed_with_voidcore')
@@ -217,4 +219,25 @@ test('selector response contains only the objective privacy allowlist', () => {
   ]) {
     assert.equal(serialized.includes(forbidden), false, forbidden)
   }
+})
+
+test('selector preserves separate exact variants and merges only the same variant across specs', () => {
+  const result = buildKeystoneLootDungeonSummary(1, 249, { stoneCount: 0, stones: [] }, [
+    character(1, 'Variants', supported([
+      favorite(10, 3, { specId: 102, bonusIds: [1], variantKey: 'bonus:1', itemLevel: 389, qualityType: 'RARE' }),
+      favorite(10, 3, { specId: 103, bonusIds: [1], variantKey: 'bonus:1', itemLevel: 389, qualityType: 'RARE' }),
+      favorite(10, 3, { specId: 102, bonusIds: [2], variantKey: 'bonus:2', itemLevel: 402, qualityType: 'EPIC' }),
+    ])),
+  ])
+
+  assert.equal(result.characters[0].objectives.length, 2)
+  assert.deepEqual(result.characters[0].objectives.map(objective => ({
+    variantKey: objective.variantKey,
+    itemLevel: objective.itemLevel,
+    qualityType: objective.qualityType,
+    specIds: objective.specIds,
+  })), [
+    { variantKey: 'bonus:1', itemLevel: 389, qualityType: 'RARE', specIds: [102, 103] },
+    { variantKey: 'bonus:2', itemLevel: 402, qualityType: 'EPIC', specIds: [102] },
+  ])
 })

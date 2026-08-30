@@ -8,7 +8,13 @@ export const KEYSTONE_LOOT_LIMITS = {
   characterKeyLength: 128,
   sourceIdLength: 128,
   sourceTypeLength: 64,
+  variantKeyLength: 1024,
 } as const
+
+export const KEYSTONE_LOOT_QUALITY_TYPES = [
+  'POOR', 'COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'ARTIFACT', 'HEIRLOOM',
+] as const
+export type KeystoneLootQualityType = typeof KEYSTONE_LOOT_QUALITY_TYPES[number]
 
 type JsonObject = Record<string, unknown>
 
@@ -23,6 +29,9 @@ export type KeystoneLootFavorite = {
   bonusIds?: number[]
   gems?: number[]
   enchant?: number
+  variantKey?: string
+  itemLevel?: number | null
+  qualityType?: KeystoneLootQualityType | null
   [key: string]: unknown
 }
 
@@ -123,7 +132,30 @@ function validateFavorite(value: unknown, index: number): string | null {
     if (error) return error
   }
 
+
+  if (value.itemLevel !== undefined && value.itemLevel !== null && !isPositiveInteger(value.itemLevel)) {
+    return `favorites[${index}].itemLevel no es válido`
+  }
+  if (value.qualityType !== undefined && value.qualityType !== null
+    && (typeof value.qualityType !== 'string'
+      || !KEYSTONE_LOOT_QUALITY_TYPES.includes(value.qualityType as KeystoneLootQualityType))) {
+    return `favorites[${index}].qualityType no es válido`
+  }
+  if (value.variantKey !== undefined) {
+    if (!boundedString(value.variantKey, KEYSTONE_LOOT_LIMITS.variantKeyLength)) {
+      return `favorites[${index}].variantKey no es válido`
+    }
+    if (value.variantKey !== keystoneLootVariantKey(value.bonusIds)) {
+      return `favorites[${index}].variantKey no coincide con bonusIds`
+    }
+  }
+
   return null
+}
+
+export function keystoneLootVariantKey(bonusIds: unknown): string {
+  if (!Array.isArray(bonusIds) || bonusIds.length === 0) return 'base'
+  return `bonus:${[...bonusIds].map(Number).sort((left, right) => left - right).join(',')}`
 }
 
 function validateVoidcore(value: unknown): string | null {

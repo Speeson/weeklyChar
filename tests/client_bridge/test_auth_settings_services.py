@@ -298,6 +298,21 @@ class SettingsServiceTests(unittest.TestCase):
         self.assertEqual(self.saved_cfg["sync_token"], "sync")
         self.assertEqual(self.saved_cfg["unknown_future_key"], {"x": 1})
 
+    def test_language_only_update_survives_a_simulated_client_restart(self) -> None:
+        cfg = {
+            "start_minimized": True,
+            "minimize_on_close": False,
+            "lang": "es",
+            "sync_token": "sync",
+        }
+
+        settings_service.update_settings(cfg, {"lang": "en"})
+        restarted_settings = settings_service.get_settings(self.saved_cfg)
+
+        self.assertEqual(restarted_settings["lang"], "en")
+        self.assertTrue(restarted_settings["startMinimized"])
+        self.assertEqual(self.saved_cfg["sync_token"], "sync")
+
     def test_update_rejects_unknown_field(self) -> None:
         with self.assertRaises(settings_service.SettingsError):
             settings_service.update_settings({"lang": "es"}, {"sync_token": "x"})

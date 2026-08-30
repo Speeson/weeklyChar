@@ -325,6 +325,10 @@ test('KeystoneLoot rejects invalid optional favorite and Voidcore fields', async
     payload => { payload.keystoneLoot.favorites[0].enchant = 7334.5 },
     payload => { payload.keystoneLoot.favorites[0].bonusIds = [6652, '1498'] },
     payload => { payload.keystoneLoot.favorites[0].gems = [0.5] },
+    payload => { payload.keystoneLoot.favorites[0].itemLevel = 0 },
+    payload => { payload.keystoneLoot.favorites[0].itemLevel = 402.5 },
+    payload => { payload.keystoneLoot.favorites[0].qualityType = 'MYTHIC' },
+    payload => { payload.keystoneLoot.favorites[0].variantKey = 'bonus:wrong' },
     payload => { payload.keystoneLoot.voidcore.checked = 'true' },
     payload => { payload.keystoneLoot.voidcore.usedItems = [249343, 0] },
   ]
@@ -339,6 +343,26 @@ test('KeystoneLoot rejects invalid optional favorite and Voidcore fields', async
     assert.equal(response.status, 400)
     assert.equal(env.DB.characters.length, 0)
   }
+})
+
+test('KeystoneLoot accepts exact variant metadata and legacy favorites', async () => {
+  const base = await loadPayload('keystoneloot-sync-payload.json')
+  const env = makeEnv()
+  base.keystoneLoot.favorites.push({
+    ...base.keystoneLoot.favorites[0],
+    bonusIds: [6652, 1498],
+    variantKey: 'bonus:1498,6652',
+    itemLevel: 402,
+    qualityType: 'EPIC',
+  })
+
+  const response = await sync(env, base)
+
+  assert.equal(response.status, 200)
+  const stored = JSON.parse(env.DB.characters[0].keystone_loot_json)
+  assert.equal(stored.favorites[0].itemLevel, undefined)
+  assert.equal(stored.favorites.at(-1).itemLevel, 402)
+  assert.equal(stored.favorites.at(-1).qualityType, 'EPIC')
 })
 
 test('KeystoneLoot enforces array limits without hardcoding a maximum tier', async () => {

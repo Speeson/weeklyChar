@@ -13,7 +13,8 @@ const objective = (itemId: number, tier: number, overrides: Partial<KeystoneSele
   sourceId: 399, slotId: 16, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Báculo",
   statNames: ["Intelecto", "Aguante", "Celeridad", "Maestría"],
   primaryStatNames: ["Intelecto", "Aguante"], secondaryStatNames: ["Celeridad", "Maestría"],
-  otherStatNames: [], qualityType: "EPIC", voidcoreState: "pending", ...overrides,
+  otherStatNames: [], qualityType: "EPIC", itemLevel: 402, variantKey: `preview:${itemId}`,
+  voidcoreState: "pending", ...overrides,
 });
 
 const primaryTeam: ClientTeamSummary = { id: 7, name: "Mythiqueros 2.0", memberCount: 8 };
@@ -54,7 +55,8 @@ const primaryDetail: ClientTeamDetail = {
 const secondDetail: ClientTeamDetail = { id: 8, name: secondTeam.name, members: primaryDetail.members.slice(0, 2) };
 const characterObjectives = [
   objective(231001, 3, { specIds: [62, 64], itemName: null }),
-  objective(231002, 3, { specIds: [62] }), objective(231003, 2, { specIds: [62, 64] }),
+  objective(231002, 3, { specIds: [62], variantKey: "preview:231002:epic", itemLevel: 402, qualityType: "EPIC" }),
+  objective(231002, 2, { specIds: [62, 64], variantKey: "preview:231002:rare", itemLevel: 389, qualityType: "RARE" }),
   objective(231004, 2, { specIds: [64], iconUrl: "https://render.worldofwarcraft.com/eu/icons/56/inv_staff_2h_etherealraid_d_01.jpg", qualityType: "RARE" }),
   objective(231005, 1, { specIds: [62] }), objective(231006, 5, { specIds: [64] }),
   objective(231007, 4, { specIds: [62, 64] }), objective(231008, 99, { specIds: [62] }),
@@ -84,14 +86,34 @@ const fullSelector: KeystoneSelectorResponse = {
   ],
 };
 
-function selectorForDungeon(challengeMapId: number): KeystoneSelectorResponse {
-  if (challengeMapId === 399) return fullSelector;
+function selectorForDungeon(challengeMapId: number, language: "es" | "en"): KeystoneSelectorResponse {
+  const localized = language === "en"
+    ? {
+        ...fullSelector,
+        characters: fullSelector.characters.map(character => ({
+          ...character,
+          objectives: character.objectives.map(item => ({
+            ...item,
+            itemName: item.itemName?.replace("Echo de Medianoche", "Midnight Echo") ?? null,
+            slotName: item.slotName ? "Main Hand" : null,
+            itemClassName: item.itemClassName ? "Weapon" : null,
+            itemSubClassName: item.itemSubClassName ? "Staff" : null,
+            statNames: item.statNames.length > 0 ? ["Intellect", "Stamina", "Haste", "Mastery"] : [],
+            primaryStatNames: item.primaryStatNames.length > 0 ? ["Intellect", "Stamina"] : [],
+            secondaryStatNames: item.secondaryStatNames.length > 0 ? ["Haste", "Mastery"] : [],
+          })),
+        })),
+      }
+    : fullSelector;
+  if (challengeMapId === 399) return localized;
   return { ...fullSelector, challengeMapId, availability: { stoneCount: 0, stones: [] }, summary: { charactersWithObjectives: 0, totalObjectives: 0, tiers: tiers() }, characters: [] };
 }
 
 export function getTeamsPreviewDataSource(): TeamsDataSource | null {
   if (!import.meta.env.DEV) return null;
-  const scenario = new URLSearchParams(window.location.search).get("preview");
+  const params = new URLSearchParams(window.location.search);
+  const scenario = params.get("preview");
+  const language = params.get("lang") === "en" ? "en" : "es";
   if (!scenario?.startsWith("teams-")) return null;
   const list = scenario === "teams-empty" ? [] : scenario === "teams-multiple" ? [primaryTeam, secondTeam, thirdTeam, fourthTeam] : [primaryTeam];
   return {
@@ -100,8 +122,8 @@ export function getTeamsPreviewDataSource(): TeamsDataSource | null {
     getKeystoneSelector: async (_teamId, challengeMapId) => {
       if (scenario === "teams-selector-loading") return new Promise<KeystoneSelectorResponse>(() => undefined);
       if (scenario === "teams-selector-error") throw { code: "API_UNAVAILABLE", message: "La API no está disponible." };
-      if (scenario === "teams-selector-empty") return selectorForDungeon(challengeMapId);
-      return selectorForDungeon(challengeMapId);
+      if (scenario === "teams-selector-empty") return selectorForDungeon(challengeMapId, language);
+      return selectorForDungeon(challengeMapId, language);
     },
   };
 }

@@ -549,7 +549,7 @@ export async function enrichKeystoneLootObjectives<T extends KeystoneLootMetadat
       primaryStatNames: statGroups.primary,
       secondaryStatNames: statGroups.secondary,
       otherStatNames: statGroups.other,
-      qualityType: safeQualityType(metadata.quality_type),
+      qualityType: objective.qualityType ?? safeQualityType(metadata.quality_type),
     }
   })
 }

@@ -184,6 +184,13 @@ through its existing bridge to the Worker so Blizzard tooltip metadata follows t
 the existing D1 locale key prevents cross-language cache reuse. This refinement does not change the
 addon SavedVariables contract.
 
+The exact-variant refinement additively extends that contract with a normalized bonus-based
+`variantKey`, nullable exact `itemLevel`, and nullable exact in-game `qualityType`. Exact variants
+remain distinct through Worker/Client Selector aggregation; Blizzard item quality is legacy
+fallback only. Client language selection is an immediate serialized partial settings write and no
+longer depends on the general Save action. The fields remain in `keystone_loot_json`; no migration
+or Web change is required.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

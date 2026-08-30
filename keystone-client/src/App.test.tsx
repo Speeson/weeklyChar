@@ -5,7 +5,7 @@ import App from "./App";
 import { login, logout } from "./core/auth";
 import { coreRequest } from "./core/client";
 import { listenCoreEvents } from "./core/events";
-import { getSettings } from "./core/settings";
+import { getSettings, updateSettings } from "./core/settings";
 import { setProfileAvatar } from "./core/profile";
 import {
   exitApplication,
@@ -152,6 +152,7 @@ const listenCoreEventsMock = vi.mocked(listenCoreEvents);
 const loginMock = vi.mocked(login);
 const logoutMock = vi.mocked(logout);
 const getSettingsMock = vi.mocked(getSettings);
+const updateSettingsMock = vi.mocked(updateSettings);
 const exitApplicationMock = vi.mocked(exitApplication);
 const listenWindowCloseRequestedMock = vi.mocked(listenWindowCloseRequested);
 const minimizeToTrayMock = vi.mocked(minimizeToTray);
@@ -208,6 +209,7 @@ describe("App", () => {
     loginMock.mockReset();
     logoutMock.mockReset();
     getSettingsMock.mockReset();
+    updateSettingsMock.mockReset();
     exitApplicationMock.mockClear();
     listenWindowCloseRequestedMock.mockReset();
     listenWindowCloseRequestedMock.mockResolvedValue(() => undefined);
@@ -541,6 +543,7 @@ describe("App", () => {
     const user = userEvent.setup();
     mockStartup(authenticatedState);
     getSettingsMock.mockResolvedValueOnce(authenticatedState.settings);
+    updateSettingsMock.mockResolvedValueOnce({ ...authenticatedState.settings, lang: "en" });
 
     render(<App />);
     await screen.findByText("player");

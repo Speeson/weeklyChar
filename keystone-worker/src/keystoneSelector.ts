@@ -28,6 +28,8 @@ export type KeystoneLootSelectorObjectiveDTO = {
   secondaryStatNames: string[]
   otherStatNames: string[]
   qualityType: string | null
+  itemLevel: number | null
+  variantKey: string
   voidcoreState: KeystoneLootVoidcoreState
 }
 
@@ -118,7 +120,7 @@ function sourceKey(sourceId: number | string): string {
 }
 
 function canonicalIdentity(objective: KeystoneLootObjectiveDTO): string {
-  return `${objective.sourceType}\u0000${sourceKey(objective.sourceId)}\u0000${objective.itemId}`
+  return `${objective.sourceType}\u0000${sourceKey(objective.sourceId)}\u0000${objective.itemId}\u0000${objective.variantKey}`
 }
 
 function strongerObjective(
@@ -153,6 +155,8 @@ function selectorObjective(
     secondaryStatNames: selected.secondaryStatNames,
     otherStatNames: selected.otherStatNames,
     qualityType: selected.qualityType,
+    itemLevel: selected.itemLevel,
+    variantKey: selected.variantKey,
     voidcoreState: selected.voidcoreState,
   }
 }
@@ -190,7 +194,8 @@ function buildCharacter(
     .map(entry => selectorObjective(entry.objective, entry.specIds))
     .sort((left, right) => left.itemId - right.itemId
       || left.sourceType.localeCompare(right.sourceType)
-      || sourceKey(left.sourceId).localeCompare(sourceKey(right.sourceId)))
+      || sourceKey(left.sourceId).localeCompare(sourceKey(right.sourceId))
+      || left.variantKey.localeCompare(right.variantKey))
   const actionable = objectives.filter(objective => objective.voidcoreState !== 'completed_with_voidcore')
   if (actionable.length === 0) return null
 

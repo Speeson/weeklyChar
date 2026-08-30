@@ -93,11 +93,14 @@ test('owner objectives require JWT ownership and ignore the sharing toggle', asy
     secondaryStatNames: ownBody.objectives[0].secondaryStatNames,
     otherStatNames: ownBody.objectives[0].otherStatNames,
     qualityType: ownBody.objectives[0].qualityType,
+    itemLevel: ownBody.objectives[0].itemLevel,
+    variantKey: ownBody.objectives[0].variantKey,
   }, {
     slotName: 'Chest', itemClassName: 'Armor', itemSubClassName: 'Cloth',
     statNames: ['Haste', 'Intellect'],
     primaryStatNames: ['Intellect'], secondaryStatNames: ['Haste'], otherStatNames: [],
     qualityType: 'EPIC',
+    itemLevel: null, variantKey: 'bonus:1',
   })
 
   const syncToken = await app.request('/api/me/characters/10/keystone-loot/objectives', {
@@ -191,6 +194,7 @@ test('authorized teammate receives only the allowlisted objective DTO', async ()
     statNames: ['Haste', 'Intellect'],
     primaryStatNames: ['Intellect'], secondaryStatNames: ['Haste'], otherStatNames: [],
     qualityType: 'EPIC',
+    itemLevel: null, variantKey: 'bonus:1',
     voidcoreState: 'pending',
   })
   const serialized = JSON.stringify(body)

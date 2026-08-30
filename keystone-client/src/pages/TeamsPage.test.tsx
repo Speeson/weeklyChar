@@ -13,6 +13,7 @@ const objective = (itemId: number, tier: number, overrides: Partial<KeystoneSele
   slotId: 16, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Báculo",
   statNames: ["Intelecto", "Celeridad"], primaryStatNames: ["Intelecto"],
   secondaryStatNames: ["Celeridad"], otherStatNames: [], qualityType: "EPIC",
+  itemLevel: 402, variantKey: `test:${itemId}`,
   voidcoreState: "pending", ...overrides,
 });
 

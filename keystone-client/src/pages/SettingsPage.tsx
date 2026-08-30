@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { Button } from "../components/ui";
@@ -59,6 +59,17 @@ export function SettingsPage({
   const [error, setError] = useState<string | null>(null);
   const [autostartEnabled, setAutostartState] = useState(false);
   const [loadedAutostart, setLoadedAutostart] = useState(false);
+  const mountedRef = useRef(true);
+  const settingsGenerationRef = useRef(0);
+  const persistedSettingsRef = useRef(initialSettings);
+  const languageWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (preview) {
@@ -66,15 +77,19 @@ export function SettingsPage({
     }
 
     let cancelled = false;
+    const loadGeneration = settingsGenerationRef.current;
     setLoading(true);
     setError(null);
     Promise.all([getSettings(), getAutostartEnabled()])
       .then(([loaded, nativeAutostart]) => {
         if (!cancelled) {
-          setSettings(loaded);
           setAutostartState(nativeAutostart);
           setLoadedAutostart(nativeAutostart);
-          onSettingsChanged(loaded);
+          if (settingsGenerationRef.current === loadGeneration) {
+            persistedSettingsRef.current = loaded;
+            setSettings(loaded);
+            onSettingsChanged(loaded);
+          }
         }
       })
       .catch((caught) => {
@@ -101,11 +116,13 @@ export function SettingsPage({
     setMessage(null);
     setError(null);
     try {
+      await languageWriteQueueRef.current;
       const nativeAutostart = await setAutostartEnabled(autostartEnabled);
       if (nativeAutostart !== autostartEnabled) {
         throw new Error(t("settings.autostartMismatch"));
       }
       const saved = await updateSettings(settings);
+      persistedSettingsRef.current = saved;
       setSettings(saved);
       onSettingsChanged(saved);
       setLoadedAutostart(nativeAutostart);
@@ -122,6 +139,32 @@ export function SettingsPage({
     } finally {
       setSaving(false);
     }
+  }
+
+  function persistLanguage(lang: ClientSettings["lang"]) {
+    if (settings.lang === lang) return;
+    const generation = settingsGenerationRef.current + 1;
+    settingsGenerationRef.current = generation;
+    setMessage(null);
+    setError(null);
+    setSettings((current) => ({ ...current, lang }));
+    onSettingsChanged({ ...persistedSettingsRef.current, lang });
+
+    languageWriteQueueRef.current = languageWriteQueueRef.current.then(async () => {
+      try {
+        const saved = await updateSettings({ lang });
+        persistedSettingsRef.current = saved;
+        if (!mountedRef.current || settingsGenerationRef.current !== generation) return;
+        setSettings((current) => ({ ...current, lang: saved.lang }));
+        onSettingsChanged(saved);
+      } catch (caught) {
+        if (!mountedRef.current || settingsGenerationRef.current !== generation) return;
+        const persisted = persistedSettingsRef.current;
+        setSettings((current) => ({ ...current, lang: persisted.lang }));
+        onSettingsChanged(persisted);
+        setError(formatSettingsError(caught, t("settings.error")));
+      }
+    });
   }
 
   const checkingUpdate = updater.status === "checking";
@@ -169,22 +212,14 @@ export function SettingsPage({
           <div className="settings-segmented">
             <button
               aria-pressed={settings.lang === "es"}
-              onClick={() => setSettings((current) => {
-                const next = { ...current, lang: "es" as const };
-                onSettingsChanged(next);
-                return next;
-              })}
+              onClick={() => persistLanguage("es")}
               type="button"
             >
               {t("settings.spanish")}
             </button>
             <button
               aria-pressed={settings.lang === "en"}
-              onClick={() => setSettings((current) => {
-                const next = { ...current, lang: "en" as const };
-                onSettingsChanged(next);
-                return next;
-              })}
+              onClick={() => persistLanguage("en")}
               type="button"
             >
               {t("settings.english")}

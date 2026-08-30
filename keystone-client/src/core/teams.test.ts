@@ -22,6 +22,8 @@ const objective: KeystoneSelectorObjective = {
   itemClassName: "Arma", itemSubClassName: "Báculo", statNames: ["Intelecto", "Celeridad"],
   primaryStatNames: ["Intelecto"], secondaryStatNames: ["Celeridad"], otherStatNames: [],
   qualityType: "EPIC",
+  itemLevel: 402,
+  variantKey: "bonus:1498,6652",
   voidcoreState: "pending",
 };
 const selector = {
@@ -108,13 +110,32 @@ describe("Teams core bridge", () => {
       statNames: ["Intelecto", "Celeridad"], voidcoreState: "pending",
       primaryStatNames: ["Intelecto"], secondaryStatNames: ["Celeridad"], otherStatNames: [],
       qualityType: "EPIC",
+      itemLevel: 402, variantKey: "bonus:1498,6652",
     });
     expect(JSON.stringify(parsed)).not.toMatch(/bonusIds|gems|enchant|keystoneLoot/);
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, voidcoreState: "unknown" }] }] }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, challengeMapId: 587 }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, statNames: [42] }] }] }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, qualityType: "MYTHIC" }] }] }, 7, 588)).toBeNull();
+    expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, itemLevel: 0 }] }] }, 7, 588)).toBeNull();
+    expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, itemLevel: 402.5 }] }] }, 7, 588)).toBeNull();
+    expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, variantKey: "" }] }] }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, primaryStatNames: ["Celeridad"] }] }] }, 7, 588)).toBeNull();
+  });
+
+  it("keeps two exact variants of the same item as distinct selector objects", () => {
+    const twoVariants = {
+      ...selector,
+      summary: { ...selector.summary, totalObjectives: 2 },
+      characters: [{
+        ...selector.characters[0], totalObjectives: 2,
+        objectives: [objective, { ...objective, itemLevel: 389, qualityType: "RARE", variantKey: "bonus:1498,6651" }],
+      }],
+    };
+    const parsed = parseKeystoneSelector(twoVariants, 7, 588);
+    expect(parsed?.characters[0].objectives.map(item => [item.variantKey, item.itemLevel])).toEqual([
+      ["bonus:1498,6652", 402], ["bonus:1498,6651", 389],
+    ]);
   });
 
   it("rejects malformed bridge results with structured CoreErrors", async () => {

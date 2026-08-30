@@ -84,6 +84,7 @@ export function TeamItemTooltip({ objective }: { objective: KeystoneSelectorObje
         style={{ left: position.left, top: position.top, "--teams-tooltip-scale": position.scale } as CSSProperties}
       >
         <strong className={`teams-tooltip__name teams-tooltip__name--quality-${quality.toLowerCase()}`}>{name}</strong>
+        {objective.itemLevel !== null ? <p className="teams-tooltip__item-level">{t("teams.itemLevel", { level: objective.itemLevel })}</p> : null}
         {[objective.slotName, objective.itemClassName, objective.itemSubClassName].filter(Boolean).length > 0
           ? <p>{[objective.slotName, objective.itemClassName, objective.itemSubClassName].filter(Boolean).join(" · ")}</p> : null}
         {objective.statNames.length > 0 ? <ul className="teams-tooltip__stats">

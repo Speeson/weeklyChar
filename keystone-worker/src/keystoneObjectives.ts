@@ -1,4 +1,4 @@
-import { parseSupportedKeystoneLoot, validateKeystoneLoot } from './keystoneLoot'
+import { keystoneLootVariantKey, parseSupportedKeystoneLoot, validateKeystoneLoot } from './keystoneLoot'
 import type { KeystoneLootFavorite, SupportedKeystoneLootSnapshot } from './keystoneLoot'
 import { keystoneLootTierWeight } from './keystoneRecommendations'
 
@@ -32,6 +32,8 @@ export type KeystoneLootObjectiveDTO = {
   secondaryStatNames: string[]
   otherStatNames: string[]
   qualityType: string | null
+  itemLevel: number | null
+  variantKey: string
   voidcoreState: KeystoneLootVoidcoreState
 }
 
@@ -95,7 +97,11 @@ function effectiveSourceType(favorite: KeystoneLootFavorite): string {
 }
 
 function displayIdentity(favorite: KeystoneLootFavorite): string {
-  return `${favorite.specId}\u0000${effectiveSourceType(favorite)}\u0000${sourceKey(favorite.sourceId)}\u0000${favorite.itemId}`
+  return `${favorite.specId}\u0000${effectiveSourceType(favorite)}\u0000${sourceKey(favorite.sourceId)}\u0000${favorite.itemId}\u0000${effectiveVariantKey(favorite)}`
+}
+
+function effectiveVariantKey(favorite: KeystoneLootFavorite): string {
+  return favorite.variantKey ?? keystoneLootVariantKey(favorite.bonusIds)
 }
 
 function compareFavoriteRepresentation(left: KeystoneLootFavorite, right: KeystoneLootFavorite): number {
@@ -115,6 +121,7 @@ function compareFavorites(left: KeystoneLootFavorite, right: KeystoneLootFavorit
     || effectiveSourceType(left).localeCompare(effectiveSourceType(right))
     || compareSourceId(left.sourceId, right.sourceId)
     || (left.itemId - right.itemId)
+    || effectiveVariantKey(left).localeCompare(effectiveVariantKey(right))
     || (left.tier - right.tier)
 }
 
@@ -210,7 +217,9 @@ export function buildKeystoneLootObjectivePage(
     primaryStatNames: [],
     secondaryStatNames: [],
     otherStatNames: [],
-    qualityType: null,
+    qualityType: favorite.qualityType ?? null,
+    itemLevel: favorite.itemLevel ?? null,
+    variantKey: effectiveVariantKey(favorite),
     voidcoreState: !usedItems
       ? 'voidcore_not_checked'
       : usedItems.has(favorite.itemId) ? 'completed_with_voidcore' : 'pending',

@@ -5,6 +5,7 @@ import { getSettings, updateSettings } from "../core/settings";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SettingsPage } from "./SettingsPage";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
+import type { ClientSettings } from "../core/types";
 
 vi.mock("../core/settings", () => ({
   getSettings: vi.fn(),
@@ -76,6 +77,10 @@ describe("SettingsPage", () => {
     const onSettingsChanged = vi.fn();
     getSettingsMock.mockResolvedValueOnce(initialSettings);
     updateSettingsMock.mockResolvedValueOnce({
+      startMinimized: false,
+      minimizeOnClose: false,
+      lang: "en",
+    }).mockResolvedValueOnce({
       startMinimized: true,
       minimizeOnClose: false,
       lang: "en",
@@ -87,7 +92,8 @@ describe("SettingsPage", () => {
     await user.click(screen.getByRole("button", { name: "English" }));
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
-    expect(updateSettingsMock).toHaveBeenCalledWith({
+    expect(updateSettingsMock).toHaveBeenNthCalledWith(1, { lang: "en" });
+    expect(updateSettingsMock).toHaveBeenNthCalledWith(2, {
       startMinimized: true,
       minimizeOnClose: false,
       lang: "en",
@@ -99,6 +105,89 @@ describe("SettingsPage", () => {
       minimizeOnClose: false,
       lang: "en",
     });
+  });
+
+  it("persists language immediately without saving unrelated drafts", async () => {
+    const user = userEvent.setup();
+    const onSettingsChanged = vi.fn();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, lang: "en" });
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
+    await user.click(await screen.findByLabelText("Arrancar minimizado"));
+    await user.click(screen.getByRole("button", { name: "English" }));
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ lang: "en" });
+    expect(await screen.findByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Arrancar minimizado")).toBeChecked();
+    expect(onSettingsChanged).toHaveBeenLastCalledWith({ ...initialSettings, lang: "en" });
+  });
+
+  it("reverts language and reports a controlled persistence failure", async () => {
+    const user = userEvent.setup();
+    const onSettingsChanged = vi.fn();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockRejectedValueOnce(new Error("disk failed"));
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
+    await user.click(await screen.findByRole("button", { name: "English" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("disk failed");
+    expect(screen.getByRole("button", { name: "Español" })).toHaveAttribute("aria-pressed", "true");
+    expect(onSettingsChanged).toHaveBeenLastCalledWith(initialSettings);
+  });
+
+  it("serializes rapid language writes so the final selection wins", async () => {
+    const user = userEvent.setup();
+    const onSettingsChanged = vi.fn();
+    let resolveEnglish!: (value: ClientSettings) => void;
+    const english = new Promise<ClientSettings>(resolve => { resolveEnglish = resolve; });
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock
+      .mockReturnValueOnce(english)
+      .mockResolvedValueOnce(initialSettings);
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
+    await screen.findByRole("button", { name: "English" });
+    await user.click(screen.getByRole("button", { name: "English" }));
+    await user.click(screen.getByRole("button", { name: "Español" }));
+    expect(updateSettingsMock).toHaveBeenCalledTimes(1);
+
+    resolveEnglish({ ...initialSettings, lang: "en" });
+    expect(await screen.findByRole("button", { name: "Español" })).toHaveAttribute("aria-pressed", "true");
+    await vi.waitFor(() => expect(updateSettingsMock).toHaveBeenNthCalledWith(2, { lang: "es" }));
+    expect(onSettingsChanged).toHaveBeenLastCalledWith(initialSettings);
+  });
+
+  it("ignores a stale initial settings response but still loads native autostart", async () => {
+    const user = userEvent.setup();
+    let resolveInitial!: (value: ClientSettings) => void;
+    getSettingsMock.mockReturnValueOnce(new Promise(resolve => { resolveInitial = resolve; }));
+    getAutostartEnabledMock.mockResolvedValueOnce(true);
+    updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, lang: "en" });
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "English" }));
+    resolveInitial({ ...initialSettings, startMinimized: true, lang: "es" });
+
+    expect(await screen.findByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Arrancar con Windows")).toBeChecked();
+    expect(screen.getByLabelText("Arrancar minimizado")).not.toBeChecked();
+  });
+
+  it("keeps the persisted language after Settings is reopened", async () => {
+    const user = userEvent.setup();
+    const onSettingsChanged = vi.fn();
+    getSettingsMock.mockResolvedValueOnce(initialSettings).mockResolvedValueOnce({ ...initialSettings, lang: "en" });
+    updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, lang: "en" });
+    const first = render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
+    await user.click(await screen.findByRole("button", { name: "English" }));
+    await vi.waitFor(() => expect(onSettingsChanged).toHaveBeenLastCalledWith({ ...initialSettings, lang: "en" }));
+    first.unmount();
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={{ ...initialSettings, lang: "en" }} onSettingsChanged={onSettingsChanged} />);
+    expect(await screen.findByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+    expect(onSettingsChanged).toHaveBeenLastCalledWith({ ...initialSettings, lang: "en" });
   });
 
   it("updates real autostart and rolls the control back on failure", async () => {

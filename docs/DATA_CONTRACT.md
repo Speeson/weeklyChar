@@ -267,6 +267,13 @@ non-negative integer timestamp, favorites, and Voidcore. Favorites require posit
 integer item/spec IDs, positive integer tiers without a maximum, and numeric or bounded
 string source identity. Known optional item fields are type-checked.
 
+Exact Favorite variants add optional positive-safe-integer `itemLevel`, allowlisted
+`qualityType`, and a deterministic `variantKey`. The key is `base` when `bonusIds` are absent or
+empty and otherwise encodes the sorted numeric bonus IDs; a supplied key must match those IDs.
+Legacy Favorites remain valid. Objective and Selector identity includes this key, so equal
+item/source/spec Favorites with different saved bonus variants remain separate before asynchronous
+item metadata is available.
+
 Limits:
 
 - serialized UTF-8 block: 256 KiB;
@@ -497,6 +504,10 @@ Stone Selector aggregate endpoint:
 - S2 enriches the S1-reserved `slotName`, `itemClassName`, `itemSubClassName`, and `statNames`
   fields through the same Worker cache and safe projection used by owner and Team objective
   endpoints. Metadata failure never removes an objective.
+- Exact addon `qualityType` takes precedence over the locale-scoped Blizzard base quality; cached
+  Blizzard quality is only the fallback for legacy/unresolved Favorites. Exact `itemLevel` and
+  `variantKey` pass through the same allowlisted DTO. Variant quality is never written into the
+  generic `(region, locale, item_id)` metadata cache.
 - Migration `0006_keystone_loot_item_quality_and_stat_groups.sql` additively caches Blizzard's
   stable item-quality type and three name-only stat groups. Classification uses Blizzard stat
   type identifiers, never localized display names, and unknown stat types remain safe `other`
@@ -548,6 +559,10 @@ positive tiers are tolerated, while malformed required fields, unsafe URLs, and 
 states are rejected. Access and sync tokens, invite codes, WoW account names, vault state, raw
 KeystoneLoot, `bonusIds`, gems, enchants, and raw error payloads remain below or outside the React
 boundary.
+
+The safe Client objective projection includes `variantKey` and nullable `itemLevel`. React uses the
+key only for stable identity and shows the item level only when present; it does not receive the raw
+`bonusIds` array.
 
 Stone Selector S5 consumes these safe Client DTOs without widening them. `TeamsPage` receives a
 `TeamsDataSource` whose production implementation calls only `teams.list`, `teams.get`, and

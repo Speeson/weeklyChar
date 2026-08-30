@@ -209,6 +209,8 @@ export type KeystoneSelectorObjective = {
   secondaryStatNames: string[];
   otherStatNames: string[];
   qualityType: ItemQualityType | null;
+  itemLevel: number | null;
+  variantKey: string;
   voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
 };
 

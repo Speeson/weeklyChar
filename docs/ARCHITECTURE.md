@@ -50,6 +50,8 @@ Owns:
 - WoW API reads, WoW event handling, local weekly-state capture, and weekly reset preservation rules.
 - Optional current-character KeystoneLoot public API v2 capture through isolated
   `KeystoneLootIntegration.lua`.
+- Exact Favorite variant resolution from stored `bonusIds` through guarded WoW item-loading
+  callbacks; unresolved item level/quality remains nullable.
 
 Does not own:
 
@@ -340,6 +342,11 @@ Migration `0004_keystone_loot_item_metadata.sql` adds a D1 cache keyed by
 `(region, locale, item_id)`. Positive results last 30 days, confirmed 404 results last six
 hours, stale positive data survives upstream failures, and unavailable metadata degrades
 to null display fields.
+
+Exact Favorite metadata remains inside `characters.keystone_loot_json`. A deterministic variant
+key participates in both objective and Selector aggregation, exact in-game quality overrides the
+generic Blizzard base-quality fallback, and exact item level reaches only the allowlisted Client
+DTO. This requires no D1 schema change and does not alter Web contracts.
 
 Stone Selector S2 extends that same cache through additive migration
 `0005_keystone_loot_item_tooltip_metadata.sql`. The Worker reads localized equipment slot,

@@ -45,7 +45,7 @@ test('snapshot presentation statuses are explicit and malformed data is unavaila
 test('display DTOs dedupe deterministically with V1 weights and derive Voidcore states', () => {
   const snapshot = supported([
     favorite(10, 1, { bonusIds: [1], future: 'secret' }),
-    favorite(10, 3, { slotId: 15 }),
+    favorite(10, 3, { slotId: 15, bonusIds: [1] }),
     favorite(11, 2),
     favorite(12, 5, { specId: 103 }),
     favorite(10, 2, { sourceId: 250 }),
@@ -59,6 +59,7 @@ test('display DTOs dedupe deterministically with V1 weights and derive Voidcore 
       sourceType: 'dungeon', sourceId: 249, slotId: 15,
       slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
       primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null,
+      itemLevel: null, variantKey: 'bonus:1',
       voidcoreState: 'pending',
     },
     {
@@ -66,6 +67,7 @@ test('display DTOs dedupe deterministically with V1 weights and derive Voidcore 
       sourceType: 'dungeon', sourceId: 249, slotId: 13,
       slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
       primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null,
+      itemLevel: null, variantKey: 'base',
       voidcoreState: 'completed_with_voidcore',
     },
     {
@@ -73,6 +75,7 @@ test('display DTOs dedupe deterministically with V1 weights and derive Voidcore 
       sourceType: 'dungeon', sourceId: 250, slotId: 13,
       slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
       primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null,
+      itemLevel: null, variantKey: 'base',
       voidcoreState: 'pending',
     },
     {
@@ -80,6 +83,7 @@ test('display DTOs dedupe deterministically with V1 weights and derive Voidcore 
       sourceType: 'dungeon', sourceId: 249, slotId: 13,
       slotName: null, itemClassName: null, itemSubClassName: null, statNames: [],
       primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null,
+      itemLevel: null, variantKey: 'base',
       voidcoreState: 'pending',
     },
   ])
@@ -119,4 +123,22 @@ test('pagination is stable and a 2,000-favorite snapshot exposes only the reques
   assert.deepEqual(first.objectives.slice(0, 3).map(item => item.itemId), [1, 2, 3])
   const second = buildKeystoneLootObjectivePage(snapshot, { limit: 50, cursor: first.nextCursor })
   assert.deepEqual(second.objectives.slice(0, 3).map(item => item.itemId), [51, 52, 53])
+})
+
+test('exact variants stay separate and carry exact metadata into objectives', () => {
+  const page = buildKeystoneLootObjectivePage(supported([
+    favorite(10, 3, { bonusIds: [6652, 1498], variantKey: 'bonus:1498,6652', itemLevel: 389, qualityType: 'RARE' }),
+    favorite(10, 3, { bonusIds: [6652, 1501], variantKey: 'bonus:1501,6652', itemLevel: 402, qualityType: 'EPIC' }),
+    favorite(10, 2, { bonusIds: [1498, 6652], variantKey: 'bonus:1498,6652', itemLevel: 389, qualityType: 'RARE' }),
+  ]), { limit: 50 })
+
+  assert.equal(page.objectives.length, 2)
+  assert.deepEqual(page.objectives.map(objective => ({
+    variantKey: objective.variantKey,
+    itemLevel: objective.itemLevel,
+    qualityType: objective.qualityType,
+  })), [
+    { variantKey: 'bonus:1498,6652', itemLevel: 389, qualityType: 'RARE' },
+    { variantKey: 'bonus:1501,6652', itemLevel: 402, qualityType: 'EPIC' },
+  ])
 })

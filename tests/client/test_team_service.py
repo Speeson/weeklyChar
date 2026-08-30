@@ -71,18 +71,24 @@ class TeamServiceTests(unittest.TestCase):
             "statNames": ["Intelecto", "Celeridad", "Evitación"],
             "primaryStatNames": ["Intelecto"], "secondaryStatNames": ["Celeridad"],
             "otherStatNames": ["Evitación"], "qualityType": "EPIC",
+            "itemLevel": 402, "variantKey": "bonus:1498,6652",
             "voidcoreState": "pending", "numericStats": {"Intelecto": 9999},
         }
 
         projected = _objective(objective)
 
         self.assertEqual(projected["qualityType"], "EPIC")
+        self.assertEqual(projected["itemLevel"], 402)
+        self.assertEqual(projected["variantKey"], "bonus:1498,6652")
         self.assertEqual(projected["primaryStatNames"], ["Intelecto"])
         self.assertEqual(projected["secondaryStatNames"], ["Celeridad"])
         self.assertEqual(projected["otherStatNames"], ["Evitación"])
         self.assertNotIn("numericStats", projected)
         for malformed in (
             {**objective, "qualityType": "MYTHIC"},
+            {**objective, "itemLevel": 0},
+            {**objective, "itemLevel": 402.5},
+            {**objective, "variantKey": ""},
             {**objective, "primaryStatNames": [42]},
             {**objective, "secondaryStatNames": ["Intelecto"]},
             {**objective, "otherStatNames": [], "statNames": ["Intelecto", "Celeridad", "Evitación"]},

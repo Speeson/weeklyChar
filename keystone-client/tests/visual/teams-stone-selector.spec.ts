@@ -194,12 +194,32 @@ test("reviews lifecycle stability, themed empty prompt, cached navigation and ra
     await firstCard.getByRole("button", { name: /Ver objetos/u }).click();
     await capture(page, `20-${theme}-expanded-character.png`);
 
-    await firstCard.getByRole("button", { name: "Echo de Medianoche 231002" }).focus();
+    await firstCard.getByRole("button", { name: "Echo de Medianoche 231002" }).first().focus();
     await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "EPIC");
+    await expect(page.getByRole("tooltip")).toContainText("Nivel de objeto 402");
     await capture(page, `21-${theme}-tooltip-epic.png`);
     await page.keyboard.press("Escape");
-    await firstCard.getByRole("button", { name: "Echo de Medianoche 231004" }).focus();
+    await firstCard.getByRole("button", { name: "Echo de Medianoche 231002" }).nth(1).focus();
     await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "RARE");
+    await expect(page.getByRole("tooltip")).toContainText("Nivel de objeto 389");
     await capture(page, `22-${theme}-tooltip-rare.png`);
+
+    await openTeams(page, "teams-selector-full", "en", theme);
+    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    const englishCard = page.getByTestId("selector-character").first();
+    await englishCard.getByRole("button", { name: /Show items/u }).click();
+    await englishCard.getByRole("button", { name: "Midnight Echo 231002" }).first().focus();
+    await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "EPIC");
+    await expect(page.getByRole("tooltip")).toContainText("Item Level 402");
+    await expect(page.getByRole("tooltip")).toContainText("Main Hand · Weapon · Staff");
+    await expect(page.getByRole("tooltip")).toContainText("Intellect");
+    await expect(page.getByRole("tooltip")).toContainText("Haste");
+    await capture(page, `23-${theme}-tooltip-epic-en.png`);
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+    await capture(page, `24-${theme}-settings-english-reopened.png`);
   }
 });

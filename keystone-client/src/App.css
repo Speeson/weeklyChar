@@ -2800,6 +2800,7 @@ select {
 .teams-tooltip__name--quality-legendary { color: #ff8000; }
 .teams-tooltip__name--quality-artifact { color: #e6cc80; }
 .teams-tooltip__name--quality-heirloom { color: #00ccff; }
+.teams-tooltip .teams-tooltip__item-level { color: #ffd100; font-weight: 700; }
 .teams-tooltip p { margin: 0; color: #f3f3ef; font-size: 12px; }
 .teams-tooltip__stats { display: grid; gap: 3px; margin: 0; padding: 8px 0 0; border-top: 1px solid rgb(255 255 255 / 8%); list-style: none; font-size: 12px; }
 .teams-tooltip__stats li::before { content: "+ "; }

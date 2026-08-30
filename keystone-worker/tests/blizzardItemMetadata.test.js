@@ -561,3 +561,19 @@ test('malformed optional Blizzard and cached tooltip fields degrade independentl
   assert.deepEqual(remote[0].otherStatNames, ['Valid Stat'])
   assert.equal(remote[0].qualityType, null)
 })
+
+test('exact favorite quality takes precedence over cached Blizzard base quality', async () => {
+  const testEnv = env(false)
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Base rare',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 10,
+    slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: '[]',
+    stat_groups_json: JSON.stringify({ primary: [], secondary: [], other: [] }), quality_type: 'RARE',
+  })
+  const exact = { ...objective(10), qualityType: 'EPIC' }
+
+  const [result] = await enrichKeystoneLootObjectives(testEnv, 'eu', [exact], { now: NOW })
+
+  assert.equal(result.qualityType, 'EPIC')
+})
