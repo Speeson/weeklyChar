@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.5",
+  "version": "0.6.6",
+  "bump": "patch",
+  "tag": "client-v0.6.6",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-teams-production-fix.json"
+  ]
+}
