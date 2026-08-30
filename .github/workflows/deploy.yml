@@ -55,6 +55,11 @@ on:
         required: false
         default: false
         type: boolean
+      recover_worker_readiness:
+        description: Re-run only authenticated Worker smoke before a guarded Client release recovery.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -78,6 +83,7 @@ jobs:
       publish_client: ${{ steps.outputs.outputs.publish_client }}
       deploy_worker: ${{ steps.outputs.outputs.deploy_worker }}
       run_migrations: ${{ steps.outputs.outputs.run_migrations }}
+      smoke_worker: ${{ steps.outputs.outputs.smoke_worker }}
       worker_readiness_required: ${{ steps.outputs.outputs.worker_readiness_required }}
       unknown_paths: ${{ steps.outputs.outputs.unknown_paths }}
       changed_files: ${{ steps.outputs.outputs.changed_files }}
@@ -148,6 +154,7 @@ jobs:
           DEPLOY_WORKER_REQUESTED: ${{ inputs.deploy_worker || false }}
           RUN_MIGRATIONS_REQUESTED: ${{ inputs.run_migrations || false }}
           CONFIRM_MANUAL_RELEASE_SCOPE: ${{ inputs.confirm_release_scope || false }}
+          RECOVER_WORKER_READINESS: ${{ inputs.recover_worker_readiness || false }}
         run: |
           python scripts/release_orchestration.py plan \
             --impact-file impact.json \
@@ -159,6 +166,7 @@ jobs:
             --deploy-worker-requested "$DEPLOY_WORKER_REQUESTED" \
             --run-migrations-requested "$RUN_MIGRATIONS_REQUESTED" \
             --confirm-manual-release-scope "$CONFIRM_MANUAL_RELEASE_SCOPE" \
+            --recover-worker-readiness-requested "$RECOVER_WORKER_READINESS" \
             > orchestration.json
           cat orchestration.json
 
@@ -181,7 +189,7 @@ jobs:
           with open(output_path, "a", encoding="utf-8") as out:
               for key in ("web", "worker", "db", "client_build", "client_release", "addon", "addon_release"):
                   out.write(f"{key}={str(impact[key]).lower()}\n")
-              for key in ("publish_client", "deploy_worker", "run_migrations", "worker_readiness_required"):
+              for key in ("publish_client", "deploy_worker", "run_migrations", "smoke_worker", "worker_readiness_required"):
                   out.write(f"{key}={str(orchestration[key]).lower()}\n")
               out.write(f"unknown_paths={json.dumps(impact['unknown_paths'])}\n")
               out.write(f"changed_files={json.dumps(changed_files)}\n")
@@ -213,11 +221,12 @@ jobs:
   worker:
     name: Worker validation/deploy
     needs: impact
-    if: needs.impact.outputs.worker == 'true' || needs.impact.outputs.deploy_worker == 'true' || needs.impact.outputs.run_migrations == 'true'
+    if: needs.impact.outputs.worker == 'true' || needs.impact.outputs.deploy_worker == 'true' || needs.impact.outputs.run_migrations == 'true' || needs.impact.outputs.smoke_worker == 'true'
     uses: ./.github/workflows/deploy-worker.yml
     with:
       deploy: ${{ needs.impact.outputs.deploy_worker == 'true' }}
       run_migrations: ${{ needs.impact.outputs.run_migrations == 'true' }}
+      run_smoke: ${{ needs.impact.outputs.smoke_worker == 'true' }}
     secrets: inherit
 
   client-build:

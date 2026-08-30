@@ -13,6 +13,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_smoke:
+        description: Verify production readiness after deploy or during guarded recovery.
+        required: false
+        default: false
+        type: boolean
       smoke_base_url:
         description: Production Worker base URL used after deployment.
         required: false
@@ -26,6 +31,8 @@ on:
       CLOUDFLARE_API_TOKEN:
         required: false
       CLOUDFLARE_ACCOUNT_ID:
+        required: false
+      WORKER_SMOKE_BYPASS_TOKEN:
         required: false
   workflow_dispatch:
 
@@ -127,13 +134,17 @@ jobs:
 
   smoke:
     name: Smoke production Worker
-    needs: deploy
-    if: inputs.deploy && always() && needs.deploy.result == 'success'
+    needs:
+      - validate
+      - deploy
+    if: inputs.run_smoke && always() && needs.validate.result == 'success' && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped')
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       production_ready: ${{ steps.ready.outputs.production_ready }}
     env:
       WORKER_BASE_URL: ${{ inputs.smoke_base_url }}
+      WORKER_SMOKE_BYPASS_TOKEN: ${{ secrets.WORKER_SMOKE_BYPASS_TOKEN }}
     steps:
       - name: Verify health and Selector authentication boundary
         id: ready
@@ -145,8 +156,12 @@ jobs:
             echo "Worker smoke URL must use HTTPS." >&2
             exit 1
           fi
+          if [[ -z "$WORKER_SMOKE_BYPASS_TOKEN" ]]; then
+            echo "Missing WORKER_SMOKE_BYPASS_TOKEN secret." >&2
+            exit 1
+          fi
 
-          health_status="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 --output health.json --write-out '%{http_code}' "$base_url/api/health")"
+          health_status="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 --header "X-KeystoneSync-Smoke-Token: $WORKER_SMOKE_BYPASS_TOKEN" --output health.json --write-out '%{http_code}' "$base_url/api/health")"
           if [[ "$health_status" != "200" ]]; then
             cat health.json >&2
             echo "Unexpected Worker health status: $health_status" >&2
@@ -154,7 +169,7 @@ jobs:
           fi
           python -c "import json; payload=json.load(open('health.json', encoding='utf-8')); assert payload.get('status') == 'ok' and payload.get('service') == 'keystone-worker', payload"
 
-          selector_status="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 --output selector.json --write-out '%{http_code}' "$base_url/api/teams/1/keystone-loot/dungeons/249/summary")"
+          selector_status="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 --header "X-KeystoneSync-Smoke-Token: $WORKER_SMOKE_BYPASS_TOKEN" --output selector.json --write-out '%{http_code}' "$base_url/api/teams/1/keystone-loot/dungeons/249/summary")"
           if [[ "$selector_status" != "401" ]]; then
             cat selector.json >&2
             echo "Selector route was not recognized behind its authentication boundary: $selector_status" >&2

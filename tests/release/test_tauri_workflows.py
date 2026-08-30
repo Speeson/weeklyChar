@@ -206,6 +206,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
         client_release = workflow_job(workflow, "client-release")
 
         self.assertIn("needs.impact.outputs.deploy_worker", worker)
+        self.assertIn("needs.impact.outputs.smoke_worker", worker)
         self.assertIn("needs:\n      - impact\n      - worker", release_gate)
         self.assertIn("release_orchestration.py require-readiness", release_gate)
         self.assertIn("needs.worker.outputs.production_ready", release_gate)
@@ -221,7 +222,7 @@ class TauriWorkflowContractTests(unittest.TestCase):
         smoke = workflow_job(workflow, "smoke")
 
         self.assertIn("- migrate", deploy)
-        self.assertIn("needs: deploy", smoke)
+        self.assertIn("- deploy", smoke)
         self.assertIn("/api/health", smoke)
         self.assertIn(
             "/api/teams/1/keystone-loot/dungeons/249/summary",
@@ -229,6 +230,19 @@ class TauriWorkflowContractTests(unittest.TestCase):
         )
         self.assertIn('"401"', smoke)
         self.assertIn("production_ready=true", smoke)
+        self.assertIn("inputs.run_smoke", smoke)
+        self.assertIn("WORKER_SMOKE_BYPASS_TOKEN", smoke)
+        self.assertIn("X-KeystoneSync-Smoke-Token", smoke)
+
+    def test_guarded_recovery_smokes_without_migration_or_deploy(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("recover_worker_readiness:", workflow)
+        self.assertIn("--recover-worker-readiness-requested", workflow)
+        self.assertIn("smoke_worker", workflow)
+        self.assertIn("run_smoke:", workflow)
 
     def test_direct_client_workflow_cannot_publish_without_orchestrator_gate(self):
         workflow = (REPO_ROOT / ".github" / "workflows" / "release-client.yml").read_text(

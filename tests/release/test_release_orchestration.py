@@ -44,6 +44,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": True,
                 "deploy_worker": False,
                 "run_migrations": False,
+                "smoke_worker": False,
                 "worker_readiness_required": False,
             },
         )
@@ -55,6 +56,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": True,
                 "deploy_worker": True,
                 "run_migrations": False,
+                "smoke_worker": True,
                 "worker_readiness_required": True,
             },
         )
@@ -66,6 +68,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": True,
                 "deploy_worker": True,
                 "run_migrations": True,
+                "smoke_worker": True,
                 "worker_readiness_required": True,
             },
         )
@@ -101,6 +104,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": False,
                 "deploy_worker": False,
                 "run_migrations": False,
+                "smoke_worker": False,
                 "worker_readiness_required": False,
             },
         )
@@ -112,6 +116,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": False,
                 "deploy_worker": False,
                 "run_migrations": False,
+                "smoke_worker": False,
                 "worker_readiness_required": False,
             },
         )
@@ -170,6 +175,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": True,
                 "deploy_worker": True,
                 "run_migrations": True,
+                "smoke_worker": True,
                 "worker_readiness_required": True,
             },
         )
@@ -187,9 +193,64 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": False,
                 "deploy_worker": True,
                 "run_migrations": True,
+                "smoke_worker": True,
                 "worker_readiness_required": False,
             },
         )
+
+    def test_confirmed_recovery_smokes_without_repeating_migration_or_deploy(self):
+        self.assertEqual(
+            self.orchestration.plan_release(
+                event_name="workflow_dispatch",
+                ref="refs/heads/main",
+                impact={"worker": True, "db": True, "client_release": True},
+                auto_release_enabled=False,
+                client_release_mode="release",
+                confirm_manual_release_scope=True,
+                base_ref="origin/main~1",
+                recover_worker_readiness_requested=True,
+            ),
+            {
+                "publish_client": True,
+                "deploy_worker": False,
+                "run_migrations": False,
+                "smoke_worker": True,
+                "worker_readiness_required": True,
+            },
+        )
+
+    def test_recovery_requires_a_backend_dependent_manual_release(self):
+        with self.assertRaisesRegex(
+            self.orchestration.OrchestrationError,
+            "backend-dependent manual Client release",
+        ):
+            self.orchestration.plan_release(
+                event_name="workflow_dispatch",
+                ref="refs/heads/main",
+                impact={"worker": False, "db": False, "client_release": True},
+                auto_release_enabled=False,
+                client_release_mode="release",
+                confirm_manual_release_scope=True,
+                base_ref="origin/main~1",
+                recover_worker_readiness_requested=True,
+            )
+
+    def test_recovery_cannot_request_migration_or_deploy(self):
+        with self.assertRaisesRegex(
+            self.orchestration.OrchestrationError,
+            "cannot request migration or deploy",
+        ):
+            self.orchestration.plan_release(
+                event_name="workflow_dispatch",
+                ref="refs/heads/main",
+                impact={"worker": True, "db": True, "client_release": True},
+                auto_release_enabled=False,
+                client_release_mode="release",
+                confirm_manual_release_scope=True,
+                base_ref="origin/main~1",
+                recover_worker_readiness_requested=True,
+                deploy_worker_requested=True,
+            )
 
     def test_plan_cli_emits_the_outputs_consumed_by_github_actions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -225,6 +286,7 @@ class ReleaseOrchestrationTests(unittest.TestCase):
                 "publish_client": True,
                 "deploy_worker": True,
                 "run_migrations": True,
+                "smoke_worker": True,
                 "worker_readiness_required": True,
             },
         )

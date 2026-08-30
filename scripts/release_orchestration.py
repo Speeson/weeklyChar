@@ -24,6 +24,7 @@ def plan_release(
     deploy_worker_requested: bool = False,
     run_migrations_requested: bool = False,
     confirm_manual_release_scope: bool = False,
+    recover_worker_readiness_requested: bool = False,
 ) -> dict[str, bool]:
     automatic_release = (
         event_name == "push"
@@ -41,10 +42,23 @@ def plan_release(
         )
     if manual_release and not base_ref.strip():
         raise OrchestrationError("Manual Client publication requires an explicit base_ref")
+    if recover_worker_readiness_requested:
+        if not manual_release or not (
+            impact.get("client_release") is True
+            and (impact.get("worker") is True or impact.get("db") is True)
+        ):
+            raise OrchestrationError(
+                "Worker readiness recovery requires a backend-dependent manual Client release"
+            )
+        if deploy_worker_requested or run_migrations_requested:
+            raise OrchestrationError(
+                "Worker readiness recovery cannot request migration or deploy"
+            )
 
     publish_client = automatic_release or manual_release
-    deploy_worker = deploy_worker_requested or (
-        publish_client and (impact.get("worker") is True or impact.get("db") is True)
+    deploy_worker = not recover_worker_readiness_requested and (
+        deploy_worker_requested
+        or (publish_client and (impact.get("worker") is True or impact.get("db") is True))
     )
     run_migrations = run_migrations_requested or (
         deploy_worker and impact.get("db") is True
@@ -54,7 +68,9 @@ def plan_release(
         "publish_client": publish_client,
         "deploy_worker": deploy_worker,
         "run_migrations": run_migrations,
-        "worker_readiness_required": publish_client and deploy_worker,
+        "smoke_worker": deploy_worker or recover_worker_readiness_requested,
+        "worker_readiness_required": publish_client
+        and (deploy_worker or recover_worker_readiness_requested),
     }
 
 
@@ -100,6 +116,7 @@ def _parser() -> argparse.ArgumentParser:
     plan.add_argument("--deploy-worker-requested", default=False, type=_bool)
     plan.add_argument("--run-migrations-requested", default=False, type=_bool)
     plan.add_argument("--confirm-manual-release-scope", default=False, type=_bool)
+    plan.add_argument("--recover-worker-readiness-requested", default=False, type=_bool)
 
     readiness = commands.add_parser("require-readiness")
     readiness.add_argument("--publish-client", required=True, type=_bool)
@@ -125,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
                 deploy_worker_requested=args.deploy_worker_requested,
                 run_migrations_requested=args.run_migrations_requested,
                 confirm_manual_release_scope=args.confirm_manual_release_scope,
+                recover_worker_readiness_requested=args.recover_worker_readiness_requested,
             )
             print(json.dumps(result, indent=2))
         else:
