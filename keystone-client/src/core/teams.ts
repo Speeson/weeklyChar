@@ -28,7 +28,7 @@ export function teamStoneCounts(team: ClientTeamDetail): Map<number, number> {
   const counts = new Map<number, number>();
   for (const member of team.members) for (const character of member.characters) {
     const id = character.currentKeystone?.challengeMapId;
-    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    if (positive(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   return counts;
 }
@@ -89,18 +89,19 @@ function nullableHttps(value: unknown): value is string | null {
 
 function parseKeystone(value: unknown): ClientTeamCharacter["currentKeystone"] | undefined {
   if (value === null) return null;
-  if (!object(value) || !positive(value.level) || !positive(value.challengeMapId)
+  if (!object(value) || !positive(value.level)
+    || !(value.challengeMapId === null || positive(value.challengeMapId))
     || !nullableText(value.dungeon, 256)) return undefined;
   return { level: value.level, challengeMapId: value.challengeMapId, dungeon: value.dungeon };
 }
 
 function parseTeamCharacter(value: unknown): ClientTeamCharacter | null {
-  if (!object(value) || !positive(value.id) || !text(value.name, 128) || !text(value.realm, 128)
+  if (!object(value) || !positive(value.characterId) || !text(value.name, 128) || !text(value.realm, 128)
     || !text(value.region, 16) || !nullableText(value.wowClass, 64) || !nullableHttps(value.avatarUrl)
     || !nullableNumber(value.ilvl) || !nullableNumber(value.rioScore)) return null;
   const currentKeystone = parseKeystone(value.currentKeystone);
   if (currentKeystone === undefined) return null;
-  return { characterId: value.id, name: value.name, realm: value.realm, region: value.region,
+  return { characterId: value.characterId, name: value.name, realm: value.realm, region: value.region,
     wowClass: value.wowClass, avatarUrl: value.avatarUrl, ilvl: value.ilvl, rioScore: value.rioScore,
     currentKeystone };
 }

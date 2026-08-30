@@ -285,7 +285,7 @@ test('official Item fields produce bounded deterministic tooltip metadata withou
   assert.equal(JSON.stringify(result).includes('value'), false)
 })
 
-test('fresh pre-S2 rows keep name and icon then lazily gain tooltip metadata at normal expiry', async () => {
+test('fresh pre-S2 rows immediately enrich tooltip metadata once', async () => {
   resetBlizzardTokenCacheForTests()
   const testEnv = env()
   testEnv.DB.itemMetadata.push({
@@ -314,18 +314,87 @@ test('fresh pre-S2 rows keep name and icon then lazily gain tooltip metadata at 
   const fresh = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
     now: NOW, fetch: fetchTooltip,
   })
-  assert.equal(itemCalls, 0)
-  assert.equal(fresh[0].itemName, 'Nombre anterior')
-  assert.equal(fresh[0].slotName, null)
+  assert.equal(itemCalls, 1)
+  assert.equal(fresh[0].itemName, 'Nombre actualizado')
+  assert.equal(fresh[0].slotName, 'Chest')
+  assert.deepEqual(fresh[0].statNames, [])
+  assert.equal(testEnv.DB.itemMetadata[0].stat_names_json, '[]')
 
-  const refreshed = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
-    now: NOW + 11, fetch: fetchTooltip,
+  await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW + 1, fetch: fetchTooltip,
   })
   assert.equal(itemCalls, 1)
-  assert.equal(refreshed[0].itemName, 'Nombre actualizado')
-  assert.equal(refreshed[0].slotName, 'Chest')
-  assert.deepEqual(refreshed[0].statNames, [])
+})
+
+test('failed legacy tooltip enrichment preserves positives and applies bounded backoff', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre anterior',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 30 * 24 * 60 * 60,
+    slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: null,
+  })
+  let itemCalls = 0
+  const failingFetch = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    itemCalls += 1
+    return json({ error: 'down' }, 503)
+  }
+
+  const first = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: failingFetch,
+  })
+  const second = await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW + 1, fetch: failingFetch,
+  })
+
+  assert.equal(itemCalls, 1)
+  assert.equal(first[0].itemName, 'Nombre anterior')
+  assert.equal(second[0].iconUrl, 'https://render.worldofwarcraft.com/eu/icons/10.jpg')
+  assert.equal(testEnv.DB.itemMetadata[0].refresh_after, NOW + 6 * 60 * 60)
+})
+
+test('legitimate empty tooltip metadata is cached and not immediately refetched', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre anterior',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 10,
+    slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: null,
+  })
+  let itemCalls = 0
+  const emptyTooltipFetch = async url => {
+    if (String(url).includes('/oauth/token')) return json({ access_token: 'token', expires_in: 3600 })
+    if (String(url).includes('/media/item/')) {
+      return json({ id: 10, assets: [{ key: 'icon', value: 'https://render.worldofwarcraft.com/eu/icons/10.jpg' }] })
+    }
+    itemCalls += 1
+    return json({ id: 10, name: 'Nombre', preview_item: { stats: [] } })
+  }
+
+  await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], { now: NOW, fetch: emptyTooltipFetch })
+  await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], { now: NOW + 1, fetch: emptyTooltipFetch })
+
+  assert.equal(itemCalls, 1)
   assert.equal(testEnv.DB.itemMetadata[0].stat_names_json, '[]')
+})
+
+test('fully enriched fresh rows make zero Blizzard calls', async () => {
+  resetBlizzardTokenCacheForTests()
+  const testEnv = env()
+  testEnv.DB.itemMetadata.push({
+    region: 'eu', locale: 'es_ES', item_id: 10, name: 'Nombre',
+    icon_url: 'https://render.worldofwarcraft.com/eu/icons/10.jpg', status: 'ok',
+    fetched_at: NOW - 10, refresh_after: NOW + 10,
+    slot_name: null, item_class_name: null, item_subclass_name: null, stat_names_json: '[]',
+  })
+  let calls = 0
+  await enrichKeystoneLootObjectives(testEnv, 'eu', [objective(10)], {
+    now: NOW, fetch: async () => { calls += 1; throw new Error('unexpected') },
+  })
+  assert.equal(calls, 0)
 })
 
 test('malformed optional Blizzard and cached tooltip fields degrade independently to safe fallbacks', async () => {

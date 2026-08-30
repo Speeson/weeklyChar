@@ -62,7 +62,7 @@ describe("Teams core bridge", () => {
   it("parses a compact Team dashboard without raw character or member fields", () => {
     const parsed = parseTeamDetail({
       id: 7, name: "Raid", inviteCode: "SECRET", members: [{ userId: 2, username: "ana", avatarUrl: "https://ignored.test/member.jpg", characters: [{
-        id: 10, name: "Auralis", realm: "Zul'jin", region: "eu", wowClass: "Mage",
+        characterId: 10, name: "Auralis", realm: "Zul'jin", region: "eu", wowClass: "Mage",
         avatarUrl: "https://cdn.test/avatar.jpg", ilvl: 300, rioScore: 2500,
         currentKeystone: { level: 12, challengeMapId: 588, dungeon: "Altar of Fangs", mapId: 1 },
         wowAccount: "ACCOUNT", vault: { secret: true }, keystoneLoot: { raw: true },
@@ -75,6 +75,28 @@ describe("Teams core bridge", () => {
     }] }] });
     expect(JSON.stringify(parsed)).not.toMatch(/SECRET|ACCOUNT|vault|keystoneLoot|member\.jpg/);
     expect(parseTeamDetail({ id: 7, name: "Raid", members: [{ userId: -1, username: "ana", characters: [] }] }, 7)).toBeNull();
+  });
+
+  it("accepts the sanitized bridge characterId and nullable keystone map contract", () => {
+    const character = {
+      characterId: 10, name: "Auralis", realm: "Zul'jin", region: "eu", wowClass: "Mage",
+      avatarUrl: null, ilvl: null, rioScore: null,
+    };
+    const team = (currentKeystone: unknown) => ({
+      id: 7, name: "Raid", members: [{ userId: 2, username: "ana", characters: [
+        { ...character, currentKeystone },
+      ] }],
+    });
+
+    expect(parseTeamDetail(team(null), 7)?.members[0].characters[0].currentKeystone).toBeNull();
+    expect(parseTeamDetail(team({ level: 10, challengeMapId: 588, dungeon: null }), 7)
+      ?.members[0].characters[0].currentKeystone?.challengeMapId).toBe(588);
+    expect(parseTeamDetail(team({ level: 10, challengeMapId: null, dungeon: null }), 7)
+      ?.members[0].characters[0].currentKeystone?.challengeMapId).toBeNull();
+    for (const challengeMapId of ["588", 0, -1, 1.5]) {
+      expect(parseTeamDetail(team({ level: 10, challengeMapId, dungeon: null }), 7)).toBeNull();
+    }
+    expect(parseTeamDetail(team({ level: 10, dungeon: null }), 7)).toBeNull();
   });
 
   it("strictly parses Selector tooltip metadata, Voidcore states, and unknown positive tiers", () => {
@@ -100,6 +122,7 @@ describe("Teams core bridge", () => {
     const counts = teamStoneCounts({ id: 7, name: "Raid", members: [{ userId: 1, username: "one", characters: [
       { characterId: 1, name: "A", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 10, challengeMapId: 399, dungeon: null } },
       { characterId: 2, name: "B", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 8, challengeMapId: 399, dungeon: null } },
+      { characterId: 3, name: "C", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 8, challengeMapId: null, dungeon: null } },
     ] }] });
     expect(counts.get(399)).toBe(2);
     expect(counts.get(585)).toBeUndefined();

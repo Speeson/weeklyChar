@@ -153,7 +153,7 @@ export type ClientTeamSummary = {
 
 export type ClientTeamKeystone = {
   level: number;
-  challengeMapId: number;
+  challengeMapId: number | null;
   dungeon: string | null;
 };
 
