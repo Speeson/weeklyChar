@@ -3,6 +3,7 @@ import type { Context } from 'hono'
 import { getCurrentUser } from '../auth'
 import { newInviteCode } from '../crypto'
 import {
+  getUserByUsername,
   recommendationCharactersForUser,
   selectorCharactersForTeam,
   selectorStonesForTeam,
@@ -355,7 +356,7 @@ teamRoutes.post('/api/teams/:teamId/invites', async c => {
   const username = payload.username?.trim() ?? ''
   if (username.length < 3) return jsonError(c, 400, 'Introduce un username valido')
 
-  const invitedUser = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<UserRow>()
+  const invitedUser = await getUserByUsername(c.env, username)
   if (!invitedUser) return jsonError(c, 404, 'Usuario no encontrado')
   if (invitedUser.id === currentUser.id) return jsonError(c, 400, 'No puedes invitarte a ti mismo')
 

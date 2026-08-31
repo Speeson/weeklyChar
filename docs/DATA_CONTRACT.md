@@ -119,7 +119,31 @@ The addon writes the canonical Midnight Season 2 keys:
 
 Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyComplete`, and `displayColor`.
 
-`sparksOfTides` is item/currency-derived and includes Spark of Tides item counts plus Tidal Spark Dust currency counts. `trovehuntersBounty` includes `itemID`, `bagCount`, `hasBuff`, `questCompleted`, `iconFileID`, `iconPath`, and `weekKey`; same-week completed quest state is preserved across transient incomplete reads.
+`sparksOfTides` tracks Spark of Tides (`itemID = 274476`) as a physical item
+owned by the current character. Its fields are:
+
+- `quantity`, `itemQuantity`, and `totalItemQuantity`: compatible aliases for
+  the physical total currently known for this character;
+- `inventoryQuantity`: Sparks carried in normal bags or the equipped reagent
+  bag;
+- `bankQuantity`: Sparks in the normal personal bank plus personal Reagent Bank;
+- `bankQuantityKnown`: whether `bankQuantity` is a trustworthy capture;
+- `bankUpdatedAt`: optional Unix timestamp of the last trustworthy bank capture.
+
+The addon obtains carried quantity with
+`C_Item.GetItemCount(274476, false, false, false, false)` and captures the
+character-owned candidate with
+`C_Item.GetItemCount(274476, true, false, true, false)` while the personal bank
+is accessible. Warband/Account Bank is excluded. Before the first trustworthy
+bank capture, the total contains carried Sparks and bank state is unknown. Once
+captured, the per-character bank quantity survives reload/login until the next
+bank access; it is never copied between characters. Tidal Spark Dust
+(`currencyID = 3509`) remains independent progression data.
+
+Web Summary renders the known total directly and appends a bank hint only for a
+known positive bank amount, for example `6 (3 en el banco)`.
+
+`trovehuntersBounty` includes `itemID`, `bagCount`, `hasBuff`, `questCompleted`, `iconFileID`, `iconPath`, and `weekKey`; same-week completed quest state is preserved across transient incomplete reads.
 
 ### `money`
 
@@ -212,6 +236,18 @@ Authentication:
 
 - Header: `Authorization: Bearer <sync_token>`.
 - The sync token is obtained from `/api/me` after login and stored in local config.
+
+Username identity preserves the original stored/display text but compares
+case-insensitively using SQLite `COLLATE NOCASE`. Registration, login,
+verification resend, and Team invitation lookup trim input and resolve through
+that common identity rule. Migration `0007_users_username_nocase.sql` enforces a
+unique `users(username COLLATE NOCASE)` index, so case-only duplicate accounts
+are forbidden without lowercasing existing rows.
+
+Before applying migration `0007` in production, run the documented read-only
+collision preflight. Any returned row blocks rollout; conflicting accounts must
+be reported and resolved manually, never merged, deleted, renamed, or
+lowercased automatically.
 
 Missing and partial fields:
 

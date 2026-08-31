@@ -4,6 +4,12 @@ import { createAccessToken, hashPassword, newPlainToken, newSyncToken, sha256Hex
 import { sendPasswordResetEmail, sendVerificationEmail } from '../email'
 import { jsonError } from '../http'
 import { checkEmailRateLimits } from '../rateLimit'
+import {
+  getUserByUsername,
+  isUsernameUniquenessError,
+  normalizeUsernameInput,
+  usernameExists,
+} from '../db'
 import type { Env, UserRow } from '../types'
 
 const EMAIL_TOKEN_EXPIRE_HOURS = 24
@@ -75,12 +81,12 @@ async function findUserByEmailOrUsername(env: Env, value: string): Promise<UserR
   const normalized = normalizeEmail(value)
   const byEmail = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(normalized).first<UserRow>()
   if (byEmail) return byEmail
-  return env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(value.trim()).first<UserRow>()
+  return getUserByUsername(env, value)
 }
 
 authRoutes.post('/api/auth/register', async c => {
   const payload = await c.req.json<RegisterRequest>()
-  const username = payload.username?.trim() ?? ''
+  const username = normalizeUsernameInput(payload.username ?? '')
   const firstName = payload.firstName?.trim() ?? ''
   const lastName = payload.lastName?.trim() ?? ''
   const email = normalizeEmail(payload.email ?? '')
@@ -93,8 +99,7 @@ authRoutes.post('/api/auth/register', async c => {
   if (payload.password !== payload.confirmPassword) return jsonError(c, 400, 'Las passwords no coinciden')
   if (!dateOfBirth || new Date(dateOfBirth).getTime() >= Date.now()) return jsonError(c, 400, 'Fecha de nacimiento invalida')
 
-  const existingUsername = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
-  if (existingUsername) return jsonError(c, 400, 'Nombre de usuario ya en uso')
+  if (await usernameExists(c.env, username)) return jsonError(c, 400, 'Nombre de usuario ya en uso')
 
   const existingEmail = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first()
   if (existingEmail) return jsonError(c, 400, 'Email ya en uso')
@@ -104,22 +109,30 @@ authRoutes.post('/api/auth/register', async c => {
   const passwordHash = await hashPassword(payload.password)
   const syncToken = newSyncToken()
 
-  const insert = await c.env.DB.prepare(`
-    INSERT INTO users (
-      username, password_hash, sync_token, first_name, last_name, email, date_of_birth,
-      email_verified, email_verification_token_hash, email_verification_expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-  `).bind(
-    username,
-    passwordHash,
-    syncToken,
-    firstName,
-    lastName,
-    email,
-    dateOfBirth,
-    tokenHash,
-    addHours(EMAIL_TOKEN_EXPIRE_HOURS),
-  ).run()
+  let insert: D1Result<unknown>
+  try {
+    insert = await c.env.DB.prepare(`
+      INSERT INTO users (
+        username, password_hash, sync_token, first_name, last_name, email, date_of_birth,
+        email_verified, email_verification_token_hash, email_verification_expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+    `).bind(
+      username,
+      passwordHash,
+      syncToken,
+      firstName,
+      lastName,
+      email,
+      dateOfBirth,
+      tokenHash,
+      addHours(EMAIL_TOKEN_EXPIRE_HOURS),
+    ).run()
+  } catch (error) {
+    if (isUsernameUniquenessError(error)) {
+      return jsonError(c, 400, 'Nombre de usuario ya en uso')
+    }
+    throw error
+  }
 
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(insert.meta.last_row_id).first<UserRow>()
   if (!user) return jsonError(c, 500, 'No se pudo crear el usuario')
@@ -142,7 +155,7 @@ authRoutes.post('/api/auth/register', async c => {
 
 authRoutes.post('/api/auth/login', async c => {
   const payload = await c.req.json<LoginRequest>()
-  const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(payload.username).first<UserRow>()
+  const user = await getUserByUsername(c.env, payload.username ?? '')
 
   if (!user || !(await verifyPassword(payload.password ?? '', user.password_hash))) {
     return jsonError(c, 401, 'Credenciales incorrectas')

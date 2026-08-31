@@ -7,6 +7,29 @@ import type {
 } from './keystoneSelector'
 import { currentEuWeeklyResetUnix } from './weeklyReset'
 
+export function normalizeUsernameInput(username: string): string {
+  return username.trim()
+}
+
+export async function getUserByUsername(env: Env, username: string): Promise<UserRow | null> {
+  return env.DB.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE')
+    .bind(normalizeUsernameInput(username))
+    .first<UserRow>()
+}
+
+export async function usernameExists(env: Env, username: string): Promise<boolean> {
+  const row = await env.DB.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE')
+    .bind(normalizeUsernameInput(username))
+    .first<{ id: number }>()
+  return row !== null
+}
+
+export function isUsernameUniquenessError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return /unique constraint failed/i.test(error.message)
+    && /(users\.username|users_username_nocase_unique)/i.test(error.message)
+}
+
 export async function getUserById(env: Env, id: number): Promise<UserRow | null> {
   return env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>()
 }

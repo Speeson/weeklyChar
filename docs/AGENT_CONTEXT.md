@@ -64,9 +64,9 @@ Main implementation points:
 
 Verified from checked-out files:
 
-- Canonical addon repo `Speeson/KeystoneSync` at verified `main`/`v0.2.3`: `Version: 0.2.3`, `Interface: 120100`
-- Canonical Windows client `keystone-client/VERSION`: `0.6.4`
-- Current public Tauri release: `0.6.4`, tag `client-v0.6.4`, at commit `585d266`
+- Canonical addon repo `Speeson/KeystoneSync` baseline `v0.2.5`: `Version: 0.2.5`, `Interface: 120100`; the pending Spark bank fix is a patch change that predicts `0.2.6` without releasing it.
+- Canonical Windows client `keystone-client/VERSION`: `0.6.10`
+- Current public Tauri release: `0.6.10`, tag `client-v0.6.10`, at commit `3646fddd1ef41e240e7681771097940e84b8bd58`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`

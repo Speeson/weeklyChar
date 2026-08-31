@@ -24,8 +24,13 @@ export class FakeD1Database {
     this.keystones = []
     this.teams = []
     this.teamMembers = []
+    this.teamInvitations = []
+    this.rateLimits = []
     this.nextCharacterId = 1
     this.nextKeystoneId = 1
+    this.nextTeamInvitationId = 1
+    this.nextUserId = 2
+    this.forceUsernameInsertConflict = false
     this.characterQueryUserIds = []
     this.itemMetadata = []
     this.metadataReadItemIds = []
@@ -34,6 +39,10 @@ export class FakeD1Database {
 
   prepare(sql) {
     return new FakeD1Statement(this, sql)
+  }
+
+  async batch(statements) {
+    return Promise.all(statements.map(statement => statement.run()))
   }
 }
 
@@ -59,6 +68,62 @@ class FakeD1Statement {
 
     if (sql === 'SELECT * FROM users WHERE id = ?') {
       return this.db.users.find(user => user.id === values[0]) ?? null
+    }
+
+    if (sql === 'SELECT id FROM users WHERE username = ?') {
+      const user = this.db.users.find(entry => entry.username === values[0])
+      return user ? { id: user.id } : null
+    }
+
+    if (sql === 'SELECT * FROM users WHERE username = ?') {
+      return this.db.users.find(user => user.username === values[0]) ?? null
+    }
+
+    if (sql === 'SELECT id FROM users WHERE username = ? COLLATE NOCASE') {
+      const value = String(values[0]).toLowerCase()
+      const user = this.db.users.find(entry => entry.username.toLowerCase() === value)
+      return user ? { id: user.id } : null
+    }
+
+    if (sql === 'SELECT * FROM users WHERE username = ? COLLATE NOCASE') {
+      const value = String(values[0]).toLowerCase()
+      return this.db.users.find(user => user.username.toLowerCase() === value) ?? null
+    }
+
+    if (sql === 'SELECT id FROM users WHERE email = ?') {
+      const user = this.db.users.find(entry => entry.email === values[0])
+      return user ? { id: user.id } : null
+    }
+
+    if (sql === 'SELECT * FROM users WHERE email = ?') {
+      return this.db.users.find(user => user.email === values[0]) ?? null
+    }
+
+    if (sql === 'SELECT username FROM users WHERE id = ?') {
+      const user = this.db.users.find(entry => entry.id === values[0])
+      return user ? { username: user.username } : null
+    }
+
+    if (sql === 'SELECT name FROM teams WHERE id = ?') {
+      const team = this.db.teams.find(entry => entry.id === values[0])
+      return team ? { name: team.name } : null
+    }
+
+    if (sql === 'SELECT attempts_json FROM rate_limits WHERE key = ?') {
+      const entry = this.db.rateLimits.find(row => row.key === values[0])
+      return entry ? { attempts_json: entry.attempts_json } : null
+    }
+
+    if (sql.includes("SELECT * FROM team_invitations WHERE team_id = ? AND invited_user_id = ? AND status = 'pending'")) {
+      const [teamId, invitedUserId] = values
+      return this.db.teamInvitations.find(invitation =>
+        invitation.team_id === teamId
+        && invitation.invited_user_id === invitedUserId
+        && invitation.status === 'pending') ?? null
+    }
+
+    if (sql === 'SELECT * FROM team_invitations WHERE id = ?') {
+      return this.db.teamInvitations.find(invitation => invitation.id === values[0]) ?? null
     }
 
     if (sql.includes('SELECT * FROM characters WHERE user_id = ? AND name = ? AND realm = ? AND region = ?')) {
@@ -242,6 +307,82 @@ class FakeD1Statement {
       if (!target) throw new Error(`Missing user ${userId}`)
       target.share_keystone_loot_with_teams = enabled
       return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('INSERT INTO users')) {
+      if (this.db.forceUsernameInsertConflict) {
+        throw new Error('D1_ERROR: UNIQUE constraint failed: users.username')
+      }
+      const [
+        username,
+        passwordHash,
+        syncToken,
+        firstName,
+        lastName,
+        email,
+        dateOfBirth,
+        verificationTokenHash,
+        verificationExpiresAt,
+      ] = values
+      const inserted = {
+        id: this.db.nextUserId++,
+        username,
+        password_hash: passwordHash,
+        sync_token: syncToken,
+        avatar_url: null,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        date_of_birth: dateOfBirth,
+        email_verified: 0,
+        email_verification_token_hash: verificationTokenHash,
+        email_verification_expires_at: verificationExpiresAt,
+        password_reset_token_hash: null,
+        password_reset_expires_at: null,
+        share_keystone_loot_with_teams: 1,
+        created_at: '2026-08-31T00:00:00.000Z',
+      }
+      this.db.users.push(inserted)
+      return { meta: { changes: 1, last_row_id: inserted.id } }
+    }
+
+    if (sql.includes('UPDATE users SET email_verification_token_hash = ?')) {
+      const [tokenHash, expiresAt, userId] = values
+      const target = this.db.users.find(user => user.id === userId)
+      if (!target) throw new Error(`Missing user ${userId}`)
+      target.email_verification_token_hash = tokenHash
+      target.email_verification_expires_at = expiresAt
+      return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('INSERT INTO rate_limits')) {
+      const [key, attemptsJson] = values
+      const existing = this.db.rateLimits.find(row => row.key === key)
+      if (existing) existing.attempts_json = attemptsJson
+      else this.db.rateLimits.push({ key, attempts_json: attemptsJson })
+      return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('INSERT INTO team_invitations')) {
+      const [teamId, invitedUserId, invitedByUserId, expiresAt] = values
+      const invitation = {
+        id: this.db.nextTeamInvitationId++,
+        team_id: teamId,
+        invited_user_id: invitedUserId,
+        invited_by_user_id: invitedByUserId,
+        status: 'pending',
+        created_at: '2026-08-31T00:00:00.000Z',
+        expires_at: expiresAt,
+        responded_at: null,
+      }
+      this.db.teamInvitations.push(invitation)
+      return { meta: { changes: 1, last_row_id: invitation.id } }
+    }
+
+    if (sql.includes("UPDATE team_invitations SET status = 'declined'")) {
+      const invitation = this.db.teamInvitations.find(entry => entry.id === values[0])
+      if (invitation) invitation.status = 'declined'
+      return { meta: { changes: invitation ? 1 : 0 } }
     }
 
     if (sql.includes('INSERT INTO wow_item_metadata')) {

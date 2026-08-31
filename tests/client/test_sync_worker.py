@@ -134,6 +134,11 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(currencies["nebulousVoidcore"]["id"], 3513)
         self.assertEqual(currencies["sparksOfTides"]["itemID"], 274476)
         self.assertEqual(currencies["sparksOfTides"]["currencyID"], 3509)
+        self.assertEqual(currencies["sparksOfTides"]["itemQuantity"], 6)
+        self.assertEqual(currencies["sparksOfTides"]["inventoryQuantity"], 3)
+        self.assertEqual(currencies["sparksOfTides"]["bankQuantity"], 3)
+        self.assertTrue(currencies["sparksOfTides"]["bankQuantityKnown"])
+        self.assertEqual(currencies["sparksOfTides"]["bankUpdatedAt"], 2000000190)
         self.assertEqual(
             currencies["trovehuntersBounty"],
             {
