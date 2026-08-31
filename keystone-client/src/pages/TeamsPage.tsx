@@ -8,6 +8,10 @@ import {
   groupSelectorObjectives, liveTeamsDataSource, selectorObjectivesForSpec, teamStoneCounts,
   type SelectorObjectiveGroup, type TeamsDataSource,
 } from "../core/teams";
+import {
+  getCachedSelector, getCachedTeamDetail, getTeamsSessionSnapshot, loadSelector, loadTeamDetail,
+  loadTeams, removeTeamFromSessionCache, setSelectedTeamId,
+} from "../core/teamsSessionCache";
 import { specName } from "../core/wowSpecs";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import type {
@@ -137,10 +141,22 @@ function MemberStrip({ detail, onClear, onToggle, selected }: { detail: ClientTe
 
 export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessionExpired }: TeamsPageProps) {
   const { language, t } = useI18n();
-  const brandMark = useThemeAsset("brand-mark");
-  const [teams, setTeams] = useState<ClientTeamSummary[] | null>(null);
-  const [teamId, setTeamId] = useState<number | null>(null);
-  const [detail, setDetail] = useState<ClientTeamDetail | null>(null);
+  const brandMark = useThemeAsset("teams-loading-mark");
+  const [initialSession] = useState(() => {
+    const snapshot = getTeamsSessionSnapshot();
+    const initialTeamId = snapshot.teams?.some(team => team.id === snapshot.selectedTeamId)
+      ? snapshot.selectedTeamId
+      : snapshot.teams?.[0]?.id ?? null;
+    if (initialTeamId !== snapshot.selectedTeamId) setSelectedTeamId(initialTeamId);
+    return {
+      teams: snapshot.teams,
+      teamId: initialTeamId,
+      detail: initialTeamId === null ? null : getCachedTeamDetail(initialTeamId),
+    };
+  });
+  const [teams, setTeams] = useState<ClientTeamSummary[] | null>(initialSession.teams);
+  const [teamId, setTeamId] = useState<number | null>(initialSession.teamId);
+  const [detail, setDetail] = useState<ClientTeamDetail | null>(initialSession.detail);
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(() => new Set());
   const [dungeonId, setDungeonId] = useState<number | null>(null);
   const [selector, setSelector] = useState<KeystoneSelectorResponse | null>(null);
@@ -150,22 +166,23 @@ export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessi
   const listGeneration = useRef(0);
   const detailGeneration = useRef(0);
   const selectorGeneration = useRef(0);
-  const teamsRef = useRef<ClientTeamSummary[] | null>(null);
-  const listInFlight = useRef<Promise<ClientTeamSummary[]> | null>(null);
-  const selectorCache = useRef(new Map<string, KeystoneSelectorResponse>());
-  const selectorInFlight = useRef(new Map<string, Promise<KeystoneSelectorResponse>>());
+  const teamsRef = useRef<ClientTeamSummary[] | null>(initialSession.teams);
+  const hasRevealedTeam = useRef(initialSession.detail !== null);
 
   useEffect(() => { teamsRef.current = teams; }, [teams]);
 
   const refreshTeams = useCallback((): Promise<ClientTeamSummary[]> => {
-    if (listInFlight.current) return listInFlight.current;
     const generation = ++listGeneration.current;
-    const request = dataSource.listTeams().then(result => {
+    return loadTeams(dataSource).then(result => {
       if (generation !== listGeneration.current) return result;
       setTeamError(null);
       teamsRef.current = result;
       setTeams(result);
-      setTeamId(current => result.some(team => team.id === current) ? current : result[0]?.id ?? null);
+      setTeamId(current => {
+        const next = result.some(team => team.id === current) ? current : result[0]?.id ?? null;
+        setSelectedTeamId(next);
+        return next;
+      });
       return result;
     }).catch(caught => {
       if (generation === listGeneration.current) {
@@ -174,11 +191,7 @@ export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessi
         else if (teamsRef.current === null) setTeamError(parsed.message);
       }
       throw caught;
-    }).finally(() => {
-      if (listInFlight.current === request) listInFlight.current = null;
     });
-    listInFlight.current = request;
-    return request;
   }, [dataSource, onSessionExpired, t]);
 
   useEffect(() => {
@@ -189,26 +202,40 @@ export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessi
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       listGeneration.current += 1;
-      listInFlight.current = null;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [refreshTeams]);
 
-  useEffect(() => { if (teams && teams.length > 0 && teamId === null) setTeamId(teams[0].id); }, [teamId, teams]);
+  useEffect(() => {
+    if (teams && teams.length > 0 && teamId === null) {
+      setSelectedTeamId(teams[0].id);
+      setTeamId(teams[0].id);
+    }
+  }, [teamId, teams]);
 
   useEffect(() => {
     const generation = ++detailGeneration.current;
     selectorGeneration.current += 1;
-    setDetail(null); setSelectedUsers(new Set()); setDungeonId(null); setSelector(null); setSelectorError(null);
-    if (teamId === null) return;
-    dataSource.getTeam(teamId).then(result => { if (generation === detailGeneration.current) setDetail(result); }).catch(caught => {
+    setSelectedUsers(new Set()); setDungeonId(null); setSelector(null); setSelectorError(null);
+    if (teamId === null) { setDetail(null); return; }
+    const cached = getCachedTeamDetail(teamId);
+    setDetail(cached);
+    if (cached) hasRevealedTeam.current = true;
+    loadTeamDetail(dataSource, teamId).then(result => {
+      if (generation !== detailGeneration.current) return;
+      setTeamError(null);
+      setDetail(result);
+      hasRevealedTeam.current = true;
+    }).catch(caught => {
       if (generation !== detailGeneration.current) return;
       const parsed = errorInfo(caught, t("teams.loadError"));
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired();
       else if (["TEAM_ACCESS_DENIED", "TEAM_NOT_FOUND"].includes(parsed.code)) {
-        setTeams(current => current?.filter(team => team.id !== teamId) ?? current); setTeamId(null);
-      } else setTeamError(parsed.message);
+        removeTeamFromSessionCache(teamId);
+        setTeams(current => current?.filter(team => team.id !== teamId) ?? current);
+        setTeamId(null);
+      } else if (!cached) setTeamError(parsed.message);
     });
     return () => { detailGeneration.current += 1; };
   }, [dataSource, onSessionExpired, t, teamId]);
@@ -217,19 +244,10 @@ export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessi
     if (teamId === null) return;
     const generation = ++selectorGeneration.current;
     const locale = language === "en" ? "en_US" : "es_ES";
-    const key = `${teamId}:${nextDungeonId}:${locale}`;
-    const cached = selectorCache.current.get(key) ?? null;
+    const cached = getCachedSelector(teamId, nextDungeonId, locale);
     setDungeonId(nextDungeonId); setSelector(cached); setSelectorError(null); setSelectorLoading(cached === null);
-    let request = selectorInFlight.current.get(key);
-    if (!request) {
-      request = dataSource.getKeystoneSelector(teamId, nextDungeonId, locale);
-      selectorInFlight.current.set(key, request);
-      void request.finally(() => {
-        if (selectorInFlight.current.get(key) === request) selectorInFlight.current.delete(key);
-      }).catch(() => undefined);
-    }
+    const request = loadSelector(dataSource, teamId, nextDungeonId, locale);
     request.then(result => {
-      selectorCache.current.set(key, result);
       if (generation === selectorGeneration.current) { setSelector(result); setSelectorError(null); }
     }).catch(caught => {
       if (generation !== selectorGeneration.current) return;
@@ -245,17 +263,32 @@ export function TeamsPage({ dataSource = liveTeamsDataSource, onOpenWeb, onSessi
   });
   const counts = detail ? teamStoneCounts(detail) : new Map<number, number>();
   const selectedDungeon = MIDNIGHT_SEASON_2_DUNGEONS.find(dungeon => dungeon.id === dungeonId);
+  const coldLoading = teams === null
+    || Boolean(teams.length > 0 && !hasRevealedTeam.current && (teamId === null || detail?.id !== teamId));
+  const detailLoading = !coldLoading && teamId !== null && detail?.id !== teamId;
 
-  if (teams === null && !teamError) return <section className="teams-page teams-page--center" aria-label={t("teams.loading")}><div className="teams-page-skeleton" /></section>;
+  if (coldLoading && !teamError) return <section className="teams-page teams-page--loading">
+    <div aria-label={t("teams.loading")} className="teams-loading-veil" role="status">
+      <img alt="" aria-hidden="true" src={brandMark} />
+      <span>{t("teams.loading")}</span>
+    </div>
+  </section>;
   if (teamError) return <section className="teams-page teams-page--center"><p className="error" role="alert">{teamError}</p></section>;
   if (teams?.length === 0) return <section className="teams-page teams-page--center"><div className="teams-empty"><Users aria-hidden="true" /><h2>{t("teams.emptyTitle")}</h2><p>{t("teams.emptyDetail")}</p><button onClick={onOpenWeb} type="button">{t("shell.openWeb")}</button></div></section>;
 
   return <section className="teams-page">
     <div className="teams-top-row">
-      <TeamPicker activeId={teamId} onOpen={() => { void refreshTeams().catch(() => undefined); }} onSelect={setTeamId} teams={teams ?? []} />
+      <TeamPicker activeId={teamId} onOpen={() => { void refreshTeams().catch(() => undefined); }} onSelect={(nextTeamId) => {
+        setSelectedTeamId(nextTeamId);
+        setTeamId(nextTeamId);
+        setDetail(getCachedTeamDetail(nextTeamId));
+      }} teams={teams ?? []} />
       <MemberStrip detail={detail} onClear={() => setSelectedUsers(new Set())} onToggle={toggleUser} selected={selectedUsers} />
     </div>
     <div className="teams-selector">
+      {detailLoading ? <div aria-label={t("teams.loadingTeam")} className="teams-detail-loading" role="status">
+        <img alt="" aria-hidden="true" src={brandMark} /><span>{t("teams.loadingTeam")}</span>
+      </div> : null}
       <nav aria-label={t("teams.dungeons")} className="teams-dungeon-rail">
         {MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => {
           const count = counts.get(dungeon.id) ?? 0; const selected = dungeonId === dungeon.id;

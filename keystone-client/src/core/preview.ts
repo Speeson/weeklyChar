@@ -167,6 +167,7 @@ const previews: Record<string, SystemState> = {
     lastError: "No se pudo contactar con KeystoneSync API.",
   }),
   "teams-default": baseState(),
+  "teams-cold-loading": baseState(),
   "teams-multiple": baseState(),
   "teams-empty": baseState(),
   "teams-selector-full": baseState(),

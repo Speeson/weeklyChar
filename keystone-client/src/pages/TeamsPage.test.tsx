@@ -1,8 +1,11 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider, type Language } from "../core/i18n";
 import type { TeamsDataSource } from "../core/teams";
+import {
+  clearTeamsSessionCache, loadTeamDetail, loadTeams, setSelectedTeamId,
+} from "../core/teamsSessionCache";
 import type { ClientTeamDetail, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
 import { renderWithTheme } from "../test/renderWithTheme";
 import { TeamsPage } from "./TeamsPage";
@@ -66,6 +69,105 @@ async function selectRuby(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("TeamsPage compact ranking", () => {
+  beforeEach(() => clearTeamsSessionCache());
+
+  it("covers the full cold Teams area until both list and initial detail are ready", async () => {
+    let resolveTeams!: (value: Array<{ id: number; name: string; memberCount: number }>) => void;
+    let resolveDetail!: (value: ClientTeamDetail) => void;
+    const dataSource = source({
+      listTeams: vi.fn(() => new Promise<Array<{ id: number; name: string; memberCount: number }>>(resolve => { resolveTeams = resolve; })),
+      getTeam: vi.fn(() => new Promise<ClientTeamDetail>(resolve => { resolveDetail = resolve; })),
+    });
+
+    renderPage(dataSource);
+
+    const loader = screen.getByLabelText("Cargando equipos...");
+    expect(loader).toHaveClass("teams-loading-veil");
+    expect(loader.querySelector("img")).toHaveAttribute("src", expect.stringContaining("app-icon"));
+    expect(document.querySelector(".teams-page-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: detail.name })).not.toBeInTheDocument();
+
+    await act(async () => resolveTeams([{ id: 7, name: detail.name, memberCount: 2 }]));
+    expect(screen.getByLabelText("Cargando equipos...")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: detail.name })).not.toBeInTheDocument();
+
+    await act(async () => resolveDetail(detail));
+    expect(await screen.findByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando equipos...")).not.toBeInTheDocument();
+  });
+
+  it("restores the complete Teams UI synchronously after unmount and revalidates once", async () => {
+    const dataSource = source();
+    const first = renderPage(dataSource);
+    expect(await screen.findByRole("button", { name: detail.name })).toBeInTheDocument();
+    first.unmount();
+
+    renderPage(dataSource);
+
+    expect(screen.getByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando equipos...")).not.toBeInTheDocument();
+    expect(document.querySelector(".teams-page-skeleton")).not.toBeInTheDocument();
+    await waitFor(() => expect(dataSource.listTeams).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(dataSource.getTeam).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps cached Teams visible while list and detail revalidation are pending", async () => {
+    let resolveListRefresh!: (value: Array<{ id: number; name: string; memberCount: number }>) => void;
+    let resolveDetailRefresh!: (value: ClientTeamDetail) => void;
+    const refreshedDetail: ClientTeamDetail = {
+      ...detail,
+      members: [...detail.members, { userId: 9, username: "New Member", characters: [] }],
+    };
+    const dataSource = source({
+      listTeams: vi.fn()
+        .mockResolvedValueOnce([{ id: 7, name: detail.name, memberCount: 2 }])
+        .mockImplementationOnce(() => new Promise(resolve => { resolveListRefresh = resolve; })),
+      getTeam: vi.fn()
+        .mockResolvedValueOnce(detail)
+        .mockImplementationOnce(() => new Promise(resolve => { resolveDetailRefresh = resolve; })),
+    });
+    const first = renderPage(dataSource);
+    expect(await screen.findByRole("button", { name: /Filtrar por Speeson/u })).toBeInTheDocument();
+    first.unmount();
+
+    renderPage(dataSource);
+
+    expect(screen.getByRole("button", { name: detail.name })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando equipos...")).not.toBeInTheDocument();
+    await waitFor(() => expect(dataSource.listTeams).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(dataSource.getTeam).toHaveBeenCalledTimes(2));
+
+    await act(async () => resolveListRefresh([{ id: 7, name: detail.name, memberCount: 3 }]));
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toBeInTheDocument();
+    await act(async () => resolveDetailRefresh(refreshedDetail));
+    expect(await screen.findByRole("button", { name: /Filtrar por New Member/u })).toBeInTheDocument();
+  });
+
+  it("restores a cached Selector synchronously after navigation and keeps it during revalidation", async () => {
+    const user = userEvent.setup();
+    let resolveSelectorRefresh!: (value: KeystoneSelectorResponse) => void;
+    const getKeystoneSelector = vi.fn()
+      .mockResolvedValueOnce(selector)
+      .mockImplementationOnce(() => new Promise(resolve => { resolveSelectorRefresh = resolve; }));
+    const dataSource = source({ getKeystoneSelector });
+    const first = renderPage(dataSource);
+    await selectRuby(user);
+    first.unmount();
+
+    renderPage(dataSource);
+    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+
+    expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando objetivos")).not.toBeInTheDocument();
+    expect(getKeystoneSelector).toHaveBeenCalledTimes(2);
+    await act(async () => resolveSelectorRefresh({
+      ...selector,
+      summary: { ...selector.summary, totalObjectives: 8 },
+    }));
+    expect(await screen.findByText("2 personajes · 8 objetivos")).toBeInTheDocument();
+  });
+
   it("renders the compact Team trigger, member strip, eight locally-derived stone counts and minimal initial state", async () => {
     const dataSource = source();
     renderPage(dataSource);
@@ -306,6 +408,10 @@ describe("TeamsPage compact ranking", () => {
   it("ignores an older Team detail response after switching Teams", async () => {
     const user = userEvent.setup();
     const second: ClientTeamDetail = { id: 8, name: "Second Team", members: [{ userId: 9, username: "Newest", characters: [] }] };
+    const initialSource = source();
+    await loadTeams(initialSource);
+    await loadTeamDetail(initialSource, 7);
+    setSelectedTeamId(7);
     const resolvers = new Map<number, (value: ClientTeamDetail) => void>();
     const dataSource = source({
       listTeams: vi.fn(async () => [{ id: 7, name: detail.name, memberCount: 2 }, { id: 8, name: second.name, memberCount: 1 }]),

@@ -2770,9 +2770,7 @@ select {
 .teams-selector-loading { grid-row: 1 / -1; display: grid; align-content: start; gap: 10px; padding: 16px; }
 .teams-selector-loading i { height: 68px; border: 1px solid var(--theme-border); border-radius: var(--radius-md); background: linear-gradient(90deg, var(--theme-surface-1), color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-1)), var(--theme-surface-1)); background-size: 200% 100%; animation: teams-skeleton 1.3s ease-in-out infinite; }
 .teams-selector-error { align-self: start; margin: 16px; }
-.teams-page-skeleton,
 .teams-dashboard--loading { animation: teams-skeleton 1.3s ease-in-out infinite; background: linear-gradient(90deg, var(--theme-surface-1), color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-1)), var(--theme-surface-1)); background-size: 200% 100%; }
-.teams-page-skeleton { width: 420px; height: 120px; border-radius: var(--radius-lg); }
 
 .teams-tooltip {
   position: fixed;
@@ -2810,6 +2808,10 @@ select {
 .teams-tooltip__meta { display: grid; gap: 3px; padding-top: 8px; border-top: 1px solid rgb(255 255 255 / 10%); color: #9ea99a; font-size: 11px; }
 
 @keyframes teams-skeleton { to { background-position: -200% 0; } }
+@keyframes teams-loading-pulse {
+  0%, 100% { transform: scale(0.96); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--theme-accent) 24%, transparent)); opacity: 0.72; }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 24px color-mix(in srgb, var(--theme-accent) 58%, transparent)); opacity: 1; }
+}
 
 :where(.teams-members, .teams-character-list)::-webkit-scrollbar { width: 8px; height: 8px; }
 :where(.teams-members, .teams-character-list)::-webkit-scrollbar-thumb { border-radius: 8px; background: color-mix(in srgb, var(--theme-accent) 42%, transparent); }
@@ -2949,7 +2951,6 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .teams-selector-loading i,
-  .teams-page-skeleton,
   .teams-dashboard--loading { animation: none; }
   .teams-expand svg { transition: none; }
 }
@@ -3164,6 +3165,62 @@ select {
 .teams-selector {
   grid-template-columns: 198px minmax(0, 1fr);
   gap: 12px;
+  position: relative;
+}
+
+.teams-page--loading {
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+
+.teams-loading-veil,
+.teams-detail-loading {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 13px;
+  color: var(--theme-text-accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background:
+    radial-gradient(circle at center, color-mix(in srgb, var(--theme-accent) 12%, transparent), transparent 42%),
+    color-mix(in srgb, var(--theme-surface-0) 78%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.teams-loading-veil {
+  position: absolute;
+  inset: 0;
+  min-height: 100%;
+}
+
+.teams-loading-veil img {
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+  animation: teams-loading-pulse 1.7s ease-in-out infinite;
+}
+
+.teams-detail-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, var(--theme-border));
+  border-radius: var(--radius-lg);
+}
+
+.teams-detail-loading img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  animation: teams-loading-pulse 1.7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teams-loading-veil img,
+  .teams-detail-loading img { animation: none; }
 }
 
 .teams-dungeon-rail {

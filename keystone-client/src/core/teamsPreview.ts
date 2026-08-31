@@ -117,7 +117,9 @@ export function getTeamsPreviewDataSource(): TeamsDataSource | null {
   if (!scenario?.startsWith("teams-")) return null;
   const list = scenario === "teams-empty" ? [] : scenario === "teams-multiple" ? [primaryTeam, secondTeam, thirdTeam, fourthTeam] : [primaryTeam];
   return {
-    listTeams: async () => list,
+    listTeams: async () => scenario === "teams-cold-loading"
+      ? new Promise<ClientTeamSummary[]>(() => undefined)
+      : list,
     getTeam: async teamId => teamId === 8 ? secondDetail : primaryDetail,
     getKeystoneSelector: async (_teamId, challengeMapId) => {
       if (scenario === "teams-selector-loading") return new Promise<KeystoneSelectorResponse>(() => undefined);
@@ -129,6 +131,6 @@ export function getTeamsPreviewDataSource(): TeamsDataSource | null {
 }
 
 export const TEAMS_PREVIEW_SCENARIOS = [
-  "teams-default", "teams-multiple", "teams-empty", "teams-selector-full", "teams-selector-multispec",
+  "teams-default", "teams-cold-loading", "teams-multiple", "teams-empty", "teams-selector-full", "teams-selector-multispec",
   "teams-selector-empty", "teams-selector-loading", "teams-selector-error",
 ] as const;

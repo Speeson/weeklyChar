@@ -8,6 +8,9 @@ import { listenCoreEvents } from "./core/events";
 import { getSettings, updateSettings } from "./core/settings";
 import { setProfileAvatar } from "./core/profile";
 import {
+  clearTeamsSessionCache, getTeamsSessionSnapshot, loadTeams,
+} from "./core/teamsSessionCache";
+import {
   exitApplication,
   listenWindowCloseRequested,
   minimizeToTray,
@@ -203,6 +206,7 @@ function mockStartup(state = anonymousState) {
 
 describe("App", () => {
   beforeEach(() => {
+    clearTeamsSessionCache();
     window.history.pushState({}, "", "/");
     coreRequestMock.mockReset();
     listenCoreEventsMock.mockReset();
@@ -276,6 +280,50 @@ describe("App", () => {
     expect(coreRequestMock).toHaveBeenNthCalledWith(4, "teams.get", { teamId: 7 });
   });
 
+  it("prefetches the Team list and first detail before navigation and deduplicates a concurrent entry", async () => {
+    const user = userEvent.setup();
+    let resolveTeams!: (value: Array<{ id: number; name: string; memberCount: number }>) => void;
+    let resolveDetail!: (value: { id: number; name: string; members: [] }) => void;
+    mockStartup(authenticatedState);
+    coreRequestMock.mockImplementation((command) => {
+      if (command === "teams.list") return new Promise(resolve => { resolveTeams = resolve; });
+      if (command === "teams.get") return new Promise(resolve => { resolveDetail = resolve; });
+      return Promise.reject(new Error(`Unexpected command: ${command}`));
+    });
+
+    render(<App />);
+    await screen.findByText("player");
+    await waitFor(() => expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.list")).toHaveLength(1));
+    await user.click(screen.getByRole("button", { name: "Equipos" }));
+    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.list")).toHaveLength(1);
+
+    resolveTeams([{ id: 7, name: "Mythiqueros 2.0", memberCount: 1 }]);
+    await waitFor(() => expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.get")).toHaveLength(1));
+    resolveDetail({ id: 7, name: "Mythiqueros 2.0", members: [] });
+
+    expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.get")).toHaveLength(1);
+  });
+
+  it("clears cached private Team data immediately on logout", async () => {
+    const user = userEvent.setup();
+    mockStartup(authenticatedState);
+    logoutMock.mockResolvedValueOnce({ authenticated: false, username: null, avatarUrl: null });
+    render(<App />);
+    await screen.findByText("player");
+    await loadTeams({
+      listTeams: vi.fn(async () => [{ id: 7, name: "Private Team", memberCount: 1 }]),
+      getTeam: vi.fn(),
+      getKeystoneSelector: vi.fn(),
+    });
+    expect(getTeamsSessionSnapshot().teams?.[0]?.name).toBe("Private Team");
+
+    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+
+    expect(getTeamsSessionSnapshot()).toEqual({ teams: null, selectedTeamId: null });
+  });
+
   it("keeps Teams rendered without refetching when Settings opens and closes", async () => {
     const user = userEvent.setup();
     mockStartup(authenticatedState);
@@ -287,6 +335,8 @@ describe("App", () => {
     await screen.findByText("player");
     await user.click(screen.getByRole("button", { name: "Equipos" }));
     expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+    const listRequests = coreRequestMock.mock.calls.filter(([command]) => command === "teams.list").length;
+    const detailRequests = coreRequestMock.mock.calls.filter(([command]) => command === "teams.get").length;
 
     await user.click(screen.getByRole("button", { name: "Configuracion" }));
     expect(screen.getByRole("dialog", { name: "Ajustes" })).toBeInTheDocument();
@@ -294,18 +344,42 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Cerrar configuracion" }));
     expect(screen.queryByRole("dialog", { name: "Ajustes" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
-    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.list")).toHaveLength(1);
-    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.get")).toHaveLength(1);
+    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.list")).toHaveLength(listRequests);
+    expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.get")).toHaveLength(detailRequests);
   });
 
-  it("returns to the existing login flow when the Teams bridge reports an expired session", async () => {
+  it("restores Teams immediately after navigating to another section and back", async () => {
     const user = userEvent.setup();
     mockStartup(authenticatedState);
-    coreRequestMock.mockRejectedValueOnce({ code: "SESSION_EXPIRED", message: "Caducada" });
-
+    coreRequestMock.mockImplementation((command) => {
+      if (command === "teams.list") return Promise.resolve([{ id: 7, name: "Mythiqueros 2.0", memberCount: 1 }]);
+      if (command === "teams.get") return Promise.resolve({ id: 7, name: "Mythiqueros 2.0", members: [] });
+      return Promise.reject(new Error(`Unexpected command: ${command}`));
+    });
     render(<App />);
     await screen.findByText("player");
     await user.click(screen.getByRole("button", { name: "Equipos" }));
+    expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Addon" }));
+    expect(screen.getByRole("heading", { name: "Addon" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Equipos" }));
+
+    expect(screen.getByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando equipos...")).not.toBeInTheDocument();
+    expect(document.querySelector(".teams-page-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("returns to the existing login flow when the Teams prefetch reports an expired session", async () => {
+    let rejectTeams!: (reason: unknown) => void;
+    mockStartup(authenticatedState);
+    coreRequestMock.mockImplementation((command) => command === "teams.list"
+      ? new Promise((_, reject) => { rejectTeams = reject; })
+      : Promise.reject(new Error(`Unexpected command: ${command}`)));
+
+    render(<App />);
+    await screen.findByText("player");
+    rejectTeams({ code: "SESSION_EXPIRED", message: "Caducada" });
 
     expect(await screen.findByRole("heading", { name: /Iniciar sesi/u })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Equipos" })).not.toBeInTheDocument();

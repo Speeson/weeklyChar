@@ -13,6 +13,7 @@ import {
 const expectedKeystoneAssets = {
   "brand-mark": "app-icon.png",
   "brand-emblem": "21-app-icon-hd.png",
+  "teams-loading-mark": "21-app-icon-hd.png",
   "shell-active-tab": "02-active-tab-indicator.png.png",
   "shell-settings": "03-settings-button.png.png",
   "shell-footer-web": "05-footer-web-button.png.png",
@@ -44,6 +45,7 @@ const expectedKeystoneAssets = {
 const expectedPoisonAssets = {
   "brand-mark": "app-badge.png",
   "brand-emblem": "emblem.png",
+  "teams-loading-mark": "app-badge.png",
   "shell-active-tab": "tab-active-decoration.png",
   "shell-settings": "settings-button.png",
   "shell-footer-web": "web-button-frame.png",

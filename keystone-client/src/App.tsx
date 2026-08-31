@@ -23,6 +23,7 @@ import {
 import { getPreviewState, isTeamsPreview } from "./core/preview";
 import { liveTeamsDataSource, type TeamsDataSource } from "./core/teams";
 import { getTeamsPreviewDataSource } from "./core/teamsPreview";
+import { clearTeamsSessionCache, prefetchTeamsSession } from "./core/teamsSessionCache";
 import { setProfileAvatar } from "./core/profile";
 import { tauriUpdaterAdapter } from "./core/tauriUpdater";
 import { UpdateController, type UpdaterSnapshot } from "./core/updater";
@@ -116,6 +117,7 @@ function App() {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [postUpdateChangelog, setPostUpdateChangelog] = useState<PostUpdateChangelog | null>(null);
   const updaterController = useRef<UpdateController | null>(null);
+  const teamsSessionOwner = useRef<string | null | undefined>(undefined);
 
   const applySystemState = useCallback((state: SystemState) => {
     setAuth(state.auth);
@@ -276,6 +278,7 @@ function App() {
   }, []);
 
   const handleSessionExpired = useCallback(() => {
+    clearTeamsSessionCache();
     setAuth({ authenticated: false, username: null, avatarUrl: null });
     setCharacters(current => current ? { ...current, characters: [], source: "none", lastRefreshAt: null, lastError: null } : current);
     setCurrentView("sync");
@@ -290,6 +293,7 @@ function App() {
     const previousAuth = auth;
     setBusyAction("logout");
     setError(null);
+    clearTeamsSessionCache();
     setAuth({ authenticated: false, username: null, avatarUrl: null });
     setCharacters((current) => current ? { ...current, characters: [], source: "none", lastRefreshAt: null, lastError: null } : current);
     setSettingsOpen(false);
@@ -307,6 +311,7 @@ function App() {
   }
 
   async function handleAuthenticated(nextAuth: AuthState) {
+    clearTeamsSessionCache();
     setAuth(nextAuth);
     setBusyAction("startup");
     setError(null);
@@ -319,6 +324,28 @@ function App() {
       setBusyAction(null);
     }
   }
+
+  const authenticatedUsername = auth?.authenticated ? auth.username : null;
+
+  useEffect(() => {
+    if (teamsSessionOwner.current === authenticatedUsername) return;
+    clearTeamsSessionCache();
+    teamsSessionOwner.current = authenticatedUsername;
+  }, [authenticatedUsername]);
+
+  useEffect(() => {
+    if (!auth?.authenticated || bridgeStatus !== "ready" || !settings || !wow || !sync || !characters || !addon
+      || (previewMode && !isTeamsPreview())) return;
+    let cancelled = false;
+    void prefetchTeamsSession(teamsDataSource).catch(caught => {
+      if (!cancelled && typeof caught === "object" && caught !== null && "code" in caught
+        && String((caught as CoreError).code) === "SESSION_EXPIRED") {
+        handleSessionExpired();
+      }
+    });
+    return () => { cancelled = true; };
+  }, [addon, auth?.authenticated, bridgeStatus, characters, handleSessionExpired, previewMode,
+    settings, sync, teamsDataSource, wow]);
 
   async function handleAvatarSelect(avatarUrl: string) {
     if (avatarSaving) {

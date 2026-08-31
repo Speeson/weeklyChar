@@ -223,3 +223,35 @@ test("reviews lifecycle stability, themed empty prompt, cached navigation and ra
     await capture(page, `24-${theme}-settings-english-reopened.png`);
   }
 });
+
+test("reviews the full-area cold loader and warm section navigation in both themes", async ({ page }) => {
+  for (const theme of ["poison", "keystone"] as const) {
+    await openTeams(page, "teams-cold-loading", "es", theme);
+    const loader = page.getByLabel("Cargando equipos...");
+    await expect(loader).toBeVisible();
+    await expect(loader).toHaveClass(/teams-loading-veil/u);
+    await expect(loader.locator("img")).toHaveAttribute(
+      "src",
+      new RegExp(theme === "poison" ? "app-badge" : "21-app-icon-hd"),
+    );
+    await expect(loader.locator("img")).toHaveCSS("animation-name", "none");
+    await expect(page.locator(".teams-page-skeleton")).toHaveCount(0);
+    await capture(page, `25-${theme}-cold-teams-loading.png`);
+
+    await openTeams(page, "teams-default", "es", theme);
+    await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
+    await page.getByRole("button", { name: "Sincronizacion" }).click();
+    await page.evaluate(() => {
+      (window as typeof window & { __teamsLoaderObserved?: boolean }).__teamsLoaderObserved = false;
+      new MutationObserver(() => {
+        if (document.querySelector(".teams-loading-veil, .teams-page-skeleton")) {
+          (window as typeof window & { __teamsLoaderObserved?: boolean }).__teamsLoaderObserved = true;
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+    await page.getByRole("button", { name: "Equipos" }).click();
+    await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
+    expect(await page.evaluate(() => (window as typeof window & { __teamsLoaderObserved?: boolean }).__teamsLoaderObserved)).toBe(false);
+    await capture(page, `26-${theme}-warm-teams-return.png`);
+  }
+});
