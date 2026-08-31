@@ -50,6 +50,7 @@ Owns:
 - WoW API reads, WoW event handling, local weekly-state capture, and weekly reset preservation rules.
 - Optional current-character KeystoneLoot public API v2 capture through isolated
   `KeystoneLootIntegration.lua`.
+- One persistent top-level SavedVariables instance identifier used only for safe reset detection.
 - Exact Favorite variant resolution from stored `bonusIds` through guarded WoW item-loading
   callbacks; unresolved item level/quality remains nullable.
 
@@ -77,6 +78,8 @@ Owns:
 - Sync payload construction and `POST /api/keystones/update`.
 - Presence-sensitive KeystoneLoot transport, including Lua-array to JSON-array
   representation at the known V1-A array fields.
+- Private per-WoW-account/region SavedVariables instance baselines in the existing config, with
+  reconciliation retry until reset, current-character sync, and baseline persistence all succeed.
 - Windows desktop/tray UX, login, account selection, and local config.
 - Checking addon releases in the background without blocking startup.
 - Downloading, validating, caching, and installing standalone addon releases from `Speeson/KeystoneSync` after explicit user action.
@@ -101,6 +104,8 @@ Owns:
 - HTTP routes mounted in `keystone-worker/src/index.ts`.
 - Authentication and sync-token handling.
 - `POST /api/keystones/update` write handling in `keystone-worker/src/routes/keystones.ts`.
+- Owner-authenticated, account-scoped KeystoneLoot reconciliation in
+  `POST /api/me/keystone-loot/reset`.
 - Focused KeystoneLoot validation in `keystone-worker/src/keystoneLoot.ts`.
 - Pure KeystoneLoot recommendation scoring in `keystone-worker/src/keystoneRecommendations.ts`.
 - Allowlisted KeystoneLoot objective projection/pagination in
@@ -324,6 +329,15 @@ and returns only one aggregate `(character, specId)` recommendation per member. 
 loads the account preference through the existing `/api/me` contracts, selects one real
 current keystone from team detail, sends only its `challengeMapId`, and renders the
 aggregate response. Web performs no scoring or Voidcore decisions.
+
+SavedVariables reset reconciliation separates character absence from explicit source replacement.
+The addon instance ID is local control metadata; the Client compares it only with its own persisted
+baseline for the same WoW account and region. A first observation enrolls without deletion. A later
+change invokes the Worker reset endpoint, which derives owner identity from authentication and
+nulls only matching `characters.keystone_loot_json`. The Client advances the baseline only after
+that reset and all current character writes succeed, so network or disk failures remain retryable.
+No D1 instance table or migration exists, and team/owner objective reads observe the null snapshot
+immediately through their existing classification paths.
 
 KeystoneLoot V2-A extends the Worker contract without changing the raw team-detail or V1
 recommendation responses. JWT-authenticated owners can request a paginated allowlisted

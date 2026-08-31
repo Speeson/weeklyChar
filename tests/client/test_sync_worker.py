@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -19,9 +20,10 @@ from sync_worker import SyncWorker, _keystone_loot_for_json, _normalize_ilvl  # 
 
 
 class FakeResponse:
-    ok = True
-    status_code = 200
-    text = ""
+    def __init__(self, *, ok=True, status_code=200, text=""):
+        self.ok = ok
+        self.status_code = status_code
+        self.text = text
 
 
 def load_savedvariables(name: str) -> dict:
@@ -65,6 +67,43 @@ class SyncWorkerContractTests(unittest.TestCase):
             worker._sync(str(FIXTURE_ROOT / "savedvariables" / fixture_name), "ACCOUNT-1")
 
         return posts
+
+    def write_instance_savedvariables(
+        self, root: Path, instance_id: str, characters: tuple[str, ...] = ("Bakuhatsu",)
+    ) -> Path:
+        entries = []
+        for name in characters:
+            entries.append(
+                f'''["Everlight-{name}"] = {{
+                    character = "{name}", realm = "Everlight", region = "eu",
+                    hasKeystone = false,
+                }}'''
+            )
+        path = root / "KeystoneSync.lua"
+        path.write_text(
+            "KeystoneSyncDB = {\n"
+            f'  savedVariablesInstanceId = "{instance_id}",\n'
+            f"  {','.join(entries)}\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def run_instance_sync(self, worker: SyncWorker, path: Path, responses=None):
+        posts = []
+        queued = list(responses or [])
+
+        def fake_post(url, json, headers, timeout):
+            posts.append({"url": url, "json": json})
+            return queued.pop(0) if queued else FakeResponse()
+
+        with (
+            mock.patch.object(worker, "_fetch_raiderio", return_value=(None, None, None, None)),
+            mock.patch("sync_worker.requests.post", side_effect=fake_post),
+            mock.patch("sync_worker.cfg_module.save") as save_config,
+        ):
+            result = worker._sync(str(path), "ACCOUNT-1")
+        return result, posts, save_config
 
     def test_basic_savedvariables_fixture_decodes_current_contract_blocks(self):
         decoded = load_savedvariables("basic.lua")
@@ -205,6 +244,188 @@ class SyncWorkerContractTests(unittest.TestCase):
         [post] = self.capture_sync_payloads("basic.lua")
 
         self.assertNotIn("keystoneLoot", post["json"])
+
+    def test_first_instance_observation_enrolls_after_sync_without_remote_reset(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(Path(temp), "instance-A")
+            worker = SyncWorker(dict(self.config))
+
+            result, posts, save_config = self.run_instance_sync(worker, path)
+
+        self.assertTrue(result)
+        self.assertEqual([post["url"] for post in posts], [
+            "https://api.test/api/keystones/update",
+        ])
+        self.assertEqual(
+            worker.config["saved_variables_instances"],
+            {"account-1": {"eu": "instance-A"}},
+        )
+        save_config.assert_called_once()
+
+    def test_unchanged_instance_and_missing_character_do_not_reset(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {"account-1": {"eu": "instance-A"}},
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(Path(temp), "instance-A", ("Bakuhatsu",))
+            worker = SyncWorker(config)
+
+            result, posts, save_config = self.run_instance_sync(worker, path)
+
+        self.assertTrue(result)
+        self.assertEqual([post["json"]["character"] for post in posts], ["Bakuhatsu"])
+        self.assertNotIn("/api/me/keystone-loot/reset", [post["url"] for post in posts])
+        save_config.assert_not_called()
+
+    def test_changed_instance_resets_before_sync_and_advances_baseline_once(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {
+                "account-1": {"eu": "instance-A"},
+                "account-2": {"eu": "other-instance"},
+            },
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(Path(temp), "instance-B")
+            worker = SyncWorker(config)
+
+            result, posts, save_config = self.run_instance_sync(worker, path)
+            second_result, second_posts, second_save = self.run_instance_sync(worker, path)
+
+        self.assertTrue(result)
+        self.assertEqual([post["url"] for post in posts], [
+            "https://api.test/api/me/keystone-loot/reset",
+            "https://api.test/api/keystones/update",
+        ])
+        self.assertEqual(posts[0]["json"], {"region": "eu", "wowAccount": "ACCOUNT-1"})
+        self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-B")
+        self.assertEqual(
+            worker.config["saved_variables_instances"]["account-2"]["eu"],
+            "other-instance",
+        )
+        save_config.assert_called_once()
+        self.assertTrue(second_result)
+        self.assertEqual([post["url"] for post in second_posts], [
+            "https://api.test/api/keystones/update",
+        ])
+        second_save.assert_not_called()
+
+    def test_failed_reset_keeps_old_baseline_and_retries_next_sync(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {"account-1": {"eu": "instance-A"}},
+        }
+        errors = []
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(Path(temp), "instance-B")
+            worker = SyncWorker(config, on_error=errors.append)
+            failure = FakeResponse(ok=False, status_code=503, text="unavailable")
+
+            first_result, first_posts, first_save = self.run_instance_sync(worker, path, [failure])
+            second_result, second_posts, second_save = self.run_instance_sync(worker, path, [failure])
+
+        self.assertFalse(first_result)
+        self.assertFalse(second_result)
+        self.assertEqual(first_posts[0]["url"], "https://api.test/api/me/keystone-loot/reset")
+        self.assertEqual(second_posts[0]["url"], "https://api.test/api/me/keystone-loot/reset")
+        self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-A")
+        first_save.assert_not_called()
+        second_save.assert_not_called()
+        self.assertEqual(len(errors), 2)
+
+    def test_character_sync_failure_after_reset_does_not_advance_baseline(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {"account-1": {"eu": "instance-A"}},
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(Path(temp), "instance-B")
+            worker = SyncWorker(config)
+            failure = FakeResponse(ok=False, status_code=500, text="failed")
+
+            result, posts, save_config = self.run_instance_sync(
+                worker, path, [FakeResponse(), failure]
+            )
+
+        self.assertFalse(result)
+        self.assertEqual(len(posts), 2)
+        self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-A")
+        save_config.assert_not_called()
+
+    def test_config_persistence_failure_keeps_reset_retryable_in_memory(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {"account-1": {"eu": "instance-A"}},
+        }
+        posts = []
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(Path(temp), "instance-B")
+            worker = SyncWorker(config)
+
+            def fake_post(url, json, headers, timeout):
+                posts.append(url)
+                return FakeResponse()
+
+            with (
+                mock.patch.object(worker, "_fetch_raiderio", return_value=(None, None, None, None)),
+                mock.patch("sync_worker.requests.post", side_effect=fake_post),
+                mock.patch("sync_worker.cfg_module.save", side_effect=OSError("disk full")),
+            ):
+                with self.assertRaises(OSError):
+                    worker._sync(str(path), "ACCOUNT-1")
+                with self.assertRaises(OSError):
+                    worker._sync(str(path), "ACCOUNT-1")
+
+        self.assertEqual(posts, [
+            "https://api.test/api/me/keystone-loot/reset",
+            "https://api.test/api/keystones/update",
+            "https://api.test/api/me/keystone-loot/reset",
+            "https://api.test/api/keystones/update",
+        ])
+        self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-A")
+
+    def test_invalid_savedvariables_never_reset_or_change_baseline(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {"account-1": {"eu": "instance-A"}},
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "KeystoneSync.lua"
+            path.write_text("KeystoneSyncDB = { savedVariablesInstanceId = ", encoding="utf-8")
+            worker = SyncWorker(config)
+            with (
+                mock.patch("sync_worker.requests.post") as post,
+                mock.patch("sync_worker.cfg_module.save") as save_config,
+            ):
+                with self.assertRaises(Exception):
+                    worker._sync(str(path), "ACCOUNT-1")
+
+        post.assert_not_called()
+        save_config.assert_not_called()
+        self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-A")
+
+        missing = Path(temp) / "missing.lua"
+        with mock.patch("sync_worker.requests.post") as missing_post:
+            with self.assertRaises(FileNotFoundError):
+                worker._sync(str(missing), "ACCOUNT-1")
+        missing_post.assert_not_called()
+
+    def test_watcher_retries_same_mtime_until_complete_sync_succeeds(self):
+        worker = SyncWorker(dict(self.config))
+        account = {"name": "ACCOUNT-1", "savedvars_path": "C:/WTF/KeystoneSync.lua"}
+        with (
+            mock.patch("sync_worker.wow_path.selected_savedvars_paths", return_value=[account]),
+            mock.patch("sync_worker.os.path.exists", return_value=True),
+            mock.patch("sync_worker.os.path.getmtime", return_value=123.0),
+            mock.patch("sync_worker.time.sleep"),
+            mock.patch.object(worker, "_sync", side_effect=[False, True]) as sync,
+        ):
+            worker._check()
+            worker._check()
+
+        self.assertEqual(sync.call_count, 2)
+        self.assertEqual(worker._last_mtimes[account["savedvars_path"]], 123.0)
 
 
 if __name__ == "__main__":

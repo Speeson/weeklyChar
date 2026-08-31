@@ -21,6 +21,7 @@ _DEFAULTS = {
     "wow_install_path": None,
     "wow_accounts_selected": [],
     "wow_accounts_prompted": False,
+    "saved_variables_instances": {},
     "start_minimized": False,
     "minimize_on_close": False,
     "login_at": None,

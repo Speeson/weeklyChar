@@ -48,6 +48,11 @@ Main implementation points:
 - Addon distribution to users: `Speeson/KeystoneSync` GitHub Release -> `KeystoneSync-vX.Y.Z.zip` -> `keystone-client/sidecar/addon_updater.py` -> validated local cache -> WoW AddOns folder.
 - `keystone-client/sidecar/wow_path.py`: discovers `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
 - `keystone-client/sidecar/sync_worker.py`: `SyncWorker._sync()` parses SavedVariables with `slpp`, fetches Raider.IO enrichment, builds the payload, and posts to `/api/keystones/update`.
+- SavedVariables reset reconciliation uses addon top-level `savedVariablesInstanceId`, a private
+  Client baseline per normalized WoW account/region in `%APPDATA%\KeystoneClient\config.json`, and
+  authenticated `POST /api/me/keystone-loot/reset`. First observation is non-destructive; only a
+  later A-to-B change clears matching `keystone_loot_json`, and baseline/mtime advance only after
+  reset plus all current-character writes and config persistence succeed.
 - `keystone-client/sidecar/character_service.py`: sanitizes cached/API character DTOs, preserves cached rows on refresh failure, enriches missing display fields server-side and publishes `characters.updated` without exposing tokens.
 - `keystone-client/sidecar/sync_service.py`: owns the single SavedVariables monitor, reconciles it against authentication/WoW account prerequisites and schedules character refresh after successful sync.
 - `keystone-client/src/`: consumes `characters.get` / `characters.refresh`, renders real sortable character rows and uses a scoped Tauri command for Raider.IO profile navigation.
@@ -64,7 +69,7 @@ Main implementation points:
 
 Verified from checked-out files:
 
-- Canonical addon repo `Speeson/KeystoneSync` baseline `v0.2.5`: `Version: 0.2.5`, `Interface: 120100`; the pending Spark bank fix is a patch change that predicts `0.2.6` without releasing it.
+- Canonical addon repo `Speeson/KeystoneSync`: released `v0.2.8`, `Version: 0.2.8`, `Interface: 120100`.
 - Canonical Windows client `keystone-client/VERSION`: `0.6.10`
 - Current public Tauri release: `0.6.10`, tag `client-v0.6.10`, at commit `3646fddd1ef41e240e7681771097940e84b8bd58`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
@@ -119,6 +124,10 @@ Verified from checked-out files:
 - The end-to-end tracked-data contract is documented in `docs/DATA_CONTRACT.md`.
 - Project skills live under `.agents/skills/` and were reviewed against the verified architecture/data contract in Phase 7.
 - The data contract spans addon SavedVariables, client parsing/payloads, Worker API, D1 persistence, and Web rendering.
+- Character absence alone never deletes remote KeystoneLoot. Explicit per-character `null` clears
+  one snapshot; a baselined SavedVariables instance change authorizes only an owner/account/region
+  scoped KeystoneLoot reset. The existing nullable D1 column is reused without a migration, and
+  `wow_item_metadata` is outside this lifecycle.
 - The root `KeystoneSync/` duplicate was removed in Phase 5. Phase 11 removed the remaining embedded Client addon bundle; do not recreate it without an explicit architecture change.
 - Deployment/release impact must be determined by `scripts/deploy_impact.py`, not by memory. Reporting remote impact does not authorize deployment, remote D1 migration, tag, release, or push.
 

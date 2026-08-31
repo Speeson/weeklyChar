@@ -46,13 +46,18 @@ The addon declares:
 ## SavedVariables: KeystoneSyncDB
 ```
 
-`KeystoneSyncDB` is a Lua table keyed by:
+`KeystoneSyncDB` is a Lua table with one reserved instance field and per-character keys:
 
 ```text
 <realm>-<character>
 ```
 
-`GetCharacterKey()` builds the key from `GetRealmName()` and `UnitName("player")`. Each value is a per-character table written by `SaveCharacterData()`.
+`savedVariablesInstanceId` is a persistent string created only when the SavedVariables database
+does not already contain one. It survives reloads, restarts, character changes, and addon versions;
+deleting/recreating `KeystoneSync.lua` creates a new value. It is local reconciliation metadata,
+not a character entry or Worker payload field. `GetCharacterKey()` builds character keys from
+`GetRealmName()` and `UnitName("player")`. Each character value is a table written by
+`SaveCharacterData()`.
 
 ### Per-character Fields
 
@@ -195,8 +200,18 @@ Parsing behavior:
 - Reads the SavedVariables file as UTF-8.
 - Takes the substring after the first `=`.
 - Decodes the Lua table with `slpp`.
-- Iterates every per-character entry in the decoded table.
+- Reads and validates the reserved top-level `savedVariablesInstanceId`, then iterates only
+  validated per-character entries.
 - Does not use the `KeystoneSyncDB` table key as identity; identity comes from fields inside each entry.
+- Invalid/unreadable structures, invalid instance IDs, missing character scope, or files with no
+  character entries fail without issuing reconciliation or changing the stored baseline.
+- `%APPDATA%\KeystoneClient\config.json` stores `saved_variables_instances`, a private map scoped
+  by normalized WoW account folder and region. It is never sent to the Worker.
+- Missing baseline is first enrollment and performs no reset. Equal instance IDs perform normal
+  sync. A changed ID calls `POST /api/me/keystone-loot/reset` before character updates.
+- The new baseline and file mtime are confirmed only after reconciliation, every current character
+  update, and config persistence succeed. Failures retain the old baseline and retry the same file.
+- Character absence while the instance ID is unchanged never authorizes remote deletion.
 
 Raider.IO enrichment:
 
@@ -291,11 +306,22 @@ Character update behavior:
 - For scalar enrichment fields, `null` or omitted values retain the previous stored value.
 - Existing JSON blocks use `payload.<block> === undefined ? null : jsonDump(payload.<block>)` before `COALESCE`.
 - For those existing blocks, omitted values preserve previous JSON; present `null` is serialized to JSON string `"null"` and stored.
-- KeystoneLoot is stricter: omitted `keystoneLoot` preserves the existing column, a
-  present valid block replaces it authoritatively, and explicit `null` is rejected.
+- KeystoneLoot is presence-sensitive: omitted `keystoneLoot` preserves the existing column, a
+  present valid object replaces it authoritatively, and explicit `null` clears the column.
 - KeystoneLoot validation happens before character creation/update, so malformed data
   cannot partially persist or erase an earlier snapshot.
 - `characters.updated_at` is always set to current Worker time on accepted update.
+
+Account-scoped reconciliation endpoint:
+
+- `POST /api/me/keystone-loot/reset` accepts `{ "region": string, "wowAccount": string }`.
+- Existing flexible owner authentication accepts a valid access token or sync token; the user ID
+  always comes from the bearer token, and unknown payload fields such as `userId` are rejected.
+- Region is allowlisted to `eu`, `us`, `kr`, or `tw`; `wowAccount` is trimmed, non-empty, and at
+  most 128 characters.
+- The idempotent update clears only `characters.keystone_loot_json` where `user_id`, `region`, and
+  `wow_account` all match. Character rows, other columns, keystones, teams, and
+  `wow_item_metadata` are untouched.
 
 KeystoneLoot validation accepts additive unknown fields but enforces the known V1-A
 contract. Supported snapshots require API v2, bounded version/character identifiers,
@@ -480,8 +506,10 @@ Read endpoints:
 - `GET /api/teams/:teamId` returns member characters through the default response shape,
   which continues to omit the `keystoneLoot` property entirely.
 - `POST /api/me/characters/enrich` can update its established enrichment/JSON blocks but
-  does not accept or persist KeystoneLoot. The only V1-B write source is SavedVariables
-  sync through `POST /api/keystones/update`.
+  does not accept or persist KeystoneLoot. The normal per-character V1-B snapshot write
+  source is SavedVariables sync through `POST /api/keystones/update`.
+- `POST /api/me/keystone-loot/reset` is the explicit owner-authenticated reconciliation surface
+  used only after the sidecar detects a previously baselined SavedVariables instance change.
 
 Privacy and recommendation endpoints:
 
@@ -740,6 +768,7 @@ Verified addon fields that are written to `KeystoneSyncDB` but do not cross the 
 | --- | --- | --- |
 | `keystoneWeeklyResetKey` | `SaveCharacterData()` writes `keystone.weeklyResetKey` | Used locally by addon preservation logic; not included in `keystone-client/sidecar/sync_worker.py` payload; not accepted/persisted by Worker. |
 | `mythicPlusSeasonUpdatedAt` | `UpdateMythicPlusSeason()` writes `time()` or preserves previous value | Used locally to track season capture time; not included in client payload; not accepted/persisted by Worker. |
+| `savedVariablesInstanceId` | `SaveCharacterData()` creates one value when the top-level DB lacks it | Consumed only by the Client's private reset detector; never included in character payloads or stored server-side. |
 
 Do not fix this gap in documentation-only phases. Future work should decide whether these are intentionally local-only or should become transported contract fields.
 
@@ -761,8 +790,12 @@ KeystoneLoot V1 compatibility was validated as follows:
 | old Client payload | new Worker | accepted; omitted snapshot preserves stored data |
 | new Client payload without `keystoneLoot` | new Worker | accepted; omitted snapshot preserves stored data |
 | new Client payload with `keystoneLoot` | new Worker | validated and authoritatively persisted |
+| new Client payload with `keystoneLoot: null` | new Worker | accepted and clears only that character's snapshot |
 | new Client payload with `keystoneLoot` | pre-V1 Worker | accepted; additive field safely ignored |
 | new Worker aggregate data | current Web | preference and recommendations rendered without raw team wishlist data |
+| SavedVariables without instance ID | new Client | normal legacy sync; no reset and no baseline until an ID exists |
+| first observed instance ID | new Client/Worker | baseline enrollment after successful sync; no reset |
+| changed baselined instance ID | new Client/Worker | account/region-scoped reset, current-character sync, then baseline advance |
 
 Validated production order is addon, Client, migration `0002`, migration `0003`, Worker,
 then Web. The Worker cannot precede its migrations because its SQL references both new
