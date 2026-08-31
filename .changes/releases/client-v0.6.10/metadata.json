@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.9",
+  "version": "0.6.10",
+  "bump": "patch",
+  "tag": "client-v0.6.10",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-teams-session-cache.json"
+  ]
+}
