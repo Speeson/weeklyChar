@@ -446,6 +446,7 @@ class FakeD1Statement {
         currenciesJson,
         moneyJson,
         mythicPlusSeasonJson,
+        hasKeystoneLoot,
         keystoneLootJson,
         characterId,
       ] = values
@@ -462,9 +463,22 @@ class FakeD1Statement {
       assignIfPresent(character, 'currencies_json', currenciesJson)
       assignIfPresent(character, 'money_json', moneyJson)
       assignIfPresent(character, 'mythic_plus_season_json', mythicPlusSeasonJson)
-      assignIfPresent(character, 'keystone_loot_json', keystoneLootJson)
+      if (hasKeystoneLoot === 1) character.keystone_loot_json = keystoneLootJson
       character.updated_at = '2026-08-21T00:00:00.000Z'
       return { meta: { changes: 1 } }
+    }
+
+    if (sql.includes('UPDATE characters SET keystone_loot_json = NULL')) {
+      const [userId, region, wowAccount] = values
+      let changes = 0
+      for (const character of this.db.characters) {
+        if (character.user_id === userId && character.region === region
+          && character.wow_account === wowAccount && character.keystone_loot_json !== null) {
+          character.keystone_loot_json = null
+          changes += 1
+        }
+      }
+      return { meta: { changes } }
     }
 
     if (sql.includes('UPDATE characters SET avatar_url = COALESCE')) {

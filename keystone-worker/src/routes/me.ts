@@ -39,6 +39,13 @@ type PreferencesUpdateRequest = {
   shareKeystoneLootWithTeams?: unknown
 }
 
+type KeystoneLootResetRequest = {
+  region?: unknown
+  wowAccount?: unknown
+}
+
+const KEYSTONE_LOOT_RESET_REGIONS = new Set(['eu', 'us', 'kr', 'tw'])
+
 function isResponse(value: unknown): value is Response {
   return value instanceof Response
 }
@@ -116,6 +123,34 @@ meRoutes.patch('/api/me/preferences', async c => {
   `).bind(enabled ? 1 : 0, currentUser.id).run()
 
   return c.json({ shareKeystoneLootWithTeams: enabled })
+})
+
+meRoutes.post('/api/me/keystone-loot/reset', async c => {
+  const currentUser = await getCurrentUserFlexible(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const payload = await c.req.json<KeystoneLootResetRequest>().catch(() => null)
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).some(key => key !== 'region' && key !== 'wowAccount')
+    || typeof payload.region !== 'string' || !KEYSTONE_LOOT_RESET_REGIONS.has(payload.region)
+    || typeof payload.wowAccount !== 'string' || payload.wowAccount.trim() !== payload.wowAccount
+    || payload.wowAccount.length === 0 || payload.wowAccount.length > 128) {
+    return jsonError(c, 400, 'region o wowAccount no válidos')
+  }
+
+  const result = await c.env.DB.prepare(`
+    UPDATE characters
+    SET keystone_loot_json = NULL
+    WHERE user_id = ? AND region = ? AND wow_account = ?
+      AND keystone_loot_json IS NOT NULL
+  `).bind(currentUser.id, payload.region, payload.wowAccount).run()
+
+  return c.json({
+    status: 'ok',
+    region: payload.region,
+    wowAccount: payload.wowAccount,
+    clearedCharacters: result.meta.changes ?? 0,
+  })
 })
 
 meRoutes.patch('/api/me/avatar', async c => {

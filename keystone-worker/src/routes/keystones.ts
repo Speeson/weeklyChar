@@ -46,7 +46,7 @@ keystoneRoutes.post('/api/keystones/update', async c => {
     return jsonError(c, 400, 'Personaje y reino son obligatorios')
   }
 
-  if (hasKeystoneLoot) {
+  if (hasKeystoneLoot && payload.keystoneLoot !== null) {
     const keystoneLootError = validateKeystoneLoot(payload.keystoneLoot)
     if (keystoneLootError) {
       return jsonError(c, 400, `Datos de KeystoneLoot no válidos: ${keystoneLootError}`)
@@ -80,7 +80,7 @@ keystoneRoutes.post('/api/keystones/update', async c => {
         currencies_json = COALESCE(?, currencies_json),
         money_json = COALESCE(?, money_json),
         mythic_plus_season_json = COALESCE(?, mythic_plus_season_json),
-        keystone_loot_json = COALESCE(?, keystone_loot_json),
+        keystone_loot_json = CASE WHEN ? = 1 THEN ? ELSE keystone_loot_json END,
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE id = ?
   `).bind(
@@ -94,7 +94,8 @@ keystoneRoutes.post('/api/keystones/update', async c => {
     payload.currencies === undefined ? null : jsonDump(payload.currencies),
     payload.money === undefined ? null : jsonDump(payload.money),
     payload.mythicPlusSeason === undefined ? null : jsonDump(payload.mythicPlusSeason),
-    hasKeystoneLoot ? jsonDump(payload.keystoneLoot) : null,
+    hasKeystoneLoot ? 1 : 0,
+    hasKeystoneLoot && payload.keystoneLoot !== null ? jsonDump(payload.keystoneLoot) : null,
     character.id,
   ).run()
 

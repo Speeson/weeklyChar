@@ -267,17 +267,22 @@ test('explicit null and empty JSON blocks persist according to current Worker be
   assert.equal(characters[0].mythicPlusSeason, null)
 })
 
-test('KeystoneLoot rejects explicit null without creating partial character data', async () => {
+test('explicit null KeystoneLoot clears the snapshot without deleting the character', async () => {
   const env = makeEnv()
+  const payload = await loadPayload('keystoneloot-sync-payload.json')
+  assert.equal((await sync(env, payload)).status, 200)
+  assert.notEqual(env.DB.characters[0].keystone_loot_json, null)
+
   const response = await sync(env, {
-    character: 'Nullwish',
-    realm: 'Everlight',
+    character: payload.character,
+    realm: payload.realm,
+    region: payload.region,
     keystoneLoot: null,
   })
 
-  assert.equal(response.status, 400)
-  assert.match((await response.json()).detail, /KeystoneLoot/)
-  assert.equal(env.DB.characters.length, 0)
+  assert.equal(response.status, 200)
+  assert.equal(env.DB.characters.length, 1)
+  assert.equal(env.DB.characters[0].keystone_loot_json, null)
 })
 
 test('KeystoneLoot rejects inconsistent state flags', async () => {
@@ -498,7 +503,7 @@ test('invalid KeystoneLoot cannot erase a previously stored snapshot', async () 
     character: payload.character,
     realm: payload.realm,
     region: payload.region,
-    keystoneLoot: null,
+    keystoneLoot: [],
   })
 
   assert.equal(response.status, 400)
