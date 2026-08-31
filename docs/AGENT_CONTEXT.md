@@ -70,8 +70,8 @@ Main implementation points:
 Verified from checked-out files:
 
 - Canonical addon repo `Speeson/KeystoneSync`: released `v0.2.8`, `Version: 0.2.8`, `Interface: 120100`.
-- Canonical Windows client `keystone-client/VERSION`: `0.6.10`
-- Current public Tauri release: `0.6.10`, tag `client-v0.6.10`, at commit `3646fddd1ef41e240e7681771097940e84b8bd58`
+- Canonical Windows client `keystone-client/VERSION`: `0.6.11`
+- Current public Tauri release: `0.6.11`, tag `client-v0.6.11`, at commit `67b464de2cba1a53872c61f28b90d5e990737811`
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
