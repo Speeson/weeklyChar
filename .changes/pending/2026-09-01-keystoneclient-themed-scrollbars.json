@@ -1,0 +1,9 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Tematiza las barras de desplazamiento de KeystoneClient.",
+  "details": [
+    "Las barras de desplazamiento de Ajustes, tablas y paneles desplazables respetan los colores propios de Keystone, Poison y Void."
+  ]
+}

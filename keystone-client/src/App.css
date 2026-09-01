@@ -19,6 +19,27 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-color: var(--theme-scrollbar) var(--theme-scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: var(--theme-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid var(--theme-scrollbar-track);
+  border-radius: 5px;
+  background: var(--theme-scrollbar);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-hover);
 }
 
 body {
@@ -658,7 +679,6 @@ h2 {
   grid-auto-rows: minmax(58px, 1fr);
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-color: var(--theme-scrollbar) var(--theme-scrollbar-track);
   scrollbar-width: thin;
 }
 
