@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.7.0",
+  "version": "0.7.1",
+  "bump": "patch",
+  "tag": "client-v0.7.1",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-09-01-keystoneclient-themed-scrollbars.json"
+  ]
+}
