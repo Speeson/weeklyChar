@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.6.11",
+  "version": "0.7.0",
+  "bump": "minor",
+  "tag": "client-v0.7.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-09-01-keystoneclient-void-theme.json"
+  ]
+}
