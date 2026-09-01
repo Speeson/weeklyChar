@@ -58,6 +58,31 @@ import poisonWarningIcon from "../themes/assets/poison/icons/poison-warning-icon
 import poisonActiveTab from "../themes/assets/poison/navigation/tab-active-decoration.png";
 import poisonInactiveTab from "../themes/assets/poison/navigation/tab-inactive-decoration.png";
 import poisonAmbientOverlay from "../themes/assets/poison/overlays/ambient-overlay.png";
+import voidBackground from "../themes/assets/void/backgrounds/background-main.png";
+import voidOverlay1 from "../themes/assets/void/backgrounds/overlay1.png";
+import voidOverlay2 from "../themes/assets/void/backgrounds/overlay2.png";
+import voidOverlay3 from "../themes/assets/void/backgrounds/overlay3.png";
+import voidAppIconHd from "../themes/assets/void/branding/app-icon-hd.png";
+import voidAppIcon from "../themes/assets/void/branding/app-icon.png";
+import voidCloseButton from "../themes/assets/void/frames/buttons/close-button.png";
+import voidMinimizeButton from "../themes/assets/void/frames/buttons/minimize-button.png";
+import voidSettingsButton from "../themes/assets/void/frames/buttons/settings-button.png";
+import voidTrayButton from "../themes/assets/void/frames/buttons/tray-button.png";
+import voidWebButton from "../themes/assets/void/frames/buttons/web-button.png";
+import voidAvatarFrame from "../themes/assets/void/frames/profile/avatar-frame.png";
+import voidUserPanelFrame from "../themes/assets/void/frames/profile/user-panel-frame.png";
+import voidRightHeroPanelFrame from "../themes/assets/void/frames/right-hero-panel-frame.png";
+import voidAccountsIcon from "../themes/assets/void/icons/accounts.png";
+import voidCharactersIcon from "../themes/assets/void/icons/characters.png";
+import voidDropdownIcon from "../themes/assets/void/icons/dropdown-icon.png";
+import voidErrorIcon from "../themes/assets/void/icons/error.png";
+import voidInfoIcon from "../themes/assets/void/icons/info.png";
+import voidLastSyncIcon from "../themes/assets/void/icons/last-sync.png";
+import voidStatusSuccessIcon from "../themes/assets/void/icons/status-success.png";
+import voidSyncIcon from "../themes/assets/void/icons/sync.png";
+import voidVersionIcon from "../themes/assets/void/icons/version.png";
+import voidWarningIcon from "../themes/assets/void/icons/warning.png";
+import voidActiveTab from "../themes/assets/void/navigation/active-tab-indicator.png";
 import type { ThemeId } from "./theme.types";
 
 export const KEYSTONE_THEME_ASSETS = {
@@ -109,6 +134,8 @@ export const OPTIONAL_THEME_ASSET_ROLES = [
   "addon-status-frame",
   "artwork-background",
   "artwork-overlay",
+  "artwork-overlay-alternative-2",
+  "artwork-overlay-alternative-3",
   "brand-theme-emblem",
   "brand-app-badge",
   "chrome-scalable-frame",
@@ -183,11 +210,49 @@ export const THEME_ASSET_OVERRIDES: ThemeAssetOverrides = {
     "sync-version": poisonVersionIcon,
     "sync-version-frame": poisonVersionCardFrame,
   },
+  void: {
+    "addon-status-current": voidStatusSuccessIcon,
+    "addon-status-error": voidErrorIcon,
+    "addon-status-local-newer": voidInfoIcon,
+    "addon-status-not-installed": voidErrorIcon,
+    "addon-status-offline-cache": voidInfoIcon,
+    "addon-status-operation": voidSyncIcon,
+    "addon-status-unavailable": voidErrorIcon,
+    "addon-status-update": voidWarningIcon,
+    "artwork-background": voidBackground,
+    "artwork-overlay": voidOverlay1,
+    "artwork-overlay-alternative-2": voidOverlay2,
+    "artwork-overlay-alternative-3": voidOverlay3,
+    "brand-emblem": voidAppIconHd,
+    "brand-mark": voidAppIcon,
+    "teams-loading-mark": voidAppIconHd,
+    "shell-active-tab": voidActiveTab,
+    "shell-avatar-frame": voidAvatarFrame,
+    "shell-footer-tray": voidTrayButton,
+    "shell-footer-web": voidWebButton,
+    "shell-settings": voidSettingsButton,
+    "shell-user-dropdown": voidDropdownIcon,
+    "shell-user-panel": voidUserPanelFrame,
+    "shell-window-close": voidCloseButton,
+    "shell-window-minimize": voidMinimizeButton,
+    "sync-hero-frame": voidRightHeroPanelFrame,
+    "sync-status-error": voidErrorIcon,
+    "sync-status-info": voidInfoIcon,
+    "sync-status-success": voidStatusSuccessIcon,
+    "sync-status-syncing": voidSyncIcon,
+    "sync-status-warning": voidWarningIcon,
+    "sync-summary-accounts": voidAccountsIcon,
+    "sync-summary-characters": voidCharactersIcon,
+    "sync-summary-last": voidLastSyncIcon,
+    "sync-version": voidVersionIcon,
+  },
 };
 
 export const THEME_ASSET_CSS_PROPERTIES = {
   "artwork-background": "--theme-artwork-background",
   "artwork-overlay": "--theme-artwork-overlay",
+  "artwork-overlay-alternative-2": "--theme-artwork-overlay-alternative-2",
+  "artwork-overlay-alternative-3": "--theme-artwork-overlay-alternative-3",
   "brand-theme-emblem": "--theme-emblem-artwork",
   "brand-app-badge": "--theme-app-badge-artwork",
   "chrome-scalable-frame": "--theme-chrome-scalable-frame",

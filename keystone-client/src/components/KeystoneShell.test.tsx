@@ -64,7 +64,7 @@ describe("KeystoneShell profile menu", () => {
     expect(document.querySelector('.ks-footer-action__asset[src$="tray-button-frame.png"]')).toBeInTheDocument();
   });
 
-  it.each(["keystone", "poison"] as const)("keeps shell state hooks, ARIA, and navigation behavior under the %s theme", async (theme) => {
+  it.each(["keystone", "poison", "void"] as const)("keeps shell state hooks, ARIA, and navigation behavior under the %s theme", async (theme) => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     document.documentElement.dataset.theme = theme;
@@ -92,6 +92,19 @@ describe("KeystoneShell profile menu", () => {
     await user.click(trigger);
     expect(trigger).toHaveAttribute("data-state", "open");
     expect(trigger).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("uses Void shell artwork and decorates only the active tab", () => {
+    localStorage.setItem("keystone-client.theme", "void");
+    renderShell();
+
+    expect(document.querySelector('.ks-brand__icon[src$="app-icon.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-user-menu__shell[src$="user-panel-frame.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-user-menu__dropdown-icon[src$="dropdown-icon.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-footer-action--web img[src$="web-button.png"]')).toBeInTheDocument();
+    expect(document.querySelector('.ks-footer-action--tray img[src$="tray-button.png"]')).toBeInTheDocument();
+    expect(document.querySelectorAll('.ks-tab__decoration--active[src$="active-tab-indicator.png"]')).toHaveLength(1);
+    expect(document.querySelectorAll(".ks-tab__decoration--inactive")).toHaveLength(0);
   });
 
   it("closes on outside click and Escape", async () => {

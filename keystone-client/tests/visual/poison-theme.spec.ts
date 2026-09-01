@@ -102,7 +102,7 @@ test.describe("Poison visual states", () => {
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
     const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
     await expect(themeSelector).toHaveValue("poison");
-    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison"]);
+    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison", "Void"]);
     await expectStableReleaseScreenshot(page, "poison-settings-theme-selector.png");
   });
 

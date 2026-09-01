@@ -53,6 +53,7 @@ describe("Settings theme integration", () => {
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "Keystone",
       "Poison",
+      "Void",
     ]);
     expect(screen.getByTestId("application-theme")).toHaveTextContent("keystone");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
@@ -62,11 +63,11 @@ describe("Settings theme integration", () => {
     await user.tab();
     expect(selector).toHaveFocus();
 
-    await user.selectOptions(selector, "poison");
-    expect(selector).toHaveValue("poison");
-    expect(screen.getByTestId("application-theme")).toHaveTextContent("poison");
-    expect(document.documentElement.dataset.theme).toBe("poison");
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("poison");
+    await user.selectOptions(selector, "void");
+    expect(selector).toHaveValue("void");
+    expect(screen.getByTestId("application-theme")).toHaveTextContent("void");
+    expect(document.documentElement.dataset.theme).toBe("void");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("void");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
 
     await user.selectOptions(selector, "keystone");
@@ -76,14 +77,14 @@ describe("Settings theme integration", () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("keystone");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
 
-    await user.selectOptions(selector, "poison");
+    await user.selectOptions(selector, "void");
 
     firstView.unmount();
     document.documentElement.dataset.theme = "keystone";
     renderSettings(onApplicationMount);
-    expect(screen.getByRole("combobox", { name: "Tema visual" })).toHaveValue("poison");
-    expect(screen.getByTestId("application-theme")).toHaveTextContent("poison");
-    expect(document.documentElement.dataset.theme).toBe("poison");
+    expect(screen.getByRole("combobox", { name: "Tema visual" })).toHaveValue("void");
+    expect(screen.getByTestId("application-theme")).toHaveTextContent("void");
+    expect(document.documentElement.dataset.theme).toBe("void");
     expect(onApplicationMount).toHaveBeenCalledTimes(2);
   });
 });

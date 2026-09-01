@@ -1,6 +1,6 @@
 # KeystoneClient static theme authoring
 
-KeystoneClient themes are static frontend skins. A theme may change visual presentation, but it must reuse the same pages, navigation, accessibility semantics, application state, and Client/sidecar behavior. Keystone is the safe default and Poison is the first selectable alternate skin currently shipped.
+KeystoneClient themes are static frontend skins. A theme may change visual presentation, but it must reuse the same pages, navigation, accessibility semantics, application state, and Client/sidecar behavior. Keystone is the safe default; Poison and Void are selectable alternate skins.
 
 ## Add a static theme
 
@@ -193,12 +193,14 @@ The optional registry roles and their document CSS slots are:
 | --- | --- |
 | `artwork-background` | `--theme-artwork-background` |
 | `artwork-overlay` | `--theme-artwork-overlay` |
+| `artwork-overlay-alternative-2` | `--theme-artwork-overlay-alternative-2` |
+| `artwork-overlay-alternative-3` | `--theme-artwork-overlay-alternative-3` |
 | `brand-theme-emblem` | `--theme-emblem-artwork` |
 | `brand-app-badge` | `--theme-app-badge-artwork` |
 | `decoration-panel-ornament` | `--theme-panel-ornament` |
 | `decoration-serpentine-amani` | `--theme-serpentine-decoration` |
 
-`applyThemeToDocument` publishes missing optional roles as `none` and controls `--theme-emblem-fallback-visibility`. Decorative layers must remain text-free and `pointer-events: none`. Prefer CSS gradients, then SVG, then WebP; optimize files before committing. Required branded/status asset roles resolve through `useThemeAsset` and safely fall back to Keystone until a theme registers a replacement.
+`applyThemeToDocument` publishes missing optional roles as `none` and controls `--theme-emblem-fallback-visibility`. Alternative overlay slots are review inputs only; production composition continues to read `--theme-artwork-overlay`. Decorative layers must remain text-free and `pointer-events: none`. Prefer CSS gradients, then SVG, then WebP; optimize files before committing. Required branded/status asset roles resolve through `useThemeAsset` and safely fall back to Keystone until a theme registers a replacement.
 
 The design references under `keystone-client/design/` are authoring evidence only. Never import them into runtime code.
 

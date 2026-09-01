@@ -1,6 +1,7 @@
 @import "../themes/base.css";
 @import "../themes/keystone.css";
 @import "../themes/poison.css";
+@import "../themes/void.css";
 
 @theme {
   --color-background: var(--theme-bg);

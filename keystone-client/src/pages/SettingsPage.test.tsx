@@ -55,6 +55,7 @@ describe("SettingsPage", () => {
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "Keystone",
       "Poison",
+      "Void",
     ]);
   });
 

@@ -1,0 +1,10 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Añade el tema visual seleccionable Void a KeystoneClient.",
+  "details": [
+    "Void aplica una identidad oscura en tonos violeta e índigo a todas las pantallas del cliente.",
+    "El tema conserva la estructura y el comportamiento de Keystone y puede seleccionarse y recordarse desde Ajustes."
+  ]
+}

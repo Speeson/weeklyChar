@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   KEYSTONE_THEME_ASSETS,
   OPTIONAL_THEME_ASSET_ROLES,
+  THEME_ASSET_OVERRIDES,
   resolveThemeAssetCssProperties,
   resolveThemeAsset,
   type OptionalThemeAssetRole,
@@ -90,6 +91,46 @@ const expectedPoisonDecorations = {
   "sync-version-frame": "version-card-frame.png",
 } as const satisfies Partial<Record<OptionalThemeAssetRole, string>>;
 
+const expectedVoidAssets = {
+  "brand-mark": "app-icon.png",
+  "brand-emblem": "app-icon-hd.png",
+  "teams-loading-mark": "app-icon-hd.png",
+  "shell-active-tab": "active-tab-indicator.png",
+  "shell-avatar-frame": "avatar-frame.png",
+  "shell-footer-web": "web-button.png",
+  "shell-settings": "settings-button.png",
+  "shell-user-dropdown": "dropdown-icon.png",
+  "shell-user-panel": "user-panel-frame.png",
+  "shell-window-close": "close-button.png",
+  "shell-window-minimize": "minimize-button.png",
+  "sync-hero-frame": "right-hero-panel-frame.png",
+  "sync-status-error": "error.png",
+  "sync-status-info": "info.png",
+  "sync-status-success": "status-success.png",
+  "sync-status-syncing": "sync.png",
+  "sync-status-warning": "warning.png",
+  "sync-summary-accounts": "accounts.png",
+  "sync-summary-characters": "characters.png",
+  "sync-summary-last": "last-sync.png",
+  "sync-version": "version.png",
+  "addon-status-operation": "sync.png",
+  "addon-status-current": "status-success.png",
+  "addon-status-update": "warning.png",
+  "addon-status-local-newer": "info.png",
+  "addon-status-offline-cache": "info.png",
+  "addon-status-unavailable": "error.png",
+  "addon-status-error": "error.png",
+  "addon-status-not-installed": "error.png",
+} as const satisfies Partial<Record<RequiredThemeAssetRole, string>>;
+
+const expectedVoidDecorations = {
+  "artwork-background": "background-main.png",
+  "artwork-overlay": "overlay1.png",
+  "artwork-overlay-alternative-2": "overlay2.png",
+  "artwork-overlay-alternative-3": "overlay3.png",
+  "shell-footer-tray": "tray-button.png",
+} as const satisfies Partial<Record<OptionalThemeAssetRole, string>>;
+
 describe("theme asset resolution", () => {
   it("resolves every semantic Keystone role to the exact existing bundled file", () => {
     for (const [role, fileName] of Object.entries(expectedKeystoneAssets)) {
@@ -115,6 +156,23 @@ describe("theme asset resolution", () => {
       );
       expect(resolveThemeAsset("keystone", role as OptionalThemeAssetRole)).toBeUndefined();
     }
+  });
+
+  it("resolves Void through the canonical assets while keeping overlay1 as production default", () => {
+    for (const [role, fileName] of Object.entries(expectedVoidAssets)) {
+      expect(resolveThemeAsset("void", role as RequiredThemeAssetRole)).toMatch(
+        new RegExp(`/themes/assets/void/.+/${fileName.replace(/\./g, "\\.")}$`),
+      );
+    }
+    for (const [role, fileName] of Object.entries(expectedVoidDecorations)) {
+      expect(resolveThemeAsset("void", role as OptionalThemeAssetRole)).toMatch(
+        new RegExp(`/themes/assets/void/.+/${fileName.replace(/\./g, "\\.")}$`),
+      );
+    }
+
+    expect(resolveThemeAsset("void", "artwork-overlay")).toMatch(/overlay1\.png$/);
+    expect(resolveThemeAsset("void", "shell-inactive-tab")).toBeUndefined();
+    expect(Object.values(THEME_ASSET_OVERRIDES.void ?? {}).some((asset) => asset.endsWith("empty-button.png"))).toBe(false);
   });
 
   it("keeps required-role fallback deterministic when an override set omits an asset", () => {
@@ -165,6 +223,8 @@ describe("theme asset resolution", () => {
       "--theme-app-badge-artwork": "none",
       "--theme-artwork-background": 'url("/assets/poison/background.webp")',
       "--theme-artwork-overlay": "none",
+      "--theme-artwork-overlay-alternative-2": "none",
+      "--theme-artwork-overlay-alternative-3": "none",
       "--theme-chrome-scalable-frame": "none",
       "--theme-emblem-artwork": 'url("/assets/poison/emblem.svg")',
       "--theme-emblem-fallback-visibility": "hidden",

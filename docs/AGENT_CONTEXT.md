@@ -119,6 +119,7 @@ Verified from checked-out files:
 ## Important architectural decisions
 
 - Modernization work follows `docs/KEYSTONESYNC_ACTION_PLAN.md`.
+- KeystoneClient's static theme registry ships three selectable skins: `keystone` (default), `poison`, and `void`. Void follows Keystone's shared page/layout behavior, uses centralized semantic artwork roles, and keeps `overlay1.png` as its production overlay; `overlay2.png` and `overlay3.png` are visual-review candidates only.
 - `docs/AGENT_CONTEXT.md` stores durable project state, not chronological work history.
 - Detailed system architecture is documented in `docs/ARCHITECTURE.md`.
 - The end-to-end tracked-data contract is documented in `docs/DATA_CONTRACT.md`.

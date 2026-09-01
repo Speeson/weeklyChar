@@ -18,6 +18,12 @@ export const THEMES: readonly ThemeDefinition[] = [
     description: "A dark toxic skin with acid-green energy and organic glow.",
     selectable: true,
   },
+  {
+    id: "void",
+    label: "Void",
+    description: "A dark cosmic skin with restrained violet and indigo energy.",
+    selectable: true,
+  },
 ];
 
 export function getSelectableThemes(

@@ -1,0 +1,228 @@
+html[data-theme="void"] {
+  --theme-bg: #05030d;
+  --theme-bg-secondary: rgb(18 10 34 / 82%);
+  --theme-bg-image: none;
+  --theme-bg-overlay: linear-gradient(180deg, rgb(11 6 21 / 20%), rgb(6 7 21 / 62%));
+  --theme-ambient-primary: radial-gradient(circle at 50% 24%, rgb(142 82 250 / 20%), transparent 34%);
+  --theme-ambient-secondary: radial-gradient(circle at 82% 28%, rgb(164 50 255 / 14%), transparent 30%);
+  --theme-surface-1: rgb(26 15 47 / 76%);
+  --theme-surface-2: rgb(24 14 44 / 88%);
+  --theme-surface-3: rgb(47 30 85 / 72%);
+  --theme-surface-hover: rgb(127 81 222 / 12%);
+  --theme-surface-active: rgb(166 126 244 / 4%);
+  --theme-border: rgb(150 96 255 / 42%);
+  --theme-border-strong: rgb(173 112 255 / 72%);
+  --theme-border-active: rgb(164 102 255 / 68%);
+  --theme-divider: rgb(176 106 255 / 24%);
+  --theme-text: #f3efff;
+  --theme-text-muted: #b8b0cf;
+  --theme-text-accent: #d8d0eb;
+  --theme-accent: #a786ff;
+  --theme-accent-strong: #c0a4ff;
+  --theme-accent-soft: rgb(166 126 244 / 10%);
+  --theme-accent-contrast: #0d0817;
+  --theme-button-primary: #a786ff;
+  --theme-button-primary-hover: #a786ff;
+  --theme-button-primary-active: #a786ff;
+  --theme-button-secondary: rgb(32 19 57 / 84%);
+  --theme-button-secondary-hover: rgb(52 34 90 / 92%);
+  --theme-focus-ring: rgb(173 114 255 / 92%);
+  --theme-glow-soft: 0 0 16px rgb(166 126 244 / 18%);
+  --theme-glow-medium: 0 0 24px rgb(147 99 255 / 34%);
+  --theme-glow-strong: 0 0 24px rgb(166 126 244 / 36%);
+  --theme-shadow-panel: 0 20px 60px rgb(5 2 7 / 38%), inset 0 1px 0 rgb(255 242 255 / 8%);
+  --theme-shadow-elevated: 0 18px 42px rgb(5 2 7 / 62%), 0 0 24px rgb(120 74 206 / 24%), inset 0 1px 0 rgb(198 122 255 / 12%);
+  --theme-icon: #ad8cff;
+  --theme-icon-muted: #c6bfd4;
+  --theme-icon-active: #9d78ef;
+  --theme-icon-glow: drop-shadow(0 0 18px rgb(166 126 244 / 34%));
+  --theme-card-texture: none;
+  --theme-card-highlight: none;
+  --theme-card-overlay: none;
+  --theme-modal-backdrop: rgb(5 2 7 / 58%);
+  --theme-scrollbar: rgb(142 87 233 / 72%);
+  --theme-scrollbar-hover: rgb(142 87 233 / 72%);
+  --theme-motion-fast: 140ms ease;
+  --theme-motion-normal: 160ms ease;
+  --theme-motion-ambient: 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --theme-frame-border: rgb(167 102 255 / 38%);
+  --theme-frame-shadow: inset 0 0 0 1px rgb(255 242 255 / 3%), inset 0 0 34px rgb(121 74 213 / 7%);
+  --theme-header-border: rgb(158 96 255 / 40%);
+  --theme-header-background: linear-gradient(180deg, rgb(15 8 28 / 86%), rgb(20 11 37 / 72%));
+  --theme-header-shadow: 0 12px 34px rgb(5 2 7 / 34%);
+  --theme-header-divider: rgb(135 82 211 / 36%);
+  --theme-brand-glow: drop-shadow(0 0 18px rgb(166 126 244 / 34%));
+  --theme-tab-border: rgb(135 82 211 / 28%);
+  --theme-tab-text: rgb(226 214 254 / 78%);
+  --theme-tab-hover-border: rgb(165 106 255 / 42%);
+  --theme-tab-hover-text: rgb(224 136 255 / 96%);
+  --theme-tab-hover-shadow: inset 0 0 32px rgb(161 109 255 / 18%), inset 0 -2px 0 rgb(170 117 255 / 26%);
+  --theme-tab-hover-glow: 0 0 14px rgb(169 118 255 / 44%);
+  --theme-tab-active-shadow: inset 0 0 34px rgb(166 126 244 / 10%), inset 0 -1px 0 rgb(174 132 255 / 18%);
+  --theme-control-border: rgb(166 100 255 / 50%);
+  --theme-control-background: rgb(26 15 48 / 62%);
+  --theme-control-shadow: inset 0 0 18px rgb(153 90 255 / 10%);
+  --theme-menu-text: rgb(246 231 255 / 94%);
+  --theme-dropdown-background: linear-gradient(145deg, rgb(39 23 70 / 98%), rgb(20 11 37 / 98%)), rgb(24 13 43 / 98%);
+  --theme-dropdown-item-border: rgb(157 97 254 / 18%);
+  --theme-dropdown-item-text: rgb(236 227 255 / 92%);
+  --theme-dropdown-item-background: rgb(52 32 90 / 44%);
+  --theme-dropdown-hover-border: rgb(174 132 255 / 44%);
+  --theme-dropdown-hover-text: #fff;
+  --theme-dropdown-hover-background: rgb(120 74 206 / 36%);
+  --theme-summary-background: linear-gradient(125deg, rgb(35 21 64 / 78%), rgb(28 15 50 / 58%)), radial-gradient(circle at 20% 20%, rgb(155 106 255 / 26%), transparent 58%);
+  --theme-card-inner-border: rgb(161 106 255 / 12%);
+  --theme-summary-icon-glow: drop-shadow(0 0 16px rgb(150 104 255 / 40%));
+  --theme-summary-label: rgb(235 223 255 / 94%);
+  --theme-summary-value: #f7f2ff;
+  --theme-summary-detail: rgb(213 204 235 / 82%);
+  --theme-table-background: linear-gradient(180deg, rgb(29 16 53 / 74%), rgb(22 12 40 / 64%)), radial-gradient(circle at 45% 55%, rgb(144 81 252 / 16%), transparent 45%);
+  --theme-scrollbar-track: rgb(24 13 43 / 52%);
+  --theme-table-divider: rgb(174 104 255 / 22%);
+  --theme-table-heading: rgb(224 216 244 / 90%);
+  --theme-table-sort-icon: rgb(174 104 255 / 72%);
+  --theme-table-row-text: rgb(218 210 238 / 92%);
+  --theme-table-row-hover: rgb(144 81 252 / 10%);
+  --theme-table-row-marker: rgb(162 123 255 / 68%);
+  --theme-avatar-border: rgb(255 242 255 / 32%);
+  --theme-avatar-background: #5734a8;
+  --theme-avatar-glow: 0 0 14px rgb(142 97 250 / 35%);
+  --theme-sidebar-background: linear-gradient(155deg, rgb(31 17 56 / 86%), rgb(22 12 40 / 70%)), radial-gradient(circle at 48% 34%, rgb(136 73 246 / 24%), transparent 48%);
+  --theme-emblem-glow: drop-shadow(0 0 22px rgb(166 126 244 / 36%));
+  --theme-version-border: rgb(165 99 255 / 42%);
+  --theme-version-background: rgb(26 14 48 / 76%);
+  --theme-version-shadow: inset 0 0 14px rgb(142 86 250 / 10%);
+  --theme-text-bright: white;
+  --theme-panel-divider: rgb(177 105 255 / 18%);
+  --theme-sync-action-border: rgb(174 132 255 / 90%);
+  --theme-sync-action-text: #d2c0ff;
+  --theme-sync-action-background: linear-gradient(180deg, rgb(121 92 178 / 80%), rgb(68 52 100 / 76%)), radial-gradient(circle at 50% 0%, rgb(174 132 255 / 36%), transparent 70%);
+  --theme-sync-action-shadow: 0 0 0 1px rgb(87 66 128 / 80%), 0 0 28px rgb(166 126 244 / 32%), inset 0 1px 0 rgb(174 132 255 / 28%);
+  --theme-addon-border: rgb(188 114 255 / 24%);
+  --theme-addon-text: #f1edfa;
+  --theme-addon-background: linear-gradient(120deg, rgb(25 15 47 / 68%), rgb(20 11 36 / 74%)), radial-gradient(circle at 47% 43%, rgb(81 56 145 / 24%), transparent 38%);
+  --theme-addon-shadow: 0 18px 70px rgb(5 2 7 / 35%);
+  --theme-addon-inner-border: rgb(161 106 255 / 10%);
+  --theme-addon-icon-glow: drop-shadow(0 0 18px rgb(166 126 244 / 32%));
+  --theme-addon-eyebrow: rgb(168 127 246 / 84%);
+  --theme-addon-description: #cec7dc;
+  --theme-addon-border-strong: rgb(188 114 255 / 34%);
+  --theme-addon-card-background: rgb(25 15 46 / 82%);
+  --theme-addon-card-highlight: inset 0 1px 0 rgb(255 242 255 / 4%);
+  --theme-addon-field-border: rgb(188 114 255 / 30%);
+  --theme-addon-field-text: #d9d1e6;
+  --theme-addon-field-background: rgb(19 11 35 / 82%);
+  --theme-addon-icon-muted: #c3bbd2;
+  --theme-addon-button-text: #eee9f8;
+  --theme-addon-button-background: rgb(40 25 70 / 84%);
+  --theme-addon-button-hover-border: rgb(168 127 246 / 72%);
+  --theme-addon-primary-text: #0d0915;
+  --theme-addon-primary-background: linear-gradient(105deg, #8f68eb, #b994ff 50%, #7350c4), #9d78ef;
+  --theme-addon-primary-shadow: 0 0 0 2px rgb(68 52 100 / 75%), 0 12px 30px rgb(5 2 7 / 24%);
+  --theme-addon-column-divider: rgb(188 114 255 / 28%);
+  --theme-addon-card-border: rgb(188 114 255 / 44%);
+  --theme-addon-status-background: rgb(23 14 42 / 90%);
+  --theme-addon-status-shadow: inset 0 0 28px rgb(98 63 171 / 7%);
+  --theme-addon-divider: rgb(255 242 255 / 15%);
+  --theme-addon-label: #cbc4d8;
+  --theme-addon-value: #eee9f7;
+  --theme-addon-secondary-background: #1b1232;
+  --theme-footer-border: rgb(128 74 208 / 24%);
+  --theme-footer-background: linear-gradient(180deg, rgb(16 8 29 / 35%), rgb(12 6 23 / 72%));
+  --theme-footer-action-border: rgb(171 103 255 / 56%);
+  --theme-footer-action-text: rgb(238 226 255 / 92%);
+  --theme-footer-action-background: rgb(29 17 52 / 76%);
+  --theme-footer-action-shadow: inset 0 0 18px rgb(151 95 255 / 12%);
+  --theme-footer-accent-border: rgb(166 126 244 / 70%);
+  --theme-footer-web-hover-filter: brightness(1.14);
+  --theme-footer-web-active-filter: brightness(0.92);
+  --theme-auth-background: linear-gradient(155deg, rgb(36 21 65 / 96%), rgb(22 12 40 / 96%)), var(--theme-surface-2);
+  --theme-auth-shadow: var(--theme-shadow-panel), 0 0 38px rgb(134 81 232 / 18%);
+  --theme-auth-register-border: rgb(153 93 245 / 35%);
+  --theme-auth-register-background: rgb(49 30 86 / 62%);
+  --theme-update-modal-divider: rgb(176 106 255 / 18%);
+  --theme-onboarding-background: linear-gradient(155deg, rgb(36 21 65 / 97%), rgb(22 12 40 / 97%));
+  --theme-onboarding-account-background: rgb(32 19 58 / 74%);
+  --theme-accent-border-soft: rgb(166 126 244 / 28%);
+  --theme-accent-surface-soft: rgb(166 126 244 / 6%);
+  --theme-choice-border: rgb(152 93 244 / 28%);
+  --theme-choice-background: rgb(37 22 66 / 72%);
+  --theme-choice-portrait-border: rgb(157 97 254 / 55%);
+  --theme-choice-check-text: #0c0717;
+}
+
+
+
+html[data-theme="void"] .shell::before {
+  opacity: 0.3;
+}
+
+html[data-theme="void"] .ks-app-frame {
+  border-color: rgb(135 99 210 / 46%);
+}
+
+html[data-theme="void"] .sync-emblem-panel__frame {
+  opacity: 0.76;
+  object-fit: cover;
+}
+
+html[data-theme="void"] .ks-brand__icon,
+html[data-theme="void"] .sync-emblem-panel__icon,
+html[data-theme="void"] .teams-loading__mark {
+  border-radius: 50%;
+}
+
+html[data-theme="void"] .ks-user-menu__shell {
+  object-fit: fill;
+}
+
+html[data-theme="void"] .ks-window-button--minimize img {
+  width: 125.5%;
+  height: 125.5%;
+}
+
+html[data-theme="void"] .ks-footer-action {
+  position: relative;
+  isolation: isolate;
+  width: 298px;
+  height: 64px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+html[data-theme="void"] .ks-footer-action span {
+  position: absolute;
+  inset: 0 12px 0 76px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  transform: translate(var(--void-footer-label-shift-x), -2px);
+}
+
+html[data-theme="void"] .ks-footer-action--web span {
+  --void-footer-label-shift-x: -8px;
+}
+
+html[data-theme="void"] .ks-footer-action--tray span {
+  --void-footer-label-shift-x: -4px;
+}
+
+html[data-theme="void"] .ks-footer-action__asset {
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="void"] *,
+  html[data-theme="void"] *::before,
+  html[data-theme="void"] *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
