@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.7.1",
+  "version": "0.7.2",
+  "bump": "patch",
+  "tag": "client-v0.7.2",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-09-03-keystoneclient-close-preference.json"
+  ]
+}
