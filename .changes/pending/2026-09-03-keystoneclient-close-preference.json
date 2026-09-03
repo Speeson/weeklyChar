@@ -1,0 +1,11 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Mejora el cierre de KeystoneClient y permite recordar la acción elegida.",
+  "details": [
+    "Ajustes permite elegir entre preguntar, minimizar a la bandeja o cerrar la aplicación al cerrar la ventana.",
+    "El diálogo de cierre puede recordar la elección para solicitudes posteriores.",
+    "Una segunda pulsación de Alt+F4 mientras el diálogo está abierto confirma la salida y evita que el cliente quede bloqueado."
+  ]
+}

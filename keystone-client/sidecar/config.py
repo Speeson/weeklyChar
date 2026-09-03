@@ -24,6 +24,7 @@ _DEFAULTS = {
     "saved_variables_instances": {},
     "start_minimized": False,
     "minimize_on_close": False,
+    "close_behavior": "ask",
     "login_at": None,
     "lang": "es",
     "cached_characters": [],
@@ -50,7 +51,10 @@ def load() -> dict:
     cfg = {**_DEFAULTS, **(loaded or {})}
     original_api_url = cfg.get("api_url")
     cfg["api_url"] = _normalize_api_url(original_api_url)
-    if loaded is not None and cfg["api_url"] != original_api_url:
+    migrated_close_behavior = loaded is not None and "close_behavior" not in loaded
+    if migrated_close_behavior:
+        cfg["close_behavior"] = "minimize" if loaded.get("minimize_on_close") else "ask"
+    if loaded is not None and (cfg["api_url"] != original_api_url or migrated_close_behavior):
         save(cfg)
     return cfg
 

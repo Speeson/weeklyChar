@@ -273,7 +273,7 @@ class SettingsServiceTests(unittest.TestCase):
 
         self.assertEqual(
             settings,
-            {"startMinimized": True, "minimizeOnClose": False, "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lang": "en"},
         )
         self.assertNotIn("sync_token", settings)
         self.assertNotIn("access_token", settings)
@@ -293,7 +293,7 @@ class SettingsServiceTests(unittest.TestCase):
 
         self.assertEqual(
             settings,
-            {"startMinimized": True, "minimizeOnClose": False, "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lang": "en"},
         )
         self.assertEqual(self.saved_cfg["sync_token"], "sync")
         self.assertEqual(self.saved_cfg["unknown_future_key"], {"x": 1})
@@ -313,6 +313,15 @@ class SettingsServiceTests(unittest.TestCase):
         self.assertTrue(restarted_settings["startMinimized"])
         self.assertEqual(self.saved_cfg["sync_token"], "sync")
 
+    def test_close_behavior_migrates_legacy_minimize_and_keeps_it_compatible(self) -> None:
+        legacy = {"start_minimized": False, "minimize_on_close": True, "lang": "es"}
+
+        self.assertEqual(settings_service.get_settings(legacy)["closeBehavior"], "minimize")
+
+        updated = settings_service.update_settings(legacy, {"closeBehavior": "exit"})
+        self.assertEqual(updated["closeBehavior"], "exit")
+        self.assertFalse(self.saved_cfg["minimize_on_close"])
+
     def test_update_rejects_unknown_field(self) -> None:
         with self.assertRaises(settings_service.SettingsError):
             settings_service.update_settings({"lang": "es"}, {"sync_token": "x"})
@@ -320,6 +329,9 @@ class SettingsServiceTests(unittest.TestCase):
     def test_update_rejects_wrong_type(self) -> None:
         with self.assertRaises(settings_service.SettingsError):
             settings_service.update_settings({"lang": "es"}, {"startMinimized": "yes"})
+
+        with self.assertRaises(settings_service.SettingsError):
+            settings_service.update_settings({"lang": "es"}, {"closeBehavior": "sometimes"})
 
 
 if __name__ == "__main__":

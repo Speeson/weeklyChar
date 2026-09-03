@@ -11,6 +11,7 @@ import { SettingsPage } from "./SettingsPage";
 const initialSettings = {
   startMinimized: false,
   minimizeOnClose: false,
+  closeBehavior: "ask" as const,
   lang: "es" as const,
 };
 
@@ -50,7 +51,7 @@ describe("Settings theme integration", () => {
 
     expect(selector.tagName).toBe("SELECT");
     expect(selector).toHaveValue("keystone");
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+    expect(Array.from(selector.querySelectorAll("option")).map((option) => option.textContent)).toEqual([
       "Keystone",
       "Poison",
       "Void",
@@ -58,6 +59,7 @@ describe("Settings theme integration", () => {
     expect(screen.getByTestId("application-theme")).toHaveTextContent("keystone");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
 
+    await user.tab();
     await user.tab();
     await user.tab();
     await user.tab();

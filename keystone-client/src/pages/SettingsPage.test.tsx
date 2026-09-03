@@ -25,6 +25,7 @@ const setAutostartEnabledMock = vi.mocked(setAutostartEnabled);
 const initialSettings = {
   startMinimized: false,
   minimizeOnClose: false,
+  closeBehavior: "ask" as const,
   lang: "es" as const,
 };
 
@@ -52,7 +53,7 @@ describe("SettingsPage", () => {
 
     const selector = screen.getByRole("combobox", { name: "Tema visual" });
     expect(selector).toHaveValue("keystone");
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+    expect(Array.from(selector.querySelectorAll("option")).map((option) => option.textContent)).toEqual([
       "Keystone",
       "Poison",
       "Void",
@@ -63,6 +64,7 @@ describe("SettingsPage", () => {
     getSettingsMock.mockResolvedValueOnce({
       startMinimized: true,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "en",
     });
 
@@ -80,10 +82,12 @@ describe("SettingsPage", () => {
     updateSettingsMock.mockResolvedValueOnce({
       startMinimized: false,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "en",
     }).mockResolvedValueOnce({
       startMinimized: true,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "en",
     });
 
@@ -97,6 +101,7 @@ describe("SettingsPage", () => {
     expect(updateSettingsMock).toHaveBeenNthCalledWith(2, {
       startMinimized: true,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "en",
     });
     expect(setAutostartEnabledMock).toHaveBeenCalledWith(false);
@@ -104,8 +109,21 @@ describe("SettingsPage", () => {
     expect(onSettingsChanged).toHaveBeenLastCalledWith({
       startMinimized: true,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "en",
     });
+  });
+
+  it("edits the close behavior preference", async () => {
+    const user = userEvent.setup();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, closeBehavior: "exit" });
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    await user.selectOptions(await screen.findByLabelText("Al cerrar la ventana"), "exit");
+    await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ ...initialSettings, closeBehavior: "exit" });
   });
 
   it("persists language immediately without saving unrelated drafts", async () => {

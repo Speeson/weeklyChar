@@ -52,6 +52,7 @@ function baseState(sync: SyncStatus = baseSync, addon: AddonStatus = baseAddon):
     settings: {
       startMinimized: false,
       minimizeOnClose: true,
+      closeBehavior: "ask",
       lang: "es",
     },
     wow: {

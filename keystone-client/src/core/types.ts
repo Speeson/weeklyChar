@@ -66,6 +66,7 @@ export type RegisterResult = {
 export type ClientSettings = {
   startMinimized: boolean;
   minimizeOnClose: boolean;
+  closeBehavior: "ask" | "minimize" | "exit";
   lang: "es" | "en";
 };
 

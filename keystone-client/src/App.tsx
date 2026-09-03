@@ -25,6 +25,7 @@ import { liveTeamsDataSource, type TeamsDataSource } from "./core/teams";
 import { getTeamsPreviewDataSource } from "./core/teamsPreview";
 import { clearTeamsSessionCache, prefetchTeamsSession } from "./core/teamsSessionCache";
 import { setProfileAvatar } from "./core/profile";
+import { updateSettings } from "./core/settings";
 import { tauriUpdaterAdapter } from "./core/tauriUpdater";
 import { UpdateController, type UpdaterSnapshot } from "./core/updater";
 import { I18nProvider, translate } from "./core/i18n";
@@ -109,6 +110,9 @@ function App() {
   const [teamsDataSource] = useState<TeamsDataSource>(() => getTeamsPreviewDataSource() ?? liveTeamsDataSource);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [rememberCloseChoice, setRememberCloseChoice] = useState(false);
+  const [closeChoiceSaving, setCloseChoiceSaving] = useState(false);
+  const [closeChoiceError, setCloseChoiceError] = useState<string | null>(null);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -118,6 +122,10 @@ function App() {
   const [postUpdateChangelog, setPostUpdateChangelog] = useState<PostUpdateChangelog | null>(null);
   const updaterController = useRef<UpdateController | null>(null);
   const teamsSessionOwner = useRef<string | null | undefined>(undefined);
+  const settingsRef = useRef<ClientSettings | null>(null);
+  const closeDialogOpenRef = useRef(false);
+
+  settingsRef.current = settings;
 
   const applySystemState = useCallback((state: SystemState) => {
     setAuth(state.auth);
@@ -249,9 +257,7 @@ function App() {
     let cancelled = false;
     const unlisten = listenWindowCloseRequested(() => {
       if (!cancelled) {
-        setSettingsOpen(false);
-        setAvatarPickerOpen(false);
-        setCloseDialogOpen(true);
+        handleCloseRequest();
       }
     });
     return () => {
@@ -266,7 +272,7 @@ function App() {
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setCloseDialogOpen(false);
+        dismissCloseDialog();
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -274,6 +280,7 @@ function App() {
   }, [closeDialogOpen]);
 
   const handleSettingsChanged = useCallback((nextSettings: ClientSettings) => {
+    settingsRef.current = nextSettings;
     setSettings(nextSettings);
   }, []);
 
@@ -375,6 +382,61 @@ function App() {
     }
   }
 
+  function openCloseDialog() {
+    closeDialogOpenRef.current = true;
+    setSettingsOpen(false);
+    setAvatarPickerOpen(false);
+    setCloseChoiceError(null);
+    setCloseDialogOpen(true);
+  }
+
+  function dismissCloseDialog() {
+    closeDialogOpenRef.current = false;
+    setRememberCloseChoice(false);
+    setCloseChoiceError(null);
+    setCloseDialogOpen(false);
+  }
+
+  function performCloseAction(behavior: Exclude<ClientSettings["closeBehavior"], "ask">) {
+    dismissCloseDialog();
+    void runNativeAction(behavior === "minimize" ? minimizeToTray : exitApplication);
+  }
+
+  function handleCloseRequest() {
+    const behavior = settingsRef.current?.closeBehavior ?? "ask";
+    if (behavior !== "ask") {
+      performCloseAction(behavior);
+      return;
+    }
+    if (closeDialogOpenRef.current) {
+      performCloseAction("exit");
+      return;
+    }
+    openCloseDialog();
+  }
+
+  async function chooseCloseAction(behavior: Exclude<ClientSettings["closeBehavior"], "ask">) {
+    if (closeChoiceSaving) return;
+    if (rememberCloseChoice) {
+      if (previewMode) {
+        setSettings((current) => current ? { ...current, closeBehavior: behavior } : current);
+      } else {
+        setCloseChoiceSaving(true);
+        setCloseChoiceError(null);
+        try {
+          const saved = await updateSettings({ closeBehavior: behavior });
+          handleSettingsChanged(saved);
+        } catch (caught) {
+          setCloseChoiceError(formatError(caught, t("settings.error")));
+          setCloseChoiceSaving(false);
+          return;
+        }
+        setCloseChoiceSaving(false);
+      }
+    }
+    performCloseAction(behavior);
+  }
+
   function checkForUpdates() {
     void updaterController.current?.check();
   }
@@ -409,7 +471,7 @@ function App() {
           auth={auth}
           busyLogout={busyAction === "logout"}
           currentView={currentView}
-          onCloseWindow={() => setCloseDialogOpen(true)}
+          onCloseWindow={handleCloseRequest}
           onChangeAvatar={() => {
             setAvatarError(null);
             setAvatarPickerOpen(true);
@@ -566,18 +628,20 @@ function App() {
                 <p className="shell__eyebrow">KeystoneClient</p>
                 <h2 id="close-dialog-title">{t("close.title")}</h2>
               </div>
-              <button aria-label={t("close.cancelLabel")} className="ks-modal__close" onClick={() => setCloseDialogOpen(false)} type="button">
+              <button aria-label={t("close.cancelLabel")} className="ks-modal__close" onClick={dismissCloseDialog} type="button">
                 <ThemedIcon name="close" size={20} />
               </button>
             </div>
+            <label className="check-row ks-choice-modal__remember">
+              <input checked={rememberCloseChoice} onChange={(event) => setRememberCloseChoice(event.target.checked)} type="checkbox" />
+              {t("close.remember")}
+            </label>
             <div className="ks-choice-modal__actions">
-              <button autoFocus onClick={() => {
-                setCloseDialogOpen(false);
-                void runNativeAction(minimizeToTray);
-              }} type="button">{t("shell.minimizeTray")}</button>
-              <button className="ks-choice-modal__exit" onClick={() => void runNativeAction(exitApplication)} type="button">{t("close.exit")}</button>
-              <button className="ks-choice-modal__cancel" onClick={() => setCloseDialogOpen(false)} type="button">{t("common.cancel")}</button>
+              <button autoFocus disabled={closeChoiceSaving} onClick={() => void chooseCloseAction("minimize")} type="button">{t("shell.minimizeTray")}</button>
+              <button className="ks-choice-modal__exit" disabled={closeChoiceSaving} onClick={() => void chooseCloseAction("exit")} type="button">{t("close.exit")}</button>
+              <button className="ks-choice-modal__cancel" disabled={closeChoiceSaving} onClick={dismissCloseDialog} type="button">{t("common.cancel")}</button>
             </div>
+            {closeChoiceError ? <p className="error" role="alert">{closeChoiceError}</p> : null}
           </div>
         </div>
       ) : null}

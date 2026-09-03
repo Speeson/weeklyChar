@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -166,7 +166,7 @@ const anonymousState: SystemState = {
   protocolVersion: 1,
   bridge: "ready",
   auth: { authenticated: false, username: null, avatarUrl: null },
-  settings: { startMinimized: false, minimizeOnClose: false, lang: "es" },
+  settings: { startMinimized: false, minimizeOnClose: false, closeBehavior: "ask", lang: "es" },
   wow: emptyWow,
   sync: idleSync,
   characters: emptyCharacters,
@@ -177,7 +177,7 @@ const authenticatedState: SystemState = {
   protocolVersion: 1,
   bridge: "ready",
   auth: { authenticated: true, username: "player", avatarUrl: null },
-  settings: { startMinimized: false, minimizeOnClose: false, lang: "es" },
+  settings: { startMinimized: false, minimizeOnClose: false, closeBehavior: "ask", lang: "es" },
   wow: detectedWow,
   sync: { ...idleSync, state: "success", selectedAccounts: 1 },
   characters: {
@@ -473,8 +473,7 @@ describe("App", () => {
     expect(screen.queryByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).not.toBeInTheDocument();
   });
 
-  it("routes native close requests to one modal and exits only after confirmation", async () => {
-    const user = userEvent.setup();
+  it("treats a second native close request as confirmation", async () => {
     let closeHandler: () => void = () => undefined;
     listenWindowCloseRequestedMock.mockImplementationOnce(async (handler) => {
       closeHandler = handler;
@@ -487,13 +486,63 @@ describe("App", () => {
     closeHandler();
     closeHandler();
 
-    expect(await screen.findAllByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toHaveLength(1);
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).not.toBeInTheDocument();
-
-    closeHandler();
-    await user.click(await screen.findByRole("button", { name: "Cerrar KeystoneClient" }));
     expect(exitApplicationMock).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).not.toBeInTheDocument();
+  });
+
+  it("asks again after the close dialog is cancelled", async () => {
+    const user = userEvent.setup();
+    let closeHandler: () => void = () => undefined;
+    listenWindowCloseRequestedMock.mockImplementationOnce(async (handler) => {
+      closeHandler = handler;
+      return () => undefined;
+    });
+    mockStartup(authenticatedState);
+
+    render(<App />);
+    await screen.findByText("player");
+    act(() => closeHandler());
+    await screen.findByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    act(() => closeHandler());
+
+    expect(await screen.findByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" })).toBeInTheDocument();
+    expect(exitApplicationMock).not.toHaveBeenCalled();
+  });
+
+  it("remembers the selected close action", async () => {
+    const user = userEvent.setup();
+    updateSettingsMock.mockResolvedValueOnce({
+      ...authenticatedState.settings,
+      minimizeOnClose: true,
+      closeBehavior: "minimize",
+    });
+    mockStartup(authenticatedState);
+
+    render(<App />);
+    await screen.findByText("player");
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    const dialog = screen.getByRole("dialog", { name: "¿Qué quieres hacer con KeystoneClient?" });
+    await user.click(within(dialog).getByRole("checkbox", { name: "Recordar mi elección" }));
+    await user.click(within(dialog).getByRole("button", { name: "Minimizar a la bandeja" }));
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ closeBehavior: "minimize" });
+    expect(minimizeToTrayMock).toHaveBeenCalledOnce();
+  });
+
+  it("applies a stored close action without asking", async () => {
+    mockStartup({
+      ...authenticatedState,
+      settings: { ...authenticatedState.settings, closeBehavior: "exit" },
+    });
+
+    render(<App />);
+    await screen.findByText("player");
+    await userEvent.setup().click(screen.getByRole("button", { name: "Cerrar" }));
+
+    expect(exitApplicationMock).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("shows the same native close dialog while the login view is active", async () => {

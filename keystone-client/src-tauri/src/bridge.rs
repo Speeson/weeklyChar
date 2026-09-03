@@ -1071,7 +1071,7 @@ mod tests {
                 "protocolVersion": 1,
                 "bridge": "ready",
                 "auth": {"authenticated": false, "username": null, "avatarUrl": null},
-                "settings": {"startMinimized": false, "minimizeOnClose": false, "lang": "es"},
+                "settings": {"startMinimized": false, "minimizeOnClose": false, "closeBehavior": "ask", "lang": "es"},
                 "wow": {
                     "install": {"detected": false, "installPath": null, "retailPath": null, "addonsPath": null},
                     "accounts": [],
@@ -1128,7 +1128,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             settings,
-            json!({"startMinimized": false, "minimizeOnClose": false, "lang": "es"})
+            json!({"startMinimized": false, "minimizeOnClose": false, "closeBehavior": "ask", "lang": "es"})
         );
 
         let updated_settings = bridge
@@ -1139,7 +1139,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             updated_settings,
-            json!({"startMinimized": true, "minimizeOnClose": false, "lang": "en"})
+            json!({"startMinimized": true, "minimizeOnClose": false, "closeBehavior": "ask", "lang": "en"})
         );
 
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -1289,7 +1289,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             persisted_settings,
-            json!({"startMinimized": true, "minimizeOnClose": false, "lang": "en"})
+            json!({"startMinimized": true, "minimizeOnClose": false, "closeBehavior": "ask", "lang": "en"})
         );
         restarted.shutdown();
     }

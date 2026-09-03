@@ -1789,6 +1789,14 @@ h2 {
   padding: 24px;
 }
 
+.ks-choice-modal__remember {
+  margin: 20px 24px 0;
+}
+
+.ks-choice-modal__panel > .error {
+  margin: 0 24px 20px;
+}
+
 .ks-choice-modal__actions button {
   min-height: 52px;
 }
@@ -1931,6 +1939,14 @@ h2 {
   display: flex;
   align-items: center;
   gap: 14px;
+  color: var(--theme-text-accent);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.settings-field {
+  display: grid;
+  gap: 6px;
   color: var(--theme-text-accent);
   font-size: 0.9rem;
   font-weight: 650;

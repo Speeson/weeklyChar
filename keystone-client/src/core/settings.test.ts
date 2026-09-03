@@ -17,6 +17,7 @@ describe("settings wrappers", () => {
     coreRequestMock.mockResolvedValueOnce({
       startMinimized: false,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "es",
     });
 
@@ -30,6 +31,7 @@ describe("settings wrappers", () => {
     coreRequestMock.mockResolvedValueOnce({
       startMinimized: true,
       minimizeOnClose: false,
+      closeBehavior: "ask",
       lang: "en",
     });
 

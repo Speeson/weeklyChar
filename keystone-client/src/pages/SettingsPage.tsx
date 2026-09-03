@@ -201,6 +201,21 @@ export function SettingsPage({
           />
           {t("settings.startMinimized")}
         </label>
+        <label className="settings-field">
+          <span>{t("settings.closeBehavior")}</span>
+          <select
+            aria-label={t("settings.closeBehavior")}
+            value={settings.closeBehavior}
+            onChange={(event) => setSettings((current) => ({
+              ...current,
+              closeBehavior: event.target.value as ClientSettings["closeBehavior"],
+            }))}
+          >
+            <option value="ask">{t("settings.closeAsk")}</option>
+            <option value="minimize">{t("settings.closeMinimize")}</option>
+            <option value="exit">{t("settings.closeExit")}</option>
+          </select>
+        </label>
       </section>
 
       <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />

@@ -214,6 +214,7 @@ def smoke_sidecar(binary_path: Path) -> dict[str, Any]:
             "settings": {
                 "startMinimized": False,
                 "minimizeOnClose": False,
+                "closeBehavior": "ask",
                 "lang": "es",
             },
             "wow": {
