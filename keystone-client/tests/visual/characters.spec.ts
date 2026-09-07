@@ -21,6 +21,11 @@ test("matches the approved Characters composition at 1672 x 941", async ({ page 
   await expect(page.locator(".ks-header")).toHaveCSS("height", "90px");
   await expect(page.locator(".ks-footer")).toHaveCSS("height", "102px");
   await expect(page.locator(".characters-rail")).toHaveCSS("border-right-width", "0px");
+  await expect(page.locator(".characters-select__trigger > b")).toHaveCount(2);
+  await page.getByRole("button", { name: "CUENTA" }).click();
+  await expect(page.getByRole("listbox", { name: "CUENTA" })).toBeVisible();
+  await expect(page.getByRole("listbox", { name: "CUENTA" })).toHaveCSS("background-image", /gradient/);
+  await page.getByRole("button", { name: "CUENTA" }).click();
   await expect(page.locator(".currency-card__icon img")).toHaveCount(10);
   await expect.poll(() => page.locator(".currency-card__icon img").evaluateAll(images => images.every(image => (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
   expect(await page.locator(".dungeon-grid article").first().evaluate(card => card.getBoundingClientRect().height)).toBeLessThan(100);
@@ -39,6 +44,25 @@ test("matches the approved Characters composition at 1672 x 941", async ({ page 
   const money = await page.locator(".money-card").boundingBox();
   expect(Math.abs(vault!.height - prey!.height)).toBeLessThan(2);
   expect(money!.height).toBeLessThan(vault!.height);
+  const moneyIcon = await page.locator(".money-card__icon").boundingBox();
+  const moneyValues = await page.locator(".money-card > div").boundingBox();
+  const goldSize = await page.locator(".money-card strong").evaluate(element => getComputedStyle(element).fontSize);
+  const silverSize = await page.locator(".money-card__silver").evaluate(element => getComputedStyle(element).fontSize);
+  const copperSize = await page.locator(".money-card__copper").evaluate(element => getComputedStyle(element).fontSize);
+  expect(goldSize).toBe(silverSize);
+  expect(goldSize).toBe(copperSize);
+  const moneyGroupCenter = (moneyIcon!.x + moneyValues!.x + moneyValues!.width) / 2;
+  expect(Math.abs(moneyGroupCenter - (money!.x + money!.width / 2))).toBeLessThan(2);
+  const fallbackEnchant = page.locator(".gear-item__enchant:not(a)").first();
+  await fallbackEnchant.hover();
+  const fallbackTooltip = page.getByRole("tooltip", { name: "Hex de parasitismo potenciado" });
+  await expect(fallbackTooltip).toBeVisible();
+  await expect(fallbackTooltip).toHaveCSS("position", "fixed");
+  await expect(fallbackTooltip).toHaveCSS("z-index", "2147483647");
+  expect(await fallbackTooltip.evaluate(tooltip => tooltip.parentElement === document.body)).toBe(true);
+  const fallbackBounds = await fallbackTooltip.boundingBox();
+  expect(fallbackBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(fallbackBounds!.y).toBeGreaterThanOrEqual(0);
   const dungeonVaultSlot = page.locator(".vault-panel > div").nth(1).locator(".vault-slot").first();
   await dungeonVaultSlot.hover();
   await expect(dungeonVaultSlot.getByRole("tooltip")).toBeVisible();
@@ -110,6 +134,7 @@ test("exposes typed Wowhead targets without allowing the script to rewrite the U
 });
 
 test("keeps the PNG composition in Keystone, Poison, and Void", async ({ page }) => {
+  const selectorBorders = new Set<string>();
   for (const theme of ["keystone", "poison", "void"]) {
     await page.evaluate(value => localStorage.setItem("keystone-client.theme", value), theme);
     await page.reload();
@@ -117,6 +142,11 @@ test("keeps the PNG composition in Keystone, Poison, and Void", async ({ page })
     await expect(page.locator(".gear-item")).toHaveCount(16);
     await expect(page.locator(".dungeon-grid article")).toHaveCount(8);
     await expect(page.locator(".currency-card")).toHaveCount(10);
+    await page.getByRole("button", { name: "CUENTA" }).click();
+    const popover = page.getByRole("listbox", { name: "CUENTA" });
+    await expect(popover).toBeVisible();
+    selectorBorders.add(await popover.evaluate(element => getComputedStyle(element).borderColor));
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(941);
   }
+  expect(selectorBorders.size).toBe(3);
 });

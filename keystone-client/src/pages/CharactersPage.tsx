@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import medal1 from "../assets/medals/tier1.avif";
 import medal2 from "../assets/medals/tier2.avif";
 import medal3 from "../assets/medals/tier3.avif";
 import { TalentModal } from "../components/TalentModal";
+import { FloatingTooltip } from "../components/FloatingTooltip";
 import { WowheadTooltip } from "../components/WowheadTooltip";
 import { classColor } from "../core/characterDisplay";
 import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor } from "../core/characterSnapshots";
@@ -18,12 +19,14 @@ const number = (value: unknown, fallback = 0) => typeof value === "number" && Nu
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const safeImage = (value: string | null | undefined) => value && (/^(https?:\/\/|\/)/.test(value)) ? value : null;
 const characterCopy = (language: "es" | "en") => language === "es" ? {
+  account: "CUENTA", realm: "REINO", characters: "PERSONAJES",
   gear: "EQUIPO", itemLevel: "Nivel de objeto", setPieces: "Piezas de conjunto", talents: "TALENTOS",
   classTalents: "TALENTOS DE CLASE", heroTalents: "TALENTOS HEROICOS", specTalents: "TALENTOS DE ESPECIALIZACIÓN",
   dungeons: "MAZMORRAS", greatVault: "GRAN CÁMARA", preyHunts: "CACERÍAS", currencies: "MONEDAS", gold: "ORO",
   raids: "Bandas", world: "Mundo", weekly: "Semanal", season: "Temporada", maximum: "Máximo",
   noCap: "Sin límite relevante", completed: "Completado", showTalents: "Mostrar configuración completa",
 } : {
+  account: "ACCOUNT", realm: "REALM", characters: "CHARACTERS",
   gear: "GEAR", itemLevel: "Item Level", setPieces: "Set Pieces", talents: "TALENTS",
   classTalents: "CLASS TALENTS", heroTalents: "HERO TALENTS", specTalents: "SPEC TALENTS",
   dungeons: "DUNGEONS", greatVault: "GREAT VAULT", preyHunts: "PREY HUNTS", currencies: "CURRENCIES", gold: "GOLD",
@@ -48,6 +51,77 @@ function Portrait({ character }: { character: Character }) {
   return <span className="characters-portrait" style={{ "--class-color": classColor(character.wowClass) } as CSSProperties}>{character.avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={character.avatarUrl} /> : character.name[0]}</span>;
 }
 
+function CharacterSelect({ label, onChange, options, value }: { label: string; onChange: (value: string) => void; options: string[]; value: string }) {
+  const [open, setOpen] = useState(false);
+  const listboxId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const moveOptionFocus = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [...(rootRef.current?.querySelectorAll<HTMLButtonElement>(".characters-select__options button") ?? [])];
+    const current = buttons.indexOf(event.currentTarget);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+      : event.key === "ArrowDown" ? Math.min(buttons.length - 1, current + 1) : Math.max(0, current - 1);
+    buttons[next]?.focus();
+  };
+
+  return <div className={"characters-select" + (open ? " is-open" : "")} ref={rootRef}>
+    <button
+      aria-controls={listboxId}
+      aria-expanded={open}
+      aria-haspopup="listbox"
+      aria-label={label}
+      className="characters-select__trigger"
+      onClick={() => setOpen(current => !current)}
+      onKeyDown={event => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          setOpen(true);
+          requestAnimationFrame(() => rootRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]')?.focus());
+        }
+      }}
+      ref={triggerRef}
+      type="button"
+    ><span>{value || "—"}</span><b aria-hidden="true">›</b></button>
+    {open ? <div aria-label={label} className="characters-select__popover" id={listboxId} role="listbox">
+      <strong>{label}</strong>
+      <div className="characters-select__options">{options.map(option => <button
+        aria-selected={option === value}
+        key={option}
+        onClick={() => {
+          onChange(option);
+          setOpen(false);
+          triggerRef.current?.focus();
+        }}
+        onKeyDown={moveOptionFocus}
+        role="option"
+        type="button"
+      ><i aria-hidden="true">✓</i><span>{option}</span></button>)}</div>
+    </div> : null}
+  </div>;
+}
+
 function GearItem({ item, character }: { item: EquipmentItem; character: Character }) {
   const [iconFailed, setIconFailed] = useState(false);
   const setItems = item.setId ? character.equipment?.items.filter(candidate => candidate.setId === item.setId).map(candidate => candidate.itemId) : [];
@@ -63,7 +137,7 @@ function GearItem({ item, character }: { item: EquipmentItem; character: Charact
       <strong>{item.itemLevel ?? "—"}</strong>
     </span></WowheadTooltip>
     <span className="gear-item__extras"><span className="gear-item__gems">{item.gems.map(gem => { const gemIcon = blizzardIconUrl(gem.iconPath, character.region, gem.iconFileID); return <WowheadTooltip className="gear-item__gem" id={gem.itemId} key={gem.itemId} label={gem.name} type="item">{gemIcon ? <img alt="" src={gemIcon}/> : <i>◆</i>}</WowheadTooltip>; })}</span>
-      {item.enchant ? item.enchant.spellId ? <WowheadTooltip className="gear-item__enchant" id={item.enchant.spellId} label={item.enchant.name} type="spell">{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</WowheadTooltip> : <span aria-label={item.enchant.name ?? "Encantamiento"} className="gear-item__enchant local-tooltip" data-local-tooltip={item.enchant.name ?? "Encantamiento"}>{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</span> : null}
+      {item.enchant ? item.enchant.spellId ? <WowheadTooltip className="gear-item__enchant" id={item.enchant.spellId} label={item.enchant.name} type="spell">{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</WowheadTooltip> : <FloatingTooltip className="gear-item__enchant" label={item.enchant.name ?? "Encantamiento"}>{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</FloatingTooltip> : null}
     </span>
   </span>;
 }
@@ -161,7 +235,7 @@ export function CharactersPage({ state }: { state: CharacterState }) {
   const regularCurrencies = CHARACTER_CURRENCIES.filter(meta => meta.key !== "trovehuntersBounty");
   const goldIcon = blizzardIconUrl(null, character.region, 133785);
   return <div className="characters-page">
-    <aside className="characters-rail"><label>CUENTA<select aria-label="Cuenta" onChange={event => setAccount(event.target.value)} value={account}>{accounts.map(value => <option key={value}>{value}</option>)}</select></label><label>REINO<select aria-label="Reino" onChange={event => setRealm(event.target.value)} value={realm}>{realms.map(value => <option key={value}>{value}</option>)}</select></label><header><span>PERSONAJES</span><small>{visible.length}/{accountCharacters.length}</small></header><div className="characters-list">{visible.map(value => <button aria-pressed={value.id === character.id} key={value.id} onClick={() => setSelectedId(value.id)} style={{ "--class-color": classColor(value.wowClass) } as CSSProperties} type="button"><Portrait character={value}/><span><strong>{value.name}</strong><small>{value.wowClass ?? "—"}</small></span><b>›</b></button>)}</div></aside>
+    <aside className="characters-rail"><div className="characters-filter"><span>{copy.account}</span><CharacterSelect label={copy.account} onChange={setAccount} options={accounts} value={account}/></div><div className="characters-filter"><span>{copy.realm}</span><CharacterSelect label={copy.realm} onChange={setRealm} options={realms} value={realm}/></div><header><span>{copy.characters}</span><small>{visible.length}/{accountCharacters.length}</small></header><div className="characters-list">{visible.map(value => <button aria-pressed={value.id === character.id} key={value.id} onClick={() => setSelectedId(value.id)} style={{ "--class-color": classColor(value.wowClass) } as CSSProperties} type="button"><Portrait character={value}/><span><strong>{value.name}</strong><small>{value.wowClass ?? "—"}</small></span><b>›</b></button>)}</div></aside>
     <div className="characters-dashboard">
       <div className="characters-top">
         <section className="characters-panel gear-panel"><h2>{copy.gear} <span>{character.equipment?.averageItemLevel ?? character.ilvl ?? "—"} {copy.itemLevel}</span><span>{character.equipment?.setPieces?.reduce((sum, set) => sum + set.count, 0) ?? 0} {copy.setPieces}</span></h2>{character.equipment?.items.length ? <div className="gear-row">{character.equipment.items.map(item => <GearItem character={character} item={item} key={item.slotId}/>)}</div> : <p>Sin datos de equipo. Entra con este personaje y sincroniza.</p>}</section>

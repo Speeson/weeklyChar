@@ -6,7 +6,9 @@ const equipment: EquipmentItem[] = slots.map((slotName, index) => ({
   slotId: index + 1, slotName, itemId: 240000 + index, itemName: `${slotName} of the Eclipse`, itemLink: `item:${240000 + index}:456:250001:0:0:0:0:90:102:0:13:1:2001:0`,
   quality: index % 5 === 0 ? 5 : 4, itemLevel: [308, 311, 308, 311, 321, 311, 308, 308, 331, 331, 311, 311, 311, 308, 321, 311][index],
   iconFileID: 1000 + index, iconPath: MIDNIGHT_SEASON_2_DUNGEONS[index % 8].teleportIconUrl, setId: index < 4 ? 36 : null,
-  enchant: index % 3 === 0 ? { enchantId: 456, spellId: 1254400, name: "Authority of the Depths", iconFileID: 5929576 } : null,
+  enchant: index % 3 === 0
+    ? { enchantId: 456, spellId: 1254400, name: "Authority of the Depths", iconFileID: 5929576 }
+    : index === 1 ? { enchantId: 7961, spellId: null, name: "Hex de parasitismo potenciado", iconFileID: null } : null,
   gems: index % 4 === 0 ? [{ itemId: 250001, itemLink: "item:250001", name: "Elusive Blasphemite", iconFileID: 5931199 }] : [], bonusIds: [2001, 2002], itemContext: 16, suffixId: 0,
 }));
 

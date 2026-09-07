@@ -58,15 +58,25 @@ describe("CharactersPage", () => {
     expect(extras.querySelector(".gear-item__enchant img")).toHaveAttribute("src", expect.stringContaining("133785"));
   });
 
-  it("uses a local enchant tooltip and never treats enchantId as a spellId", () => {
+  it("uses an unclipped portal fallback and never treats enchantId as a spellId", () => {
     const characters = charactersPreview();
     characters[0].equipment!.items[0].enchant = { enchantId: 7961, spellId: null, name: "Hex de parasitismo potenciado", iconFileID: null };
     const { container } = renderPage({ ...state, characters });
     const enchant = container.querySelector(".gear-item__enchant")!;
-    expect(enchant).toHaveAttribute("data-local-tooltip", "Hex de parasitismo potenciado");
     expect(enchant).not.toHaveAttribute("title");
     expect(enchant.closest("a[href*='/spell=7961']")).toBeNull();
     expect(enchant.querySelector("img")).toHaveAttribute("src", expect.stringContaining("463531"));
+    fireEvent.mouseEnter(enchant);
+    const tooltip = screen.getByRole("tooltip", { name: "Hex de parasitismo potenciado" });
+    expect(tooltip.parentElement).toBe(document.body);
+    expect(tooltip).toHaveClass("floating-local-tooltip");
+  });
+
+  it("replaces the native Account and Realm arrows with the character-card chevron", () => {
+    const { container } = renderPage();
+    const selectors = container.querySelectorAll(".characters-select");
+    expect(selectors).toHaveLength(2);
+    selectors.forEach(selector => expect(selector.querySelector(".characters-select__trigger b[aria-hidden=true]")).toHaveTextContent("›"));
   });
 
   it("adds identity, Wowhead tooltips and a full-width action to the talent preview", () => {
@@ -128,12 +138,25 @@ describe("CharactersPage", () => {
     expect(grid).not.toContainElement(container.querySelector(".money-card"));
   });
 
-  it("recalculates realms and characters when the account changes", () => {
+  it("recalculates realms and characters when the account changes", async () => {
+    const user = userEvent.setup();
     renderPage();
-    fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "WOW Account 2" } });
-    expect(screen.getByLabelText("Reino")).toHaveValue("Sanguino");
+    await user.click(screen.getByRole("button", { name: "CUENTA" }));
+    await user.click(screen.getByRole("option", { name: "WOW Account 2" }));
+    expect(screen.getByRole("button", { name: "REINO" })).toHaveTextContent("Sanguino");
     expect(screen.getByRole("button", { name: /Morwyn/ })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Bakuhatsu/ })).not.toBeInTheDocument();
+  });
+
+  it("uses themed custom popovers and translates rail labels in English", async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithTheme(<I18nProvider language="en"><CharactersPage state={state}/></I18nProvider>);
+    expect(screen.getByText("ACCOUNT")).toBeVisible();
+    expect(screen.getByText("REALM")).toBeVisible();
+    expect(screen.getByText("CHARACTERS")).toBeVisible();
+    expect(container.querySelector("select")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ACCOUNT" }));
+    expect(screen.getByRole("listbox", { name: "ACCOUNT" })).toHaveClass("characters-select__popover");
   });
 
   it("opens the read-only full talent trees and copies the captured import string", async () => {
