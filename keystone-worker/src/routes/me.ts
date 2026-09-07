@@ -193,7 +193,10 @@ meRoutes.get('/api/me/characters', async c => {
   const currentUser = await getCurrentUserFlexible(c)
   if (isResponse(currentUser)) return currentUser
 
-  return c.json(await charactersForUser(c.env, currentUser.id, { includeKeystoneLoot: true }))
+  return c.json(await charactersForUser(c.env, currentUser.id, {
+    includeKeystoneLoot: true,
+    includeCharacterSnapshots: true,
+  }))
 })
 
 meRoutes.get('/api/me/characters/:characterId/keystone-loot/objectives', async c => {

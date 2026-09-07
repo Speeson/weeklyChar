@@ -22,7 +22,7 @@ function getClientScale() {
   return Math.min(window.innerWidth / CLIENT_WIDTH, window.innerHeight / CLIENT_HEIGHT);
 }
 
-export type KeystoneView = "sync" | "teams" | "addon";
+export type KeystoneView = "sync" | "characters" | "teams" | "addon";
 
 type KeystoneShellProps = {
   auth: AuthState;
@@ -66,6 +66,7 @@ export function KeystoneShell({
   return (
     <div
       className="ks-app-frame"
+      data-view={currentView}
       data-ui="keystone-shell"
       style={{ "--ks-client-scale": clientScale } as CSSProperties}
     >
@@ -183,6 +184,21 @@ function KeystoneHeader({
         >
           <span className="ks-tab__label">{t("shell.sync")}</span>
           {currentView === "sync" ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
+          ) : inactiveTabIndicator ? (
+            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
+          ) : null}
+        </button>
+        <button
+          aria-current={currentView === "characters" ? "page" : undefined}
+          className="ks-tab"
+          data-state={currentView === "characters" ? "selected" : "default"}
+          data-ui="shell-tab"
+          onClick={() => onNavigate("characters")}
+          type="button"
+        >
+          <span className="ks-tab__label">{t("shell.characters")}</span>
+          {currentView === "characters" ? (
             <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
           ) : inactiveTabIndicator ? (
             <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />

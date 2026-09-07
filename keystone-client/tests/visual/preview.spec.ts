@@ -80,7 +80,7 @@ test.describe("preview states", () => {
 
   test("keeps navigation hover blue and the selected tab softly gold", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    const syncTab = page.getByRole("button", { name: "Sincronizacion", exact: true });
+    const syncTab = page.getByRole("button", { name: "Sincronizar", exact: true });
     const addonTab = page.getByRole("button", { name: "Addon", exact: true });
 
     await expect(syncTab).toHaveAttribute("aria-current", "page");

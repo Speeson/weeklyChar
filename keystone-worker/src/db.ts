@@ -78,6 +78,7 @@ function keystoneDict(keystone: KeystoneRow | null): Record<string, unknown> | n
 
 export type CharacterResponseOptions = {
   includeKeystoneLoot?: boolean
+  includeCharacterSnapshots?: boolean
 }
 
 export function characterResponse(
@@ -101,6 +102,11 @@ export function characterResponse(
     currencies: jsonLoad(character.currencies_json),
     money: jsonLoad(character.money_json),
     mythicPlusSeason: jsonLoad(character.mythic_plus_season_json),
+  }
+  if (options.includeCharacterSnapshots === true) {
+    response.equipment = jsonLoad(character.equipment_json)
+    response.talents = jsonLoad(character.talents_json)
+    response.omniumFolio = jsonLoad(character.omnium_folio_json)
   }
   if (options.includeKeystoneLoot === true) {
     response.keystoneLoot = jsonLoad(character.keystone_loot_json)
@@ -129,15 +135,56 @@ export async function charactersForUser(
   userId: number,
   options: CharacterResponseOptions = {},
 ): Promise<Array<Record<string, unknown>>> {
+  type CharacterWithKeystone = CharacterRow & {
+    current_keystone_id: number | null
+    current_has_keystone: number | null
+    current_keystone_level: number | null
+    current_keystone_challenge_map_id: number | null
+    current_keystone_map_id: number | null
+    current_keystone_dungeon: string | null
+    current_updated_reason: string | null
+    current_updated_at: number | null
+    current_created_at: string | null
+  }
+  const resetUnix = currentEuWeeklyResetUnix()
   const { results } = await env.DB.prepare(`
-    SELECT * FROM characters
-    WHERE user_id = ?
-    ORDER BY name
-  `).bind(userId).all<CharacterRow>()
+    SELECT
+      c.*,
+      k.id AS current_keystone_id,
+      k.has_keystone AS current_has_keystone,
+      k.keystone_level AS current_keystone_level,
+      k.keystone_challenge_map_id AS current_keystone_challenge_map_id,
+      k.keystone_map_id AS current_keystone_map_id,
+      k.keystone_dungeon AS current_keystone_dungeon,
+      k.updated_reason AS current_updated_reason,
+      k.updated_at AS current_updated_at,
+      k.created_at AS current_created_at
+    FROM characters c
+    LEFT JOIN keystones k ON k.id = (
+      SELECT candidate.id FROM keystones candidate
+      WHERE candidate.character_id = c.id
+        AND candidate.has_keystone = 1
+        AND candidate.keystone_level IS NOT NULL
+        AND candidate.updated_at >= ?
+      ORDER BY COALESCE(candidate.updated_at, 0) DESC, candidate.id DESC
+      LIMIT 1
+    )
+    WHERE c.user_id = ?
+    ORDER BY c.name
+  `).bind(resetUnix, userId).all<CharacterWithKeystone>()
 
-  return Promise.all(results.map(async character => {
-    return characterResponse(character, await latestRealKeystone(env, character.id), options)
-  }))
+  return results.map(character => characterResponse(character, character.current_keystone_id === null ? null : {
+    id: character.current_keystone_id,
+    character_id: character.id,
+    has_keystone: character.current_has_keystone ?? 1,
+    keystone_level: character.current_keystone_level,
+    keystone_challenge_map_id: character.current_keystone_challenge_map_id,
+    keystone_map_id: character.current_keystone_map_id,
+    keystone_dungeon: character.current_keystone_dungeon,
+    updated_reason: character.current_updated_reason,
+    updated_at: character.current_updated_at,
+    created_at: character.current_created_at ?? "",
+  }, options))
 }
 
 export async function recommendationCharactersForUser(

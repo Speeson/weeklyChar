@@ -240,7 +240,7 @@ test("reviews the full-area cold loader and warm section navigation in both them
 
     await openTeams(page, "teams-default", "es", theme);
     await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
-    await page.getByRole("button", { name: "Sincronizacion" }).click();
+    await page.getByRole("button", { name: "Sincronizar" }).click();
     await page.evaluate(() => {
       (window as typeof window & { __teamsLoaderObserved?: boolean }).__teamsLoaderObserved = false;
       new MutationObserver(() => {

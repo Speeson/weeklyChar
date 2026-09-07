@@ -1,4 +1,5 @@
 import type { AddonStatus, Character, CharacterState, SyncStatus, SystemState } from "./types";
+import { charactersPreview } from "./charactersPreview";
 
 const previewCharacters: Character[] = [
   { id: "makabe", name: "Makabe", realm: "Zul'jin", region: "eu", wowAccount: "PREVIEW", wowClass: "Warrior", avatarUrl: null, ilvl: 344, rioScore: 4500, currentKeystone: { level: 10, dungeon: "King's Rest", challengeMapId: null, mapId: null }, keystoneDisplay: "+10 King's Rest (KR)" },
@@ -176,10 +177,18 @@ const previews: Record<string, SystemState> = {
   "teams-selector-empty": baseState(),
   "teams-selector-loading": baseState(),
   "teams-selector-error": baseState(),
+  "characters": {
+    ...baseState(),
+    characters: { ...previewCharacterState, characters: charactersPreview() },
+  },
 };
 
 export function isTeamsPreview(): boolean {
   return import.meta.env.DEV && new URLSearchParams(window.location.search).get("preview")?.startsWith("teams-") === true;
+}
+
+export function isCharactersPreview(): boolean {
+  return import.meta.env.DEV && new URLSearchParams(window.location.search).get("preview") === "characters";
 }
 
 export function getPreviewState(): SystemState | null {

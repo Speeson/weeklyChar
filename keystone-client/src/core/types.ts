@@ -124,6 +124,162 @@ export type CharacterKeystone = {
   mapId: number | null;
 };
 
+export type CharacterCurrency = {
+  id?: number | null;
+  name?: string | null;
+  quantity?: number | null;
+  maxQuantity?: number | null;
+  maxWeeklyQuantity?: number | null;
+  totalEarned?: number | null;
+  trackedQuantity?: number | null;
+  quantityEarnedThisWeek?: number | null;
+  useTotalEarnedForMaxQty?: boolean;
+  canEarnPerWeek?: boolean;
+  discovered?: boolean;
+  quality?: number | null;
+  iconFileID?: number | null;
+  iconPath?: string | null;
+  itemID?: number | null;
+  currencyID?: number | null;
+  itemQuantity?: number | null;
+  inventoryQuantity?: number | null;
+  totalItemQuantity?: number | null;
+  bankQuantity?: number | null;
+  bankQuantityKnown?: boolean;
+  bankUpdatedAt?: number | null;
+  dustQuantity?: number | null;
+  dustMaxQuantity?: number | null;
+  dustTotalEarned?: number | null;
+  dustTrackedQuantity?: number | null;
+  bagCount?: number | null;
+  hasBuff?: boolean;
+  questCompleted?: boolean;
+  weekKey?: string | null;
+  isWeeklyMaxed?: boolean;
+  isSeasonMaxed?: boolean;
+  isTotalMaxed?: boolean;
+  isMaxed?: boolean;
+  isWeeklyComplete?: boolean;
+  displayColor?: string | null;
+};
+
+export type EquipmentGem = {
+  itemId: number;
+  itemLink: string | null;
+  name: string | null;
+  iconFileID: number | null;
+  iconPath?: string | null;
+};
+
+export type EquipmentEnchant = {
+  enchantId: number | null;
+  spellId?: number | null;
+  name: string | null;
+  iconFileID?: number | null;
+  iconPath?: string | null;
+};
+
+export type EquipmentItem = {
+  slotId: number;
+  slotName: string;
+  itemId: number;
+  itemName: string | null;
+  itemLink: string;
+  quality: number | null;
+  itemLevel: number | null;
+  iconFileID: number | null;
+  iconPath: string | null;
+  setId: number | null;
+  enchant: EquipmentEnchant | null;
+  gems: EquipmentGem[];
+  bonusIds: number[];
+  itemContext?: number | null;
+  suffixId?: number | null;
+  upgrade?: {
+    track?: string | null;
+    currentLevel?: number | null;
+    maxLevel?: number | null;
+  } | null;
+};
+
+export type EquipmentSnapshot = {
+  averageItemLevel?: number | null;
+  setPieces?: Array<{ setId?: number | null; count: number }>;
+  items: EquipmentItem[];
+};
+
+export type TalentEntrySnapshot = {
+  entryId: number;
+  definitionId: number | null;
+  spellId: number | null;
+  overriddenSpellId: number | null;
+  name: string | null;
+  description: string | null;
+  subtext: string | null;
+  iconFileID: number | null;
+  iconPath?: string | null;
+  selected: boolean;
+  rank: number;
+  maxRanks?: number | null;
+  entryType?: number | string | null;
+  subTreeId?: number | null;
+};
+
+export type TalentEdgeSnapshot = {
+  targetNodeId: number;
+  type: number | string | null;
+  visualStyle: number | string | null;
+  active: boolean;
+};
+
+export type TalentNodeSnapshot = {
+  nodeId: number;
+  posX: number;
+  posY: number;
+  nodeType: number | string | null;
+  ranksPurchased: number;
+  maxRanks: number;
+  activeEntryId: number | null;
+  entries: TalentEntrySnapshot[];
+  visibleEdges: TalentEdgeSnapshot[];
+  subTreeId: number | null;
+  subTreeActive?: boolean;
+};
+
+export type TalentTreeSnapshot = {
+  treeId: number;
+  type: "class" | "hero" | "spec" | "omnium" | string;
+  name: string | null;
+  iconFileID?: number | null;
+  iconPath?: string | null;
+  subTreeId?: number | null;
+  description?: string | null;
+  iconAtlas?: string | number | null;
+  active?: boolean;
+  nodes: TalentNodeSnapshot[];
+};
+
+export type TalentsSnapshot = {
+  specId?: number | null;
+  specName?: string | null;
+  specIconFileID?: number | null;
+  specIconPath?: string | null;
+  class?: string | null;
+  className?: string | null;
+  configId?: number | null;
+  loadoutName?: string | null;
+  importString?: string | null;
+  characterLevel?: number | null;
+  trees: TalentTreeSnapshot[];
+};
+
+export type OmniumFolioSnapshot = {
+  systemId: number;
+  configId?: number | null;
+  treeIds: number[];
+  trees: TalentTreeSnapshot[];
+};
+
 export type Character = {
   id: string;
   name: string;
@@ -136,6 +292,14 @@ export type Character = {
   rioScore: number | null;
   currentKeystone: CharacterKeystone | null;
   keystoneDisplay: string;
+  vault?: Record<string, unknown> | null;
+  preyHunts?: Record<string, unknown> | null;
+  currencies?: Record<string, CharacterCurrency> | null;
+  money?: { gold?: number; silver?: number; copper?: number; copperOnly?: number; totalCopper?: number } | null;
+  mythicPlusSeason?: { dungeons?: Array<Record<string, unknown>> } | null;
+  equipment?: EquipmentSnapshot | null;
+  talents?: TalentsSnapshot | null;
+  omniumFolio?: OmniumFolioSnapshot | null;
 };
 
 export type CharacterState = {

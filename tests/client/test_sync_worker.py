@@ -162,6 +162,60 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertNotIn("keystoneWeeklyResetKey", post["json"])
         self.assertNotIn("mythicPlusSeasonUpdatedAt", post["json"])
 
+    def test_character_snapshots_reach_worker_payload_unchanged(self):
+        equipment = {"averageItemLevel": 331, "items": [{"slotId": 1, "itemId": 123, "bonusIds": [1, 2]}]}
+        talents = {"configId": 77, "importString": "BUILD", "trees": [{"type": "class", "nodes": []}]}
+        omnium = {"systemId": 48, "configId": 88, "treeIds": [1186], "trees": []}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "KeystoneSync.lua"
+            # JSON object syntax is valid for strings/numbers but not Lua keys; write the small fixture explicitly.
+            path.write_text(
+                '''KeystoneSyncDB = { ["Everlight-Auralis"] = {
+                  character = "Auralis", realm = "Everlight", region = "eu",
+                  equipment = { averageItemLevel = 331, items = { { slotId = 1, itemId = 123, bonusIds = { 1, 2 } } } },
+                  talents = { configId = 77, importString = "BUILD", trees = { { type = "class", nodes = {} } } },
+                  omniumFolio = { systemId = 48, configId = 88, treeIds = { 1186 }, trees = {} },
+                } }''',
+                encoding="utf-8",
+            )
+            worker = SyncWorker(self.config)
+            posts = []
+            with (
+                mock.patch.object(worker, "_fetch_raiderio", return_value=(None, None, None, None)),
+                mock.patch("sync_worker.requests.post", side_effect=lambda url, json, headers, timeout: posts.append(json) or FakeResponse()),
+            ):
+                self.assertTrue(worker._sync(str(path), "ACCOUNT-1"))
+        [payload] = posts
+        self.assertEqual(json_normalized(payload["equipment"]), equipment)
+        self.assertEqual(json_normalized(payload["talents"]), talents)
+        self.assertEqual(json_normalized(payload["omniumFolio"]), omnium)
+
+    def test_vault_detail_arrays_survive_lua_to_json_transport(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "KeystoneSync.lua"
+            path.write_text(
+                '''KeystoneSyncDB = { ["Everlight-Auralis"] = {
+                  character = "Auralis", realm = "Everlight", region = "eu",
+                  vault = {
+                    raid = { slots = { { encounters = {} } } },
+                    dungeons = { topRuns = { { level = 12, mapChallengeModeID = 501 } } },
+                    world = { tierProgress = { { difficulty = 8, numPoints = 2 } } },
+                  },
+                } }''',
+                encoding="utf-8",
+            )
+            worker = SyncWorker(self.config)
+            posts = []
+            with (
+                mock.patch.object(worker, "_fetch_raiderio", return_value=(None, None, None, None)),
+                mock.patch("sync_worker.requests.post", side_effect=lambda url, json, headers, timeout: posts.append(json) or FakeResponse()),
+            ):
+                self.assertTrue(worker._sync(str(path), "ACCOUNT-1"))
+        vault = posts[0]["vault"]
+        self.assertEqual(vault["raid"]["slots"][0]["encounters"], [])
+        self.assertEqual(vault["dungeons"]["topRuns"], [{"level": 12, "mapChallengeModeID": 501}])
+        self.assertEqual(vault["world"]["tierProgress"], [{"difficulty": 8, "numPoints": 2}])
+
     def test_season2_currency_contract_survives_savedvariables_payload(self):
         [post] = self.capture_sync_payloads("season2.lua")
 

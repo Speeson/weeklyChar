@@ -28,7 +28,25 @@ type KeystoneUpdateRequest = {
   currencies?: unknown
   money?: unknown
   mythicPlusSeason?: unknown
+  equipment?: unknown
+  talents?: unknown
+  omniumFolio?: unknown
   keystoneLoot?: unknown
+}
+
+const MAX_CHARACTER_SNAPSHOT_BYTES = 512 * 1024
+
+function validateCharacterSnapshot(value: unknown, label: string): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'object' || Array.isArray(value)) return `${label} debe ser un objeto`
+  try {
+    if (new TextEncoder().encode(JSON.stringify(value)).byteLength > MAX_CHARACTER_SNAPSHOT_BYTES) {
+      return `${label} supera 512 KiB`
+    }
+  } catch {
+    return `${label} no se puede serializar`
+  }
+  return null
 }
 
 function isResponse(value: unknown): value is Response {
@@ -44,6 +62,15 @@ keystoneRoutes.post('/api/keystones/update', async c => {
   const hasKeystoneLoot = Object.prototype.hasOwnProperty.call(payload, 'keystoneLoot')
   if (!payload.character || !payload.realm) {
     return jsonError(c, 400, 'Personaje y reino son obligatorios')
+  }
+
+  for (const [label, value] of [
+    ['equipment', payload.equipment],
+    ['talents', payload.talents],
+    ['omniumFolio', payload.omniumFolio],
+  ] as const) {
+    const snapshotError = validateCharacterSnapshot(value, label)
+    if (snapshotError) return jsonError(c, 400, `Snapshot no válido: ${snapshotError}`)
   }
 
   if (hasKeystoneLoot && payload.keystoneLoot !== null) {
@@ -80,6 +107,9 @@ keystoneRoutes.post('/api/keystones/update', async c => {
         currencies_json = COALESCE(?, currencies_json),
         money_json = COALESCE(?, money_json),
         mythic_plus_season_json = COALESCE(?, mythic_plus_season_json),
+        equipment_json = COALESCE(?, equipment_json),
+        talents_json = COALESCE(?, talents_json),
+        omnium_folio_json = COALESCE(?, omnium_folio_json),
         keystone_loot_json = CASE WHEN ? = 1 THEN ? ELSE keystone_loot_json END,
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE id = ?
@@ -94,6 +124,9 @@ keystoneRoutes.post('/api/keystones/update', async c => {
     payload.currencies === undefined ? null : jsonDump(payload.currencies),
     payload.money === undefined ? null : jsonDump(payload.money),
     payload.mythicPlusSeason === undefined ? null : jsonDump(payload.mythicPlusSeason),
+    payload.equipment === undefined ? null : jsonDump(payload.equipment),
+    payload.talents === undefined ? null : jsonDump(payload.talents),
+    payload.omniumFolio === undefined ? null : jsonDump(payload.omniumFolio),
     hasKeystoneLoot ? 1 : 0,
     hasKeystoneLoot && payload.keystoneLoot !== null ? jsonDump(payload.keystoneLoot) : null,
     character.id,

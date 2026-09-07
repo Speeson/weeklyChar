@@ -68,6 +68,27 @@ def _keystone_loot_for_json(value):
     return snapshot
 
 
+_SNAPSHOT_ARRAY_FIELDS = {
+    "items", "setPieces", "gems", "bonusIds", "treeIds", "trees", "nodes",
+    "entries", "visibleEdges", "entryIDs", "subTreeSelectionNodeIDs", "encounters",
+    "topRuns", "tierProgress",
+}
+
+
+def _snapshot_for_json(value, field_name=None):
+    if isinstance(value, list):
+        return [_snapshot_for_json(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if not value and field_name in _SNAPSHOT_ARRAY_FIELDS:
+        return []
+    if field_name in _SNAPSHOT_ARRAY_FIELDS:
+        numeric = _lua_array_for_json(value)
+        if isinstance(numeric, list):
+            return [_snapshot_for_json(item) for item in numeric]
+    return {key: _snapshot_for_json(item, str(key)) for key, item in value.items()}
+
+
 def _decode_savedvariables(content: str):
     table_str = content[content.index("=") + 1 :].strip()
     data = lua.decode(table_str)
@@ -278,12 +299,15 @@ class SyncWorker(threading.Thread):
                 "rioScore": rio_score,
                 "wowClass": wow_class,
                 "ilvl": addon_ilvl if addon_ilvl is not None else ilvl,
-                "vault": entry.get("vault"),
+                "vault": _snapshot_for_json(entry.get("vault")),
                 "preyHunts": entry.get("preyHunts"),
                 "currencies": entry.get("currencies"),
                 "money": entry.get("money"),
                 "mythicPlusSeason": entry.get("mythicPlusSeason"),
             }
+            for snapshot_field in ("equipment", "talents", "omniumFolio"):
+                if snapshot_field in entry:
+                    payload[snapshot_field] = _snapshot_for_json(entry[snapshot_field])
             if "keystoneLoot" in entry:
                 payload["keystoneLoot"] = _keystone_loot_for_json(entry["keystoneLoot"])
             if not self._post(

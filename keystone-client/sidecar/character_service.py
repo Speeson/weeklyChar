@@ -5,12 +5,14 @@ import threading
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
 
 import config as config_module
+import wow_path
 
 
 CHARACTER_NOT_AUTHENTICATED = "CHARACTER_NOT_AUTHENTICATED"
@@ -92,6 +94,66 @@ _DUNGEON_ABBR_BY_ID = {
     399: ("Ruby Life Pools", "RLP"),
 }
 
+_CHARACTER_SNAPSHOT_FIELDS = (
+    "vault",
+    "preyHunts",
+    "currencies",
+    "money",
+    "mythicPlusSeason",
+    "equipment",
+    "talents",
+    "omniumFolio",
+)
+_INVALID_SNAPSHOT_VALUE = object()
+
+
+def _load_local_snapshots(cfg: dict[str, Any]) -> list[dict[str, Any]]:
+    from sync_worker import _decode_savedvariables
+
+    snapshots = []
+    for account in wow_path.selected_savedvars_paths(cfg):
+        try:
+            content = Path(account["savedvars_path"]).read_text(encoding="utf-8").strip()
+            _instance_id, characters = _decode_savedvariables(content)
+        except (OSError, TypeError, ValueError):
+            continue
+        for character in characters:
+            if isinstance(character, dict):
+                snapshot = dict(character)
+                snapshot["wowAccount"] = account.get("name")
+                snapshots.append(snapshot)
+    return snapshots
+
+
+def _identity(value: dict[str, Any]) -> tuple[str, str, str]:
+    name = _text(value.get("name") or value.get("character")) or ""
+    realm = _text(value.get("realm")) or ""
+    region = (_text(value.get("region")) or "eu").lower()
+    return region, realm.casefold(), name.casefold()
+
+
+def _merge_local_snapshots(
+    characters: list[dict[str, Any]], local_snapshots: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    from sync_worker import _snapshot_for_json
+
+    local_by_identity = {_identity(value): value for value in local_snapshots if _identity(value)[1:] != ("", "")}
+    merged = []
+    for character in characters:
+        local = local_by_identity.get(_identity(character))
+        if not local:
+            merged.append(character)
+            continue
+        result = dict(character)
+        for field in _CHARACTER_SNAPSHOT_FIELDS:
+            if field not in local:
+                continue
+            sanitized = _sanitize_snapshot_value(_snapshot_for_json(local[field], field))
+            if sanitized is not _INVALID_SNAPSHOT_VALUE:
+                result[field] = sanitized
+        merged.append(result)
+    return merged
+
 
 class CharacterServiceError(Exception):
     def __init__(self, code: str, message: str):
@@ -169,6 +231,40 @@ def _sanitize_keystone(value: Any) -> dict[str, Any] | None:
     }
 
 
+def _sanitize_snapshot_value(value: Any, *, depth: int = 0, budget: list[int] | None = None) -> Any:
+    """Copy JSON-compatible snapshot data with bounded depth and size."""
+    if budget is None:
+        budget = [50_000]
+    budget[0] -= 1
+    if budget[0] < 0 or depth > 12:
+        return _INVALID_SNAPSHOT_VALUE
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else _INVALID_SNAPSHOT_VALUE
+    if isinstance(value, str):
+        return value[:32_768]
+    if isinstance(value, list):
+        result = []
+        for item in value[:4096]:
+            sanitized = _sanitize_snapshot_value(item, depth=depth + 1, budget=budget)
+            if sanitized is not _INVALID_SNAPSHOT_VALUE:
+                result.append(sanitized)
+        return result
+    if isinstance(value, dict):
+        result = {}
+        for key, item in list(value.items())[:4096]:
+            if not isinstance(key, str) or not key or len(key) > 128:
+                continue
+            sanitized = _sanitize_snapshot_value(item, depth=depth + 1, budget=budget)
+            if sanitized is not _INVALID_SNAPSHOT_VALUE:
+                result[key] = sanitized
+        return result
+    return _INVALID_SNAPSHOT_VALUE
+
+
 def sanitize_character(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -183,7 +279,7 @@ def sanitize_character(value: Any) -> dict[str, Any] | None:
     if not stable_id:
         stable_id = f"{region}:{realm.casefold()}:{name.casefold()}"
 
-    return {
+    result = {
         "id": stable_id,
         "name": name,
         "realm": realm,
@@ -196,6 +292,13 @@ def sanitize_character(value: Any) -> dict[str, Any] | None:
         "currentKeystone": current_keystone,
         "keystoneDisplay": keystone_display(current_keystone),
     }
+    for field in _CHARACTER_SNAPSHOT_FIELDS:
+        if field not in value:
+            continue
+        sanitized = _sanitize_snapshot_value(value[field])
+        if sanitized is not _INVALID_SNAPSHOT_VALUE:
+            result[field] = sanitized
+    return result
 
 
 class CharacterService:
@@ -206,12 +309,14 @@ class CharacterService:
         config_saver: Callable[[dict[str, Any]], None] = config_module.save,
         session=requests,
         raiderio_fetcher: Callable[[str, str, str], tuple[Any, Any, Any, Any]] | None = None,
+        local_snapshot_loader: Callable[[dict[str, Any]], list[dict[str, Any]]] | None = None,
         emit: Callable[[str, dict[str, Any]], None] | None = None,
     ):
         self._config_loader = config_loader
         self._config_saver = config_saver
         self._session = session
         self._raiderio_fetcher = raiderio_fetcher
+        self._local_snapshot_loader = local_snapshot_loader or _load_local_snapshots
         self._emit = emit or (lambda _event, _data: None)
         self._lock = threading.RLock()
         self._characters: list[dict[str, Any]] | None = None
@@ -246,7 +351,7 @@ class CharacterService:
         with self._lock:
             if self._characters is None:
                 cached = self._sanitize_list(cfg.get("cached_characters"))
-                self._characters = self._sort_default(cached)
+                self._characters = self._sort_default(self._with_local_snapshots(cached, cfg))
                 self._source = "cache" if self._characters else "none"
             return self._state_locked()
 
@@ -267,7 +372,7 @@ class CharacterService:
             with self._lock:
                 if generation != self._generation:
                     return self._finish_refresh()
-                self._characters = self._sort_default(characters)
+                self._characters = self._sort_default(self._with_local_snapshots(characters, cfg))
                 self._source = "remote"
                 self._last_refresh_at = _utc_now()
                 self._last_error = None
@@ -382,6 +487,13 @@ class CharacterService:
             if dto is not None:
                 sanitized.append(dto)
         return sanitized
+
+    def _with_local_snapshots(self, characters: list[dict[str, Any]], cfg: dict[str, Any]) -> list[dict[str, Any]]:
+        try:
+            local = self._local_snapshot_loader(cfg)
+        except Exception:
+            return characters
+        return _merge_local_snapshots(characters, local)
 
     def _enrich_missing(self, character: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
         missing_avatar = not _safe_avatar_url(character.get("avatarUrl"))

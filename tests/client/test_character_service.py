@@ -80,16 +80,61 @@ class CharacterServiceTests(unittest.TestCase):
             "cached_characters": [],
         }
 
-    def make_service(self, payload=None, *, fetcher=None):
+    def make_service(self, payload=None, *, fetcher=None, local_snapshot_loader=None):
         session = FakeSession(payload if payload is not None else [])
         service = CharacterService(
             config_loader=lambda: self.config,
             config_saver=lambda cfg: setattr(self, "saved", dict(cfg)),
             session=session,
             raiderio_fetcher=fetcher,
+            local_snapshot_loader=local_snapshot_loader or (lambda _cfg: []),
             emit=lambda event, data: self.events.append((event, data)),
         )
         return service, session
+
+    def test_merges_fresh_local_addon_snapshots_into_remote_character(self):
+        local = {
+            "character": "Auralis",
+            "realm": "Zul'jin",
+            "region": "eu",
+            "equipment": {"averageItemLevel": 318.75, "items": [{"itemId": 271528}], "setPieces": [{"setId": 2057, "count": 4}]},
+            "talents": {"trees": [{"treeId": 1}, {"treeId": 2}]},
+            "omniumFolio": {"systemId": 48, "trees": []},
+        }
+        service, _session = self.make_service(
+            [character(equipment=None, talents=None, omniumFolio=None)],
+            local_snapshot_loader=lambda _cfg: [local],
+        )
+
+        dto = service.refresh()["characters"][0]
+
+        self.assertEqual(dto["equipment"]["averageItemLevel"], 318.75)
+        self.assertEqual(dto["equipment"]["setPieces"], [{"setId": 2057, "count": 4}])
+        self.assertEqual(len(dto["talents"]["trees"]), 2)
+        self.assertEqual(dto["omniumFolio"]["systemId"], 48)
+
+    def test_normalizes_empty_lua_array_fields_in_local_snapshots(self):
+        local = {
+            "character": "Auralis",
+            "realm": "Zul'jin",
+            "region": "eu",
+            "equipment": {
+                "items": [{"itemId": 271528, "gems": {}, "bonusIds": {}}],
+                "setPieces": {},
+            },
+            "talents": {"trees": {}},
+        }
+        service, _session = self.make_service(
+            [character(equipment=None, talents=None)],
+            local_snapshot_loader=lambda _cfg: [local],
+        )
+
+        dto = service.refresh()["characters"][0]
+
+        self.assertEqual(dto["equipment"]["items"][0]["gems"], [])
+        self.assertEqual(dto["equipment"]["items"][0]["bonusIds"], [])
+        self.assertEqual(dto["equipment"]["setPieces"], [])
+        self.assertEqual(dto["talents"]["trees"], [])
 
     def test_sanitizes_rendering_dto_and_preserves_zero_score(self):
         dto = sanitize_character(character(sync_token="must-not-leak", unknown={"x": 1}))
@@ -124,6 +169,30 @@ class CharacterServiceTests(unittest.TestCase):
         self.assertIsNone(dto["avatarUrl"])
         self.assertIsNone(dto["ilvl"])
         self.assertIsNone(dto["rioScore"])
+
+    def test_preserves_character_snapshot_blocks_for_rendering_and_cache(self):
+        snapshots = {
+            "vault": {"dungeons": [{"threshold": 4, "progress": 3}]},
+            "preyHunts": {"normal": {"completed": True}},
+            "currencies": {"untaintedManaCrystals": {"quantity": 143}},
+            "money": {"gold": 123, "silver": 45, "copper": 67},
+            "mythicPlusSeason": {"dungeons": [{"challengeMapId": 588, "level": 12}]},
+            "equipment": {"items": [{"itemId": 123, "bonusIds": [2001, 2002]}]},
+            "talents": {"trees": [{"treeId": 1, "nodes": [{"nodeId": 2}]}]},
+            "omniumFolio": {"systemId": 48, "treeIds": [1186]},
+        }
+
+        dto = sanitize_character(character(**snapshots))
+
+        self.assertIsNotNone(dto)
+        for key, value in snapshots.items():
+            self.assertEqual(dto[key], value)
+
+        service, _session = self.make_service([character(**snapshots)])
+        service.refresh()
+        cached = self.saved["cached_characters"][0]
+        for key, value in snapshots.items():
+            self.assertEqual(cached[key], value)
 
     def test_keystone_display_preserves_unknown_dungeon_fallbacks(self):
         self.assertEqual(keystone_display({"level": 4, "dungeon": "Unknown Dungeon"}), "+4 Unknown Dungeon")

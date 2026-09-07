@@ -285,6 +285,27 @@ test('explicit null KeystoneLoot clears the snapshot without deleting the charac
   assert.equal(env.DB.characters[0].keystone_loot_json, null)
 })
 
+test('equipment, talents, and Omnium snapshots persist and round-trip additively', async () => {
+  const env = makeEnv()
+  const snapshots = {
+    equipment: { averageItemLevel: 331, items: [{ slotId: 1, itemId: 123, bonusIds: [2001, 2002] }] },
+    talents: { configId: 77, importString: 'BUILD', trees: [{ type: 'class', nodes: [] }] },
+    omniumFolio: { systemId: 48, configId: 88, treeIds: [1186], trees: [] },
+  }
+  assert.equal((await sync(env, { character: 'Cyra', realm: 'Dawnwatch', ...snapshots })).status, 200)
+  const [stored] = env.DB.characters
+  assert.deepEqual(JSON.parse(stored.equipment_json), snapshots.equipment)
+  assert.deepEqual(JSON.parse(stored.talents_json), snapshots.talents)
+  assert.deepEqual(JSON.parse(stored.omnium_folio_json), snapshots.omniumFolio)
+  const [character] = await readCharacters(env)
+  assert.deepEqual(character.equipment, snapshots.equipment)
+  assert.deepEqual(character.talents, snapshots.talents)
+  assert.deepEqual(character.omniumFolio, snapshots.omniumFolio)
+
+  assert.equal((await sync(env, { character: 'Cyra', realm: 'Dawnwatch', ilvl: 340 })).status, 200)
+  assert.deepEqual(JSON.parse(stored.equipment_json), snapshots.equipment)
+})
+
 test('KeystoneLoot rejects inconsistent state flags', async () => {
   const env = makeEnv()
   const payload = await loadPayload('keystoneloot-sync-payload.json')
@@ -553,6 +574,9 @@ test('team detail character responses do not expose raw KeystoneLoot data', asyn
   assert.equal(team.members.length, 1)
   assert.equal(team.members[0].characters.length, 1)
   assert.equal('keystoneLoot' in team.members[0].characters[0], false)
+  assert.equal('equipment' in team.members[0].characters[0], false)
+  assert.equal('talents' in team.members[0].characters[0], false)
+  assert.equal('omniumFolio' in team.members[0].characters[0], false)
 })
 
 test('character enrich does not provide a KeystoneLoot write surface', async () => {

@@ -17,6 +17,11 @@ describe("i18n", () => {
     expect(translate("en", "shell.userMenu", { name: "player" })).toBe("User menu for player");
   });
 
+  it("localizes the Characters navigation tab", () => {
+    expect(translate("es", "shell.characters")).toBe("Personajes");
+    expect(translate("en", "shell.characters")).toBe("Characters");
+  });
+
   it("keeps singular and plural Team member copy explicit in both languages", () => {
     expect(translate("es", "teams.characterCountOne", { count: 1 })).toBe("1 personaje");
     expect(translate("es", "teams.characterCount", { count: 2 })).toBe("2 personajes");
@@ -26,7 +31,7 @@ describe("i18n", () => {
 
   it("updates consumers when language changes", () => {
     const view = render(<I18nProvider language="es"><Probe /></I18nProvider>);
-    expect(screen.getByText("Sincronizacion")).toBeInTheDocument();
+    expect(screen.getByText("Sincronizar")).toBeInTheDocument();
     view.rerender(<I18nProvider language="en"><Probe /></I18nProvider>);
     expect(screen.getByText("Sync")).toBeInTheDocument();
   });

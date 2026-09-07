@@ -78,10 +78,17 @@ not a character entry or Worker payload field. `GetCharacterKey()` builds charac
 | `currencies` | map keyed by currency/item aliases | `C_CurrencyInfo`, bag/item APIs | Missing currency info omits that currency key. | Client, Worker JSON block, Web |
 | `money` | table | `GetMoney()` | Preserves previous money on logout if WoW returns zero and previous copper was positive. | Client, Worker JSON block, Web |
 | `mythicPlusSeason` | table | `C_PlayerInfo`, `C_ChallengeMode`, `C_MythicPlus` | Updated only on delayed login, completed runs, new weekly records, and manual `/ksync`; previous season data can be preserved when the new read is empty/duplicate. | Client, Worker JSON block, Web |
+| `equipment` | table | inventory APIs (`GetInventoryItemLink`, `C_Item`, `C_TooltipInfo`) | A transient empty/error capture preserves the prior non-empty snapshot. | Client, Worker `equipment_json` |
+| `talents` | table | active combat config through `C_ClassTalents` and `C_Traits` | Contains the complete visible class/spec/Hero graph and captured import string; transient unavailable APIs preserve prior data. | Client, Worker `talents_json` |
+| `omniumFolio` | table | trait system 48 through `C_Traits.GetConfigIDBySystemID()` | Tree IDs are derived from the config; tree 1186 is a guarded fallback only. | Client, Worker `omnium_folio_json` |
 | `keystoneLoot` | table | Optional `KeystoneLootIntegration.lua` snapshot using KeystoneLoot public API v2 plus read-only Voidcore state | Present only after that character is processed by V1-A; empty `favorites` is authoritative. | Conditional Client transport, validated Worker JSON block, owner read API |
 | `mythicPlusSeasonUpdatedAt` | Unix seconds | `time()` in `UpdateMythicPlusSeason()` | Local-only today; not included in client payload. | Addon local preservation |
 | `updatedAt` | Unix seconds | `time()` in `SaveCharacterData()` | Used by Worker staleness rules for current keystone rows. | Client, Worker, Web |
 | `updatedReason` | string | Event/reason passed into `SaveCharacterData()` | Stored on keystone rows when a real keystone snapshot is inserted. | Client, Worker, Web |
+
+Talent snapshots may include `specIconFileID`/`specIconPath`. Hero tree snapshots may include
+`iconAtlas`, plus `iconFileID`/`iconPath` when that atlas resolves through
+`C_Texture.GetAtlasInfo()`. Older snapshots can omit these additive display fields.
 
 ### `vault`
 
@@ -92,7 +99,9 @@ Shape:
 - `raid`, `dungeons`, `world`
 - each bucket has `unlocked` and `slots`
 - slot fields include `id`, `index`, `type`, `level`, `progress`, `threshold`, `activityTierID`, `unlocked`
-- `dungeons.completedRuns` includes `heroic`, `mythic`, and `mythicPlus`
+- raid slots can include `encounters` with Blizzard encounter/instance IDs, localized names, UI order, and best completed difficulty
+- `dungeons.completedRuns` includes `heroic`, `mythic`, and `mythicPlus`; `dungeons.topRuns` contains the sorted current-week Mythic+ level, challenge map ID, and localized dungeon name used by Great Vault tooltips
+- `world.tierProgress` contains Blizzard's sorted activity tier, difficulty, and completion count used by Great Vault tooltips
 
 ### `preyHunts`
 
@@ -118,11 +127,12 @@ The addon writes the canonical Midnight Season 2 keys:
 - `tidalSparkDust`
 - `cofferKeyShards`
 - `restoredCofferKey`
+- `untaintedManaCrystals` (currency ID `3356`)
 - `nebulousVoidcore`
 - `sparksOfTides`
 - `trovehuntersBounty`
 
-Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyComplete`, and `displayColor`.
+Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `useTotalEarnedForMaxQty`, `canEarnPerWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyMaxed`, `isSeasonMaxed`, `isTotalMaxed`, and `isMaxed`. Caps always come from the WoW API: weekly progress is independent of owned quantity, seasonal caps compare `totalEarned`, and ordinary total caps compare `quantity`.
 
 `sparksOfTides` tracks Spark of Tides (`itemID = 274476`) as a physical item
 owned by the current character. Its fields are:
@@ -245,6 +255,9 @@ Payload sent to `POST /api/keystones/update`:
 | `currencies` | SavedVariables `currencies` |
 | `money` | SavedVariables `money` |
 | `mythicPlusSeason` | SavedVariables `mythicPlusSeason` |
+| `equipment` | SavedVariables `equipment`, only when that key exists |
+| `talents` | SavedVariables `talents`, only when that key exists |
+| `omniumFolio` | SavedVariables `omniumFolio`, only when that key exists |
 | `keystoneLoot` | SavedVariables `keystoneLoot`, only when that key exists |
 
 Authentication:
@@ -273,9 +286,11 @@ Missing and partial fields:
 - `keystoneLoot` is different: a missing SavedVariables key is omitted from the HTTP
   payload, while a present block is authoritative.
 - `slpp` represents numeric Lua arrays as mappings and cannot distinguish an empty Lua
-  array from an empty object. The Client converts only the known V1-A array fields
-  `favorites`, `voidcore.usedItems`, `bonusIds`, and `gems` from empty or contiguous
-  one-based mappings to JSON arrays. It does not otherwise normalize or enrich the block.
+  array from an empty object. The Client converts known KeystoneLoot and character snapshot
+  array fields (`items`, `setPieces`, `gems`, `bonusIds`, `treeIds`, `trees`, `nodes`,
+  `entries`, `visibleEdges`, `entryIDs`, `subTreeSelectionNodeIDs`, `encounters`, `topRuns`,
+  and `tierProgress`) from empty or
+  contiguous one-based mappings to JSON arrays.
 
 ## Worker Write Contract
 
@@ -389,6 +404,9 @@ Tables:
 
 Character sync columns:
 
+Migration `0008_character_snapshots.sql` adds the three snapshot columns below without
+rewriting existing rows; old rows therefore read them as `null`.
+
 - `characters.name`
 - `characters.realm`
 - `characters.region`
@@ -402,6 +420,9 @@ Character sync columns:
 - `characters.currencies_json`
 - `characters.money_json`
 - `characters.mythic_plus_season_json`
+- `characters.equipment_json`
+- `characters.talents_json`
+- `characters.omnium_folio_json`
 - `characters.keystone_loot_json`
 
 KeystoneLoot team sharing is stored as
@@ -456,6 +477,9 @@ JSON storage:
 - `currencies` is stored as `characters.currencies_json`.
 - `money` is stored as `characters.money_json`.
 - `mythicPlusSeason` is stored as `characters.mythic_plus_season_json`.
+- `equipment` is stored as `characters.equipment_json`.
+- `talents` is stored as `characters.talents_json`.
+- `omniumFolio` is stored as `characters.omnium_folio_json`.
 - `keystoneLoot` is stored as `characters.keystone_loot_json`.
 
 Design implication: adding a nested key inside an existing JSON block may not require a D1 migration if the Worker can preserve and return it and the Web can tolerate it. Adding a new independently persisted top-level block or queryable field requires a schema/contract decision and may require a migration.
@@ -483,6 +507,9 @@ Character response shape:
 | `currencies` | parsed `currencies_json`, or `null` |
 | `money` | parsed `money_json`, or `null` |
 | `mythicPlusSeason` | parsed `mythic_plus_season_json`, or `null` |
+| `equipment` | parsed `equipment_json`, or `null` |
+| `talents` | parsed `talents_json`, or `null` |
+| `omniumFolio` | parsed `omnium_folio_json`, or `null` |
 | `keystoneLoot` | owner reads only: parsed `keystone_loot_json`, or `null` |
 
 `currentKeystone` shape:

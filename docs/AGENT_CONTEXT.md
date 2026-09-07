@@ -55,11 +55,11 @@ Main implementation points:
   reset plus all current-character writes and config persistence succeed.
 - `keystone-client/sidecar/character_service.py`: sanitizes cached/API character DTOs, preserves cached rows on refresh failure, enriches missing display fields server-side and publishes `characters.updated` without exposing tokens.
 - `keystone-client/sidecar/sync_service.py`: owns the single SavedVariables monitor, reconciles it against authentication/WoW account prerequisites and schedules character refresh after successful sync.
-- `keystone-client/src/`: consumes `characters.get` / `characters.refresh`, renders real sortable character rows and uses a scoped Tauri command for Raider.IO profile navigation.
+- `keystone-client/src/`: consumes `characters.get` / `characters.refresh`; the `Characters` view renders account/realm-filtered addon snapshots for equipment, M+, vault, Prey, currencies, talents and Omnium. Raider.IO remains display enrichment only.
 - The Tauri host owns the frameless window lifecycle, controlled close prompt, native minimize/tray actions, real Windows autostart and localized dynamic tray. Blocking sidecar requests run outside the UI thread, and explicit exit terminates the sidecar without waiting for the synchronization monitor. React owns the ES/EN presentation, login/onboarding routing and profile/avatar dialogs; account creation stays inside the client through the allowlisted `auth.register` bridge command and existing Worker endpoint.
 - The Client close policy is persisted as `close_behavior` (`ask`, `minimize`, or `exit`), can be changed in Settings, and can be remembered from the close-choice dialog. In `ask` mode, a repeated native close request while the dialog is open confirms exit, so a second Alt+F4 cannot leave the window blocked. The legacy `minimize_on_close` value is retained and migrated for compatibility.
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
-- `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses.
+- `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses. Owner character lists load current keystones in one SQL query and include additive equipment/talents/Omnium JSON blocks.
 - `keystone-worker/src/routes/me.ts`: `GET /api/me/characters` exposes user characters.
 - `keystone-worker/src/routes/teams.ts`: team detail responses expose member characters through shared DB helpers.
 - `keystone-web/lib/auth.ts`: `apiFetch()` centralizes Web API calls.

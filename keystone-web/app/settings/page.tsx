@@ -317,6 +317,7 @@ export default function SettingsPage() {
               <ToggleRow label="Spark of Tides" checked={settings.summaryCurrencies.sparksOfTides} onChange={value => toggleGroup('summaryCurrencies', 'sparksOfTides', value)} />
               <ToggleRow label="Coffer Key Shards" checked={settings.summaryCurrencies.cofferKeyShards} onChange={value => toggleGroup('summaryCurrencies', 'cofferKeyShards', value)} />
               <ToggleRow label="Restored Coffer Key" checked={settings.summaryCurrencies.restoredCofferKey} onChange={value => toggleGroup('summaryCurrencies', 'restoredCofferKey', value)} />
+              <ToggleRow label="Untainted Mana-Crystals" checked={settings.summaryCurrencies.untaintedManaCrystals} onChange={value => toggleGroup('summaryCurrencies', 'untaintedManaCrystals', value)} />
               <ToggleRow label="Nebulous Voidcore" checked={settings.summaryCurrencies.nebulousVoidcore} onChange={value => toggleGroup('summaryCurrencies', 'nebulousVoidcore', value)} />
               <ToggleRow label="Trovehunter's Bounty" checked={settings.summaryCurrencies.trovehuntersBounty} onChange={value => toggleGroup('summaryCurrencies', 'trovehuntersBounty', value)} />
             </Section>

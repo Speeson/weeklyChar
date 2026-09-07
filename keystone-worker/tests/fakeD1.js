@@ -187,6 +187,33 @@ class FakeD1Statement {
     const sql = this.sql
     const values = this.values
 
+    if (sql.includes('FROM characters c LEFT JOIN keystones k ON k.id =')) {
+      const [resetUnix, userId] = values
+      this.db.characterQueryUserIds.push(userId)
+      const results = this.db.characters
+        .filter(character => character.user_id === userId)
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map(character => {
+          const latest = this.db.keystones
+            .filter(entry => entry.character_id === character.id && entry.has_keystone === 1
+              && entry.keystone_level !== null && entry.updated_at >= resetUnix)
+            .sort((left, right) => ((right.updated_at ?? 0) - (left.updated_at ?? 0)) || (right.id - left.id))[0]
+          return {
+            ...character,
+            current_keystone_id: latest?.id ?? null,
+            current_has_keystone: latest?.has_keystone ?? null,
+            current_keystone_level: latest?.keystone_level ?? null,
+            current_keystone_challenge_map_id: latest?.keystone_challenge_map_id ?? null,
+            current_keystone_map_id: latest?.keystone_map_id ?? null,
+            current_keystone_dungeon: latest?.keystone_dungeon ?? null,
+            current_updated_reason: latest?.updated_reason ?? null,
+            current_updated_at: latest?.updated_at ?? null,
+            current_created_at: latest?.created_at ?? null,
+          }
+        })
+      return { results }
+    }
+
     if (sql.includes('SELECT * FROM characters WHERE user_id = ? ORDER BY name')) {
       this.db.characterQueryUserIds.push(values[0])
       const results = this.db.characters
@@ -426,6 +453,9 @@ class FakeD1Statement {
         currencies_json: null,
         money_json: null,
         mythic_plus_season_json: null,
+        equipment_json: null,
+        talents_json: null,
+        omnium_folio_json: null,
         keystone_loot_json: null,
         created_at: '2026-08-21T00:00:00.000Z',
         updated_at: '2026-08-21T00:00:00.000Z',
@@ -446,6 +476,9 @@ class FakeD1Statement {
         currenciesJson,
         moneyJson,
         mythicPlusSeasonJson,
+        equipmentJson,
+        talentsJson,
+        omniumFolioJson,
         hasKeystoneLoot,
         keystoneLootJson,
         characterId,
@@ -463,6 +496,9 @@ class FakeD1Statement {
       assignIfPresent(character, 'currencies_json', currenciesJson)
       assignIfPresent(character, 'money_json', moneyJson)
       assignIfPresent(character, 'mythic_plus_season_json', mythicPlusSeasonJson)
+      assignIfPresent(character, 'equipment_json', equipmentJson)
+      assignIfPresent(character, 'talents_json', talentsJson)
+      assignIfPresent(character, 'omnium_folio_json', omniumFolioJson)
       if (hasKeystoneLoot === 1) character.keystone_loot_json = keystoneLootJson
       character.updated_at = '2026-08-21T00:00:00.000Z'
       return { meta: { changes: 1 } }

@@ -7,7 +7,7 @@ import { apiFetch, getToken } from '@/lib/auth'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 import { keystoneColor } from '@/lib/colors'
 import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
-import { formatTrovehunterStatus, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, wowheadHref } from '@/lib/season2Currencies'
+import { currencyCapState, formatTrovehunterStatus, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, wowheadHref } from '@/lib/season2Currencies'
 import { formatSparkQuantity } from '@/lib/sparkQuantity'
 
 interface Keystone {
@@ -45,6 +45,9 @@ interface CurrencyInfo {
   trackedQuantity?: number
   totalEarned?: number
   maxQuantity?: number
+  maxWeeklyQuantity?: number
+  quantityEarnedThisWeek?: number
+  useTotalEarnedForMaxQty?: boolean
   iconFileID?: number
   iconPath?: string | null
   isWeeklyComplete?: boolean
@@ -404,7 +407,7 @@ function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRE
   const value = key === 'sparksOfTides'
     ? formatSparkQuantity(info)
     : (info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0)
-  const red = key === 'nebulousVoidcore' && (info.isWeeklyComplete || info.displayColor === 'red')
+  const red = currencyCapState(info).isMaxed || info.isWeeklyComplete || info.displayColor === 'red'
   return (
     <WowheadLink
       type={currency.wowheadType}

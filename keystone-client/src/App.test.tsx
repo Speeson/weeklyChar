@@ -241,7 +241,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText("player")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sincronizacion" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Sincronizar" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Auralis")).toBeInTheDocument();
     expect(screen.getByText("Version de la aplicacion")).toBeInTheDocument();
     expect(document.querySelector(".ks-user-menu__avatar-image")).not.toBeInTheDocument();
@@ -434,7 +434,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Ubicación de World of Warcraft" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Sincronizacion" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sincronizar" })).not.toBeInTheDocument();
   });
 
   it("refreshes state after login and routes into first-run onboarding", async () => {

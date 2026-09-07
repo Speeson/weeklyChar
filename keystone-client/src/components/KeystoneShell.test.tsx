@@ -55,7 +55,8 @@ describe("KeystoneShell profile menu", () => {
     expect(document.querySelector('.ks-brand__icon[src$="app-badge.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-tab__decoration--active[src$="tab-active-decoration.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-tab__decoration--inactive[src$="tab-inactive-decoration.png"]')).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sincronizacion" }).querySelector(".ks-tab__label")).toHaveTextContent("Sincronizacion");
+    expect(screen.getByRole("button", { name: "Sincronizar" }).querySelector(".ks-tab__label")).toHaveTextContent("Sincronizar");
+    expect(screen.getByRole("button", { name: "Personajes" }).querySelector(".ks-tab__label")).toHaveTextContent("Personajes");
     expect(screen.getByRole("button", { name: "Equipos" }).querySelector(".ks-tab__label")).toHaveTextContent("Equipos");
     expect(screen.getByRole("button", { name: "Addon" }).querySelector(".ks-tab__label")).toHaveTextContent("Addon");
     expect(document.querySelector('.ks-user-menu__shell[src$="profile-frame.png"]')).toBeInTheDocument();
@@ -71,9 +72,10 @@ describe("KeystoneShell profile menu", () => {
     renderShell(vi.fn(), vi.fn(), onNavigate);
 
     const frame = screen.getByRole("banner").parentElement;
-    const syncTab = screen.getByRole("button", { name: "Sincronizacion" });
+    const syncTab = screen.getByRole("button", { name: "Sincronizar" });
     const addonTab = screen.getByRole("button", { name: "Addon" });
     const teamsTab = screen.getByRole("button", { name: "Equipos" });
+    const charactersTab = screen.getByRole("button", { name: "Personajes" });
     const trigger = screen.getByRole("button", { name: "Menu de usuario de player" });
 
     expect(frame).toHaveAttribute("data-ui", "keystone-shell");
@@ -81,6 +83,11 @@ describe("KeystoneShell profile menu", () => {
     expect(syncTab).toHaveAttribute("data-state", "selected");
     expect(syncTab).toHaveAttribute("aria-current", "page");
     expect(addonTab).toHaveAttribute("data-state", "default");
+    expect(Array.from(document.querySelectorAll(".ks-tab__label"), label => label.textContent)).toEqual([
+      "Sincronizar", "Personajes", "Equipos", "Addon",
+    ]);
+    await user.click(charactersTab);
+    expect(onNavigate).toHaveBeenCalledWith("characters");
     await user.click(teamsTab);
     expect(onNavigate).toHaveBeenCalledWith("teams");
     await user.click(addonTab);
@@ -143,7 +150,7 @@ describe("KeystoneShell window dragging", () => {
     fireEvent.pointerDown(screen.getByRole("banner"), { button: 0 });
     expect(onStartWindowDrag).toHaveBeenCalledOnce();
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Sincronizacion" }), { button: 0 });
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Sincronizar" }), { button: 0 });
     fireEvent.pointerDown(screen.getByRole("button", { name: "Configuracion" }), { button: 0 });
     expect(onStartWindowDrag).toHaveBeenCalledOnce();
   });

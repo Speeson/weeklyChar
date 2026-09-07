@@ -6,6 +6,7 @@ export type Season2CurrencyKey =
   | 'sparksOfTides'
   | 'cofferKeyShards'
   | 'restoredCofferKey'
+  | 'untaintedManaCrystals'
   | 'nebulousVoidcore'
   | 'trovehuntersBounty'
 
@@ -27,6 +28,7 @@ export const MIDNIGHT_SEASON_2_CURRENCIES: Season2CurrencyMetadata[] = [
   { key: 'sparksOfTides', label: 'Spark of Tides', color: 'text-cyan-300', wowheadType: 'item', wowheadId: 274476, iconName: 'inv_12_profession_questandcrafting_sparkwhole_green' },
   { key: 'cofferKeyShards', label: 'Coffer Key Shards', color: 'text-sky-400', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
   { key: 'restoredCofferKey', label: 'Restored Coffer Key', color: 'text-purple-400', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
+  { key: 'untaintedManaCrystals', label: 'Untainted Mana-Crystals', color: 'text-cyan-300', wowheadType: 'currency', wowheadId: 3356, iconName: 'jewelcrafting_uncut-epic-gem_color1' },
   { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', color: 'text-violet-300', wowheadType: 'currency', wowheadId: 3513, iconName: 'inv_1205_voidforge_fluctuatingvoidcores_green' },
   { key: 'trovehuntersBounty', label: "Trovehunter's Bounty", color: 'text-amber-300', wowheadType: 'item', wowheadId: 274374, iconName: 'icon_treasuremap', valueType: 'trovehunterStatus' },
 ]
@@ -41,6 +43,24 @@ export function formatTrovehunterStatus(info: { questCompleted?: boolean } | nul
 
 export function wowheadHref(type: 'currency' | 'item' | 'spell', id: number): string {
   return `https://www.wowhead.com/${type}=${id}`
+}
+
+export type CurrencyCapInfo = {
+  quantity?: number
+  maxQuantity?: number
+  maxWeeklyQuantity?: number
+  totalEarned?: number
+  quantityEarnedThisWeek?: number
+  useTotalEarnedForMaxQty?: boolean
+}
+
+export function currencyCapState(info: CurrencyCapInfo | null | undefined) {
+  const weeklyMax = info?.maxWeeklyQuantity ?? 0
+  const max = info?.maxQuantity ?? 0
+  const isWeeklyMaxed = weeklyMax > 0 && (info?.quantityEarnedThisWeek ?? 0) >= weeklyMax
+  const isSeasonMaxed = info?.useTotalEarnedForMaxQty === true && max > 0 && (info?.totalEarned ?? 0) >= max
+  const isTotalMaxed = info?.useTotalEarnedForMaxQty !== true && max > 0 && (info?.quantity ?? 0) >= max
+  return { isWeeklyMaxed, isSeasonMaxed, isTotalMaxed, isMaxed: isWeeklyMaxed || isSeasonMaxed || isTotalMaxed }
 }
 
 const LEGACY_VISIBILITY_KEYS: Record<string, Season2CurrencyKey> = {

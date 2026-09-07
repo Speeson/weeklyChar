@@ -12,7 +12,8 @@ const es = {
   "common.save": "Guardar",
   "common.bridgeError": "El bridge de Python devolvió un error controlado.",
   "shell.mainNavigation": "Principal",
-  "shell.sync": "Sincronizacion",
+  "shell.sync": "Sincronizar",
+  "shell.characters": "Personajes",
   "shell.teams": "Equipos",
   "shell.settings": "Configuracion",
   "shell.user": "Usuario",
@@ -303,7 +304,7 @@ export type TranslationKey = keyof typeof es;
 
 const en: Record<TranslationKey, string> = {
   "common.addon": "Addon", "common.cancel": "Cancel", "common.close": "Close", "common.error": "Error", "common.loading": "Loading...", "common.notAvailable": "Unavailable", "common.save": "Save", "common.bridgeError": "The Python bridge returned a controlled error.",
-  "shell.mainNavigation": "Main", "shell.sync": "Sync", "shell.teams": "Teams", "shell.settings": "Settings", "shell.user": "User", "shell.userMenu": "User menu for {name}", "shell.changeAvatar": "Change avatar", "shell.logout": "Sign out", "shell.windowControls": "Window controls", "shell.minimize": "Minimize", "shell.close": "Close", "shell.openWeb": "Open Web", "shell.minimizeTray": "Minimize to tray",
+  "shell.mainNavigation": "Main", "shell.sync": "Sync", "shell.characters": "Characters", "shell.teams": "Teams", "shell.settings": "Settings", "shell.user": "User", "shell.userMenu": "User menu for {name}", "shell.changeAvatar": "Change avatar", "shell.logout": "Sign out", "shell.windowControls": "Window controls", "shell.minimize": "Minimize", "shell.close": "Close", "shell.openWeb": "Open Web", "shell.minimizeTray": "Minimize to tray",
   "close.title": "What do you want to do with KeystoneClient?", "close.cancelLabel": "Cancel close", "close.exit": "Close KeystoneClient", "close.remember": "Remember my choice",
   "avatar.profile": "Profile", "avatar.title": "Change avatar", "avatar.close": "Close avatar picker", "avatar.empty": "No characters are available.",
   "login.title": "Sign in", "login.description": "Sign in to sync your characters and manage KeystoneSync.", "login.username": "Username", "login.password": "Password", "login.showPassword": "Show password", "login.hidePassword": "Hide password", "login.connecting": "Connecting...", "login.enter": "Sign in", "login.register": "Register", "login.error": "Could not sign in.", "login.forgotPrompt": "Forgot your password?", "login.recoverPassword": "Recover password", "login.openWeb": "Open the Web app", "login.exitApplication": "Close application", "login.nativeActionError": "The requested action could not be completed.", "login.unauthenticatedActions": "Unauthenticated actions",

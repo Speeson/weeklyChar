@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   formatTrovehunterStatus,
+  currencyCapState,
   MIDNIGHT_SEASON_2_CURRENCIES,
   migrateSeason2CurrencyVisibility,
   wowheadHref,
@@ -37,6 +38,7 @@ test('defines canonical Season 2 labels, IDs, types, and live icon names', () =>
       { key: 'sparksOfTides', label: 'Spark of Tides', wowheadType: 'item', wowheadId: 274476, iconName: 'inv_12_profession_questandcrafting_sparkwhole_green' },
       { key: 'cofferKeyShards', label: 'Coffer Key Shards', wowheadType: 'currency', wowheadId: 3310, iconName: 'inv_gizmo_hardenedadamantitetube' },
       { key: 'restoredCofferKey', label: 'Restored Coffer Key', wowheadType: 'currency', wowheadId: 3028, iconName: 'inv_misc_key_15' },
+      { key: 'untaintedManaCrystals', label: 'Untainted Mana-Crystals', wowheadType: 'currency', wowheadId: 3356, iconName: 'jewelcrafting_uncut-epic-gem_color1' },
       { key: 'nebulousVoidcore', label: 'Nebulous Voidcore', wowheadType: 'currency', wowheadId: 3513, iconName: 'inv_1205_voidforge_fluctuatingvoidcores_green' },
       { key: 'trovehuntersBounty', label: "Trovehunter's Bounty", wowheadType: 'item', wowheadId: 274374, iconName: 'icon_treasuremap' },
     ],
@@ -61,11 +63,23 @@ test('migrates old visibility preferences without retaining Season 1 keys', () =
       sparksOfTides: true,
       cofferKeyShards: false,
       restoredCofferKey: true,
+      untaintedManaCrystals: true,
       nebulousVoidcore: true,
       trovehuntersBounty: true,
       customFutureKey: false,
     },
   )
+})
+
+test('computes weekly, seasonal, and total caps without currency-specific rules', () => {
+  assert.deepEqual(currencyCapState({ quantity: 0, quantityEarnedThisWeek: 600, maxWeeklyQuantity: 600 }), {
+    isWeeklyMaxed: true, isSeasonMaxed: false, isTotalMaxed: false, isMaxed: true,
+  })
+  assert.deepEqual(currencyCapState({ quantity: 143, quantityEarnedThisWeek: 250, maxWeeklyQuantity: 250, maxQuantity: 1000 }), {
+    isWeeklyMaxed: true, isSeasonMaxed: false, isTotalMaxed: false, isMaxed: true,
+  })
+  assert.equal(currencyCapState({ totalEarned: 450, maxQuantity: 450, useTotalEarnedForMaxQty: true }).isSeasonMaxed, true)
+  assert.equal(currencyCapState({ quantity: 8, maxQuantity: 8 }).isTotalMaxed, true)
 })
 
 test('canonical preferences win when old and new keys coexist', () => {

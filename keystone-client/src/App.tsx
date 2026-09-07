@@ -20,7 +20,7 @@ import {
   openWeb,
   startWindowDragging,
 } from "./core/native";
-import { getPreviewState, isTeamsPreview } from "./core/preview";
+import { getPreviewState, isCharactersPreview, isTeamsPreview } from "./core/preview";
 import { liveTeamsDataSource, type TeamsDataSource } from "./core/teams";
 import { getTeamsPreviewDataSource } from "./core/teamsPreview";
 import { clearTeamsSessionCache, prefetchTeamsSession } from "./core/teamsSessionCache";
@@ -48,6 +48,7 @@ import { OnboardingPage } from "./pages/OnboardingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SyncPage } from "./pages/SyncPage";
 import { TeamsPage } from "./pages/TeamsPage";
+import { CharactersPage } from "./pages/CharactersPage";
 import { WowPage } from "./pages/WowPage";
 
 type BridgeStatus = "loading" | "ready" | "error";
@@ -179,6 +180,7 @@ function App() {
         applySystemState(state);
         setPreviewMode(previewState !== null);
         if (previewState && isTeamsPreview()) setCurrentView("teams");
+        if (previewState && isCharactersPreview()) setCurrentView("characters");
         setBridgeStatus(firstPing.pong ? "ready" : "error");
         setError(null);
         document.title = `KeystoneClient - ${state.bridge}`;
@@ -494,6 +496,8 @@ function App() {
               initialWow={wow}
               preview={previewMode}
             />
+          ) : currentView === "characters" ? (
+            <CharactersPage state={characters} />
           ) : currentView === "teams" ? (
             <TeamsPage
               dataSource={teamsDataSource}

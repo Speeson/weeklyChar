@@ -30,7 +30,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Script id="wowhead-tooltips-config" strategy="beforeInteractive">
-          {`const whTooltips = { colorLinks: true, iconizeLinks: true, renameLinks: false };`}
+          {`const whTooltips = { colorLinks: false, iconizeLinks: false, renameLinks: false };`}
         </Script>
         <Script src="https://wow.zamimg.com/js/tooltips.js" strategy="afterInteractive" />
         {children}
