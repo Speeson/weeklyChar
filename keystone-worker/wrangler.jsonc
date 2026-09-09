@@ -17,5 +17,25 @@
       "database_name": "keystone-sync",
       "database_id": "418e4d4f-47c3-4191-a90d-b95a442ed06d"
     }
-  ]
+  ],
+  "env": {
+    "staging": {
+      "name": "keystone-sync-api-staging",
+      "workers_dev": true,
+      "preview_urls": false,
+      "routes": [],
+      "vars": {
+        "BATTLENET_REDIRECT_URI": "https://keystone-sync-api-staging.estebangperez77.workers.dev/api/auth/battlenet/callback",
+        "WEB_BASE_URL": "http://localhost:3000",
+        "ALLOWED_ORIGINS": "http://localhost:3000"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "keystone-sync-staging",
+          "database_id": "d01a6740-43e4-4276-916f-e9e7a37b1478"
+        }
+      ]
+    }
+  }
 }

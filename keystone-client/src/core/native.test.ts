@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { minimizeToTray, minimizeWindow, openForgotPassword, startWindowDragging } from "./native";
+import { minimizeToTray, minimizeWindow, openBattleNetAuthorization, openForgotPassword, startWindowDragging } from "./native";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/window", () => ({
@@ -32,6 +32,14 @@ describe("native window actions", () => {
     await openForgotPassword();
 
     expect(invokeMock).toHaveBeenCalledWith("open_forgot_password");
+  });
+
+  it("opens Battle.net through the dedicated scoped Rust command", async () => {
+    invokeMock.mockResolvedValueOnce(undefined);
+    await openBattleNetAuthorization("https://oauth.battle.net/authorize?scope=openid");
+    expect(invokeMock).toHaveBeenCalledWith("open_battlenet_authorization", {
+      url: "https://oauth.battle.net/authorize?scope=openid",
+    });
   });
 
   it("keeps taskbar minimization on the current native window", async () => {

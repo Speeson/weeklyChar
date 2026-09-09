@@ -14,7 +14,9 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setToken(new URLSearchParams(window.location.search).get('token') ?? '')
+    queueMicrotask(() => {
+      setToken(new URLSearchParams(window.location.search).get('token') ?? '')
+    })
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {

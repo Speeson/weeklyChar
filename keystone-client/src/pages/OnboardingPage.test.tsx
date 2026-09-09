@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
 import type { WowState } from "../core/types";
@@ -64,6 +65,18 @@ describe("OnboardingPage", () => {
     renderOnboarding(oneAccount, onComplete, false);
     await waitFor(() => expect(selectWowAccounts).toHaveBeenCalledWith({ accounts: ["ACCOUNT_A"] }));
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ configurationComplete: true })));
+  });
+
+  it("settles startup detection when Strict Mode replays the effect", async () => {
+    vi.mocked(detectWow).mockResolvedValueOnce(empty);
+    render(
+      <StrictMode>
+        <OnboardingPage initialWow={empty} onComplete={vi.fn()} onOpenAddon={vi.fn()} onWowChanged={vi.fn()} />
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(detectWow).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Detectar de nuevo" })).toBeEnabled());
   });
 
   it("shows a selector for multiple usable accounts", async () => {

@@ -84,6 +84,10 @@ class DeployImpactTests(unittest.TestCase):
         impact = self.assertImpact(["keystone-worker/tests/keystoneRoutes.test.js"], set())
         self.assertEqual(impact.known_no_impact_paths, ["keystone-worker/tests/keystoneRoutes.test.js"])
 
+    def test_worker_local_environment_example_is_no_product_impact(self):
+        impact = self.assertImpact(["keystone-worker/.dev.vars.example"], set())
+        self.assertEqual(impact.known_no_impact_paths, ["keystone-worker/.dev.vars.example"])
+
     def test_db_migration_impacts_db_and_worker(self):
         self.assertImpact(["keystone-worker/migrations/9999_example.sql"], {"worker", "db"})
 

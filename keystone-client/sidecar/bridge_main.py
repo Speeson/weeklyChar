@@ -94,6 +94,33 @@ def handle_auth_logout(payload: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def handle_auth_battlenet_start(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    try:
+        return auth_service.start_battlenet(config_module.load())
+    except auth_service.AuthError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_auth_battlenet_poll(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    try:
+        result = auth_service.poll_battlenet(config_module.load())
+        if result.get("status") == "ready":
+            refreshed_cfg = config_module.load()
+            SYNC_SERVICE.reconcile(emit_events=False)
+            CHARACTER_SERVICE.refresh_async(refreshed_cfg)
+            ADDON_SERVICE.check_async(refreshed_cfg)
+        return result
+    except auth_service.AuthError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_auth_battlenet_cancel(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    return auth_service.cancel_battlenet()
+
+
 def handle_profile_set_avatar(payload: dict[str, Any]) -> dict[str, Any]:
     avatar_url = payload.get("avatarUrl")
     if not isinstance(avatar_url, str) or not avatar_url.strip():
@@ -298,6 +325,9 @@ COMMANDS: dict[str, Handler] = {
     "auth.login": handle_auth_login,
     "auth.register": handle_auth_register,
     "auth.logout": handle_auth_logout,
+    "auth.battlenet.start": handle_auth_battlenet_start,
+    "auth.battlenet.poll": handle_auth_battlenet_poll,
+    "auth.battlenet.cancel": handle_auth_battlenet_cancel,
     "profile.set_avatar": handle_profile_set_avatar,
     "settings.get": handle_settings_get,
     "settings.update": handle_settings_update,

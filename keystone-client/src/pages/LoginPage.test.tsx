@@ -1,20 +1,27 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { login, register } from "../core/auth";
-import { exitApplication, openForgotPassword, openWeb } from "../core/native";
+import { cancelBattleNetLogin, login, pollBattleNetLogin, register, startBattleNetLogin } from "../core/auth";
+import { pollBattleNetUntilComplete } from "../core/battleNetAuth";
+import { exitApplication, openBattleNetAuthorization, openForgotPassword, openWeb } from "../core/native";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { LoginPage } from "./LoginPage";
 
 vi.mock("../core/auth", () => ({
   login: vi.fn(),
   register: vi.fn(),
+  startBattleNetLogin: vi.fn(),
+  pollBattleNetLogin: vi.fn(),
+  cancelBattleNetLogin: vi.fn(),
 }));
+
+vi.mock("../core/battleNetAuth", () => ({ pollBattleNetUntilComplete: vi.fn() }));
 
 vi.mock("../core/native", () => ({
   exitApplication: vi.fn(),
   openForgotPassword: vi.fn(),
   openWeb: vi.fn(),
+  openBattleNetAuthorization: vi.fn(),
 }));
 
 const loginMock = vi.mocked(login);
@@ -22,6 +29,11 @@ const registerMock = vi.mocked(register);
 const exitApplicationMock = vi.mocked(exitApplication);
 const openForgotPasswordMock = vi.mocked(openForgotPassword);
 const openWebMock = vi.mocked(openWeb);
+const startBattleNetLoginMock = vi.mocked(startBattleNetLogin);
+const pollBattleNetLoginMock = vi.mocked(pollBattleNetLogin);
+const cancelBattleNetLoginMock = vi.mocked(cancelBattleNetLogin);
+const pollBattleNetUntilCompleteMock = vi.mocked(pollBattleNetUntilComplete);
+const openBattleNetAuthorizationMock = vi.mocked(openBattleNetAuthorization);
 
 describe("LoginPage", () => {
   beforeEach(() => {
@@ -30,6 +42,11 @@ describe("LoginPage", () => {
     exitApplicationMock.mockReset();
     openForgotPasswordMock.mockReset();
     openWebMock.mockReset();
+    startBattleNetLoginMock.mockReset();
+    pollBattleNetLoginMock.mockReset();
+    cancelBattleNetLoginMock.mockReset();
+    pollBattleNetUntilCompleteMock.mockReset();
+    openBattleNetAuthorizationMock.mockReset();
   });
 
   it("renders login fields", () => {
@@ -38,6 +55,7 @@ describe("LoginPage", () => {
     expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     expect(screen.getByLabelText("Usuario")).toBeInTheDocument();
     expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuar con Battle.net" }).querySelector("svg[aria-hidden='true']")).toBeInTheDocument();
   });
 
   it("submits credentials and reports safe auth state", async () => {
@@ -98,6 +116,25 @@ describe("LoginPage", () => {
 
     expect(screen.getByRole("heading", { name: "Crear cuenta" })).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
+  });
+
+  it("opens Battle.net in the system browser and completes the sidecar polling flow", async () => {
+    const user = userEvent.setup();
+    const onAuthenticated = vi.fn();
+    startBattleNetLoginMock.mockResolvedValueOnce({
+      authorizationUrl: "https://oauth.battle.net/authorize?scope=openid",
+      expiresAt: "2099-01-01T00:00:00.000Z",
+    });
+    openBattleNetAuthorizationMock.mockResolvedValueOnce(undefined);
+    pollBattleNetUntilCompleteMock.mockResolvedValueOnce({
+      status: "ready",
+      auth: { authenticated: true, username: "player", avatarUrl: null },
+    });
+    render(<LoginPage onAuthenticated={onAuthenticated} />);
+    await user.click(screen.getByRole("button", { name: "Continuar con Battle.net" }));
+    expect(openBattleNetAuthorizationMock).toHaveBeenCalledWith("https://oauth.battle.net/authorize?scope=openid");
+    expect(pollBattleNetUntilCompleteMock).toHaveBeenCalledWith(expect.objectContaining({ poll: pollBattleNetLogin }));
+    expect(onAuthenticated).toHaveBeenCalledWith({ authenticated: true, username: "player", avatarUrl: null });
   });
 
   it("opens the scoped password-recovery flow from the login view", async () => {

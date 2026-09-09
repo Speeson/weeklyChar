@@ -43,7 +43,7 @@ export function OnboardingPage({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const startupActionStarted = useRef(false);
+  const startupAction = useRef<Promise<WowState> | null>(null);
   const usableAccounts = useMemo(
     () => wow.accounts.filter((account) => account.savedVariablesExists),
     [wow.accounts],
@@ -75,19 +75,20 @@ export function OnboardingPage({
   }
 
   useEffect(() => {
-    if (preview || startupActionStarted.current) {
+    if (preview) {
       return;
     }
-    startupActionStarted.current = true;
     const initialUsableAccounts = initialWow.accounts.filter((account) => account.savedVariablesExists);
     let cancelled = false;
     setBusy(true);
-    const startupAction = initialWow.install.detected && initialUsableAccounts.length === 1
-      ? selectWowAccounts({ accounts: [initialUsableAccounts[0].name] })
-      : initialWow.install.detected
-        ? Promise.resolve(initialWow)
-        : detectWow();
-    startupAction
+    if (!startupAction.current) {
+      startupAction.current = initialWow.install.detected && initialUsableAccounts.length === 1
+        ? selectWowAccounts({ accounts: [initialUsableAccounts[0].name] })
+        : initialWow.install.detected
+          ? Promise.resolve(initialWow)
+          : detectWow();
+    }
+    startupAction.current
       .then((detected) => {
         if (!cancelled) {
           applyWow(detected);

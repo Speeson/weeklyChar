@@ -12,8 +12,10 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token')
     if (!token) {
-      setStatus('error')
-      setMessage('Link de verificacion invalido.')
+      queueMicrotask(() => {
+        setStatus('error')
+        setMessage('Link de verificacion invalido.')
+      })
       return
     }
 

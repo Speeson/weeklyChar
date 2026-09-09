@@ -37,6 +37,16 @@ async function checkRateLimit(env: Env, key: string, limit: number, windowSecond
   return true
 }
 
+export async function checkActionRateLimit(
+  env: Env,
+  action: string,
+  clientIp: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  return checkRateLimit(env, await rateLimitKey(action, clientIp), limit, windowSeconds)
+}
+
 export async function checkEmailRateLimits(
   env: Env,
   action: EmailAction,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 import config as config_module
 
@@ -12,6 +13,9 @@ AUTH_CONNECTION_ERROR = "AUTH_CONNECTION_ERROR"
 AUTH_SERVER_ERROR = "AUTH_SERVER_ERROR"
 AUTH_INVALID_RESPONSE = "AUTH_INVALID_RESPONSE"
 AUTH_REGISTRATION_FAILED = "AUTH_REGISTRATION_FAILED"
+AUTH_BATTLENET_FAILED = "AUTH_BATTLENET_FAILED"
+
+_pending_battlenet_flow: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +70,11 @@ def login(cfg: dict[str, Any], username: str, password: str) -> dict[str, Any]:
     if not isinstance(token, str) or not token:
         raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de login no válida.")
 
+    return _persist_keystone_session(cfg, token, requests_module)
+
+
+def _persist_keystone_session(cfg: dict[str, Any], token: str, requests_module: Any) -> dict[str, Any]:
+    api_url = config_module._normalize_api_url(cfg.get("api_url"))
     try:
         me_response = requests_module.get(
             f"{api_url}/api/me",
@@ -102,6 +111,92 @@ def login(cfg: dict[str, Any], username: str, password: str) -> dict[str, Any]:
     config_module.save(cfg)
 
     return get_public_auth_state(cfg)
+
+
+def start_battlenet(cfg: dict[str, Any]) -> dict[str, Any]:
+    global _pending_battlenet_flow
+    api_url = config_module._normalize_api_url(cfg.get("api_url"))
+    requests_module = _http_client()
+    try:
+        response = requests_module.post(
+            f"{api_url}/api/auth/battlenet/desktop/start", json={}, timeout=10
+        )
+    except requests_module.exceptions.RequestException as exc:
+        raise AuthError(AUTH_CONNECTION_ERROR, "No se puede conectar con la API.") from exc
+    if not response.ok:
+        raise AuthError(AUTH_BATTLENET_FAILED, _safe_detail(response) or "No se pudo iniciar Battle.net.")
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de Battle.net no valida.") from exc
+
+    flow_id = payload.get("flowId")
+    poll_secret = payload.get("pollSecret")
+    authorization_url = payload.get("authorizationUrl")
+    expires_at = payload.get("expiresAt")
+    parsed = urlparse(authorization_url) if isinstance(authorization_url, str) else None
+    if (
+        not isinstance(flow_id, str) or not flow_id
+        or not isinstance(poll_secret, str) or not poll_secret
+        or not isinstance(expires_at, str) or not expires_at
+        or parsed is None or parsed.scheme != "https" or parsed.hostname != "oauth.battle.net"
+        or parsed.username is not None or parsed.password is not None or parsed.path != "/authorize"
+    ):
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de Battle.net no valida.")
+
+    _pending_battlenet_flow = {
+        "flowId": flow_id,
+        "pollSecret": poll_secret,
+        "expiresAt": expires_at,
+    }
+    return {"authorizationUrl": authorization_url, "expiresAt": expires_at}
+
+
+def poll_battlenet(cfg: dict[str, Any]) -> dict[str, Any]:
+    global _pending_battlenet_flow
+    if _pending_battlenet_flow is None:
+        raise AuthError(AUTH_BATTLENET_FAILED, "No hay una autorizacion Battle.net activa.")
+    api_url = config_module._normalize_api_url(cfg.get("api_url"))
+    requests_module = _http_client()
+    try:
+        response = requests_module.post(
+            f"{api_url}/api/auth/battlenet/desktop/exchange",
+            json={
+                "flowId": _pending_battlenet_flow["flowId"],
+                "pollSecret": _pending_battlenet_flow["pollSecret"],
+            },
+            timeout=10,
+        )
+    except requests_module.exceptions.RequestException as exc:
+        raise AuthError(AUTH_CONNECTION_ERROR, "No se puede conectar con la API.") from exc
+    if not response.ok:
+        raise AuthError(AUTH_BATTLENET_FAILED, _safe_detail(response) or "No se pudo completar Battle.net.")
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de Battle.net no valida.") from exc
+    status = payload.get("status")
+    if status in ("pending", "needs_onboarding"):
+        return {"status": status}
+    if status in ("expired", "consumed"):
+        _pending_battlenet_flow = None
+        return {"status": status}
+    if status != "ready":
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de Battle.net no valida.")
+    token = payload.get("accessToken")
+    if not isinstance(token, str) or not token:
+        raise AuthError(AUTH_INVALID_RESPONSE, "Respuesta de Battle.net no valida.")
+    try:
+        auth = _persist_keystone_session(cfg, token, requests_module)
+    finally:
+        _pending_battlenet_flow = None
+    return {"status": "ready", "auth": auth}
+
+
+def cancel_battlenet() -> dict[str, str]:
+    global _pending_battlenet_flow
+    _pending_battlenet_flow = None
+    return {"status": "cancelled"}
 
 
 def register(cfg: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:

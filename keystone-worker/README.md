@@ -76,6 +76,14 @@ No rows means the migration may proceed. Any row means stop rollout, report the
 conflicting IDs/usernames, and resolve them manually before migration. The
 application must never choose, merge, delete, rename, or lowercase an account.
 
+### Battle.net authentication migration
+
+Migration `0009_battlenet_auth.sql` rebuilds `users` so `password_hash` can be
+`NULL`, while preserving IDs, columns, uniqueness, NOCASE username identity,
+indexes, and child foreign keys. It also creates `user_identities` and the
+short-lived `oauth_flows` transaction table. Apply it locally before running the
+OAuth routes. A remote migration remains a separately authorized operation.
+
 ## Cloudflare Setup
 
 Remote Cloudflare operations require explicit authorization in the current task. Do not run remote migrations or deploy as routine validation.
@@ -102,7 +110,15 @@ npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put EMAIL_FROM
 npx wrangler secret put WEB_BASE_URL
 npx wrangler secret put ALLOWED_ORIGINS
+npx wrangler secret put BLIZZARD_CLIENT_ID
+npx wrangler secret put BLIZZARD_CLIENT_SECRET
+npx wrangler secret put BATTLENET_REDIRECT_URI
 ```
+
+Battle.net Authentication V1 requires the Developer Portal callback to match
+`BATTLENET_REDIRECT_URI` exactly. Production expects
+`https://api-keystonesync.esgarpe.dev/api/auth/battlenet/callback`. The OAuth
+request uses only `openid`; no Battle.net access or refresh token is persisted.
 
 Apply remote migrations:
 

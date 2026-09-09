@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
@@ -77,10 +79,6 @@ function classColor(wowClass: string | null | undefined) {
 function classIconUrl(wowClass: string | null | undefined) {
   const icon = CLASS_ICON_NAMES[wowClass ?? '']
   return icon ? `https://wow.zamimg.com/images/wow/icons/small/${icon}.jpg` : null
-}
-
-function dungeonLabel(char: Character) {
-  return char.currentKeystone?.dungeon ?? (char.currentKeystone?.challengeMapId ? `ID ${char.currentKeystone.challengeMapId}` : '-')
 }
 
 function dungeonLabelWithAbbr(char: Character) {
@@ -368,7 +366,8 @@ export default function TeamDetailPage() {
   function toggleMember(userId: number) {
     setCollapsedMembers(prev => {
       const next = new Set(prev)
-      next.has(userId) ? next.delete(userId) : next.add(userId)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
       return next
     })
   }

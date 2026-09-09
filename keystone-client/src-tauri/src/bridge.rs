@@ -438,6 +438,9 @@ pub fn is_command_allowed(command: &str) -> bool {
             | "auth.login"
             | "auth.register"
             | "auth.logout"
+            | "auth.battlenet.start"
+            | "auth.battlenet.poll"
+            | "auth.battlenet.cancel"
             | "profile.set_avatar"
             | "settings.get"
             | "settings.update"
@@ -865,6 +868,9 @@ mod tests {
         assert!(is_command_allowed("auth.login"));
         assert!(is_command_allowed("auth.register"));
         assert!(is_command_allowed("auth.logout"));
+        assert!(is_command_allowed("auth.battlenet.start"));
+        assert!(is_command_allowed("auth.battlenet.poll"));
+        assert!(is_command_allowed("auth.battlenet.cancel"));
         assert!(is_command_allowed("settings.get"));
         assert!(is_command_allowed("settings.update"));
         assert!(is_command_allowed("wow.detect"));
@@ -1111,7 +1117,7 @@ mod tests {
             CoreEventPayload {
                 protocol_version: 1,
                 event: "system.ready".to_string(),
-                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","teams.keystone_selector","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
+                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","auth.battlenet.start","auth.battlenet.poll","auth.battlenet.cancel","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","teams.keystone_selector","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
             }
         );
 

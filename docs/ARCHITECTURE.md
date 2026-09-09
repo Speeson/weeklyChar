@@ -93,6 +93,13 @@ Does not own:
 
 The Python sidecar remains authoritative for tokens, `%APPDATA%\KeystoneClient\config.json`, SavedVariables monitoring, character cache/API/Raider.IO enrichment, authenticated avatar updates and addon release operations. The synchronization view receives sanitized rendering DTOs only; React does not call Raider.IO or the Worker directly. A valid authenticated WoW configuration starts one monitor automatically, and successful synchronization schedules a coalesced character refresh.
 
+Battle.net Authentication V1 keeps that boundary: React requests a desktop
+flow through the JSONL sidecar, Tauri opens only the exact
+`https://oauth.battle.net/authorize` URL, and the sidecar keeps the flow ID and
+poll secret in process memory. Polling returns a KeystoneSync JWT only after the
+Worker completes OAuth; the sidecar then persists the existing KeystoneSync
+session fields and never stores a Battle.net token.
+
 The Tauri host owns frameless window behavior, controlled native close requests, explicit clean exit, OS autostart, the persistent dynamic tray and scoped browser navigation. Blocking Python requests run on Tauri's blocking executor so monitor shutdown cannot freeze the desktop event loop; tray hiding uses a scoped Rust command, and exit terminates the sidecar directly. React owns the localized ES/EN interface, internal login/registration and first-run WoW/account routing, Settings, profile dropdown and character-derived avatar picker. `auth.register` forwards the existing Worker registration contract without persisting credentials, while `profile.set_avatar` validates the requested URL against sanitized character state before Python calls `/api/me/avatar`. The private `close_behavior` setting selects whether a close request asks, minimizes to tray, or exits; a repeated request confirms exit while the choice dialog is open. The historical `minimize_on_close` key remains synchronized for compatibility and is migrated when `close_behavior` is absent.
 
 ### `keystone-worker`
@@ -114,6 +121,9 @@ Owns:
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
 - Wrangler deployment and D1 migration scripts.
+- Battle.net Authorization Code handling, PKCE/state verification, identity
+  mapping, short-lived handoff/onboarding/desktop flows, and KeystoneSync JWT
+  issuance. The Battle.net client secret exists only in this component.
 
 Does not own:
 
@@ -128,6 +138,9 @@ Current production persistence.
 Owns:
 
 - Durable storage for users, characters, current keystone snapshots, teams, team members, invitations, and rate limits.
+- Battle.net identity mappings keyed by provider `sub` and expiring OAuth
+  transactions containing only hashed public-facing secrets; BattleTags are
+  display metadata and provider tokens are never stored.
 - The schema history in `keystone-worker/migrations/0001_initial.sql`,
   `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`.
 

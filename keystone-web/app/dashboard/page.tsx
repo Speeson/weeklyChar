@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element */
+
 import { type CSSProperties, type DragEvent, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -427,10 +429,12 @@ export default function DashboardPage() {
       return
     }
 
-    setCurrentUsername(getUsername())
-    setCollapsedTeams(loadCollapsedTeams())
-    setCollapsedMembers(loadCollapsedMembers())
-    setTeamOrder(loadTeamOrder())
+    queueMicrotask(() => {
+      setCurrentUsername(getUsername())
+      setCollapsedTeams(loadCollapsedTeams())
+      setCollapsedMembers(loadCollapsedMembers())
+      setTeamOrder(loadTeamOrder())
+    })
     hydrateProfile().then(profile => {
       if (profile?.username) setCurrentUsername(profile.username)
     }).catch(() => {})
@@ -479,13 +483,13 @@ export default function DashboardPage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
   }, [characters, teams, currentUsername])
 
-  function teamVisibleCount(team: TeamDetail) {
-    return team.members
-      .filter(member => member.username !== currentUsername)
-      .reduce((sum, member) => sum + member.characters.filter(char => matchesFilter(char, filter)).length, 0)
-  }
-
   const orderedTeams = useMemo(() => {
+    function teamVisibleCount(team: TeamDetail) {
+      return team.members
+        .filter(member => member.username !== currentUsername)
+        .reduce((sum, member) => sum + member.characters.filter(char => matchesFilter(char, filter)).length, 0)
+    }
+
     const manualOrder = teamOrder.filter(id => teams.some(team => team.id === id))
     const ordered = [...teams].sort((a, b) => {
       const ai = manualOrder.indexOf(a.id)
@@ -503,7 +507,8 @@ export default function DashboardPage() {
   function toggleTeam(id: number) {
     setCollapsedTeams(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       saveCollapsedTeams(next)
       return next
     })
@@ -512,7 +517,8 @@ export default function DashboardPage() {
   function toggleMember(key: string) {
     setCollapsedMembers(prev => {
       const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       saveCollapsedMembers(next)
       return next
     })

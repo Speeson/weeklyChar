@@ -148,6 +148,32 @@ test.describe("Void visual states", () => {
       expect(geometry.alignItems).toBe("center");
       expect(geometry.justifyItems).toBe("center");
     }
+
+    await page.locator(".ks-footer-action").evaluateAll((buttons) => {
+      for (const button of buttons) {
+        (button as HTMLElement).dataset.language = "en";
+      }
+    });
+
+    for (const [variant, expectedShiftY] of [["web", -2], ["tray", 0]] as const) {
+      const geometry = await page.locator(`.ks-footer-action--${variant}`).evaluate((button) => {
+        const buttonRect = button.getBoundingClientRect();
+        const label = button.querySelector("span");
+        if (!label) {
+          throw new Error(`Missing ${button.className} label`);
+        }
+        const labelRect = label.getBoundingClientRect();
+        return {
+          labelCenterX: labelRect.left + labelRect.width / 2,
+          iconFreeCenterX: buttonRect.left + (76 + buttonRect.width - 12) / 2,
+          labelCenterY: labelRect.top + labelRect.height / 2,
+          buttonCenterY: buttonRect.top + buttonRect.height / 2,
+        };
+      });
+
+      expect(geometry.labelCenterX - geometry.iconFreeCenterX).toBeCloseTo(0, 1);
+      expect(geometry.labelCenterY - geometry.buttonCenterY).toBeCloseTo(expectedShiftY, 1);
+    }
   });
 
   test("renders Addon with the shared Keystone structure", async ({ page }) => {

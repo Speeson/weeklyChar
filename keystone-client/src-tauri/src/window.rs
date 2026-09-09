@@ -77,6 +77,34 @@ pub fn open_forgot_password(app: &AppHandle) -> Result<(), CoreBridgeError> {
         })
 }
 
+pub fn open_battlenet_authorization(app: &AppHandle, value: &str) -> Result<(), CoreBridgeError> {
+    let url = tauri::Url::parse(value).map_err(|_| invalid_battlenet_url())?;
+    if !is_battlenet_authorization_url(&url) {
+        return Err(invalid_battlenet_url());
+    }
+    app.opener()
+        .open_url(url.as_str(), None::<&str>)
+        .map_err(|_| CoreBridgeError {
+            code: "OPEN_BATTLENET_FAILED".to_string(),
+            message: "Could not open Battle.net authorization.".to_string(),
+        })
+}
+
+fn is_battlenet_authorization_url(url: &tauri::Url) -> bool {
+    url.scheme() == "https"
+        && url.host_str() == Some("oauth.battle.net")
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.path() == "/authorize"
+}
+
+fn invalid_battlenet_url() -> CoreBridgeError {
+    CoreBridgeError {
+        code: "INVALID_BATTLENET_URL".to_string(),
+        message: "Battle.net authorization URL is invalid.".to_string(),
+    }
+}
+
 pub fn open_releases(app: &AppHandle) -> Result<(), CoreBridgeError> {
     app.opener()
         .open_url(RELEASES_URL, None::<&str>)
@@ -157,7 +185,10 @@ fn setting_bool(state: &CoreBridgeState, key: &str) -> Result<bool, CoreBridgeEr
 
 #[cfg(test)]
 mod tests {
-    use super::{raiderio_character_url, CLOSE_REQUESTED_EVENT, FORGOT_PASSWORD_URL, WEB_URL};
+    use super::{
+        invalid_battlenet_url, is_battlenet_authorization_url, raiderio_character_url,
+        CLOSE_REQUESTED_EVENT, FORGOT_PASSWORD_URL, WEB_URL,
+    };
 
     #[test]
     fn packaged_window_is_frameless() {
@@ -207,5 +238,31 @@ mod tests {
         assert!(raiderio_character_url("cn", "realm", "name").is_ok());
         assert!(raiderio_character_url("eu", "", "name").is_err());
         assert!(raiderio_character_url("eu", "realm", "\n").is_err());
+    }
+
+    #[test]
+    fn battlenet_error_is_stable_and_does_not_echo_an_untrusted_url() {
+        let error = invalid_battlenet_url();
+        assert_eq!(error.code, "INVALID_BATTLENET_URL");
+        assert!(!error.message.contains("http"));
+    }
+
+    #[test]
+    fn battlenet_authorization_url_is_exactly_scoped() {
+        assert!(is_battlenet_authorization_url(
+            &tauri::Url::parse("https://oauth.battle.net/authorize?scope=openid").unwrap()
+        ));
+        for value in [
+            "http://oauth.battle.net/authorize",
+            "https://evil.example/authorize",
+            "https://oauth.battle.net.evil.example/authorize",
+            "https://user@oauth.battle.net/authorize",
+            "https://oauth.battle.net/token",
+        ] {
+            assert!(
+                !is_battlenet_authorization_url(&tauri::Url::parse(value).unwrap()),
+                "{value}"
+            );
+        }
     }
 }
