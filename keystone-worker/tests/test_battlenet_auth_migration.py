@@ -17,6 +17,23 @@ class BattleNetAuthMigrationTests(unittest.TestCase):
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
+    def apply_battlenet_migration_like_d1(self, connection):
+        script = (MIGRATIONS / "0009_battlenet_auth.sql").read_text(encoding="utf-8")
+        statement = ""
+        connection.execute("BEGIN")
+        try:
+            for line in script.splitlines(keepends=True):
+                statement += line
+                if sqlite3.complete_statement(statement):
+                    if statement.strip():
+                        connection.execute(statement)
+                    statement = ""
+            self.assertFalse(statement.strip())
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+
     def test_existing_users_characters_teams_and_memberships_survive(self):
         db = self.make_database()
         owner_id = db.execute(
@@ -37,9 +54,18 @@ class BattleNetAuthMigrationTests(unittest.TestCase):
             "INSERT INTO team_members (team_id, user_id) VALUES (?, ?)",
             (team_id, member_id),
         ).lastrowid
+        keystone_id = db.execute(
+            "INSERT INTO keystones (character_id, has_keystone, keystone_level) VALUES (?, 1, 12)",
+            (character_id,),
+        ).lastrowid
+        invitation_id = db.execute(
+            "INSERT INTO team_invitations (team_id, invited_user_id, invited_by_user_id, expires_at) "
+            "VALUES (?, ?, ?, '2099-01-01T00:00:00Z')",
+            (team_id, member_id, owner_id),
+        ).lastrowid
         db.commit()
 
-        db.executescript((MIGRATIONS / "0009_battlenet_auth.sql").read_text(encoding="utf-8"))
+        self.apply_battlenet_migration_like_d1(db)
 
         self.assertEqual(
             db.execute("SELECT id, username, password_hash FROM users ORDER BY id").fetchall(),
@@ -51,11 +77,21 @@ class BattleNetAuthMigrationTests(unittest.TestCase):
             db.execute("SELECT id, team_id, user_id FROM team_members").fetchall(),
             [(membership_id, team_id, member_id)],
         )
+        self.assertEqual(
+            db.execute("SELECT id, character_id, keystone_level FROM keystones").fetchall(),
+            [(keystone_id, character_id, 12)],
+        )
+        self.assertEqual(
+            db.execute(
+                "SELECT id, team_id, invited_user_id, invited_by_user_id FROM team_invitations"
+            ).fetchall(),
+            [(invitation_id, team_id, member_id, owner_id)],
+        )
         self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
 
     def test_nullable_password_identity_constraints_and_cascade(self):
         db = self.make_database()
-        db.executescript((MIGRATIONS / "0009_battlenet_auth.sql").read_text(encoding="utf-8"))
+        self.apply_battlenet_migration_like_d1(db)
         user_id = db.execute(
             "INSERT INTO users (username, password_hash, sync_token) VALUES ('BattleOnly', NULL, 'sync-bnet')"
         ).lastrowid

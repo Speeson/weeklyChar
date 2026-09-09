@@ -1,7 +1,15 @@
 -- Rebuild users because SQLite/D1 cannot alter a NOT NULL constraint in place.
 -- Keep the original table name until the replacement is ready so child foreign
 -- keys continue to reference `users`, not a temporary renamed table.
-PRAGMA foreign_keys = OFF;
+-- D1 runs migrations inside an implicit transaction, so `foreign_keys = OFF`
+-- cannot take effect. Defer validation and preserve rows affected by existing
+-- ON DELETE CASCADE actions while the parent table is replaced.
+PRAGMA defer_foreign_keys = ON;
+
+CREATE TABLE battlenet_v1_characters_backup AS SELECT * FROM characters;
+CREATE TABLE battlenet_v1_keystones_backup AS SELECT * FROM keystones;
+CREATE TABLE battlenet_v1_team_members_backup AS SELECT * FROM team_members;
+CREATE TABLE battlenet_v1_team_invitations_backup AS SELECT * FROM team_invitations;
 
 CREATE TABLE users_battlenet_v1 (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,6 +45,16 @@ FROM users;
 
 DROP TABLE users;
 ALTER TABLE users_battlenet_v1 RENAME TO users;
+
+INSERT INTO characters SELECT * FROM battlenet_v1_characters_backup;
+INSERT INTO keystones SELECT * FROM battlenet_v1_keystones_backup;
+INSERT INTO team_members SELECT * FROM battlenet_v1_team_members_backup;
+INSERT INTO team_invitations SELECT * FROM battlenet_v1_team_invitations_backup;
+
+DROP TABLE battlenet_v1_characters_backup;
+DROP TABLE battlenet_v1_keystones_backup;
+DROP TABLE battlenet_v1_team_members_backup;
+DROP TABLE battlenet_v1_team_invitations_backup;
 
 CREATE INDEX idx_users_email_verification_token_hash ON users(email_verification_token_hash);
 CREATE INDEX idx_users_password_reset_token_hash ON users(password_reset_token_hash);
@@ -80,4 +98,4 @@ CREATE INDEX idx_user_identities_user_provider ON user_identities(user_id, provi
 CREATE INDEX idx_oauth_flows_expires_at ON oauth_flows(expires_at);
 CREATE INDEX idx_oauth_flows_poll ON oauth_flows(id, desktop_poll_secret_hash);
 
-PRAGMA foreign_keys = ON;
+PRAGMA defer_foreign_keys = OFF;
