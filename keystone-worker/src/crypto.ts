@@ -58,8 +58,14 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(password: string, hash: string | null): Promise<boolean> {
+  if (!hash) return false
   return bcrypt.compare(password, hash)
+}
+
+export async function pkceChallenge(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+  return base64UrlEncode(new Uint8Array(digest))
 }
 
 export async function createAccessToken(secret: string, userId: number): Promise<string> {

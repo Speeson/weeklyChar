@@ -310,20 +310,20 @@ type KeystoneFooterProps = {
 };
 
 function KeystoneFooter({ onMinimizeToTray, onOpenWeb }: KeystoneFooterProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const footerTrayButton = useThemeAsset("shell-footer-tray");
   const footerWebButton = useThemeAsset("shell-footer-web");
   return (
     <footer className="ks-footer">
-      <button className="ks-footer-action ks-footer-action--web" data-ui="shell-footer-action" data-variant="web" onClick={onOpenWeb} type="button">
+      <button className="ks-footer-action ks-footer-action--web" data-language={language} data-ui="shell-footer-action" data-variant="web" onClick={onOpenWeb} type="button">
         <img alt="" className="ks-footer-action__asset" src={footerWebButton} />
         <span>{t("shell.openWeb")}</span>
       </button>
-      <button className="ks-footer-action ks-footer-action--tray" data-ui="shell-footer-action" data-variant="tray" onClick={onMinimizeToTray} type="button">
+      <button className="ks-footer-action ks-footer-action--tray" data-language={language} data-ui="shell-footer-action" data-variant="tray" onClick={onMinimizeToTray} type="button">
         {footerTrayButton ? (
           <><img alt="" className="ks-footer-action__asset" src={footerTrayButton} /><span>{t("shell.minimizeTray")}</span></>
         ) : (
-          <><ThemedIcon name="download" size={28} />{t("shell.minimizeTray")}</>
+          <><ThemedIcon name="download" size={28} /><span>{t("shell.minimizeTray")}</span></>
         )}
       </button>
     </footer>

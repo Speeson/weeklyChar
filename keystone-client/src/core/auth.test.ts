@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { coreRequest } from "./client";
-import { login, logout, register } from "./auth";
+import { cancelBattleNetLogin, login, logout, pollBattleNetLogin, register, startBattleNetLogin } from "./auth";
 
 vi.mock("./client", () => ({
   coreRequest: vi.fn(),
@@ -63,5 +63,18 @@ describe("auth wrappers", () => {
     await register(payload);
 
     expect(coreRequestMock).toHaveBeenCalledWith("auth.register", payload);
+  });
+
+  it("keeps Battle.net flow secrets below the TypeScript bridge contract", async () => {
+    coreRequestMock
+      .mockResolvedValueOnce({ authorizationUrl: "https://oauth.battle.net/authorize", expiresAt: "2026-09-08T00:10:00Z" })
+      .mockResolvedValueOnce({ status: "pending" })
+      .mockResolvedValueOnce({ status: "cancelled" });
+    await startBattleNetLogin();
+    await pollBattleNetLogin();
+    await cancelBattleNetLogin();
+    expect(coreRequestMock.mock.calls).toEqual([
+      ["auth.battlenet.start"], ["auth.battlenet.poll"], ["auth.battlenet.cancel"],
+    ]);
   });
 });

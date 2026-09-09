@@ -4,6 +4,9 @@ export type CoreCommand =
   | "auth.login"
   | "auth.register"
   | "auth.logout"
+  | "auth.battlenet.start"
+  | "auth.battlenet.poll"
+  | "auth.battlenet.cancel"
   | "profile.set_avatar"
   | "settings.get"
   | "settings.update"
@@ -122,6 +125,16 @@ export type CharacterKeystone = {
   dungeon: string | null;
   challengeMapId: number | null;
   mapId: number | null;
+};
+
+export type BattleNetDesktopStart = {
+  authorizationUrl: string;
+  expiresAt: string;
+};
+
+export type BattleNetDesktopPoll = {
+  status: "pending" | "needs_onboarding" | "ready" | "expired" | "consumed";
+  auth?: AuthState;
 };
 
 export type CharacterCurrency = {

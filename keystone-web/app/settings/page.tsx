@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
 import { apiFetch, getToken } from '@/lib/auth'
+import { getBattleNetIdentity, startBattleNetLink, unlinkBattleNet, type BattleNetIdentity } from '@/lib/battlenet'
+import BattleNetIcon from '@/app/components/BattleNetIcon'
 import { DEFAULT_SEASON_2_CURRENCY_VISIBILITY, migrateSeason2CurrencyVisibility } from '@/lib/season2Currencies'
 
 type SettingsState = {
@@ -162,6 +164,9 @@ export default function SettingsPage() {
   const [privacyLoading, setPrivacyLoading] = useState(true)
   const [privacySaving, setPrivacySaving] = useState(false)
   const [privacyError, setPrivacyError] = useState<string | null>(null)
+  const [battleNet, setBattleNet] = useState<BattleNetIdentity | null>(null)
+  const [battleNetLoading, setBattleNetLoading] = useState(true)
+  const [battleNetError, setBattleNetError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!getToken()) {
@@ -169,9 +174,11 @@ export default function SettingsPage() {
       return
     }
     const loadedSettings = loadSettings()
-    setSettings(loadedSettings)
     saveSettings(loadedSettings)
-    setLoaded(true)
+    queueMicrotask(() => {
+      setSettings(loadedSettings)
+      setLoaded(true)
+    })
 
     const controller = new AbortController()
     apiFetch('/api/me', { signal: controller.signal })
@@ -200,6 +207,16 @@ export default function SettingsPage() {
 
     return () => controller.abort()
   }, [router])
+
+  useEffect(() => {
+    if (!loaded) return
+    let active = true
+    getBattleNetIdentity()
+      .then(identity => { if (active) setBattleNet(identity) })
+      .catch(() => { if (active) setBattleNetError('No se pudo cargar la vinculacion de Battle.net.') })
+      .finally(() => { if (active) setBattleNetLoading(false) })
+    return () => { active = false }
+  }, [loaded])
 
   function update(next: SettingsState) {
     setSettings(next)
@@ -247,6 +264,31 @@ export default function SettingsPage() {
       setPrivacyError('No se pudo guardar. Se ha restaurado el valor anterior.')
     } finally {
       setPrivacySaving(false)
+    }
+  }
+
+  async function linkBattleNet() {
+    setBattleNetLoading(true)
+    setBattleNetError(null)
+    try {
+      window.location.assign(await startBattleNetLink())
+    } catch (caught) {
+      setBattleNetError(caught instanceof Error ? caught.message : 'No se pudo iniciar Battle.net.')
+      setBattleNetLoading(false)
+    }
+  }
+
+  async function removeBattleNet() {
+    if (!window.confirm('Desvincular Battle.net de tu cuenta KeystoneSync?')) return
+    setBattleNetLoading(true)
+    setBattleNetError(null)
+    try {
+      await unlinkBattleNet()
+      setBattleNet({ linked: false, displayName: null, linkedAt: null })
+    } catch (caught) {
+      setBattleNetError(caught instanceof Error ? caught.message : 'No se pudo desvincular Battle.net.')
+    } finally {
+      setBattleNetLoading(false)
     }
   }
 
@@ -343,6 +385,25 @@ export default function SettingsPage() {
             </Section>
 
             <Section title="Cuenta" description="Acciones de seguridad y preferencias básicas.">
+              <div className="rounded-xl border border-blue-400/25 bg-blue-500/10 px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Battle.net</p>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {battleNetLoading ? 'Cargando...' : battleNet?.linked ? `${battleNet.displayName} · Vinculado` : 'No vinculado'}
+                    </p>
+                  </div>
+                  {battleNet?.linked ? (
+                    <button type="button" disabled={battleNetLoading} onClick={removeBattleNet} className="rounded-lg border border-red-400/40 px-3 py-2 text-xs font-bold text-red-300 disabled:opacity-50">Desvincular</button>
+                  ) : (
+                    <button type="button" disabled={battleNetLoading} onClick={linkBattleNet} className="flex items-center gap-2 rounded-lg border border-blue-400/40 px-3 py-2 text-xs font-bold text-blue-200 disabled:opacity-50">
+                      <BattleNetIcon className="h-4 w-4 shrink-0" />
+                      Vincular Battle.net
+                    </button>
+                  )}
+                </div>
+                {battleNetError && <p role="alert" className="mt-2 text-xs text-red-300">{battleNetError}</p>}
+              </div>
               <SelectRow
                 label="Región por defecto"
                 value={settings.defaultRegion}

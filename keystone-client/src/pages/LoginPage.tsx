@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
+import { BattleNetIcon } from "../components/BattleNetIcon";
 import { Button, TextField } from "../components/ui";
-import { login, register } from "../core/auth";
+import { cancelBattleNetLogin, login, pollBattleNetLogin, register, startBattleNetLogin } from "../core/auth";
+import { pollBattleNetUntilComplete } from "../core/battleNetAuth";
 import { useI18n } from "../core/i18n";
-import { exitApplication, openForgotPassword, openWeb } from "../core/native";
+import { exitApplication, openBattleNetAuthorization, openForgotPassword, openWeb } from "../core/native";
 import type { AuthState, CoreError, RegisterPayload } from "../core/types";
 
 type LoginPageProps = {
@@ -41,6 +43,10 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [battleNetStatus, setBattleNetStatus] = useState<"idle" | "starting" | "waiting" | "onboarding">("idle");
+  const battleNetCancelled = useRef(false);
+
+  useEffect(() => () => { battleNetCancelled.current = true; }, []);
 
   function switchMode(nextMode: AuthMode) {
     setMode(nextMode);
@@ -109,6 +115,40 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     } catch (caught) {
       setError(formatLoginError(caught, t("login.nativeActionError")));
     }
+  }
+
+  async function startBattleNet() {
+    if (battleNetStatus !== "idle" || loading) return;
+    battleNetCancelled.current = false;
+    setBattleNetStatus("starting");
+    setError(null);
+    try {
+      const started = await startBattleNetLogin();
+      await openBattleNetAuthorization(started.authorizationUrl);
+      setBattleNetStatus("waiting");
+      const result = await pollBattleNetUntilComplete({
+        expiresAt: started.expiresAt,
+        poll: pollBattleNetLogin,
+        cancelled: () => battleNetCancelled.current,
+        onNeedsOnboarding: () => setBattleNetStatus("onboarding"),
+      });
+      if (result.status === "ready") {
+        onAuthenticated(result.auth);
+        return;
+      }
+      if (result.status === "expired") setError(t("login.battleNetExpired"));
+      else if (result.status === "consumed") setError(t("login.battleNetConsumed"));
+    } catch (caught) {
+      setError(formatLoginError(caught, t("login.battleNetError")));
+    } finally {
+      setBattleNetStatus("idle");
+    }
+  }
+
+  async function cancelBattleNet() {
+    battleNetCancelled.current = true;
+    setBattleNetStatus("idle");
+    try { await cancelBattleNetLogin(); } catch { /* Local cancellation remains effective. */ }
   }
 
   const unauthenticatedActions = (
@@ -269,6 +309,18 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         >
           {loading ? t("login.connecting") : t("login.enter")}
         </Button>
+        <div className="auth-provider-separator"><span>{t("login.or")}</span></div>
+        {battleNetStatus === "idle" ? (
+          <button className="auth-battlenet" disabled={loading} onClick={() => void startBattleNet()} type="button">
+            <BattleNetIcon className="auth-battlenet__icon" />
+            {t("login.battleNetContinue")}
+          </button>
+        ) : (
+          <div className="auth-battlenet-status" aria-live="polite">
+            <p>{battleNetStatus === "starting" ? t("login.battleNetOpening") : battleNetStatus === "onboarding" ? t("login.battleNetOnboarding") : t("login.battleNetWaiting")}</p>
+            <button onClick={() => void cancelBattleNet()} type="button">{t("common.cancel")}</button>
+          </div>
+        )}
         <button className="auth-register" disabled={loading} onClick={() => switchMode("register")} type="button">
           <ThemedIcon name="register" size={18} />
           {t("login.register")}

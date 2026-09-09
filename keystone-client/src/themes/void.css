@@ -213,6 +213,15 @@ html[data-theme="void"] .ks-footer-action--tray span {
   --void-footer-label-shift-x: -4px;
 }
 
+html[data-theme="void"] .ks-footer-action[data-language="en"] span {
+  --void-footer-label-shift-x: 0px;
+  transform: translate(0, 0);
+}
+
+html[data-theme="void"] .ks-footer-action--web[data-language="en"] span {
+  transform: translate(0, -2px);
+}
+
 html[data-theme="void"] .ks-footer-action__asset {
   object-fit: contain;
 }

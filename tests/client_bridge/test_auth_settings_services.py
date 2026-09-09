@@ -55,6 +55,7 @@ class FakeHttp:
 
 class AuthServiceTests(unittest.TestCase):
     def setUp(self) -> None:
+        auth_service._pending_battlenet_flow = None
         self.saved_cfg = None
         self.save_patcher = mock.patch(
             "auth_service.config_module.save", side_effect=self._capture_save
@@ -244,6 +245,81 @@ class AuthServiceTests(unittest.TestCase):
 
         self.assertEqual(loaded["custom_key"], "preserved")
         self.assertTrue(config_module.is_session_valid(loaded))
+
+    def test_battlenet_start_keeps_poll_secret_in_memory_only(self) -> None:
+        cfg = self.base_config()
+        http = FakeHttp(post_result=FakeResponse(status_code=200, payload={
+            "flowId": "flow-id",
+            "pollSecret": "poll-secret",
+            "authorizationUrl": "https://oauth.battle.net/authorize?scope=openid",
+            "expiresAt": "2099-01-01T00:00:00.000Z",
+        }))
+        with mock.patch("auth_service._http_client", return_value=http):
+            result = auth_service.start_battlenet(cfg)
+        self.assertEqual(result["authorizationUrl"], "https://oauth.battle.net/authorize?scope=openid")
+        self.assertNotIn("pollSecret", result)
+        self.assertIsNone(self.saved_cfg)
+        self.assertNotIn("poll", json.dumps(cfg).lower())
+        self.assertEqual(auth_service._pending_battlenet_flow["pollSecret"], "poll-secret")
+
+    def test_battlenet_poll_ready_persists_only_keystone_session(self) -> None:
+        cfg = self.base_config()
+        http = FakeHttp(get_result=FakeResponse(status_code=200, payload={
+            "syncToken": "sync", "username": "player", "avatarUrl": None,
+        }))
+        http.post.side_effect = [
+            FakeResponse(status_code=200, payload={
+                "flowId": "flow-id", "pollSecret": "poll-secret",
+                "authorizationUrl": "https://oauth.battle.net/authorize?scope=openid",
+                "expiresAt": "2099-01-01T00:00:00.000Z",
+            }),
+            FakeResponse(status_code=200, payload={
+                "status": "ready", "accessToken": "keystone-jwt", "tokenType": "bearer",
+            }),
+        ]
+        with mock.patch("auth_service._http_client", return_value=http):
+            auth_service.start_battlenet(cfg)
+            result = auth_service.poll_battlenet(cfg)
+        self.assertEqual(result["status"], "ready")
+        self.assertTrue(result["auth"]["authenticated"])
+        self.assertEqual(self.saved_cfg["access_token"], "keystone-jwt")
+        self.assertEqual(self.saved_cfg["sync_token"], "sync")
+        self.assertNotIn("poll-secret", json.dumps(self.saved_cfg))
+        self.assertNotIn("battlenet", json.dumps(self.saved_cfg).lower())
+        self.assertIsNone(auth_service._pending_battlenet_flow)
+
+    def test_battlenet_pending_cancel_timeout_and_server_error_are_recoverable(self) -> None:
+        cfg = self.base_config()
+        auth_service._pending_battlenet_flow = {
+            "flowId": "flow", "pollSecret": "secret", "expiresAt": "2099-01-01T00:00:00Z"
+        }
+        http = FakeHttp(post_result=FakeResponse(status_code=200, payload={"status": "pending"}))
+        with mock.patch("auth_service._http_client", return_value=http):
+            self.assertEqual(auth_service.poll_battlenet(cfg), {"status": "pending"})
+        self.assertEqual(auth_service.cancel_battlenet(), {"status": "cancelled"})
+        self.assertIsNone(auth_service._pending_battlenet_flow)
+        with self.assertRaises(auth_service.AuthError):
+            auth_service.poll_battlenet(cfg)
+
+        auth_service._pending_battlenet_flow = {
+            "flowId": "flow", "pollSecret": "secret", "expiresAt": "2099-01-01T00:00:00Z"
+        }
+        http = FakeHttp(post_result=FakeResponse(status_code=503, payload={"detail": "Temporal"}))
+        with mock.patch("auth_service._http_client", return_value=http):
+            with self.assertRaises(auth_service.AuthError) as caught:
+                auth_service.poll_battlenet(cfg)
+        self.assertEqual(caught.exception.code, auth_service.AUTH_BATTLENET_FAILED)
+
+    def test_battlenet_start_rejects_an_untrusted_authorization_url(self) -> None:
+        http = FakeHttp(post_result=FakeResponse(status_code=200, payload={
+            "flowId": "flow-id", "pollSecret": "poll-secret",
+            "authorizationUrl": "https://evil.example/authorize",
+            "expiresAt": "2099-01-01T00:00:00.000Z",
+        }))
+        with mock.patch("auth_service._http_client", return_value=http):
+            with self.assertRaises(auth_service.AuthError) as caught:
+                auth_service.start_battlenet(self.base_config())
+        self.assertEqual(caught.exception.code, auth_service.AUTH_INVALID_RESPONSE)
 
 
 class SettingsServiceTests(unittest.TestCase):

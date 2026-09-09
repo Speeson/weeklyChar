@@ -39,6 +39,11 @@ fn open_forgot_password(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
 }
 
 #[tauri::command]
+fn open_battlenet_authorization(app: tauri::AppHandle, url: String) -> Result<(), CoreBridgeError> {
+    window::open_battlenet_authorization(&app, &url)
+}
+
+#[tauri::command]
 fn open_releases(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
     window::open_releases(&app)
 }
@@ -91,6 +96,7 @@ pub fn run() {
             core_request,
             open_web,
             open_forgot_password,
+            open_battlenet_authorization,
             open_releases,
             open_raiderio_character,
             exit_app,

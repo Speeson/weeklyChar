@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import AuthForm from '@/app/components/AuthForm'
+import BattleNetButton from '@/app/components/BattleNetButton'
 
 function LoginContent() {
   const params = useSearchParams()
@@ -39,6 +40,7 @@ function LoginContent() {
         </div>
 
         <AuthForm mode={mode} showLabels />
+        <BattleNetButton />
       </div>
     </main>
   )

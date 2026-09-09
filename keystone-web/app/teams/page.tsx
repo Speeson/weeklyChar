@@ -27,14 +27,13 @@ export default function TeamsPage() {
 
   useEffect(() => {
     if (!getToken()) { router.push('/login'); return }
-    fetchTeams()
+    async function fetchTeams() {
+      const res = await apiFetch('/api/teams')
+      if (res.ok) setTeams(await res.json())
+      setLoading(false)
+    }
+    void fetchTeams()
   }, [router])
-
-  async function fetchTeams() {
-    const res = await apiFetch('/api/teams')
-    if (res.ok) setTeams(await res.json())
-    setLoading(false)
-  }
 
   async function createTeam(e: React.FormEvent) {
     e.preventDefault()

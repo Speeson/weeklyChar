@@ -12,6 +12,10 @@ export function openForgotPassword(): Promise<void> {
   return invoke<void>("open_forgot_password");
 }
 
+export function openBattleNetAuthorization(url: string): Promise<void> {
+  return invoke<void>("open_battlenet_authorization", { url });
+}
+
 export function openReleases(): Promise<void> {
   return invoke<void>("open_releases");
 }

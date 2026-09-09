@@ -1,7 +1,7 @@
 import type { Context, Next } from 'hono'
 import type { Env } from './types'
 
-type ErrorStatus = 400 | 401 | 403 | 404 | 429 | 500 | 502
+type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 410 | 429 | 500 | 502 | 503
 
 export function jsonError(c: Context<{ Bindings: Env }>, status: ErrorStatus, detail: string) {
   return c.json({ detail }, status)

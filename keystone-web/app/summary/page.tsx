@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/app/components/Navbar'
@@ -149,11 +151,10 @@ function classColumnStyle(char: Character): React.CSSProperties {
   }
 }
 
-const SUMMARY_SECTIONS = ['money', 'dungeons', 'greatVault', 'preyHunts', 'currencies'] as const
 const SUMMARY_COLLAPSED_KEY = 'ks_summary_collapsed_sections'
 const WEB_SETTINGS_KEY = 'ks_web_settings'
 
-type SummarySection = typeof SUMMARY_SECTIONS[number]
+type SummarySection = 'money' | 'dungeons' | 'greatVault' | 'preyHunts' | 'currencies'
 type CollapsedSections = Record<SummarySection, boolean>
 
 const DEFAULT_COLLAPSED_SECTIONS: CollapsedSections = {
@@ -301,18 +302,6 @@ function estimatedDungeonRating(run: SeasonDungeon) {
   const base = baseScores[run.level] ?? (run.level > 20 ? 485 + ((run.level - 20) * 15) : 0)
   if (!base) return 0
   return base + Math.max(0, Math.min(run.upgradeLevel ?? 0, 3)) * 2
-}
-
-function dungeonCell(char: Character, mapId: number) {
-  const run = dungeonFor(char, mapId)
-  if (!run || !run.level) return <span className="text-gray-600">—</span>
-  return (
-    <span className="inline-flex items-center justify-center gap-2">
-      <span className="min-w-5 font-bold" style={{ color: keystoneColor(run.level) }}>{run.level}</span>
-      <UpgradeMedal upgradeLevel={run.timed ? run.upgradeLevel ?? 0 : 0} />
-      <span className="min-w-9 text-right text-xs font-semibold text-orange-400">{Math.round(run.rating ?? 0)}</span>
-    </span>
-  )
 }
 
 function dungeonCellWithRating(char: Character, mapId: number) {
@@ -531,8 +520,10 @@ export default function SummaryPage() {
       router.push('/login')
       return
     }
-    setSummaryBlocks(loadSummaryBlockVisibility())
-    setSummaryCurrencies(loadSummaryCurrencyVisibility())
+    queueMicrotask(() => {
+      setSummaryBlocks(loadSummaryBlockVisibility())
+      setSummaryCurrencies(loadSummaryCurrencyVisibility())
+    })
     apiFetch('/api/me/characters')
       .then(r => {
         if (r.status === 401) {

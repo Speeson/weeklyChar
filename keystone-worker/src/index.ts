@@ -7,6 +7,7 @@ import { keystoneRoutes } from './routes/keystones'
 import { meRoutes } from './routes/me'
 import { teamRoutes } from './routes/teams'
 import { workersDevSmokeGuard } from './workersDevSmokeGuard'
+import { battlenetAuthRoutes } from './routes/battlenetAuth'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -17,6 +18,7 @@ app.route('/', healthRoutes)
 app.route('/', keystoneRoutes)
 app.route('/', meRoutes)
 app.route('/', teamRoutes)
+app.route('/', battlenetAuthRoutes)
 
 app.onError((error, c) => {
   console.error('Unhandled Worker error:', error)

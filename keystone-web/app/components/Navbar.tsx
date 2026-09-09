@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -57,12 +59,11 @@ export default function Navbar() {
 
   useEffect(() => {
     const stored = getUsername()
-    if (stored) {
-      setUsernameState(stored)
-    }
-
     const cached = getAvatarUrl()
-    if (cached) setAvatarUrlState(cached)
+    queueMicrotask(() => {
+      if (stored) setUsernameState(stored)
+      if (cached) setAvatarUrlState(cached)
+    })
 
     if (getToken()) {
       hydrateProfile()
@@ -71,7 +72,7 @@ export default function Navbar() {
           if (data?.avatarUrl) setAvatarUrlState(data.avatarUrl)
         })
         .catch(() => {})
-      fetchInvitations()
+      queueMicrotask(() => void fetchInvitations())
     }
   }, [])
 

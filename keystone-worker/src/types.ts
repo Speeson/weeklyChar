@@ -7,6 +7,7 @@ export type Env = {
   ALLOWED_ORIGINS?: string
   BLIZZARD_CLIENT_ID?: string
   BLIZZARD_CLIENT_SECRET?: string
+  BATTLENET_REDIRECT_URI?: string
   WORKER_SMOKE_BYPASS_TOKEN?: string
 }
 
@@ -30,7 +31,7 @@ export type WowItemMetadataRow = {
 export type UserRow = {
   id: number
   username: string
-  password_hash: string
+  password_hash: string | null
   sync_token: string
   avatar_url: string | null
   first_name: string | null
@@ -44,6 +45,34 @@ export type UserRow = {
   password_reset_expires_at: string | null
   share_keystone_loot_with_teams: number
   created_at: string
+}
+
+export type UserIdentityRow = {
+  id: number
+  user_id: number
+  provider: 'battlenet'
+  provider_subject: string
+  provider_display_name: string
+  created_at: string
+  last_login_at: string | null
+}
+
+export type OAuthFlowRow = {
+  id: string
+  intent: 'login_web' | 'login_desktop' | 'link_account'
+  state_hash: string | null
+  pkce_verifier: string | null
+  initiator_user_id: number | null
+  desktop_poll_secret_hash: string | null
+  handoff_secret_hash: string | null
+  provider_subject: string | null
+  provider_display_name: string | null
+  result_user_id: number | null
+  status: 'pending' | 'needs_onboarding' | 'ready' | 'consumed' | 'failed'
+  expires_at: string
+  handoff_expires_at: string | null
+  created_at: string
+  completed_at: string | null
 }
 
 export type CharacterRow = {

@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
@@ -100,7 +102,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!getToken()) { router.push('/login'); return }
-    setHidden(getHidden())
+    queueMicrotask(() => setHidden(getHidden()))
     apiFetch('/api/me/characters')
       .then(r => {
         if (r.status === 401) { router.push('/login'); return [] }
@@ -116,7 +118,8 @@ export default function Dashboard() {
   function toggleHidden(id: number) {
     setHidden(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       saveHidden(next)
       return next
     })
@@ -283,7 +286,7 @@ export function CharacterTable({
     return sortDir === 'asc' ? cmp : -cmp
   })
 
-  function Th({ col, children, last }: { col: SortKey; children: React.ReactNode; last?: boolean }) {
+  function renderHeader(col: SortKey, children: React.ReactNode, last = false) {
     const active = col === sortKey
     return (
       <th
@@ -303,12 +306,12 @@ export function CharacterTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left border-b border-gray-800">
-            <Th col="name">Personaje</Th>
-            <Th col="realm">Reino</Th>
-            <Th col="dungeon">Mazmorra</Th>
-            <Th col="level">Nivel</Th>
+            {renderHeader('name', 'Personaje')}
+            {renderHeader('realm', 'Reino')}
+            {renderHeader('dungeon', 'Mazmorra')}
+            {renderHeader('level', 'Nivel')}
             <th className="pb-3 pr-6 text-gray-400">Objetivos</th>
-            <Th col="updatedAt" last>Última actualización</Th>
+            {renderHeader('updatedAt', 'Última actualización', true)}
           </tr>
         </thead>
         <tbody>

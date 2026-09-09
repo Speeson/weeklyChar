@@ -61,6 +61,17 @@ Main implementation points:
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
 - `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses. Owner character lists load current keystones in one SQL query and include additive equipment/talents/Omnium JSON blocks.
 - `keystone-worker/src/routes/me.ts`: `GET /api/me/characters` exposes user characters.
+- Battle.net Authentication V1 maps the official OIDC `sub` to the unchanged
+  internal `users.id` through `user_identities`; BattleTag is display-only.
+  Worker OAuth uses Authorization Code, cryptographic state, PKCE S256, and
+  exactly `openid`. Migration `0009` makes `users.password_hash` nullable and
+  adds expiring `oauth_flows`. State/handoff/poll secrets are stored only as
+  SHA-256 hashes; the temporary PKCE verifier is erased at callback, and no
+  Battle.net access or refresh token is persisted.
+- Web exchanges a short-lived opaque ticket for the existing KeystoneSync JWT.
+  KeystoneClient opens the system browser through a scoped Tauri command while
+  its sidecar holds the desktop polling secret only in memory and persists only
+  the resulting KeystoneSync session.
 - `keystone-worker/src/routes/teams.ts`: team detail responses expose member characters through shared DB helpers.
 - `keystone-web/lib/auth.ts`: `apiFetch()` centralizes Web API calls.
 - `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, and `keystone-web/app/teams/[id]/page.tsx`: consume character and team character data.

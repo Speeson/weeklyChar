@@ -190,6 +190,7 @@ def is_known_no_impact(path: str) -> bool:
         "README.md",
         "RELEASE_WORKFLOW.md",
         "release-assets/KeystoneSync-v0.1.13.zip",
+        "keystone-worker/.dev.vars.example",
         "keystone-worker/README.md",
         "keystone-web/AGENTS.md",
         "keystone-web/CLAUDE.md",
