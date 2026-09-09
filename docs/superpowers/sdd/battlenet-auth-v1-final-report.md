@@ -2,17 +2,19 @@
 
 ## Estado
 
-La funcionalidad V1 queda implementada y validada en Worker, Web y KeystoneClient mediante infraestructura staging aislada:
+La funcionalidad V1 queda implementada, validada y desplegada en Worker, Web y KeystoneClient:
 
 - **`REAL OAUTH VALIDATED`**
 - **`REAL EXISTING ACCOUNT LINK: PASS`**
 - **`REAL DESKTOP LOGIN: PASS`**
+- **`PRODUCTION ROLLOUT: PASS`**
+- **`RELEASED: client-v0.9.0`**
 
-El estado global es **`READY FOR RELEASE`**. Este estado expresa preparación técnica; no se ha realizado ni autorizado el release.
+El estado global es **`RELEASED`**. Los cambios se integraron en `main` mediante los PR [#7](https://github.com/Speeson/weeklyChar/pull/7) y [#8](https://github.com/Speeson/weeklyChar/pull/8); la migración D1 de producción, el deploy del Worker y sus smoke tests terminaron correctamente, y KeystoneClient `0.9.0` está publicado.
 
-No se ha realizado commit, push, deploy de producción, release ni migración D1 de producción. Para la validación real se utilizaron únicamente el Worker `keystone-sync-api-staging` y la D1 aislada `keystone-sync-staging`, sin datos copiados de producción.
+La validación OAuth end-to-end con Battle.net real se realizó primero mediante el Worker `keystone-sync-api-staging` y la D1 aislada `keystone-sync-staging`, sin datos copiados de producción. El rollout posterior utilizó la configuración de producción ya registrada y no copió datos entre entornos.
 
-El trabajo partió de un `main` local ya sucio. Se preservaron sin editar los artefactos previos ajenos al alcance (`keystone-client/src-tauri/Cargo.toml`, `.playwright-mcp/`, `docs/CHARACTER-CLIENT.md`, `docs/design/`, `docs/keystonesync-selector-piedra-plan.md` y `keystone-client/tauri-current-characters.png`). `Cargo.toml` continúa apareciendo modificado por una diferencia previa de finales de línea, sin diff textual.
+El trabajo partió de un `main` local ya sucio. Se preservaron sin editar los artefactos previos ajenos al alcance (`.playwright-mcp/`, `docs/CHARACTER-CLIENT.md`, `docs/design/`, `docs/keystonesync-selector-piedra-plan.md` y `keystone-client/tauri-current-characters.png`). La actualización versionada de `keystone-client/src-tauri/Cargo.toml` a `0.9.0` fue realizada por el workflow oficial de release.
 
 El saneamiento posterior del baseline Web dejó `npm run lint` en PASS, con 0 errores y 0 warnings. Todas las suites automatizadas relevantes terminan correctamente.
 
@@ -37,6 +39,8 @@ El saneamiento posterior del baseline Web dejó `npm run lint` en PASS, con 0 er
 - `oauth_flows`: intents `login_web`, `login_desktop`, `link_account`; estados `pending`, `needs_onboarding`, `ready`, `consumed`, `failed`; índices de expiración y polling.
 
 El test de migración demuestra preservación de usuarios, characters, teams, memberships, IDs, login tradicional, creación Battle.net-only, constraints y cascade.
+
+Para compatibilidad con las transacciones implícitas de D1, la reconstrucción usa `PRAGMA defer_foreign_keys = ON` y respalda/restaura temporalmente las filas de las tablas afectadas por `ON DELETE CASCADE` (`characters`, `keystones`, `team_members` y `team_invitations`). El test reproduce el modo transaccional de D1 y comprueba también keystones e invitaciones. Las tablas de respaldo se eliminan dentro de la propia migración.
 
 ## Endpoints
 
@@ -67,7 +71,7 @@ La validación real detectó y corrigió dos defectos del cliente antes del rele
 - Tests Worker/DB: `tests/battlenetAuth.test.js`, `tests/test_battlenet_auth_migration.py`.
 - Web: `app/components/BattleNetButton.tsx`/`BattleNetIcon.tsx`, login/settings, `app/login/battlenet/{layout,callback/page,onboarding/page}.tsx`, `lib/battlenet.ts`, tests unitarios y `playwright/battlenet-auth.spec.ts`.
 - Cliente: sidecar `auth_service.py`/`bridge_main.py`, Tauri `bridge.rs`/`lib.rs`/`window.rs`, core auth/native/types/i18n, nuevo `battleNetAuth.ts`, `BattleNetIcon`, `LoginPage`, `OnboardingPage`, CSS y sus tests.
-- Cliente visual/release: snapshots actualizados para Battle.net y el ajuste final de alineación ES/EN del footer, y `.changes/pending/battlenet-auth-v1.json` (minor, plan `0.9.0`).
+- Cliente visual/release: snapshots actualizados para Battle.net y el ajuste final de alineación ES/EN del footer, y changeset publicado en `.changes/releases/client-v0.9.0/battlenet-auth-v1.json`.
 - Bridge: tres suites bajo `tests/client_bridge/`.
 
 ## Validación ejecutada
@@ -79,9 +83,9 @@ La validación real detectó y corrigió dos defectos del cliente antes del rele
 - Cliente Python: compileall — PASS; `tests/client` — 104/104; `tests/client_bridge` — 66/66.
 - Cliente frontend: `npm ci` — PASS, 0 vulnerabilidades; `npm test` — 42 archivos, 252/252; `npm run build` — PASS; `npm run test:visual` — 175/175.
 - Tauri: fmt check — PASS; cargo check — PASS; cargo test — 25/25 (warning informativo del linker de Windows).
-- Packaging: sidecar PyInstaller limpio y smoke `ready/ping/get_state/second_ping/eof` — PASS; instalador NSIS del baseline previo al release — PASS.
+- Packaging: sidecar PyInstaller limpio y smoke `ready/ping/get_state/second_ping/eof` — PASS; build NSIS, firma del updater y verificación de artefactos de release — PASS.
 - Baseline adicional: `tests/release` — 51/51; `tests/deploy_impact` — 47/47.
-- Release plan: client minor `0.8.1 -> 0.9.0`, tag futuro `client-v0.9.0`; no se ha preparado ni publicado.
+- Release ejecutado: client minor `0.8.1 -> 0.9.0`; tag y GitHub Release [client-v0.9.0](https://github.com/Speeson/weeklyChar/releases/tag/client-v0.9.0) publicados con `KeystoneClientSetup.exe`, `KeystoneClientSetup.exe.sig` y `latest.json`.
 
 ### Validación OAuth real en staging
 
@@ -131,20 +135,35 @@ Resultados confirmados manualmente:
 - El navegador heredó el APPDATA aislado del arnés de prueba y creó allí un perfil nuevo de Opera, lo que explica la ventana sin personalización y la nueva autenticación Battle.net. Es un efecto exclusivo del aislamiento de la prueba, no del flujo normal del producto.
 - **`REAL DESKTOP LOGIN: PASS`**.
 
+### Rollout de producción
+
+- El primer intento automático de aplicar `0009_battlenet_auth.sql` falló porque `PRAGMA foreign_keys = OFF` no tiene efecto dentro de la transacción implícita de una migración D1. D1 revirtió la migración completa: `0009` continuó pendiente, los contadores permanecieron en `4` users, `25` characters, `3` teams y `6` memberships, y `PRAGMA foreign_key_check` no devolvió incidencias.
+- El hotfix del PR [#8](https://github.com/Speeson/weeklyChar/pull/8) sustituyó ese comportamiento por diferimiento de FKs y respaldo/restauración explícita de las relaciones cascade, con una prueba de regresión que ejecuta la migración dentro de una transacción como D1.
+- El rollout de backend [34297029378](https://github.com/Speeson/weeklyChar/actions/runs/34297029378) terminó en PASS: Worker typecheck/tests, migración D1 remota, deploy del Worker y smoke de producción.
+- D1 producción quedó sin migraciones pendientes. Tras `0009`, los contadores siguieron exactamente en `4` users, `25` characters, `3` teams y `6` memberships; `PRAGMA foreign_key_check` devolvió cero filas.
+- `users.password_hash` admite `NULL`; `user_identities` y `oauth_flows` existen; no quedaron tablas temporales de respaldo. En el momento de la auditoría había `0` identities y `0` oauth flows de producción, por lo que no se creó ninguna cuenta durante el rollout.
+- El Worker de producción responde `200` en `https://api-keystonesync.esgarpe.dev/api/health`.
+- Un inicio OAuth de producción, sin seguir el redirect ni completar autenticación, confirmó host `oauth.battle.net`, scope exacto `openid`, callback `https://api-keystonesync.esgarpe.dev/api/auth/battlenet/callback`, `state`, code challenge y PKCE `S256`. No se imprimieron sus valores efímeros.
+- La Web de producción responde `200` en `https://keystonesync.esgarpe.dev/login` y el bundle servido contiene el código Battle.net; su build y lint volvieron a pasar en el pipeline de publicación.
+- El pipeline de release [34297312960](https://github.com/Speeson/weeklyChar/actions/runs/34297312960) repitió Worker tests, Web build/lint y smoke de producción antes de superar el gate de backend, validar Python/React/Rust, construir NSIS, verificar firma/assets y publicar atómicamente `client-v0.9.0`.
+- No se desplegó ni publicó el Addon.
+
 ## Configuración manual pendiente
 
-- Para producción, configurar los bindings/secrets correspondientes, registrar su callback exacto y aplicar `0009_battlenet_auth.sql` antes del futuro deploy. Ninguna de estas operaciones de producción se realizó durante la validación staging.
+- No queda configuración obligatoria pendiente para este rollout: el callback de producción está registrado, los bindings/secrets permanecen gestionados fuera del repositorio y `0009_battlenet_auth.sql` está aplicada.
+- Como comprobación operativa opcional posterior al rollout, puede completarse un login real en producción. La integración OAuth real ya fue validada end-to-end en staging con la misma implementación y Battle.net real; durante el rollout de producción solo se validó el inicio del flujo para no crear o vincular cuentas involuntariamente.
 
 ## Impacto de despliegue
 
-- Worker: requiere migración D1 remota y deploy del Worker, en ese orden.
-- Web: requiere deploy Web.
-- Cliente: requiere build y release minor `0.9.0`.
-- Addon: sin impacto.
+- Worker: migración D1 remota y deploy completados; health/smoke PASS.
+- Web: cambios integrados en `main`, Web de producción operativa y pipeline build/lint PASS.
+- Cliente: release minor `0.9.0` publicado con updater firmado.
+- Addon: sin impacto y sin publicación.
 
 ## Riesgos y limitaciones
 
 - PKCE S256, Authorization Code, callback, `/userinfo`, vinculación a cuenta tradicional y flujo desktop han sido probados satisfactoriamente contra Battle.net real.
+- No se completó un login Battle.net real contra producción durante el rollout; la prueba end-to-end real se ejecutó en staging aislado y el endpoint de inicio/callback configurado de producción se verificó sin avanzar al consentimiento.
 - El perfil nuevo de Opera observado durante la prueba se debió a que el arnés aisló `APPDATA` para proteger el perfil real; una ejecución normal hereda el perfil habitual del navegador predeterminado.
 - Se conserva deliberadamente el JWT Web actual en localStorage; no se migró a cookies HttpOnly.
 - V1 no implementa `wow.profile`, importación de personajes, email Battle.net ni establecimiento de password para cuentas Battle.net-only.
