@@ -11,6 +11,9 @@
       "custom_domain": true
     }
   ],
+  "vars": {
+    "BATTLENET_REDIRECT_URI": "https://api-keystonesync.esgarpe.dev/api/auth/battlenet/callback"
+  },
   "d1_databases": [
     {
       "binding": "DB",

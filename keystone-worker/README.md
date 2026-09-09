@@ -112,11 +112,11 @@ npx wrangler secret put WEB_BASE_URL
 npx wrangler secret put ALLOWED_ORIGINS
 npx wrangler secret put BLIZZARD_CLIENT_ID
 npx wrangler secret put BLIZZARD_CLIENT_SECRET
-npx wrangler secret put BATTLENET_REDIRECT_URI
 ```
 
 Battle.net Authentication V1 requires the Developer Portal callback to match
-`BATTLENET_REDIRECT_URI` exactly. Production expects
+the non-secret `BATTLENET_REDIRECT_URI` configured in `wrangler.jsonc` exactly.
+Production expects
 `https://api-keystonesync.esgarpe.dev/api/auth/battlenet/callback`. The OAuth
 request uses only `openid`; no Battle.net access or refresh token is persisted.
 
