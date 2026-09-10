@@ -17,6 +17,12 @@ import { buildKeystoneLootObjectivePage } from '../keystoneObjectives'
 import { recommendKeystoneLootTarget } from '../keystoneRecommendations'
 import { buildKeystoneLootDungeonSummary } from '../keystoneSelector'
 import type { KeystoneLootDungeonSummaryDTO } from '../keystoneSelector'
+import {
+  PlannerDataLimitError,
+  parseKeystonePlannerRequest,
+  plannerParticipantsForTeam,
+  runKeystonePlanner,
+} from '../keystonePlannerApi'
 import { isSupportedSeason2Dungeon } from '../season2'
 import type { Env, TeamInvitationRow, TeamRow, UserRow } from '../types'
 
@@ -237,6 +243,38 @@ teamRoutes.get('/api/teams/:teamId/recommendations', async c => {
   }))
 
   return c.json({ teamId, challengeMapId, members: recommendations })
+})
+
+teamRoutes.post('/api/teams/:teamId/keystone-planner', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const teamId = Number(c.req.param('teamId'))
+  if (!Number.isSafeInteger(teamId) || teamId <= 0) {
+    return jsonError(c, 400, 'teamId debe ser un entero positivo')
+  }
+  if (!(await getTeam(c.env, teamId))) return jsonError(c, 404, 'Equipo no encontrado')
+  if (!(await findMembership(c.env, teamId, currentUser.id))) {
+    return jsonError(c, 403, 'No perteneces a este team')
+  }
+
+  let request
+  try {
+    request = parseKeystonePlannerRequest(await c.req.json<unknown>())
+  } catch (error) {
+    return jsonError(c, 400, error instanceof Error ? error.message : 'Payload del Planner no válido')
+  }
+  const participants = await plannerParticipantsForTeam(c.env, teamId, request.participantUserIds)
+  if (participants.length !== request.participantUserIds.length) {
+    return jsonError(c, 400, 'Todos los participantes deben pertenecer actualmente al team')
+  }
+  try {
+    const response = await runKeystonePlanner(c.env, teamId, request)
+    return c.json(response, response.status === 'invalid_input' ? 400 : 200)
+  } catch (error) {
+    if (error instanceof PlannerDataLimitError) return jsonError(c, 422, error.message)
+    throw error
+  }
 })
 
 teamRoutes.get('/api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary', async c => {

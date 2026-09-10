@@ -151,6 +151,9 @@ Verified from checked-out files:
 - Planner solving lives in the pure `keystone-worker/src/keystonePlanner.ts` domain boundary. It
   consumes normalized privacy-filtered inputs, enforces holder and 1/1/3 constraints, and ranks a
   deterministic Top 3 without D1, Hono, authorization, or presentation copy.
+- Planner API adaptation lives in `keystone-worker/src/keystonePlannerApi.ts`; the authenticated
+  Team route derives selected members, preferences, current stones, shareable objectives, item
+  metadata, and capability metadata server-side before exposing the solver result.
 
 ## Known risks / ambiguities
 
@@ -165,10 +168,11 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 
 ## Next planned milestone
 
-Keystone Planner V1 Blocks A and B establish migration `0010`, the Worker composition catalog,
-JWT-only `GET/PUT /api/me/planner/preferences`, and the pure deterministic solver. Block C is the
-next Planner phase and must adapt authorized Team/D1/KeystoneLoot data into the normalized solver
-input and expose the Team endpoint without moving solver logic into routes or Web.
+Keystone Planner V1 Blocks A, B, and C establish migration `0010`, the Worker composition catalog,
+JWT-only preference routes, the pure deterministic solver, and authenticated
+`POST /api/teams/:teamId/keystone-planner`. Block D is the next Planner phase and owns Web preference
+configuration and Planner UI; it must consume the Worker response without rebuilding scoring,
+capability rules, or authorization in React.
 
 Stone Selector S1 added the backend-only aggregate route
 `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team

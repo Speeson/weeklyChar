@@ -826,6 +826,49 @@ aggregation is unique while member providers remain visible. Availability suppor
 Block B adds no HTTP route, D1 read adapter, authorization logic, or schema change; those remain for
 Block C.
 
+Block C exposes `POST /api/teams/:teamId/keystone-planner`. The caller must have a valid access JWT
+and current Team membership. The strict request contains only:
+
+```ts
+{
+  participantUserIds: number[] // 2..5 unique current Team members
+  targetLevel: number           // integer 1..20
+  challengeMapId?: number | null
+  options: {
+    optimizeComposition: boolean
+    bloodlust: boolean
+    battleRez: boolean
+    classBuffs: boolean
+    damageSynergy: boolean
+  }
+  locks?: PlannerLock[]          // at most 15
+}
+```
+
+Unknown fields and client-supplied candidates, objectives, stones, roles, capabilities, preferences,
+snapshots, or scores are rejected. A non-null challenge map must belong to the current Worker pool.
+All participant memberships are reread from D1 for each request.
+
+The adapter loads only selected Team users, their characters/configured preferences, and each
+selected character's latest same-week real stone. Snapshot projection uses SQL `CASE` so users with
+`share_keystone_loot_with_teams = 0` retain playable candidates but expose `NULL` to the adapter and
+therefore `objectives: []`. Eligible stone dungeon IDs are established before snapshots are parsed.
+The shared objective normalizer retains only exact numeric dungeon sources and relevant loot specs,
+preserves exact variants, and excludes completed Voidcore targets.
+
+Public responses contain `teamId`, the requested `challengeMapId`, `targetLevel`,
+`availability.eligibleStoneCount`, solver status/diagnostics, and at most three recommendations.
+Recommendation objectives expose only item ID, nullable cached/enriched name/icon, tier, variant
+key, and Voidcore state. Capability names/types/icon spell IDs/stacking come from the central Worker
+catalog. Metadata misses do not change scoring or fail the Planner.
+
+HTTP mapping is 200 for `ok`, `unconfigured_participants`, `no_valid_composition`, and zero eligible
+stones; 400 for invalid requests, non-Team participants, or solver `invalid_input`; 401 for invalid
+authentication; 403 for a requester outside the Team; 404 for a missing Team; and 422 only when
+normalized server-side data exceeds a defensive limit. Limits are 5 participants, 15 locks, 150
+candidates, 100 stones, and 5,000 candidate-objective entries. Data is never silently truncated.
+Block C adds no D1 schema or migration.
+
 ## Web Consumption Contract
 
 API helper:

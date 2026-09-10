@@ -35,6 +35,9 @@ export class FakeD1Database {
     this.itemMetadata = []
     this.metadataReadItemIds = []
     this.snapshotReadCharacterIds = []
+    this.plannerPreferences = []
+    this.plannerQueryKinds = []
+    this.plannerSharedSnapshotCharacterIds = []
   }
 
   prepare(sql) {
@@ -186,6 +189,102 @@ class FakeD1Statement {
   async all() {
     const sql = this.sql
     const values = this.values
+
+    if (sql.includes('WHERE tm.team_id = ? AND u.id IN')
+      && sql.includes('u.share_keystone_loot_with_teams')
+      && !sql.includes('JOIN characters c')) {
+      const [teamId, ...participantIds] = values
+      this.db.plannerQueryKinds.push('participants')
+      const memberIds = new Set(this.db.teamMembers
+        .filter(membership => membership.team_id === teamId)
+        .map(membership => membership.user_id))
+      return {
+        results: this.db.users
+          .filter(user => memberIds.has(user.id) && participantIds.includes(user.id))
+          .sort((left, right) => left.id - right.id)
+          .map(user => ({
+            id: user.id,
+            username: user.username,
+            share_keystone_loot_with_teams: user.share_keystone_loot_with_teams,
+          })),
+      }
+    }
+
+    if (sql.includes('LEFT JOIN character_play_preferences cpp')) {
+      const [teamId, ...participantIds] = values
+      this.db.plannerQueryKinds.push('characters_preferences')
+      const memberIds = new Set(this.db.teamMembers
+        .filter(membership => membership.team_id === teamId && participantIds.includes(membership.user_id))
+        .map(membership => membership.user_id))
+      const results = []
+      for (const character of this.db.characters.filter(entry => memberIds.has(entry.user_id))) {
+        const owner = this.db.users.find(user => user.id === character.user_id)
+        if (!owner) continue
+        const preferences = this.db.plannerPreferences.filter(row => row.character_id === character.id)
+        const rows = preferences.length > 0 ? preferences : [null]
+        for (const preference of rows) {
+          const sharedSnapshot = owner.share_keystone_loot_with_teams === 0
+            ? null
+            : character.keystone_loot_json
+          if (sharedSnapshot !== null) this.db.plannerSharedSnapshotCharacterIds.push(character.id)
+          results.push({
+            user_id: owner.id,
+            username: owner.username,
+            share_keystone_loot_with_teams: owner.share_keystone_loot_with_teams,
+            character_id: character.id,
+            character_name: character.name,
+            region: character.region,
+            wow_class: character.wow_class,
+            keystone_loot_json: sharedSnapshot,
+            spec_id: preference?.spec_id ?? null,
+            play_preference: preference?.play_preference ?? null,
+            loot_spec_id: preference?.loot_spec_id ?? null,
+          })
+        }
+      }
+      results.sort((left, right) => left.user_id - right.user_id
+        || left.character_id - right.character_id
+        || (left.spec_id ?? 0) - (right.spec_id ?? 0))
+      return { results }
+    }
+
+    if (sql.includes('WITH ranked_keystones AS') && sql.includes('u.id IN')) {
+      const hasDungeonFilter = sql.includes('AND rk.keystone_challenge_map_id = ?')
+      const resetUnix = values[0]
+      const teamId = values[1]
+      const remaining = values.slice(2)
+      const challengeMapId = hasDungeonFilter ? remaining.at(-1) : null
+      const participantIds = hasDungeonFilter ? remaining.slice(0, -1) : remaining
+      this.db.plannerQueryKinds.push('stones')
+      const memberIds = new Set(this.db.teamMembers
+        .filter(membership => membership.team_id === teamId && participantIds.includes(membership.user_id))
+        .map(membership => membership.user_id))
+      const results = []
+      for (const character of this.db.characters.filter(entry => memberIds.has(entry.user_id))) {
+        const latest = this.db.keystones
+          .filter(entry => entry.character_id === character.id
+            && entry.has_keystone === 1
+            && entry.keystone_level !== null
+            && entry.updated_at >= resetUnix)
+          .sort((left, right) => ((right.updated_at ?? 0) - (left.updated_at ?? 0))
+            || right.id - left.id)[0]
+        if (!latest || (challengeMapId !== null && latest.keystone_challenge_map_id !== challengeMapId)) continue
+        const owner = this.db.users.find(user => user.id === character.user_id)
+        if (!owner) continue
+        results.push({
+          character_id: character.id,
+          character_name: character.name,
+          owner_user_id: owner.id,
+          owner_username: owner.username,
+          keystone_level: latest.keystone_level,
+          keystone_challenge_map_id: latest.keystone_challenge_map_id,
+          keystone_dungeon: latest.keystone_dungeon,
+        })
+      }
+      results.sort((left, right) => left.keystone_challenge_map_id - right.keystone_challenge_map_id
+        || left.owner_user_id - right.owner_user_id || left.character_id - right.character_id)
+      return { results }
+    }
 
     if (sql.includes('FROM characters c LEFT JOIN keystones k ON k.id =')) {
       const [resetUnix, userId] = values

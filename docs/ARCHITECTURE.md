@@ -123,6 +123,8 @@ Owns:
   Retail specs, derived roles, conservative damage affinity, and unique capability providers.
 - The pure deterministic Planner solver in `keystone-worker/src/keystonePlanner.ts`, including
   holder-aware role-constrained search, loot/preference/utility ranking, locks, vacancies, and Top 3.
+- The Planner Team/D1 adapter and public projection in `keystone-worker/src/keystonePlannerApi.ts`,
+  exposed through authenticated `POST /api/teams/:teamId/keystone-planner`.
 - JWT-only owner preference reads and atomic replacement writes at
   `GET/PUT /api/me/planner/preferences`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
