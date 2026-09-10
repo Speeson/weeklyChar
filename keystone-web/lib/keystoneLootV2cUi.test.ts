@@ -26,12 +26,13 @@ test('Settings uses the approved single-toggle wording and preserves account-bac
   assert.doesNotMatch(resetBody, /shareKeystoneLootWithTeams|updatePrivacy/u)
 })
 
-test('Team flow exposes the aggregate Selector and keeps the future planner disabled', () => {
+test('Team flow exposes the aggregate Selector and the shared Planner entries', () => {
   assert.match(teamPage, /StoneSelector/u)
   assert.doesNotMatch(teamPage, /KeystonePlanner/u)
   assert.match(selector, /buildKeystoneSelectorPath/u)
   assert.match(selector, /Planificar piedra/u)
-  assert.match(selector, /Próximamente/u)
+  assert.match(selector, /Planificar sesión/u)
+  assert.match(selector, /KeystonePlannerPanel/u)
   assert.doesNotMatch(selector, /\/recommendations/u)
 })
 

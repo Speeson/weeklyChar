@@ -1,6 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 
-const API = 'https://api-keystonesync.esgarpe.dev'
 const cors = { 'Access-Control-Allow-Origin': '*' }
 
 async function json(route: Route, body: unknown, status = 200) {
@@ -8,13 +7,13 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 async function mockAuthenticatedShell(page: Page) {
-  await page.route(`${API}/api/me`, route => json(route, { username: 'Existing', avatarUrl: null, syncToken: 'sync', shareKeystoneLootWithTeams: true }))
-  await page.route(`${API}/api/me/characters`, route => json(route, []))
-  await page.route(`${API}/api/teams`, route => json(route, []))
+  await page.route('**/api/me', route => json(route, { username: 'Existing', avatarUrl: null, syncToken: 'sync', shareKeystoneLootWithTeams: true }))
+  await page.route('**/api/me/characters', route => json(route, []))
+  await page.route('**/api/teams', route => json(route, []))
 }
 
 test('login starts Battle.net in the official browser authorization page', async ({ page }) => {
-  await page.route(`${API}/api/auth/battlenet/start`, route => json(route, {
+  await page.route('**/api/auth/battlenet/start', route => json(route, {
     authorizationUrl: 'https://oauth.battle.net/authorize?response_type=code&scope=openid',
   }))
   await page.route('https://oauth.battle.net/**', route => route.fulfill({ contentType: 'text/html', body: '<h1>Battle.net authorization</h1>' }))
@@ -29,7 +28,7 @@ test('login starts Battle.net in the official browser authorization page', async
 test('linked Battle.net callback exchanges the ticket outside the URL and opens dashboard', async ({ page }) => {
   await mockAuthenticatedShell(page)
   let exchangeBody: unknown
-  await page.route(`${API}/api/auth/battlenet/exchange`, async route => {
+  await page.route('**/api/auth/battlenet/exchange', async route => {
     exchangeBody = route.request().postDataJSON()
     await json(route, { status: 'ready', accessToken: 'keystone-jwt', tokenType: 'bearer' })
   })
@@ -42,11 +41,11 @@ test('linked Battle.net callback exchanges the ticket outside the URL and opens 
 
 test('unknown Battle.net identity can create an explicitly named KeystoneSync account', async ({ page }) => {
   await mockAuthenticatedShell(page)
-  await page.route(`${API}/api/auth/battlenet/onboarding/status`, route => json(route, {
+  await page.route('**/api/auth/battlenet/onboarding/status', route => json(route, {
     status: 'needs_onboarding', displayName: 'Speeson#1234', desktop: false,
   }))
   let registerBody: unknown
-  await page.route(`${API}/api/auth/battlenet/onboarding/register`, async route => {
+  await page.route('**/api/auth/battlenet/onboarding/register', async route => {
     registerBody = route.request().postDataJSON()
     await json(route, { status: 'ready', accessToken: 'registered-jwt', tokenType: 'bearer' })
   })
@@ -60,11 +59,11 @@ test('unknown Battle.net identity can create an explicitly named KeystoneSync ac
 
 test('unknown Battle.net identity can link verified existing credentials', async ({ page }) => {
   await mockAuthenticatedShell(page)
-  await page.route(`${API}/api/auth/battlenet/onboarding/status`, route => json(route, {
+  await page.route('**/api/auth/battlenet/onboarding/status', route => json(route, {
     status: 'needs_onboarding', displayName: 'Speeson#1234', desktop: false,
   }))
   let linkBody: unknown
-  await page.route(`${API}/api/auth/battlenet/onboarding/link`, async route => {
+  await page.route('**/api/auth/battlenet/onboarding/link', async route => {
     linkBody = route.request().postDataJSON()
     await json(route, { status: 'ready', accessToken: 'existing-jwt', tokenType: 'bearer' })
   })
@@ -79,8 +78,8 @@ test('unknown Battle.net identity can link verified existing credentials', async
 
 test('settings renders the linked BattleTag without exposing provider subject', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('access_token', 'keystone-jwt'))
-  await page.route(`${API}/api/me`, route => json(route, { username: 'Existing', avatarUrl: null, syncToken: 'sync', shareKeystoneLootWithTeams: true }))
-  await page.route(`${API}/api/me/identities`, route => json(route, {
+  await page.route('**/api/me', route => json(route, { username: 'Existing', avatarUrl: null, syncToken: 'sync', shareKeystoneLootWithTeams: true }))
+  await page.route('**/api/me/identities', route => json(route, {
     battleNet: { linked: true, displayName: 'Speeson#1234', linkedAt: '2026-09-08T00:00:00.000Z' },
   }))
   await page.goto('/settings')
@@ -92,7 +91,7 @@ test('settings renders the linked BattleTag without exposing provider subject', 
 test('settings renders the Battle.net icon on the link action', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('access_token', 'keystone-jwt'))
   await mockAuthenticatedShell(page)
-  await page.route(`${API}/api/me/identities`, route => json(route, {
+  await page.route('**/api/me/identities', route => json(route, {
     battleNet: { linked: false, displayName: null, linkedAt: null },
   }))
   await page.goto('/settings')

@@ -424,9 +424,20 @@ The inline panel owns compact summary, collapsed character cards, optional multi
 semantic tier grids, and a subdued completed-Voidcore disclosure. A shared portal-based
 `KeystoneLootItemTooltip` now presents the S2 safe metadata on Selector tiles and the existing
 owner/Team objective rows. It supports hover, keyboard focus, click/tap, outside dismissal, and
-Escape without exposing numeric stats. The prior `KeystonePlanner` visual components are removed;
-non-visual recommendation helpers remain isolated for the deferred planner. The Client Teams
-counterpart is implemented in S5; the composition planner remains deferred.
+Escape without exposing numeric stats. At the S3 checkpoint, the prior `KeystonePlanner` visual
+components were removed and non-visual recommendation helpers remained isolated. The Client Teams
+counterpart was implemented in S5 while the composition planner was still deferred.
+
+Keystone Planner V1 Block D activates that deferred Web composition planner without changing the
+Selector objective data path. `KeystonePlannerPanel` is the single modal planning surface used by
+the Selector's session action (`challengeMapId: null`) and selected-dungeon tab. It sends only the
+public request DTO to `POST /api/teams/:teamId/keystone-planner`; request generations and abort
+controllers reject stale responses. `PlannerPreferencesDialog` separately owns the current user's
+global full-replacement `GET/PUT /api/me/planner/preferences` workflow and never edits teammate
+preferences. The Web strictly parses public results and only presents Worker-derived assignments,
+roles, vacancies, objectives, capability metadata, composition summaries, reasons and diagnostics.
+Capability spell IDs currently have no established direct Web icon resolver, so accessible text
+badges are the intentional fallback and no parallel provider catalog or N+1 metadata fetch exists.
 
 Stone Selector S4 adds the Client data path without adding the Teams UI. React calls the typed
 `teams.list`, `teams.get`, and `teams.keystone_selector` core wrappers; Rust accepts only those

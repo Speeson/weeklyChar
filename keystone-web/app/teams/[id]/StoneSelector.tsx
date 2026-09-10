@@ -21,11 +21,16 @@ import {
 import { objectiveItemName, tierPresentation, voidcorePresentation } from '@/lib/keystoneLootObjectives'
 import { specName } from '@/lib/wowSpecs'
 import KeystoneLootItemTooltip from '@/app/components/KeystoneLootItemTooltip'
+import KeystonePlannerPanel from './KeystonePlannerPanel'
 
 type SelectorTeamMember = {
   userId: number
   username: string
   characters: Array<{
+    id: number
+    name: string
+    realm: string
+    wowClass?: string | null
     currentKeystone: {
       level: number | null
       challengeMapId: number | null
@@ -36,6 +41,7 @@ type SelectorTeamMember = {
 type Props = {
   teamId: number
   members: SelectorTeamMember[]
+  currentUserId: number
 }
 
 const TIER_SUMMARY: Array<[keyof KeystoneSelectorTierCounts, string]> = [
@@ -206,7 +212,7 @@ function SelectorCharacterCard({ character }: { character: KeystoneSelectorChara
   )
 }
 
-export default function StoneSelector({ teamId, members }: Props) {
+export default function StoneSelector({ teamId, members, currentUserId }: Props) {
   const router = useRouter()
   const baseOptions = useMemo(() => selectorDungeonOptions(members), [members])
   const [countOverrides, setCountOverrides] = useState<Record<number, number>>({})
@@ -221,6 +227,8 @@ export default function StoneSelector({ teamId, members }: Props) {
   const activeController = useRef<AbortController | null>(null)
   const requestGeneration = useRef(0)
   const activeIdentity = useRef<KeystoneSelectorRequestIdentity | null>(null)
+  const [plannerDungeonId, setPlannerDungeonId] = useState<number | null | undefined>(undefined)
+  const [plannerTrigger, setPlannerTrigger] = useState<HTMLButtonElement | null>(null)
 
   useEffect(() => () => {
     activeController.current?.abort()
@@ -281,12 +289,22 @@ export default function StoneSelector({ teamId, members }: Props) {
 
   return (
     <section aria-labelledby="stone-selector-title" className="mt-6">
-      <div className="mb-3 flex items-end justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-yellow-500">KeystoneLoot</p>
           <h2 id="stone-selector-title" className="mt-1 text-lg font-black text-white">Selector de piedra</h2>
         </div>
-        <p className="hidden text-xs text-gray-500 sm:block">Elige una mazmorra para ver qué gana el equipo.</p>
+        <div className="flex items-center gap-3">
+          <p className="hidden text-xs text-gray-500 sm:block">Elige una mazmorra para ver qué gana el equipo.</p>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={event => { setPlannerTrigger(event.currentTarget); setPlannerDungeonId(null) }}
+            className="min-h-11 rounded-xl bg-yellow-500 px-4 text-sm font-black text-gray-950 shadow-lg shadow-yellow-500/10 transition hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+          >
+            Planificar sesión
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto pb-2 [scrollbar-width:thin]">
@@ -327,8 +345,15 @@ export default function StoneSelector({ teamId, members }: Props) {
           <div className="flex items-center justify-between gap-3 border-b border-gray-800 bg-gray-950/75 px-3 py-3 sm:px-4">
             <div role="tablist" aria-label="Vista del Selector" className="flex min-w-0 items-center gap-2">
               <button type="button" role="tab" aria-selected="true" className="min-h-10 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 text-xs font-black uppercase tracking-wide text-yellow-200">Objetivos</button>
-              <button type="button" role="tab" disabled aria-disabled="true" className="min-h-10 truncate rounded-lg border border-gray-800 px-3 text-xs font-bold text-gray-600 disabled:cursor-not-allowed">
-                Planificar piedra <span className="hidden sm:inline">· Próximamente</span>
+              <button
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-haspopup="dialog"
+                onClick={event => { setPlannerTrigger(event.currentTarget); setPlannerDungeonId(selectedDungeonId) }}
+                className="min-h-10 truncate rounded-lg border border-gray-700 px-3 text-xs font-bold text-gray-300 hover:border-yellow-500/50 hover:text-yellow-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+              >
+                Planificar piedra
               </button>
             </div>
             <button type="button" onClick={closePanel} aria-label="Cerrar Selector de piedra" className="min-h-10 min-w-10 rounded-lg border border-gray-700 text-xl text-gray-400 hover:border-gray-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400">×</button>
@@ -378,6 +403,16 @@ export default function StoneSelector({ teamId, members }: Props) {
             )}
           </div>
         </div>
+      )}
+      {plannerDungeonId !== undefined && (
+        <KeystonePlannerPanel
+          teamId={teamId}
+          members={members}
+          currentUserId={currentUserId}
+          challengeMapId={plannerDungeonId}
+          returnFocusElement={plannerTrigger}
+          onClose={() => setPlannerDungeonId(undefined)}
+        />
       )}
     </section>
   )

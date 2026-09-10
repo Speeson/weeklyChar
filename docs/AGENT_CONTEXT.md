@@ -77,6 +77,11 @@ Main implementation points:
   the resulting KeystoneSync session.
 - `keystone-worker/src/routes/teams.ts`: team detail responses expose member characters through shared DB helpers.
 - `keystone-web/lib/auth.ts`: `apiFetch()` centralizes Web API calls.
+- Keystone Planner V1 Web uses one shared `KeystonePlannerPanel` for session-wide and selected-
+  dungeon planning, a defensive `lib/keystonePlanner.ts` transport boundary, and an owner-only
+  `PlannerPreferencesDialog`. React does not reproduce solver, privacy, role, capability, or
+  scoring rules. Capability spell IDs are shown with accessible text badges because no reliable
+  direct Web icon resolver is currently part of the public contract.
 - `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, and `keystone-web/app/teams/[id]/page.tsx`: consume character and team character data.
 
 ## Current versions

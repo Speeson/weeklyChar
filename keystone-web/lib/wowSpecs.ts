@@ -43,9 +43,9 @@ const SPEC_NAMES: Readonly<Record<number, string>> = {
 
 const SPEC_IDS_BY_CLASS: Readonly<Record<string, readonly number[]>> = {
   'Death Knight': [250, 251, 252],
-  'Demon Hunter': [577, 581],
+  'Demon Hunter': [577, 581, 1480],
   Druid: [102, 103, 104, 105],
-  Evoker: [1467, 1468, 1473, 1480],
+  Evoker: [1467, 1468, 1473],
   Hunter: [253, 254, 255],
   Mage: [62, 63, 64],
   Monk: [268, 269, 270],

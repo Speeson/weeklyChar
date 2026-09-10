@@ -1108,6 +1108,8 @@ No el algoritmo.
 
 ### Bloque D — Web
 
+Estado: implementado localmente y validado el 2026-09-10; pendiente del Bloque E de prueba real y cierre.
+
 - configuración de personajes;
 - selector de participantes;
 - slider;

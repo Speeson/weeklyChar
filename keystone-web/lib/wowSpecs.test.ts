@@ -23,3 +23,14 @@ test('returns centralized class specialization options without duplicating label
   ])
   assert.deepEqual(specOptionsForClass('Unknown'), [])
 })
+
+test('keeps the 40-spec catalog and assigns Devourer to Demon Hunter', () => {
+  const classes = [
+    'Death Knight', 'Demon Hunter', 'Druid', 'Evoker', 'Hunter', 'Mage', 'Monk',
+    'Paladin', 'Priest', 'Rogue', 'Shaman', 'Warlock', 'Warrior',
+  ]
+  const all = classes.flatMap(specOptionsForClass)
+  assert.equal(all.length, 40)
+  assert.deepEqual(specOptionsForClass('Demon Hunter').at(-1), { id: 1480, name: 'Devourer' })
+  assert.equal(specOptionsForClass('Evoker').some(spec => spec.id === 1480), false)
+})

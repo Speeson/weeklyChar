@@ -869,6 +869,16 @@ normalized server-side data exceeds a defensive limit. Limits are 5 participants
 candidates, 100 stones, and 5,000 candidate-objective entries. Data is never silently truncated.
 Block C adds no D1 schema or migration.
 
+Block D consumes this contract through `keystone-web/lib/keystonePlanner.ts`. Its defensive parser
+requires the active Team/dungeon identity and validates all fixed statuses, diagnostic codes,
+reason codes and nested public recommendation fields before rendering. React sends only
+`participantUserIds`, `targetLevel`, `challengeMapId`, the five option booleans and visible locks;
+it never sends or reconstructs candidates, objectives, stones, roles, capabilities or scores.
+Owner preference editing expands the known same-class Web spec list into an explicit full
+replacement document, defaulting previously absent specs to `disabled` and `lootSpecId = specId`.
+Characters without `wowClass` remain unconfigurable and produce no invented spec IDs. The Web spec
+catalog retains 40 entries and maps Devourer (`1480`) to Demon Hunter.
+
 ## Web Consumption Contract
 
 API helper:
