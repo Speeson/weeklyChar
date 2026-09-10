@@ -61,6 +61,9 @@ Main implementation points:
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
 - `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses. Owner character lists load current keystones in one SQL query and include additive equipment/talents/Omnium JSON blocks.
 - `keystone-worker/src/routes/me.ts`: `GET /api/me/characters` exposes user characters.
+- Keystone Planner Block A stores JWT-owner-only per-character/spec play preferences in
+  `character_play_preferences`. `loot_spec_id` defaults to the played spec but may differ within
+  the same class; role is derived from the centralized Worker catalog and is not stored.
 - Battle.net Authentication V1 maps the official OIDC `sub` to the unchanged
   internal `users.id` through `user_identities`; BattleTag is display-only.
   Worker OAuth uses Authorization Code, cryptographic state, PKCE S256, and
@@ -142,6 +145,9 @@ Verified from checked-out files:
   `wow_item_metadata` is outside this lifecycle.
 - The root `KeystoneSync/` duplicate was removed in Phase 5. Phase 11 removed the remaining embedded Client addon bundle; do not recreate it without an explicit architecture change.
 - Deployment/release impact must be determined by `scripts/deploy_impact.py`, not by memory. Reporting remote impact does not authorize deployment, remote D1 migration, tag, release, or push.
+- Planner composition facts live in `keystone-worker/src/wowComposition.ts`: 40 current Retail
+  specs, class/role, conservative DPS physical/magical affinity, and unique capability providers.
+  Ambiguous hybrid affinity remains `null` until verified rather than being guessed.
 
 ## Known risks / ambiguities
 
@@ -155,6 +161,10 @@ Verified from checked-out files:
 The application layers use the verified Midnight Season 2 pool (challenge map IDs 588, 587, 586, 584, 585, 249, 250, and 399) and canonical Season 2 currency keys. The standalone addon release `v0.2.3` implements Interface 120100, Season 2 currencies, Prey quest IDs, Trovehunter's Bounty, and the compatible KeystoneLoot V1 snapshot contract.
 
 ## Next planned milestone
+
+Keystone Planner V1 Block A establishes migration `0010`, the Worker composition catalog, and
+JWT-only `GET/PUT /api/me/planner/preferences`. Block B is the next Planner phase and must add the
+pure composition solver without starting the Team endpoint, Top 3 response, or Web UI early.
 
 Stone Selector S1 added the backend-only aggregate route
 `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team

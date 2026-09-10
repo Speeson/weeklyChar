@@ -99,6 +99,14 @@ export type CharacterRow = {
   updated_at: string
 }
 
+export type CharacterPlayPreferenceRow = {
+  character_id: number
+  spec_id: number
+  play_preference: 'preferred' | 'available' | 'emergency' | 'disabled'
+  loot_spec_id: number
+  updated_at: string
+}
+
 export type KeystoneRow = {
   id: number
   character_id: number

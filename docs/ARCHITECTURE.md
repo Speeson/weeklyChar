@@ -119,6 +119,10 @@ Owns:
   `keystone-worker/src/keystoneObjectives.ts` and Blizzard item enrichment/cache in
   `keystone-worker/src/blizzardItemMetadata.ts`.
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
+- The centralized Planner composition domain in `keystone-worker/src/wowComposition.ts`, including
+  Retail specs, derived roles, conservative damage affinity, and unique capability providers.
+- JWT-only owner preference reads and atomic replacement writes at
+  `GET/PUT /api/me/planner/preferences`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
 - Wrangler deployment and D1 migration scripts.
 - Battle.net Authorization Code handling, PKCE/state verification, identity
@@ -138,11 +142,13 @@ Current production persistence.
 Owns:
 
 - Durable storage for users, characters, current keystone snapshots, teams, team members, invitations, and rate limits.
+- Owner-configured Planner preferences per character/spec, with character-delete cascade and no
+  duplicated role column.
 - Battle.net identity mappings keyed by provider `sub` and expiring OAuth
   transactions containing only hashed public-facing secrets; BattleTags are
   display metadata and provider tokens are never stored.
-- The schema history in `keystone-worker/migrations/0001_initial.sql`,
-  `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`.
+- The schema history in `keystone-worker/migrations/`, currently through
+  `0010_keystone_planner.sql`.
 
 Current database binding:
 
@@ -246,10 +252,8 @@ Local/deployment scripts are in `keystone-worker/package.json`:
 
 Production persistence is Cloudflare D1 database `keystone-sync`.
 
-The current schema is versioned through `keystone-worker/migrations/0001_initial.sql`
-and additive migrations `0002_keystone_loot.sql`, `0003_keystone_loot_sharing.sql`,
-`0004_keystone_loot_item_metadata.sql`, and
-`0005_keystone_loot_item_tooltip_metadata.sql`.
+The current schema is versioned through `keystone-worker/migrations/0001_initial.sql` and additive
+migrations through `0010_keystone_planner.sql`.
 
 ### Web
 
@@ -322,7 +326,7 @@ Rules:
 SavedVariables discovery: keystone-client/sidecar/wow_path.py
 SavedVariables parse/payload: keystone-client/sidecar/sync_worker.py
 Sync write endpoint: keystone-worker/src/routes/keystones.ts
-D1 schema: keystone-worker/migrations/0001_initial.sql + 0002_keystone_loot.sql + 0003_keystone_loot_sharing.sql
+D1 schema: keystone-worker/migrations/ (currently 0001 through 0010)
 Read response shaping: keystone-worker/src/db.ts
 User character reads: keystone-worker/src/routes/me.ts
 Team character reads: keystone-worker/src/routes/teams.ts

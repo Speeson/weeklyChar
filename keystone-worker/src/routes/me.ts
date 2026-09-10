@@ -6,7 +6,17 @@ import { charactersForUser, jsonDump } from '../db'
 import { enrichKeystoneLootObjectives } from '../blizzardItemMetadata'
 import { jsonError } from '../http'
 import { buildKeystoneLootObjectivePage } from '../keystoneObjectives'
-import type { CharacterRow, Env } from '../types'
+import {
+  parsePlannerPreferencePayload,
+  validatePlannerPreferenceDomain,
+} from '../plannerPreferences'
+import { wowSpecialization } from '../wowComposition'
+import type {
+  PlannerCharacterClass,
+  PlannerPreferenceDTO,
+  PlannerPreferenceInput,
+} from '../plannerPreferences'
+import type { CharacterPlayPreferenceRow, CharacterRow, Env } from '../types'
 
 export const meRoutes = new Hono<{ Bindings: Env }>()
 
@@ -45,6 +55,7 @@ type KeystoneLootResetRequest = {
 }
 
 const KEYSTONE_LOOT_RESET_REGIONS = new Set(['eu', 'us', 'kr', 'tw'])
+const PLANNER_PREFERENCE_INSERT_CHUNK = 25
 
 function isResponse(value: unknown): value is Response {
   return value instanceof Response
@@ -197,6 +208,80 @@ meRoutes.get('/api/me/characters', async c => {
     includeKeystoneLoot: true,
     includeCharacterSnapshots: true,
   }))
+})
+
+async function plannerPreferencesForUser(env: Env, userId: number): Promise<PlannerPreferenceDTO[]> {
+  const result = await env.DB.prepare(`
+    SELECT cpp.character_id, cpp.spec_id, cpp.play_preference, cpp.loot_spec_id, cpp.updated_at
+    FROM character_play_preferences cpp
+    INNER JOIN characters c ON c.id = cpp.character_id
+    WHERE c.user_id = ?
+    ORDER BY cpp.character_id, cpp.spec_id
+  `).bind(userId).all<CharacterPlayPreferenceRow>()
+
+  return result.results.map(row => {
+    const specialization = wowSpecialization(row.spec_id)
+    if (!specialization) throw new Error(`Planner preference references unknown spec ${row.spec_id}`)
+    return {
+      characterId: row.character_id,
+      specId: row.spec_id,
+      role: specialization.role,
+      playPreference: row.play_preference,
+      lootSpecId: row.loot_spec_id,
+      updatedAt: row.updated_at,
+    }
+  })
+}
+
+meRoutes.get('/api/me/planner/preferences', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+  return c.json({ preferences: await plannerPreferencesForUser(c.env, currentUser.id) })
+})
+
+meRoutes.put('/api/me/planner/preferences', async c => {
+  const currentUser = await getCurrentUser(c)
+  if (isResponse(currentUser)) return currentUser
+
+  const payload = await c.req.json<unknown>().catch(() => null)
+  let preferences: PlannerPreferenceInput[]
+  try {
+    preferences = parsePlannerPreferencePayload(payload)
+  } catch (error) {
+    return jsonError(c, 400, error instanceof Error ? error.message : 'Preferencias no válidas')
+  }
+  const characters = await c.env.DB.prepare(`
+    SELECT id, wow_class
+    FROM characters
+    WHERE user_id = ?
+    ORDER BY id
+  `).bind(currentUser.id).all<PlannerCharacterClass>()
+  try {
+    validatePlannerPreferenceDomain(preferences, characters.results)
+  } catch (error) {
+    return jsonError(c, 400, error instanceof Error ? error.message : 'Preferencias no válidas')
+  }
+
+  const statements: D1PreparedStatement[] = [c.env.DB.prepare(`
+    DELETE FROM character_play_preferences
+    WHERE character_id IN (SELECT id FROM characters WHERE user_id = ?)
+  `).bind(currentUser.id)]
+  for (let offset = 0; offset < preferences.length; offset += PLANNER_PREFERENCE_INSERT_CHUNK) {
+    const chunk = preferences.slice(offset, offset + PLANNER_PREFERENCE_INSERT_CHUNK)
+    const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO character_play_preferences (
+        character_id, spec_id, play_preference, loot_spec_id
+      ) VALUES ${placeholders}
+    `).bind(...chunk.flatMap(preference => [
+      preference.characterId,
+      preference.specId,
+      preference.playPreference,
+      preference.lootSpecId,
+    ])))
+  }
+  await c.env.DB.batch(statements)
+  return c.json({ preferences: await plannerPreferencesForUser(c.env, currentUser.id) })
 })
 
 meRoutes.get('/api/me/characters/:characterId/keystone-loot/objectives', async c => {

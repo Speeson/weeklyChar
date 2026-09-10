@@ -31,9 +31,8 @@ Primary files:
 - Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
-- D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`,
-  `0003_keystone_loot_sharing.sql`, `0004_keystone_loot_item_metadata.sql`, and
-  `0005_keystone_loot_item_tooltip_metadata.sql`
+- D1 schema: `keystone-worker/migrations/`, currently through
+  `0010_keystone_planner.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -384,10 +383,8 @@ Write response:
 
 ## D1 Storage Contract
 
-Schema source: `keystone-worker/migrations/0001_initial.sql` plus additive migrations
-`keystone-worker/migrations/0002_keystone_loot.sql` and
-`keystone-worker/migrations/0003_keystone_loot_sharing.sql`, and
-`keystone-worker/migrations/0004_keystone_loot_item_metadata.sql`.
+Schema source: `keystone-worker/migrations/`, currently through the additive
+`0010_keystone_planner.sql` migration.
 
 Tables:
 
@@ -401,6 +398,7 @@ Tables:
 | `team_invitations` | Pending/accepted/declined invitations. |
 | `rate_limits` | Rate-limit attempt JSON by key. |
 | `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced safe display and tooltip metadata. |
+| `character_play_preferences` | Owner-authored Planner state per character/spec; role remains derived. |
 
 Character sync columns:
 
@@ -748,6 +746,57 @@ below real values. Member statuses are `recommended`, `sharing_disabled`,
 Recommendation responses contain character display fields, `specId`, score, and summary
 counts only. They never contain favorites, item IDs/modifiers, `voidcore.usedItems`, or
 raw `keystoneLoot`. Owner `/api/me/characters` access is unchanged when sharing is off.
+
+## Planner Preference Contract
+
+Planner play preferences are owner-authored application data. They do not originate in the addon,
+SavedVariables, or KeystoneClient sync payload, and they do not change the
+`shareKeystoneLootWithTeams` privacy contract.
+
+Migration `0010_keystone_planner.sql` adds `character_play_preferences`:
+
+| Column | Contract |
+| --- | --- |
+| `character_id` | FK to `characters.id`, cascades on character deletion; first half of the PK. |
+| `spec_id` | Positive Retail specialization ID; second half of the PK. |
+| `play_preference` | Exactly `preferred`, `available`, `emergency`, or `disabled`. |
+| `loot_spec_id` | Positive Retail specialization ID used later for loot evaluation. |
+| `updated_at` | D1-generated UTC timestamp. |
+
+Role is intentionally absent from D1 and is derived from `spec_id` through the Worker-owned
+`wowComposition.ts` catalog. Both `spec_id` and `loot_spec_id` must belong to the character's
+canonical `wow_class`. When the request omits `lootSpecId`, the write contract stores
+`lootSpecId = specId`.
+
+Owner endpoints:
+
+- `GET /api/me/planner/preferences` requires a KeystoneSync access JWT and returns
+  `{ preferences: PlannerPreference[] }` in `(characterId, specId)` order. No rows is a normal
+  `200` response with an empty array.
+- `PUT /api/me/planner/preferences` requires a KeystoneSync access JWT and a strict
+  `{ preferences: [...] }` document. It is full replacement, including `[]` to clear all owner
+  rows. The full payload is validated before a transactional D1 batch replaces only rows belonging
+  to the authenticated owner's characters.
+- Sync-token authentication is not accepted. Foreign characters, invalid class/spec or loot-spec
+  pairs, invalid states, duplicates, unknown fields, unsafe IDs, missing character class, and
+  malformed JSON are rejected without changing persisted preferences.
+
+Each response preference is:
+
+```ts
+{
+  characterId: number
+  specId: number
+  role: 'tank' | 'healer' | 'dps'
+  playPreference: 'preferred' | 'available' | 'emergency' | 'disabled'
+  lootSpecId: number
+  updatedAt: string
+}
+```
+
+The Worker catalog also centralizes capability identities/providers and a conservative DPS-only
+`physical`/`magical` affinity. Hybrid or patch-sensitive specs may have `damageProfile: null`; no
+percentage or affinity is inferred. No solver or Team Planner read exists in Block A.
 
 ## Web Consumption Contract
 
