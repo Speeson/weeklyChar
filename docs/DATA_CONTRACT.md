@@ -796,7 +796,35 @@ Each response preference is:
 
 The Worker catalog also centralizes capability identities/providers and a conservative DPS-only
 `physical`/`magical` affinity. Hybrid or patch-sensitive specs may have `damageProfile: null`; no
-percentage or affinity is inferred. No solver or Team Planner read exists in Block A.
+percentage or affinity is inferred.
+
+## Planner Solver Domain Contract
+
+`keystone-worker/src/keystonePlanner.ts` is a pure domain boundary. It receives 2–5 unique
+participant IDs, target level 1–20, normalized candidate assignments, stones, options, and optional
+assignment/character/role locks. Candidates contain separate played `specId` and `lootSpecId` plus
+already privacy-filtered objectives. Consequently, an empty objective list contributes zero loot
+without the solver reading raw KeystoneLoot or knowing the sharing setting.
+
+Played role, class, damage affinity, and capabilities are derived from the Worker catalog. The
+solver enforces one assignment per selected user, exact stone owner character, and a complete or
+completable 1 tank / 1 healer / 3 DPS shape. Disabled candidates are excluded. Unknown or absent
+playable candidates produce `unconfiguredUserIds`; contradictory locks are `invalid_input`, and a
+validly configured search with no solution is `no_valid_composition`.
+
+Loot filtering requires played assignment `lootSpecId`, `sourceType = dungeon`, an exact numeric
+challenge map ID, and a non-completed Voidcore state. Identity is source namespace + typed source
+ID + item ID + `variantKey`, matching Selector exact-variant behavior. Ranking is hierarchical:
+weighted shared tier score, players with objectives, target-level distance, structured preference
+counts, enabled utilities, known tier counts, then stable numeric stone/assignment identity. No
+coverage bonus is added to the weighted score.
+
+Output contains at most three ranked recommendations with stone, assignments, role vacancies,
+loot/level/preference/composition summaries, stable fingerprint, and reason codes. Capability
+aggregation is unique while member providers remain visible. Availability supports `guaranteed`,
+`conditional`, and `none`; Hunter-only Bloodlust is conditional. Null DPS affinity remains neutral.
+Block B adds no HTTP route, D1 read adapter, authorization logic, or schema change; those remain for
+Block C.
 
 ## Web Consumption Contract
 

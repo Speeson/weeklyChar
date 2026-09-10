@@ -121,6 +121,8 @@ Owns:
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
 - The centralized Planner composition domain in `keystone-worker/src/wowComposition.ts`, including
   Retail specs, derived roles, conservative damage affinity, and unique capability providers.
+- The pure deterministic Planner solver in `keystone-worker/src/keystonePlanner.ts`, including
+  holder-aware role-constrained search, loot/preference/utility ranking, locks, vacancies, and Top 3.
 - JWT-only owner preference reads and atomic replacement writes at
   `GET/PUT /api/me/planner/preferences`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.

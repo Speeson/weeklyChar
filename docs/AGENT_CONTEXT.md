@@ -148,6 +148,9 @@ Verified from checked-out files:
 - Planner composition facts live in `keystone-worker/src/wowComposition.ts`: 40 current Retail
   specs, class/role, conservative DPS physical/magical affinity, and unique capability providers.
   Ambiguous hybrid affinity remains `null` until verified rather than being guessed.
+- Planner solving lives in the pure `keystone-worker/src/keystonePlanner.ts` domain boundary. It
+  consumes normalized privacy-filtered inputs, enforces holder and 1/1/3 constraints, and ranks a
+  deterministic Top 3 without D1, Hono, authorization, or presentation copy.
 
 ## Known risks / ambiguities
 
@@ -162,9 +165,10 @@ The application layers use the verified Midnight Season 2 pool (challenge map ID
 
 ## Next planned milestone
 
-Keystone Planner V1 Block A establishes migration `0010`, the Worker composition catalog, and
-JWT-only `GET/PUT /api/me/planner/preferences`. Block B is the next Planner phase and must add the
-pure composition solver without starting the Team endpoint, Top 3 response, or Web UI early.
+Keystone Planner V1 Blocks A and B establish migration `0010`, the Worker composition catalog,
+JWT-only `GET/PUT /api/me/planner/preferences`, and the pure deterministic solver. Block C is the
+next Planner phase and must adapt authorized Team/D1/KeystoneLoot data into the normalized solver
+input and expose the Team endpoint without moving solver logic into routes or Web.
 
 Stone Selector S1 added the backend-only aggregate route
 `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team
