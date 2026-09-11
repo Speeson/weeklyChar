@@ -10,6 +10,7 @@ build/
 dist/
 *.spec
 keystone-client/installer/output/
+keystone-client/artifacts/
 .tmp/
 
 # Python
@@ -37,6 +38,12 @@ keystone-worker/.tmp-test/
 
 # Claude memory
 .claude/
+.playwright-mcp/
+.superpowers/
+
+# Local visual QA captures
+keystone-client/tauri-current-characters.png
+keystone-planner-qa-*.png
 
 # OS
 .DS_Store

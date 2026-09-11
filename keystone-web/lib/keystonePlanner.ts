@@ -252,7 +252,7 @@ function parseAssignment(value: unknown): PlannerAssignment | null {
 }
 
 function parseRecommendation(value: unknown): PlannerRecommendation | null {
-  if (!record(value) || !integer(value.rank, 1) || value.rank > 3 || !nonEmptyString(value.fingerprint)
+  if (!record(value) || !integer(value.rank, 1) || value.rank > 5 || !nonEmptyString(value.fingerprint)
     || !record(value.stone) || !integer(value.stone.characterId, 1) || !nonEmptyString(value.stone.characterName, 128)
     || !integer(value.stone.ownerUserId, 1) || !nonEmptyString(value.stone.ownerUsername, 128)
     || !integer(value.stone.challengeMapId, 1) || !nonEmptyString(value.stone.dungeon, 256) || !integer(value.stone.level, 1)
@@ -302,7 +302,7 @@ export function parseKeystonePlannerResponse(
     || !value.diagnostics.lockIssues.every(issue => nonEmptyString(issue, 512))
     || !Array.isArray(value.recommendations)) return null
   const recommendations = value.recommendations.map(parseRecommendation)
-  if (recommendations.some(item => item === null) || recommendations.length > 3) return null
+  if (recommendations.some(item => item === null) || recommendations.length > 5) return null
   return { ...value, recommendations } as KeystonePlannerResponse
 }
 

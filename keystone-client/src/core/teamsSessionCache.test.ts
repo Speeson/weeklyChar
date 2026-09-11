@@ -32,6 +32,9 @@ function source(overrides: Partial<TeamsDataSource> = {}): TeamsDataSource {
     listTeams: vi.fn(async () => teams),
     getTeam: vi.fn(async () => detail),
     getKeystoneSelector: vi.fn(async () => selector),
+    getKeystonePlanner: vi.fn(async () => { throw new Error("Unused Planner mock"); }),
+    getPlannerPreferences: vi.fn(async () => ({ preferences: [] })),
+    updatePlannerPreferences: vi.fn(async () => ({ preferences: [] })),
     ...overrides,
   };
 }

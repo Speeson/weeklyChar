@@ -204,6 +204,9 @@ test('Planner request validation rejects counts, duplicates, targets, options an
     body({ options: { ...options, extra: false } }),
     body({ extra: true }),
     body({ challengeMapId: 251 }),
+    body({ stoneCharacterId: 0 }),
+    body({ stoneCharacterId: 10 }),
+    body({ challengeMapId: 249, stoneCharacterId: true }),
   ]
   for (const payload of invalidPayloads) {
     const response = await plan(fixture(), payload)
@@ -218,6 +221,7 @@ test('Planner request validation rejects counts, duplicates, targets, options an
   delete optionalFields.challengeMapId
   delete optionalFields.locks
   assert.equal((await plan(fixture(), optionalFields)).status, 200)
+  assert.equal((await plan(fixture(), body({ challengeMapId: 249, stoneCharacterId: null }))).status, 200)
   assert.equal((await plan(fixture(), body({
     participantUserIds: [1, 2],
     locks: Array.from({ length: 15 }, () => ({ type: 'role', userId: 1, role: 'tank' })),
@@ -312,6 +316,33 @@ test('current-stone query uses latest same-week participant stones and applies d
   result = await (await plan(env, body({ challengeMapId: 399 }))).json()
   assert.equal(result.availability.eligibleStoneCount, 1)
   assert.ok(result.recommendations.every(entry => entry.stone.challengeMapId === 399))
+})
+
+test('exact-stone selection plans only the chosen current owner character', async () => {
+  const env = fixture()
+  env.DB.keystones = [keystone(1, 10, 249, 10), keystone(2, 20, 249, 12)]
+
+  let response = await plan(env, body({ challengeMapId: 249, stoneCharacterId: 20, targetLevel: 12 }))
+  let result = await response.json()
+  assert.equal(response.status, 200)
+  assert.equal(result.status, 'ok')
+  assert.equal(result.availability.eligibleStoneCount, 1)
+  assert.ok(result.recommendations.length > 0)
+  assert.ok(result.recommendations.every(entry => entry.stone.characterId === 20 && entry.stone.level === 12))
+  assert.ok(result.recommendations.every(entry => entry.assignments.some(
+    assignment => assignment.userId === 2 && assignment.characterId === 20,
+  )))
+
+  response = await plan(env, body({ challengeMapId: 249, stoneCharacterId: 999, targetLevel: 12 }))
+  result = await response.json()
+  assert.equal(response.status, 200)
+  assert.equal(result.availability.eligibleStoneCount, 0)
+  assert.deepEqual(result.recommendations, [])
+
+  response = await plan(env, body({ challengeMapId: 249, stoneCharacterId: 20, targetLevel: 11 }))
+  result = await response.json()
+  assert.equal(response.status, 200)
+  assert.equal(result.availability.eligibleStoneCount, 0)
 })
 
 test('zero stones and a selected dungeon without stones are HTTP 200 domain states', async () => {
@@ -413,7 +444,7 @@ test('public output enriches items and central capability metadata without expos
   ).objectives[0].itemName, null)
 })
 
-test('metadata enrichment deduplicates Top 3 items and chunks large batches instead of N+1 reads', async () => {
+test('metadata enrichment deduplicates Top 5 items and chunks large batches instead of N+1 reads', async () => {
   const env = fixture()
   env.DB.characters.find(entry => entry.id === 10).keystone_loot_json = JSON.stringify(supported(
     Array.from({ length: 101 }, (_, index) => favorite(index + 1, 1)),
@@ -435,13 +466,13 @@ test('Devourer remains Demon Hunter and null affinity remains solver-owned', asy
   assert.equal(devourer.specId, 1480)
 })
 
-test('endpoint returns deterministic Top 3 with holder binding, level and utilities intact', async () => {
+test('endpoint returns deterministic Top 5 with holder binding, level and utilities intact', async () => {
   const env = fixture()
-  env.DB.keystones.push(keystone(2, 20, 250, 11), keystone(3, 30, 399, 12), keystone(4, 40, 584, 13))
+  env.DB.keystones.push(keystone(2, 20, 250, 11), keystone(3, 30, 399, 12), keystone(4, 40, 584, 13), keystone(5, 50, 585, 14))
   const firstResponse = await (await plan(env, body({ targetLevel: 11 }))).json()
   const secondResponse = await (await plan(env, body({ targetLevel: 11 }))).json()
-  assert.equal(firstResponse.recommendations.length, 3)
-  assert.deepEqual(firstResponse.recommendations.map(entry => entry.stone.level), [10, 11, 12])
+  assert.equal(firstResponse.recommendations.length, 5)
+  assert.deepEqual(firstResponse.recommendations.map(entry => entry.stone.level), [10, 11, 12, 13, 14])
   assert.ok(firstResponse.recommendations.every(entry => entry.assignments.some(
     assignment => assignment.userId === entry.stone.ownerUserId
       && assignment.characterId === entry.stone.characterId,

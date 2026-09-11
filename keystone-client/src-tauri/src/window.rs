@@ -195,6 +195,7 @@ mod tests {
         let config = include_str!("../tauri.conf.json");
         let value: serde_json::Value = serde_json::from_str(config).unwrap();
         assert_eq!(value["app"]["windows"][0]["decorations"], false);
+        assert_eq!(value["app"]["windows"][0]["dragDropEnabled"], false);
         assert_eq!(CLOSE_REQUESTED_EVENT, "keystone://close-requested");
 
         for icon in value["bundle"]["icon"].as_array().unwrap() {

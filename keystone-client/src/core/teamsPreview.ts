@@ -1,8 +1,10 @@
 import type { TeamsDataSource } from "./teams";
 import type {
-  ClientTeamDetail, ClientTeamSummary, KeystoneSelectorObjective, KeystoneSelectorResponse,
-  KeystoneSelectorTierCounts,
+  ClientPlannerPreferences, ClientTeamDetail, ClientTeamSummary, KeystoneSelectorObjective, KeystoneSelectorResponse,
+  KeystoneSelectorTierCounts, KeystonePlannerAssignment, KeystonePlannerRecommendation,
+  KeystonePlannerRequest, KeystonePlannerResponse, KeystonePlannerRole,
 } from "./types";
+import { WOW_SPECIALIZATIONS } from "./wowSpecs";
 
 const tiers = (overrides: Partial<KeystoneSelectorTierCounts> = {}): KeystoneSelectorTierCounts => ({
   bestInSlot: 0, mustHave: 0, niceToHave: 0, catalyst: 0, transmog: 0, other: 0, ...overrides,
@@ -24,29 +26,29 @@ const fourthTeam: ClientTeamSummary = { id: 10, name: "Alter Team Semanal con no
 
 const primaryDetail: ClientTeamDetail = {
   id: 7, name: primaryTeam.name, members: [
-    { userId: 1, username: "Speeson", characters: [
+    { userId: 1, username: "Speeson", plannerConfigured: true, characters: [
       { characterId: 10, name: "Bakuhatsu", realm: "Zul'jin", region: "eu", wowClass: "Mage", avatarUrl: null, ilvl: 318, rioScore: 3280, currentKeystone: { level: 12, challengeMapId: 399, dungeon: "Ruby Life Pools" } },
       { characterId: 11, name: "Makabe", realm: "Zul'jin", region: "eu", wowClass: "Warrior", avatarUrl: null, ilvl: 315, rioScore: 3100, currentKeystone: { level: 10, challengeMapId: 250, dungeon: "Temple of Sethraliss" } },
     ] },
-    { userId: 2, username: "GuardianaDeLosSecretosDelVacío", characters: [
+    { userId: 2, username: "GuardianaDeLosSecretosDelVacío", plannerConfigured: true, characters: [
       { characterId: 12, name: "Auralisdelaluzeterna", realm: "Dun Modr", region: "eu", wowClass: "Paladin", avatarUrl: null, ilvl: 312, rioScore: 2990, currentKeystone: { level: 9, challengeMapId: 399, dungeon: "Ruby Life Pools" } },
     ] },
-    { userId: 3, username: "Ana", characters: [
+    { userId: 3, username: "Ana", plannerConfigured: true, characters: [
       { characterId: 13, name: "Leafsong", realm: "Sanguino", region: "eu", wowClass: "Druid", avatarUrl: null, ilvl: 309, rioScore: 2800, currentKeystone: { level: 8, challengeMapId: 585, dungeon: "Voidscar Arena" } },
     ] },
-    { userId: 4, username: "Voidwalker", characters: [
+    { userId: 4, username: "Voidwalker", plannerConfigured: true, characters: [
       { characterId: 14, name: "Umbrael", realm: "Minahonda", region: "eu", wowClass: "Warlock", avatarUrl: null, ilvl: 305, rioScore: 2600, currentKeystone: null },
     ] },
-    { userId: 5, username: "Frostbyte", characters: [
+    { userId: 5, username: "Frostbyte", plannerConfigured: true, characters: [
       { characterId: 15, name: "Glaciera", realm: "Exodar", region: "eu", wowClass: "Shaman", avatarUrl: null, ilvl: 303, rioScore: 2500, currentKeystone: { level: 7, challengeMapId: 588, dungeon: "Altar of Fangs" } },
     ] },
-    { userId: 6, username: "Nightshift", characters: [
+    { userId: 6, username: "Nightshift", plannerConfigured: true, characters: [
       { characterId: 16, name: "Nocturna", realm: "C'Thun", region: "eu", wowClass: "Priest", avatarUrl: null, ilvl: 301, rioScore: 2420, currentKeystone: null },
     ] },
-    { userId: 7, username: "Ironforge", characters: [
+    { userId: 7, username: "Ironforge", plannerConfigured: true, characters: [
       { characterId: 17, name: "Cogspinner", realm: "Dun Modr", region: "eu", wowClass: "Rogue", avatarUrl: null, ilvl: 300, rioScore: 2390, currentKeystone: null },
     ] },
-    { userId: 8, username: "Moonkeeper", characters: [
+    { userId: 8, username: "Moonkeeper", plannerConfigured: true, characters: [
       { characterId: 18, name: "Lunarglade", realm: "Sanguino", region: "eu", wowClass: "Hunter", avatarUrl: null, ilvl: 298, rioScore: 2310, currentKeystone: null },
     ] },
   ],
@@ -86,6 +88,62 @@ const fullSelector: KeystoneSelectorResponse = {
   ],
 };
 
+function plannerAssignment(userId: number, username: string, characterId: number, characterName: string, wowClass: string, specId: number, role: KeystonePlannerRole, itemId: number): KeystonePlannerAssignment {
+  const objectiveTiers = characterId === 10 ? [3, 2, 1, 5, 4, 88, 3] : [itemId % 3 === 0 ? 3 : 2];
+  return {
+    userId, username, characterId, characterName, wowClass, specId, role, lootSpecId: specId,
+    playPreference: "preferred",
+    objectives: objectiveTiers.map((tier, index) => ({ itemId: itemId + index, itemName: `Eco de Medianoche ${itemId + index}`, iconUrl: null, tier, variantKey: `planner:${itemId + index}`, voidcoreState: "pending" })),
+    capabilities: [],
+  };
+}
+
+const previewPlannerParty: KeystonePlannerAssignment[] = [
+  plannerAssignment(2, "GuardianaDeLosSecretosDelVacío", 12, "Auralisdelaluzeterna", "Paladin", 66, "tank", 241002),
+  plannerAssignment(6, "Nightshift", 16, "Nocturna", "Priest", 257, "healer", 241006),
+  plannerAssignment(1, "Speeson", 10, "Bakuhatsu", "Mage", 62, "dps", 241001),
+  plannerAssignment(4, "Voidwalker", 14, "Umbrael", "Warlock", 267, "dps", 241004),
+  { ...plannerAssignment(7, "Ironforge", 17, "Cogspinner", "Rogue", 260, "dps", 241007), objectives: [] },
+];
+
+let previewPreferences: ClientPlannerPreferences = { preferences: [
+  { characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" },
+  { characterId: 10, specId: 63, role: "dps", playPreference: "available", lootSpecId: 63, updatedAt: "2026-09-11T00:00:00Z" },
+] };
+
+function previewPlannerRecommendation(rank: number, request: KeystonePlannerRequest): KeystonePlannerRecommendation {
+  const stone = fullSelector.availability.stones.find(item => item.characterId === request.stoneCharacterId) ?? fullSelector.availability.stones[0];
+  return {
+    rank, fingerprint: `preview-${rank}-${stone.characterId}`,
+    stone: { ...stone, challengeMapId: request.challengeMapId, dungeon: "Ruby Life Pools" },
+    assignments: previewPlannerParty, vacancies: [],
+    lootSummary: { weightedScore: 128 - rank * 7, playersWithObjectives: 5, totalObjectives: previewPlannerParty.reduce((total, assignment) => total + assignment.objectives.length, 0), tierCounts: { bestInSlot: 2, mustHave: 3, niceToHave: 1, catalyst: 1, transmog: 1 } },
+    levelSummary: { targetLevel: request.targetLevel, stoneLevel: stone.level, levelDistance: Math.abs(request.targetLevel - stone.level) },
+    preferenceSummary: { preferred: 5, available: 0, emergency: 0 },
+    compositionSummary: {
+      bloodlust: "guaranteed", battleRez: "guaranteed", damageProfile: "mixed",
+      magicalDpsCount: 2, physicalDpsCount: 1, unknownDpsCount: 0, chaosBrandBeneficiaries: 2,
+      mysticTouchBeneficiaries: 1, uniqueClassBuffCount: 2,
+      uniqueCapabilities: [
+        { capabilityId: "bloodlust", name: "Ansia de sangre", type: "major_utility", iconSpellId: 2825, stacking: "unique", availability: "guaranteed" },
+        { capabilityId: "battle_rez", name: "Resurrección en combate", type: "major_utility", iconSpellId: 20484, stacking: "unique", availability: "guaranteed" },
+        { capabilityId: "arcane_intellect", name: "Intelecto Arcano", type: "class_buff", iconSpellId: 1459, stacking: "unique", availability: "guaranteed" },
+        { capabilityId: "power_word_fortitude", name: "Palabra de poder: entereza", type: "class_buff", iconSpellId: 21562, stacking: "unique", availability: "guaranteed" },
+      ],
+    },
+    reasonCodes: ["PARTY_COMPLETE", "HAS_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT", "BLOODLUST_GUARANTEED", "BATTLE_REZ_PRESENT"],
+  };
+}
+
+function previewPlanner(request: KeystonePlannerRequest): KeystonePlannerResponse {
+  return {
+    teamId: 7, challengeMapId: request.challengeMapId, targetLevel: request.targetLevel,
+    availability: { eligibleStoneCount: 1 }, status: "ok",
+    diagnostics: { codes: [], unconfiguredUserIds: [], lockIssues: [] },
+    recommendations: [1, 2, 3, 4, 5].map(rank => previewPlannerRecommendation(rank, request)),
+  };
+}
+
 function selectorForDungeon(challengeMapId: number, language: "es" | "en"): KeystoneSelectorResponse {
   const localized = language === "en"
     ? {
@@ -120,12 +178,24 @@ export function getTeamsPreviewDataSource(): TeamsDataSource | null {
     listTeams: async () => scenario === "teams-cold-loading"
       ? new Promise<ClientTeamSummary[]>(() => undefined)
       : list,
-    getTeam: async teamId => teamId === 8 ? secondDetail : primaryDetail,
+    getTeam: async teamId => teamId === 8 ? secondDetail : scenario === "teams-planner-unconfigured"
+      ? { ...primaryDetail, members: primaryDetail.members.map(member => member.userId === 1 ? { ...member, username: "Spee", plannerConfigured: false, characters: member.characters.map((character, index) => index === 0 ? { ...character, wowClass: "Druid" } : character) } : member) }
+      : primaryDetail,
     getKeystoneSelector: async (_teamId, challengeMapId) => {
       if (scenario === "teams-selector-loading") return new Promise<KeystoneSelectorResponse>(() => undefined);
       if (scenario === "teams-selector-error") throw { code: "API_UNAVAILABLE", message: "La API no está disponible." };
       if (scenario === "teams-selector-empty") return selectorForDungeon(challengeMapId, language);
       return selectorForDungeon(challengeMapId, language);
+    },
+    getKeystonePlanner: async (_teamId, request) => previewPlanner(request),
+    getPlannerPreferences: async () => scenario === "teams-planner-unconfigured" ? { preferences: [] } : previewPreferences,
+    updatePlannerPreferences: async preferences => {
+      previewPreferences = { preferences: preferences.map(preference => ({
+        ...preference,
+        role: WOW_SPECIALIZATIONS.find(spec => spec.id === preference.specId)?.role ?? "dps",
+        updatedAt: "2026-09-11T00:00:00Z",
+      })) };
+      return previewPreferences;
     },
   };
 }
@@ -133,4 +203,5 @@ export function getTeamsPreviewDataSource(): TeamsDataSource | null {
 export const TEAMS_PREVIEW_SCENARIOS = [
   "teams-default", "teams-cold-loading", "teams-multiple", "teams-empty", "teams-selector-full", "teams-selector-multispec",
   "teams-selector-empty", "teams-selector-loading", "teams-selector-error",
+  "teams-planner", "teams-planner-unconfigured",
 ] as const;

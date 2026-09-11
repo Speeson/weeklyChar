@@ -24,7 +24,7 @@ export async function corsMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     c.header('Vary', 'Origin')
   }
 
-  c.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+  c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   c.header('Access-Control-Allow-Headers', 'Authorization,Content-Type')
 
   if (c.req.method === 'OPTIONS') {

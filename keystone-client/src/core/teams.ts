@@ -1,4 +1,6 @@
 import { coreRequest } from "./client";
+import { getKeystonePlanner } from "./keystonePlanner";
+import { getPlannerPreferences, updatePlannerPreferences } from "./plannerPreferences";
 import type {
   ClientTeamCharacter, ClientTeamDetail, ClientTeamMember, ClientTeamSummary, CoreError,
   KeystoneSelectorCharacter, KeystoneSelectorObjective, KeystoneSelectorResponse,
@@ -9,9 +11,15 @@ export type TeamsDataSource = {
   listTeams: typeof listTeams;
   getTeam: typeof getTeam;
   getKeystoneSelector: typeof getKeystoneSelector;
+  getKeystonePlanner: typeof getKeystonePlanner;
+  getPlannerPreferences: typeof getPlannerPreferences;
+  updatePlannerPreferences: typeof updatePlannerPreferences;
 };
 
-export const liveTeamsDataSource: TeamsDataSource = { listTeams, getTeam, getKeystoneSelector };
+export const liveTeamsDataSource: TeamsDataSource = {
+  listTeams, getTeam, getKeystoneSelector, getKeystonePlanner,
+  getPlannerPreferences, updatePlannerPreferences,
+};
 
 export type SelectorObjectiveGroup = {
   key: "bestInSlot" | "mustHave" | "niceToHave" | "catalyst" | "transmog" | "other";
@@ -110,9 +118,12 @@ function parseTeamCharacter(value: unknown): ClientTeamCharacter | null {
 function parseTeamMember(value: unknown): ClientTeamMember | null {
   if (!object(value) || !positive(value.userId) || !text(value.username, 128)
     || !Array.isArray(value.characters) || value.characters.length > 2000) return null;
+  const plannerConfigured = value.plannerConfigured === undefined ? true : value.plannerConfigured;
+  if (typeof plannerConfigured !== "boolean") return null;
   const characters = value.characters.map(parseTeamCharacter);
   if (characters.some(item => item === null)) return null;
-  return { userId: value.userId, username: value.username, characters: characters as ClientTeamCharacter[] };
+  return { userId: value.userId, username: value.username, plannerConfigured,
+    characters: characters as ClientTeamCharacter[] };
 }
 
 export function parseTeamList(value: unknown): ClientTeamSummary[] | null {

@@ -29,6 +29,7 @@ export type KeystonePlannerPublicRequest = {
   participantUserIds: number[]
   targetLevel: number
   challengeMapId: number | null
+  stoneCharacterId: number | null
   options: PlannerOptions
   locks: PlannerLock[]
 }
@@ -81,7 +82,9 @@ export function assertPlannerDataLimit(
   if (count > PLANNER_LIMITS[limit]) throw new PlannerDataLimitError(limit)
 }
 
-const REQUEST_KEYS = new Set(['participantUserIds', 'targetLevel', 'challengeMapId', 'options', 'locks'])
+const REQUEST_KEYS = new Set([
+  'participantUserIds', 'targetLevel', 'challengeMapId', 'stoneCharacterId', 'options', 'locks',
+])
 const OPTION_KEYS = new Set(['optimizeComposition', 'bloodlust', 'battleRez', 'classBuffs', 'damageSynergy'])
 const ROLE_SET = new Set<WowRole>(['tank', 'healer', 'dps'])
 const CAPABILITY_BY_ID = new Map(WOW_CAPABILITIES.map(capability => [capability.id, capability]))
@@ -169,6 +172,15 @@ export function parseKeystonePlannerRequest(value: unknown): KeystonePlannerPubl
     && (!positiveSafeInteger(challengeMapId) || !isSupportedSeason2Dungeon(challengeMapId))) {
     throw new Error('challengeMapId no pertenece al pool actual')
   }
+  const stoneCharacterId = value.stoneCharacterId === undefined || value.stoneCharacterId === null
+    ? null
+    : value.stoneCharacterId
+  if (stoneCharacterId !== null && !positiveSafeInteger(stoneCharacterId)) {
+    throw new Error('stoneCharacterId debe ser un entero positivo')
+  }
+  if (stoneCharacterId !== null && challengeMapId === null) {
+    throw new Error('stoneCharacterId requiere challengeMapId')
+  }
   const options = parseOptions(value.options)
   const rawLocks = value.locks === undefined ? [] : value.locks
   if (!Array.isArray(rawLocks) || rawLocks.length > PLANNER_LIMITS.locks) {
@@ -179,6 +191,7 @@ export function parseKeystonePlannerRequest(value: unknown): KeystonePlannerPubl
     participantUserIds: [...participantUserIds],
     targetLevel: Number(value.targetLevel),
     challengeMapId,
+    stoneCharacterId,
     options,
     locks: rawLocks.map(lock => parseLock(lock, participants)),
   }
@@ -216,11 +229,13 @@ async function plannerStones(
   teamId: number,
   request: KeystonePlannerPublicRequest,
 ): Promise<PlannerStone[]> {
-  const filter = request.challengeMapId === null ? '' : 'AND rk.keystone_challenge_map_id = ?'
+  const dungeonFilter = request.challengeMapId === null ? '' : 'AND rk.keystone_challenge_map_id = ?'
+  const characterFilter = request.stoneCharacterId === null ? '' : 'AND c.id = ? AND rk.keystone_level = ?'
   const bindings: unknown[] = [
     currentEuWeeklyResetUnix(), teamId, ...request.participantUserIds,
   ]
   if (request.challengeMapId !== null) bindings.push(request.challengeMapId)
+  if (request.stoneCharacterId !== null) bindings.push(request.stoneCharacterId, request.targetLevel)
   const { results } = await env.DB.prepare(`
     WITH ranked_keystones AS (
       SELECT k.*, ROW_NUMBER() OVER (
@@ -246,7 +261,8 @@ async function plannerStones(
     JOIN ranked_keystones rk ON rk.character_id = c.id AND rk.keystone_rank = 1
     WHERE tm.team_id = ?
       AND u.id IN (${placeholders(request.participantUserIds)})
-      ${filter}
+      ${dungeonFilter}
+      ${characterFilter}
     ORDER BY rk.keystone_challenge_map_id, u.id, c.id
   `).bind(...bindings).all<PlannerStoneRow>()
 

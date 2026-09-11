@@ -819,7 +819,7 @@ weighted shared tier score, players with objectives, target-level distance, stru
 counts, enabled utilities, known tier counts, then stable numeric stone/assignment identity. No
 coverage bonus is added to the weighted score.
 
-Output contains at most three ranked recommendations with stone, assignments, role vacancies,
+Output contains at most five ranked recommendations with stone, assignments, role vacancies,
 loot/level/preference/composition summaries, stable fingerprint, and reason codes. Capability
 aggregation is unique while member providers remain visible. Availability supports `guaranteed`,
 `conditional`, and `none`; Hunter-only Bloodlust is conditional. Null DPS affinity remains neutral.
@@ -834,6 +834,7 @@ and current Team membership. The strict request contains only:
   participantUserIds: number[] // 2..5 unique current Team members
   targetLevel: number           // integer 1..20
   challengeMapId?: number | null
+  stoneCharacterId?: number | null // exact current-stone holder; requires challengeMapId
   options: {
     optimizeComposition: boolean
     bloodlust: boolean
@@ -849,6 +850,13 @@ Unknown fields and client-supplied candidates, objectives, stones, roles, capabi
 snapshots, or scores are rejected. A non-null challenge map must belong to the current Worker pool.
 All participant memberships are reread from D1 for each request.
 
+When `stoneCharacterId` is present and non-null, the adapter restricts eligible stones to that
+exact character inside the selected participants and Team. The selected character must still own a
+latest same-week current stone for the requested `challengeMapId` and `targetLevel`; stale, moved, level-changed, or unavailable
+stones produce zero eligible stones. The solver's existing owner rule then fixes that exact
+character in every recommendation. Omitting the additive field preserves the legacy per-dungeon or
+session-wide behavior.
+
 The adapter loads only selected Team users, their characters/configured preferences, and each
 selected character's latest same-week real stone. Snapshot projection uses SQL `CASE` so users with
 `share_keystone_loot_with_teams = 0` retain playable candidates but expose `NULL` to the adapter and
@@ -857,7 +865,7 @@ The shared objective normalizer retains only exact numeric dungeon sources and r
 preserves exact variants, and excludes completed Voidcore targets.
 
 Public responses contain `teamId`, the requested `challengeMapId`, `targetLevel`,
-`availability.eligibleStoneCount`, solver status/diagnostics, and at most three recommendations.
+`availability.eligibleStoneCount`, solver status/diagnostics, and at most five recommendations.
 Recommendation objectives expose only item ID, nullable cached/enriched name/icon, tier, variant
 key, and Voidcore state. Capability names/types/icon spell IDs/stacking come from the central Worker
 catalog. Metadata misses do not change scoring or fail the Planner.
@@ -878,6 +886,23 @@ Owner preference editing expands the known same-class Web spec list into an expl
 replacement document, defaulting previously absent specs to `disabled` and `lootSpecId = specId`.
 Characters without `wowClass` remain unconfigurable and produce no invented spec IDs. The Web spec
 catalog retains 40 entries and maps Devourer (`1480`) to Demon Hunter.
+
+KeystoneClient consumes exact-stone planning through protocol-v1 command
+`teams.keystone_planner`. React sends Team ID, 2–5 selected user IDs, the selected stone holder's
+`characterId`, that stone's actual level, dungeon ID, option booleans and an empty `locks` array
+through the
+typed Tauri JSONL bridge. The Python sidecar owns the bearer token and projects the public Planner
+response through an explicit allowlist; TypeScript validates and projects it again. The level
+slider is local presentation state that only filters current-stone chips. It does not alter
+ranking. Client avatars are joined locally from the already-safe Team detail DTO rather than added
+to the Planner response.
+
+Team detail adds the privacy-safe boolean `plannerConfigured` per member. It is true only when the
+member owns at least one non-disabled character/spec preference; no private preference rows, played
+specs, loot specs, or roles are exposed. Older responses without the additive field remain
+provisionally selectable in KeystoneClient; the authenticated Planner response is authoritative
+and still reports genuinely unconfigured participants. Owner preference reads and full-replacement writes use the private
+`planner.preferences.get` and `planner.preferences.update` bridge commands.
 
 ## Web Consumption Contract
 
@@ -991,6 +1016,16 @@ JSON blocks:
 
 - Keep JSON blocks backward compatible.
 - Missing or invalid stored JSON currently reads as `null`.
+
+### Raider.IO tier-piece enrichment
+
+`equipment.tierPieces` is an optional additive array of `{ "tier": number, "count": number }`.
+KeystoneClient derives it from the `tier` value on each item in Raider.IO's existing `gear`
+response, groups equal tiers, sorts them ascending, and merges the result into the equipment JSON
+already transported through Worker/D1. It requires no new request and no D1 migration. Older
+clients and stored snapshots without the field remain valid; the desktop UI then falls back to the
+generic `setPieces` total. A fresh local SavedVariables equipment snapshot preserves the remote
+Raider.IO `tierPieces` enrichment instead of erasing it.
 
 Weekly data:
 

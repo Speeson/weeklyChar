@@ -477,19 +477,21 @@ test('participant validation distinguishes invalid input from unconfigured and n
   })).status, 'unconfigured_participants')
 })
 
-test('Top 3 is ranked capped and carries stable fingerprints and ranks', () => {
+test('Top 5 is ranked capped and carries stable fingerprints and ranks', () => {
   const result = solveKeystonePlanner(input([candidate(1, 104), candidate(2, 105)], {
     stones: [
       stone({ challengeMapId: 104, level: 14, dungeon: 'D' }),
       stone({ challengeMapId: 101, level: 11, dungeon: 'A' }),
       stone({ challengeMapId: 103, level: 13, dungeon: 'C' }),
       stone({ challengeMapId: 102, level: 12, dungeon: 'B' }),
+      stone({ challengeMapId: 105, level: 15, dungeon: 'E' }),
+      stone({ challengeMapId: 106, level: 16, dungeon: 'F' }),
     ],
   }))
   assert.deepEqual(result.recommendations.map(entry => [entry.rank, entry.stone.challengeMapId]), [
-    [1, 101], [2, 102], [3, 103],
+    [1, 101], [2, 102], [3, 103], [4, 104], [5, 105],
   ])
-  assert.equal(new Set(result.recommendations.map(entry => entry.fingerprint)).size, 3)
+  assert.equal(new Set(result.recommendations.map(entry => entry.fingerprint)).size, 5)
 })
 
 test('exact duplicate stone plus assignments is emitted once', () => {

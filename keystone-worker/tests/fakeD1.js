@@ -250,11 +250,17 @@ class FakeD1Statement {
 
     if (sql.includes('WITH ranked_keystones AS') && sql.includes('u.id IN')) {
       const hasDungeonFilter = sql.includes('AND rk.keystone_challenge_map_id = ?')
+      const hasCharacterFilter = sql.includes('AND c.id = ?')
+      const hasLevelFilter = sql.includes('AND rk.keystone_level = ?')
       const resetUnix = values[0]
       const teamId = values[1]
       const remaining = values.slice(2)
-      const challengeMapId = hasDungeonFilter ? remaining.at(-1) : null
-      const participantIds = hasDungeonFilter ? remaining.slice(0, -1) : remaining
+      const filterCount = Number(hasDungeonFilter) + Number(hasCharacterFilter) + Number(hasLevelFilter)
+      const filters = filterCount === 0 ? [] : remaining.slice(-filterCount)
+      const challengeMapId = hasDungeonFilter ? filters[0] : null
+      const stoneCharacterId = hasCharacterFilter ? filters[Number(hasDungeonFilter)] : null
+      const stoneLevel = hasLevelFilter ? filters.at(-1) : null
+      const participantIds = filterCount === 0 ? remaining : remaining.slice(0, -filterCount)
       this.db.plannerQueryKinds.push('stones')
       const memberIds = new Set(this.db.teamMembers
         .filter(membership => membership.team_id === teamId && participantIds.includes(membership.user_id))
@@ -268,7 +274,9 @@ class FakeD1Statement {
             && entry.updated_at >= resetUnix)
           .sort((left, right) => ((right.updated_at ?? 0) - (left.updated_at ?? 0))
             || right.id - left.id)[0]
-        if (!latest || (challengeMapId !== null && latest.keystone_challenge_map_id !== challengeMapId)) continue
+        if (!latest || (challengeMapId !== null && latest.keystone_challenge_map_id !== challengeMapId)
+          || (stoneCharacterId !== null && character.id !== stoneCharacterId)
+          || (stoneLevel !== null && latest.keystone_level !== stoneLevel)) continue
         const owner = this.db.users.find(user => user.id === character.user_id)
         if (!owner) continue
         results.push({
@@ -392,6 +400,23 @@ class FakeD1Statement {
         results: this.db.itemMetadata.filter(row =>
           row.region === region && row.locale === locale && itemIds.includes(row.item_id)),
       }
+    }
+
+    if (sql.includes('SELECT u.id, u.username, EXISTS ( SELECT 1 FROM character_play_preferences')) {
+      const teamId = values[0]
+      const results = this.db.teamMembers
+        .filter(membership => membership.team_id === teamId)
+        .map(membership => this.db.users.find(user => user.id === membership.user_id))
+        .filter(Boolean)
+        .map(user => ({
+          id: user.id,
+          username: user.username,
+          planner_configured: this.db.characters.some(character => character.user_id === user.id
+            && this.db.plannerPreferences.some(preference => preference.character_id === character.id
+              && preference.play_preference !== 'disabled')) ? 1 : 0,
+        }))
+        .sort((left, right) => left.username.localeCompare(right.username))
+      return { results }
     }
 
     if (sql.includes('SELECT u.id, u.username FROM team_members tm JOIN users u ON u.id = tm.user_id')) {

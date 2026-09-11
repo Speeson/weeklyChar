@@ -177,6 +177,8 @@ const previews: Record<string, SystemState> = {
   "teams-selector-empty": baseState(),
   "teams-selector-loading": baseState(),
   "teams-selector-error": baseState(),
+  "teams-planner": baseState(),
+  "teams-planner-unconfigured": baseState(),
   "characters": {
     ...baseState(),
     characters: { ...previewCharacterState, characters: charactersPreview() },

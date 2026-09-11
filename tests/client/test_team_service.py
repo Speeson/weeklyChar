@@ -38,6 +38,18 @@ class FakeSession:
             raise self.error
         return self.responses.pop(0)
 
+    def post(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        if self.error:
+            raise self.error
+        return self.responses.pop(0)
+
+    def put(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        if self.error:
+            raise self.error
+        return self.responses.pop(0)
+
 
 class TeamServiceTests(unittest.TestCase):
     def setUp(self):
@@ -62,6 +74,52 @@ class TeamServiceTests(unittest.TestCase):
         self.assertTrue(all(call[1]["timeout"] == 10 for call in session.calls))
         self.assertNotIn("access-secret", str((listed, detail, selected)))
         self.assertNotIn("SECRET", str((listed, detail, selected)))
+
+    def test_owner_planner_preferences_get_and_put_are_private_and_strict(self):
+        saved = {"preferences": [{
+            "characterId": 10, "specId": 66, "role": "tank",
+            "playPreference": "preferred", "lootSpecId": 65,
+            "updatedAt": "2026-09-11T00:00:00.000Z", "secret": "discard",
+        }]}
+        session = FakeSession([FakeResponse(saved), FakeResponse(saved)])
+        service = TeamService(session=session)
+
+        loaded = service.get_planner_preferences(self.cfg)
+        updated = service.update_planner_preferences(self.cfg, [{
+            "characterId": 10, "specId": 66,
+            "playPreference": "preferred", "lootSpecId": 65,
+        }])
+
+        expected = {"preferences": [{
+            "characterId": 10, "specId": 66, "role": "tank",
+            "playPreference": "preferred", "lootSpecId": 65,
+            "updatedAt": "2026-09-11T00:00:00.000Z",
+        }]}
+        self.assertEqual(loaded, expected)
+        self.assertEqual(updated, expected)
+        self.assertTrue(session.calls[0][0].endswith("/api/me/planner/preferences"))
+        self.assertTrue(session.calls[1][0].endswith("/api/me/planner/preferences"))
+        self.assertEqual(session.calls[1][1]["json"], {"preferences": [{
+            "characterId": 10, "specId": 66,
+            "playPreference": "preferred", "lootSpecId": 65,
+        }]})
+        self.assertNotIn("access-secret", str((loaded, updated)))
+
+    def test_old_team_detail_without_readiness_keeps_member_provisionally_selectable(self):
+        detail = {"id": 7, "name": "Raid", "members": [{
+            "userId": 2, "username": "qa-member", "characters": [],
+        }]}
+        parsed = TeamService(session=FakeSession([FakeResponse(detail)])).get_team(self.cfg, 7)
+        self.assertTrue(parsed["members"][0]["plannerConfigured"])
+
+    def test_owner_planner_preferences_reject_bad_save_before_network(self):
+        session = FakeSession([])
+        service = TeamService(session=session)
+        malformed = [{"characterId": 10, "specId": 66, "playPreference": "sometimes", "lootSpecId": 65}]
+        with self.assertRaises(TeamServiceError) as caught:
+            service.update_planner_preferences(self.cfg, malformed)
+        self.assertEqual(caught.exception.code, "INVALID_TEAM_REQUEST")
+        self.assertEqual(session.calls, [])
 
     def test_selector_objective_projects_allowlisted_quality_and_classified_stats(self):
         objective = {
@@ -133,6 +191,45 @@ class TeamServiceTests(unittest.TestCase):
         session = FakeSession([])
         with self.assertRaises(TeamServiceError) as caught:
             TeamService(session=session).get_keystone_selector(self.cfg, 7, 588, "fr_FR")
+        self.assertEqual(caught.exception.code, "INVALID_TEAM_REQUEST")
+        self.assertEqual(session.calls, [])
+
+    def test_exact_stone_planner_posts_private_bearer_and_sanitizes_response(self):
+        request = {
+            "participantUserIds": [1, 2], "targetLevel": 12, "challengeMapId": 588,
+            "stoneCharacterId": 30,
+            "options": {"optimizeComposition": True, "bloodlust": True, "battleRez": True,
+                        "classBuffs": True, "damageSynergy": True},
+            "locks": [],
+        }
+        response = {
+            "teamId": 7, "challengeMapId": 588, "targetLevel": 12,
+            "availability": {"eligibleStoneCount": 0}, "status": "no_valid_composition",
+            "diagnostics": {"codes": ["NO_VALID_COMPOSITION"], "unconfiguredUserIds": [], "lockIssues": []},
+            "recommendations": [], "access_token": "leak",
+        }
+        session = FakeSession([FakeResponse(response)])
+
+        planned = TeamService(session=session).plan_keystone(self.cfg, 7, request)
+
+        self.assertEqual(planned["status"], "no_valid_composition")
+        self.assertNotIn("access_token", planned)
+        self.assertTrue(session.calls[0][0].endswith("/api/teams/7/keystone-planner"))
+        self.assertEqual(session.calls[0][1]["headers"], {"Authorization": "Bearer access-secret"})
+        self.assertEqual(session.calls[0][1]["json"], request)
+        self.assertEqual(session.calls[0][1]["timeout"], 15)
+
+    def test_exact_stone_planner_rejects_invalid_request_before_network(self):
+        session = FakeSession([])
+        request = {
+            "participantUserIds": [1, 2], "targetLevel": 12, "challengeMapId": 588,
+            "stoneCharacterId": True,
+            "options": {"optimizeComposition": True, "bloodlust": True, "battleRez": True,
+                        "classBuffs": True, "damageSynergy": True},
+            "locks": [],
+        }
+        with self.assertRaises(TeamServiceError) as caught:
+            TeamService(session=session).plan_keystone(self.cfg, 7, request)
         self.assertEqual(caught.exception.code, "INVALID_TEAM_REQUEST")
         self.assertEqual(session.calls, [])
 

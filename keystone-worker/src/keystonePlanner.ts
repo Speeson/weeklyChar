@@ -715,7 +715,7 @@ export function solveKeystonePlanner(input: KeystonePlannerInput): KeystonePlann
     if (seen.has(recommendation.fingerprint)) return false
     seen.add(recommendation.fingerprint)
     return true
-  }).slice(0, 3).map((recommendation, index) => ({ ...recommendation, rank: index + 1 }))
+  }).slice(0, 5).map((recommendation, index) => ({ ...recommendation, rank: index + 1 }))
 
   if (top.length === 0) {
     diagnostics.codes.push('NO_VALID_COMPOSITION')

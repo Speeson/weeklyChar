@@ -65,6 +65,12 @@ test('defensively parses the exact planner result and rejects unknown enums or s
   const malformed = structuredClone(response) as unknown as KeystonePlannerResponse
   malformed.recommendations[0].reasonCodes = ['UNKNOWN' as never]
   assert.equal(parseKeystonePlannerResponse(malformed, 7, null), null)
+  const recommendation = response.recommendations[0]
+  const ranked = (count: number) => Array.from({ length: count }, (_, index) => ({
+    ...recommendation, rank: index + 1, fingerprint: `recommendation-${index + 1}`,
+  }))
+  assert.equal(parseKeystonePlannerResponse({ ...response, recommendations: ranked(5) }, 7, null)?.recommendations.length, 5)
+  assert.equal(parseKeystonePlannerResponse({ ...response, recommendations: ranked(6) }, 7, null), null)
 })
 
 test('builders copy requests and produce full replacement preference payloads', () => {

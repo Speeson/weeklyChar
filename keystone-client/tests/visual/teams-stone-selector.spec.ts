@@ -52,13 +52,9 @@ test("reviews the default, multiple-Team, empty and scaled shell states", async 
   await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
   const scaledCard = page.getByTestId("selector-character").first();
   await scaledCard.getByRole("button", { name: "Ver objetos" }).click();
-  await scaledCard.getByRole("button", { name: "Objeto #231001" }).focus();
-  const tooltipBox = await page.getByRole("tooltip").boundingBox();
-  expect(tooltipBox).not.toBeNull();
-  expect(tooltipBox!.x).toBeGreaterThanOrEqual(0);
-  expect(tooltipBox!.y).toBeGreaterThanOrEqual(0);
-  expect(tooltipBox!.x + tooltipBox!.width).toBeLessThanOrEqual(940);
-  expect(tooltipBox!.y + tooltipBox!.height).toBeLessThanOrEqual(529);
+  const scaledItem = scaledCard.getByRole("link", { name: "Objeto #231001" });
+  await scaledItem.focus();
+  await expect(scaledItem).toHaveAttribute("data-wowhead", /domain=es/u);
   await capture(page, "06-minimum-viewport-tooltip.png");
 });
 
@@ -112,12 +108,11 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
 
   await firstCard.getByRole("button", { name: /Arcane.*7/u }).click();
   await expect(firstCard.getByRole("button", { name: /Arcane.*7/u })).toHaveAttribute("aria-pressed", "true");
-  const fallbackItem = firstCard.getByRole("button", { name: "Objeto #231001" });
+  const fallbackItem = firstCard.getByRole("link", { name: "Objeto #231001" });
   await fallbackItem.focus();
-  await expect(page.getByRole("tooltip")).toContainText("Objeto #231001");
+  await expect(fallbackItem).toHaveAttribute("href", "https://www.wowhead.com/item=231001");
+  await expect(fallbackItem).toHaveAttribute("data-wowhead", /domain=es/u);
   await capture(page, "09-tooltip-fallback.png");
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("tooltip")).toBeHidden();
 
   await firstCard.getByRole("button", { name: "Ocultar objetos" }).click();
   const singleSpecCard = page.getByTestId("selector-character").nth(1);
@@ -129,10 +124,10 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await singleSpecCard.getByRole("button", { name: "Ocultar objetos" }).click();
   const missingMetadataCard = page.getByTestId("selector-character").nth(2);
   await missingMetadataCard.getByRole("button", { name: "Ver objetos" }).click();
-  await missingMetadataCard.getByRole("button", { name: "Objeto #233002" }).focus();
-  const missingMetadataTooltip = page.getByRole("tooltip");
-  await expect(missingMetadataTooltip).toContainText("Objeto #233002");
-  await expect(missingMetadataTooltip).not.toContainText("Mano principal");
+  const missingMetadataTarget = missingMetadataCard.getByRole("link", { name: "Objeto #233002" });
+  await missingMetadataTarget.focus();
+  await expect(missingMetadataTarget).toHaveAttribute("data-wowhead", /domain=es/u);
+  await expect(missingMetadataTarget).not.toHaveAttribute("data-wowhead", /bonus=/u);
   await capture(page, "11-tooltip-missing-metadata.png");
 });
 
@@ -160,6 +155,129 @@ test("reviews zero-stone, loading, empty objectives, API error and English", asy
   await expect(page.getByRole("button", { name: "Teams" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("button", { name: "Sync" })).toBeVisible();
   await capture(page, "14-english.png");
+});
+
+test("reviews exact-stone Planner previews, owner crown, accordion and minimum viewport", async ({ page }) => {
+  await openTeams(page, "teams-planner");
+  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: "Planificar piedra" }).click();
+  const configureButton = page.getByRole("button", { name: "Configurar mis personajes" });
+  const configPanel = page.locator(".planner-config-heading");
+  expect(await configureButton.evaluate(element => element.getBoundingClientRect().width)).toBeCloseTo(
+    await configPanel.evaluate(element => element.getBoundingClientRect().width - 26),
+    0,
+  );
+  const calculateButton = page.getByRole("button", { name: "Calcular Top 5" });
+  const ctaStyles = async (button: typeof configureButton) => button.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, borderColor: style.borderColor, color: style.color };
+  });
+  expect(await ctaStyles(configureButton)).toEqual(await ctaStyles(calculateButton));
+  const prioritySwitches = page.locator('.planner-priorities input[type="checkbox"]');
+  for (const dimensions of await prioritySwitches.evaluateAll(elements => elements.map(element => {
+    const bounds = element.getBoundingClientRect();
+    return { width: bounds.width, height: bounds.height };
+  }))) {
+    expect(dimensions.width).toBe(30);
+    expect(dimensions.height).toBe(17);
+  }
+  await page.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }).click();
+  for (const member of ["Guardiana", "Voidwalker", "Nightshift", "Ironforge"]) {
+    await page.getByRole("button", { name: new RegExp(`Filtrar por ${member}`, "u") }).click();
+  }
+  await page.getByRole("button", { name: "Calcular Top 5" }).click();
+  const recommendations = page.locator(".planner-recommendation");
+  await expect(recommendations).toHaveCount(5);
+  const compactHeights = await recommendations.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
+  expect(Math.max(...compactHeights) - Math.min(...compactHeights)).toBeLessThan(1);
+  const resultBounds = await page.locator(".keystone-planner__results").evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { top: bounds.top, bottom: bounds.bottom };
+  });
+  const recommendationBounds = await recommendations.evaluateAll(elements => elements.map(element => {
+    const bounds = element.getBoundingClientRect(); return { top: bounds.top, bottom: bounds.bottom };
+  }));
+  expect(recommendationBounds[0].top - resultBounds.top).toBeCloseTo(9, 0);
+  expect(resultBounds.bottom - recommendationBounds[4].bottom).toBeCloseTo(9, 0);
+  const firstPreviewHeight = await recommendations.first().locator(".planner-assignment-preview").first().evaluate(element => element.getBoundingClientRect().height);
+  expect(firstPreviewHeight).toBeGreaterThan(compactHeights[0] * 0.69);
+  await expect(page.getByLabel("Dueño de la piedra").first()).toBeVisible();
+  await capture(page, "15-planner-compact.png");
+
+  await recommendations.first().getByRole("button").click();
+  await expect(recommendations.first()).toHaveAttribute("data-expanded", "true");
+  await expect(recommendations.nth(1)).toHaveAttribute("data-expanded", "false");
+  await expect(recommendations.nth(1)).toHaveCSS("display", "none");
+  await expect(recommendations.first().locator(".planner-player-card").getByLabel("Dueño de la piedra")).toBeVisible();
+  await expect(page.getByLabel("Dueño de la piedra +12")).toHaveCount(0);
+  await expect(page.getByText("Buffos y sinergias")).toBeVisible();
+  await expect(recommendations.first().locator('.planner-player-card img[src*="classicon_"]')).toHaveCount(0);
+  await expect(recommendations.first().locator('.planner-player-role').first()).toBeVisible();
+  await expect(recommendations.first().locator('.planner-objective-icon[data-wowhead]').first()).toBeVisible();
+  await expect(recommendations.first().getByText("Sin objetivos de botín")).toHaveCSS("font-size", "13px");
+  await expect(recommendations.first().locator(".planner-recommendation__detail")).toHaveCSS("overflow-y", "auto");
+  await recommendations.first().getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 7/u }).click();
+  const lootBreakdown = page.getByRole("dialog", { name: /Desglose de objetivos · Bakuhatsu/u });
+  await expect(lootBreakdown).toBeVisible();
+  await expect(lootBreakdown.getByText(/BiS · 2/u)).toBeVisible();
+  await capture(page, "16a-planner-loot-breakdown.png");
+  await page.keyboard.press("Escape");
+  await expect(lootBreakdown).toBeHidden();
+  const expandedBounds = await recommendations.first().evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { top: bounds.top, bottom: bounds.bottom };
+  });
+  expect(expandedBounds.top - resultBounds.top).toBeCloseTo(9, 0);
+  expect(resultBounds.bottom - expandedBounds.bottom).toBeCloseTo(9, 0);
+  await capture(page, "16-planner-expanded.png");
+
+  await page.setViewportSize({ width: 940, height: 529 });
+  await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+  expect(await page.evaluate(() => document.body.scrollWidth)).toBe(940);
+  expect(await page.evaluate(() => document.body.scrollHeight)).toBe(529);
+  await capture(page, "17-planner-minimum-viewport.png");
+});
+
+test("reviews the blocking Planner character configuration", async ({ page }) => {
+  await openTeams(page, "teams-planner-unconfigured");
+  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: "Planificar piedra" }).click();
+  const dialog = page.getByRole("dialog", { name: "Configura tus personajes" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("img", { name: "KeystoneSync" })).toBeVisible();
+  const activeZone = dialog.locator('[data-zone="active"]');
+  const inactiveZone = dialog.locator('[data-zone="inactive"]');
+  const inactiveCard = inactiveZone.locator(".planner-preference-character").filter({ hasText: "Bakuhatsu" });
+  await expect(inactiveCard).toHaveClass(/is-inactive/u);
+  await expect(inactiveCard.getByRole("button", { name: /Guardian · Desactivado/u })).toBeDisabled();
+  await inactiveCard.evaluate(element => element.dispatchEvent(new DragEvent("dragstart", {
+    bubbles: true, dataTransfer: new DataTransfer(),
+  })));
+  await expect(inactiveCard).toHaveCSS("opacity", "0.5");
+  await expect(inactiveCard).toHaveCSS("filter", /blur\(1px\)/u);
+  await inactiveCard.evaluate(element => element.dispatchEvent(new DragEvent("dragend", { bubbles: true })));
+  await expect(inactiveCard).toHaveCSS("opacity", "1");
+  await inactiveCard.dragTo(activeZone);
+  const characterCard = activeZone.locator(".planner-preference-character").filter({ hasText: "Bakuhatsu" });
+  await expect(characterCard).toBeVisible();
+  await expect(characterCard).not.toHaveClass(/is-inactive/u);
+  await characterCard.dragTo(inactiveZone);
+  await expect(inactiveCard).toHaveClass(/is-inactive/u);
+  await inactiveCard.dragTo(activeZone);
+  await expect(characterCard).not.toHaveClass(/is-inactive/u);
+  await expect(characterCard).toContainText("Configura al menos una spec");
+  await expect(dialog.getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
+  const roleCards = characterCard.locator(".planner-preference-spec");
+  await expect(roleCards).toHaveCount(4);
+  await expect(roleCards.nth(0).getByRole("button")).toHaveAccessibleName(/Guardian/u);
+  await expect(roleCards.nth(1).getByRole("button")).toHaveAccessibleName(/Restoration/u);
+  await expect(roleCards.nth(2).getByRole("button")).toHaveAccessibleName(/Balance/u);
+  await expect(roleCards.nth(3).getByRole("button")).toHaveAccessibleName(/Feral/u);
+  const cardTops = await roleCards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+  expect(Math.max(...cardTops) - Math.min(...cardTops)).toBeLessThan(1);
+  const characterHeight = await characterCard.evaluate(element => element.getBoundingClientRect().height);
+  await roleCards.first().getByRole("button").click();
+  await expect(roleCards.first().getByRole("combobox", { name: "Bakuhatsu Guardian", exact: true })).toBeVisible();
+  expect(await characterCard.evaluate(element => element.getBoundingClientRect().height)).toBeCloseTo(characterHeight, 0);
+  await capture(page, "18-planner-preferences.png");
 });
 
 test("reviews lifecycle stability, themed empty prompt, cached navigation and rarity tooltips in both themes", async ({ page }) => {
@@ -194,28 +312,23 @@ test("reviews lifecycle stability, themed empty prompt, cached navigation and ra
     await firstCard.getByRole("button", { name: /Ver objetos/u }).click();
     await capture(page, `20-${theme}-expanded-character.png`);
 
-    await firstCard.getByRole("button", { name: "Echo de Medianoche 231002" }).first().focus();
-    await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "EPIC");
-    await expect(page.getByRole("tooltip")).toContainText("Nivel de objeto 402");
+    const epicTarget = firstCard.getByRole("link", { name: "Echo de Medianoche 231002" }).first();
+    await epicTarget.focus();
+    await expect(epicTarget).toHaveAttribute("data-wowhead", /domain=es.*ilvl=402/u);
     await capture(page, `21-${theme}-tooltip-epic.png`);
-    await page.keyboard.press("Escape");
-    await firstCard.getByRole("button", { name: "Echo de Medianoche 231002" }).nth(1).focus();
-    await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "RARE");
-    await expect(page.getByRole("tooltip")).toContainText("Nivel de objeto 389");
+    const rareTarget = firstCard.getByRole("link", { name: "Echo de Medianoche 231002" }).nth(1);
+    await rareTarget.focus();
+    await expect(rareTarget).toHaveAttribute("data-wowhead", /domain=es.*ilvl=389/u);
     await capture(page, `22-${theme}-tooltip-rare.png`);
 
     await openTeams(page, "teams-selector-full", "en", theme);
     await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
     const englishCard = page.getByTestId("selector-character").first();
     await englishCard.getByRole("button", { name: /Show items/u }).click();
-    await englishCard.getByRole("button", { name: "Midnight Echo 231002" }).first().focus();
-    await expect(page.getByRole("tooltip")).toHaveAttribute("data-quality", "EPIC");
-    await expect(page.getByRole("tooltip")).toContainText("Item Level 402");
-    await expect(page.getByRole("tooltip")).toContainText("Main Hand · Weapon · Staff");
-    await expect(page.getByRole("tooltip")).toContainText("Intellect");
-    await expect(page.getByRole("tooltip")).toContainText("Haste");
+    const englishTarget = englishCard.getByRole("link", { name: "Midnight Echo 231002" }).first();
+    await englishTarget.focus();
+    await expect(englishTarget).toHaveAttribute("data-wowhead", /domain=www.*ilvl=402/u);
     await capture(page, `23-${theme}-tooltip-epic-en.png`);
-    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Close settings" }).click();
     await page.getByRole("button", { name: "Settings" }).click();

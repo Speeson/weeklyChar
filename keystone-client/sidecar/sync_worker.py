@@ -25,6 +25,28 @@ def _normalize_ilvl(value):
         return None
 
 
+def _normalize_tier_pieces(gear):
+    items = gear.get("items") if isinstance(gear, dict) else None
+    values = items.values() if isinstance(items, dict) else items if isinstance(items, list) else []
+    counts = {}
+    for item in values:
+        if not isinstance(item, dict):
+            continue
+        value = item.get("tier")
+        if isinstance(value, bool):
+            continue
+        try:
+            numeric_tier = float(value)
+        except (TypeError, ValueError):
+            continue
+        if not numeric_tier.is_integer():
+            continue
+        tier = int(numeric_tier)
+        if tier > 0:
+            counts[tier] = counts.get(tier, 0) + 1
+    return [{"tier": tier, "count": counts[tier]} for tier in sorted(counts)]
+
+
 def _lua_array_for_json(value):
     if isinstance(value, list):
         return list(value)
@@ -194,8 +216,8 @@ class SyncWorker(threading.Thread):
         except Exception:
             return "WoW"
 
-    def _fetch_raiderio(self, name: str, realm: str, region: str) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[int]]:
-        """Return (avatar_url, rio_score, wow_class, ilvl) from Raider.IO, or (None, None, None, None) on failure."""
+    def _fetch_raiderio(self, name: str, realm: str, region: str) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[int], list]:
+        """Return profile fields plus normalized tier-piece counts from Raider.IO gear."""
         try:
             params = {
                 "region": region,
@@ -205,16 +227,17 @@ class SyncWorker(threading.Thread):
             }
             r = requests.get(_RIO_BASE, params=params, timeout=8)
             if not r.ok:
-                return None, None, None, None
+                return None, None, None, None, []
             data = r.json()
             avatar = data.get("thumbnail_url")
             wow_class = data.get("class")
             seasons = data.get("mythic_plus_scores_by_season") or []
             score = seasons[0]["scores"]["all"] if seasons else None
-            ilvl = _normalize_ilvl((data.get("gear") or {}).get("item_level_equipped"))
-            return avatar, score, wow_class, ilvl
+            gear = data.get("gear") or {}
+            ilvl = _normalize_ilvl(gear.get("item_level_equipped"))
+            return avatar, score, wow_class, ilvl, _normalize_tier_pieces(gear)
         except Exception:
-            return None, None, None, None
+            return None, None, None, None, []
 
     def _post(self, url, payload, headers, error_label):
         try:
@@ -280,7 +303,9 @@ class SyncWorker(threading.Thread):
             realm  = entry.get("realm")
             region = entry.get("region", "eu")
 
-            avatar_url, rio_score, wow_class, ilvl = self._fetch_raiderio(name, realm, region)
+            raiderio = self._fetch_raiderio(name, realm, region)
+            avatar_url, rio_score, wow_class, ilvl = raiderio[:4]
+            tier_pieces = raiderio[4] if len(raiderio) > 4 else []
             addon_ilvl = entry.get("ilvl")
 
             payload = {
@@ -308,6 +333,10 @@ class SyncWorker(threading.Thread):
             for snapshot_field in ("equipment", "talents", "omniumFolio"):
                 if snapshot_field in entry:
                     payload[snapshot_field] = _snapshot_for_json(entry[snapshot_field])
+            if tier_pieces:
+                equipment = dict(payload.get("equipment") or {})
+                equipment["tierPieces"] = tier_pieces
+                payload["equipment"] = equipment
             if "keystoneLoot" in entry:
                 payload["keystoneLoot"] = _keystone_loot_for_json(entry["keystoneLoot"])
             if not self._post(

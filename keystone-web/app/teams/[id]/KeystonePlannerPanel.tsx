@@ -359,7 +359,7 @@ export default function KeystonePlannerPanel({ teamId, members, currentUserId, c
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <button type="button" onClick={event => { setPreferencesTrigger(event.currentTarget); setPreferencesOpen(true) }} className="min-h-11 rounded-xl border border-gray-700 px-4 text-sm font-bold text-gray-200">Configurar mis personajes</button>
-            <button type="button" onClick={() => void calculate()} disabled={participants.length < 2 || loading} className="min-h-12 rounded-xl bg-yellow-500 px-6 text-sm font-black text-gray-950 shadow-lg shadow-yellow-500/10 disabled:cursor-not-allowed disabled:opacity-45">{loading ? 'Calculando…' : response ? 'Recalcular Top 3' : 'Calcular Top 3'}</button>
+            <button type="button" onClick={() => void calculate()} disabled={participants.length < 2 || loading} className="min-h-12 rounded-xl bg-yellow-500 px-6 text-sm font-black text-gray-950 shadow-lg shadow-yellow-500/10 disabled:cursor-not-allowed disabled:opacity-45">{loading ? 'Calculando…' : response ? 'Recalcular Top 5' : 'Calcular Top 5'}</button>
           </div>
 
           <div className="mt-5" aria-live="polite" aria-busy={loading}>

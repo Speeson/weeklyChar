@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -7,6 +7,7 @@ import { coreRequest } from "./core/client";
 import { listenCoreEvents } from "./core/events";
 import { getSettings, updateSettings } from "./core/settings";
 import { setProfileAvatar } from "./core/profile";
+import { forceSync } from "./core/sync";
 import {
   clearTeamsSessionCache, getTeamsSessionSnapshot, loadTeams,
 } from "./core/teamsSessionCache";
@@ -161,6 +162,7 @@ const listenWindowCloseRequestedMock = vi.mocked(listenWindowCloseRequested);
 const minimizeToTrayMock = vi.mocked(minimizeToTray);
 const minimizeWindowMock = vi.mocked(minimizeWindow);
 const setProfileAvatarMock = vi.mocked(setProfileAvatar);
+const forceSyncMock = vi.mocked(forceSync);
 
 const anonymousState: SystemState = {
   protocolVersion: 1,
@@ -220,6 +222,8 @@ describe("App", () => {
     minimizeToTrayMock.mockClear();
     minimizeWindowMock.mockClear();
     setProfileAvatarMock.mockReset();
+    forceSyncMock.mockReset();
+    forceSyncMock.mockResolvedValue(idleSync);
     listenCoreEventsMock.mockResolvedValue(vi.fn());
   });
 
@@ -315,6 +319,9 @@ describe("App", () => {
       listTeams: vi.fn(async () => [{ id: 7, name: "Private Team", memberCount: 1 }]),
       getTeam: vi.fn(),
       getKeystoneSelector: vi.fn(),
+      getKeystonePlanner: vi.fn(),
+      getPlannerPreferences: vi.fn(),
+      updatePlannerPreferences: vi.fn(),
     });
     expect(getTeamsSessionSnapshot().teams?.[0]?.name).toBe("Private Team");
 
@@ -587,6 +594,36 @@ describe("App", () => {
 
     expect(setProfileAvatarMock).toHaveBeenCalledWith({ avatarUrl: "https://img.test/auralis.jpg" });
     expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/auralis.jpg"]')).toBeInTheDocument();
+  });
+
+  it("places the selected-avatar check at card level", async () => {
+    const user = userEvent.setup();
+    const avatarUrl = "https://img.test/auralis.jpg";
+    mockStartup({
+      ...authenticatedState,
+      auth: { ...authenticatedState.auth, avatarUrl },
+      characters: { ...authenticatedState.characters, characters: [{ ...authenticatedState.characters.characters[0], avatarUrl }] },
+    });
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
+    const card = screen.getByRole("button", { name: /Auralis/ });
+    const check = card.querySelector(".ks-avatar-choice__check")!;
+    expect(check.parentElement).toBe(card);
+    expect(card.querySelector(".ks-avatar-choice__portrait .ks-avatar-choice__check")).toBeNull();
+  });
+
+  it("replaces the WebView context menu with the four compact client actions", async () => {
+    mockStartup(authenticatedState);
+    render(<App />);
+    await screen.findByText("player");
+    fireEvent.contextMenu(document.body, { clientX: 120, clientY: 100 });
+    const menu = screen.getByRole("menu", { name: "KeystoneClient" });
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(4);
+    expect(within(menu).getByRole("menuitem", { name: "Sincronizar ahora" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Cambiar avatar" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Configuracion" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Minimizar a la bandeja" })).toBeVisible();
   });
 
   it("preserves the previous avatar when the mutation fails", async () => {
