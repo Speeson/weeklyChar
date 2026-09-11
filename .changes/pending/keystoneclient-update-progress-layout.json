@@ -1,0 +1,10 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Evita que el progreso de actualización se solape con las notas de la versión.",
+  "details": [
+    "Reserva un pie independiente para el progreso, el estado de instalación y las acciones del diálogo.",
+    "Mantiene el changelog largo dentro de su propia zona desplazable."
+  ]
+}

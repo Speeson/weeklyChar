@@ -57,6 +57,9 @@ export function UpdateModal({ snapshot, onClose, onInstall, onRetry }: UpdateMod
             </>
           )}
 
+        </div>
+
+        <div className="ks-update-modal__footer">
           {snapshot.status === "downloading" ? (
             <div className="ks-update-modal__progress">
               <div className="ks-update-modal__progress-copy">
@@ -78,18 +81,18 @@ export function UpdateModal({ snapshot, onClose, onInstall, onRetry }: UpdateMod
               {t("updater.installing")}
             </p>
           ) : null}
-        </div>
 
-        <div className="ks-update-modal__actions">
-          {snapshot.status === "error" ? (
-            <button onClick={onRetry} type="button"><ThemedIcon name="retry" size={17} />{t("updater.retry")}</button>
-          ) : (
-            <button disabled={busy || snapshot.status !== "available"} onClick={onInstall} type="button">
-              <ThemedIcon name="download" size={18} />
-              {busy ? t("updater.working") : t("updater.installRelaunch")}
-            </button>
-          )}
-          <button className="ks-update-modal__later" disabled={busy} onClick={onClose} type="button">{t("updater.later")}</button>
+          <div className="ks-update-modal__actions">
+            {snapshot.status === "error" ? (
+              <button onClick={onRetry} type="button"><ThemedIcon name="retry" size={17} />{t("updater.retry")}</button>
+            ) : (
+              <button disabled={busy || snapshot.status !== "available"} onClick={onInstall} type="button">
+                <ThemedIcon name="download" size={18} />
+                {busy ? t("updater.working") : t("updater.installRelaunch")}
+              </button>
+            )}
+            <button className="ks-update-modal__later" disabled={busy} onClick={onClose} type="button">{t("updater.later")}</button>
+          </div>
         </div>
       </div>
     </div>
