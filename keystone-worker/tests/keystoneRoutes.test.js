@@ -579,6 +579,40 @@ test('team detail character responses do not expose raw KeystoneLoot data', asyn
   assert.equal('omniumFolio' in team.members[0].characters[0], false)
 })
 
+test('team detail exposes only privacy-safe Planner readiness for each member', async () => {
+  const env = makeEnv()
+  const payload = await loadPayload()
+  assert.equal((await sync(env, payload)).status, 200)
+  env.DB.teams = [{
+    id: 1,
+    name: 'Planner Readiness Team',
+    invite_code: 'readiness-code',
+    created_by: 1,
+    created_at: '2026-09-11T00:00:00.000Z',
+  }]
+  env.DB.teamMembers = [{ id: 1, team_id: 1, user_id: 1 }]
+
+  let response = await readTeam(env, 1)
+  let team = await response.json()
+  assert.equal(team.members[0].plannerConfigured, false)
+
+  env.DB.plannerPreferences = [{
+    character_id: env.DB.characters[0].id,
+    spec_id: 62,
+    play_preference: 'disabled',
+    loot_spec_id: 62,
+  }]
+  response = await readTeam(env, 1)
+  team = await response.json()
+  assert.equal(team.members[0].plannerConfigured, false)
+
+  env.DB.plannerPreferences[0].play_preference = 'available'
+  response = await readTeam(env, 1)
+  team = await response.json()
+  assert.equal(team.members[0].plannerConfigured, true)
+  assert.equal('plannerPreferences' in team.members[0], false)
+})
+
 test('character enrich does not provide a KeystoneLoot write surface', async () => {
   const env = makeEnv()
   const payload = await loadPayload('keystoneloot-sync-payload.json')

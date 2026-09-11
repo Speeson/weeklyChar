@@ -456,7 +456,10 @@ pub fn is_command_allowed(command: &str) -> bool {
             | "characters.refresh"
             | "teams.list"
             | "teams.get"
+            | "planner.preferences.get"
+            | "planner.preferences.update"
             | "teams.keystone_selector"
+            | "teams.keystone_planner"
             | "addon.get_status"
             | "addon.check"
             | "addon.install"
@@ -885,7 +888,10 @@ mod tests {
         assert!(is_command_allowed("characters.refresh"));
         assert!(is_command_allowed("teams.list"));
         assert!(is_command_allowed("teams.get"));
+        assert!(is_command_allowed("planner.preferences.get"));
+        assert!(is_command_allowed("planner.preferences.update"));
         assert!(is_command_allowed("teams.keystone_selector"));
+        assert!(is_command_allowed("teams.keystone_planner"));
         assert!(is_command_allowed("addon.get_status"));
         assert!(is_command_allowed("addon.check"));
         assert!(is_command_allowed("addon.install"));
@@ -1117,7 +1123,7 @@ mod tests {
             CoreEventPayload {
                 protocol_version: 1,
                 event: "system.ready".to_string(),
-                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","auth.battlenet.start","auth.battlenet.poll","auth.battlenet.cancel","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","teams.keystone_selector","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
+                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","auth.battlenet.start","auth.battlenet.poll","auth.battlenet.cancel","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","planner.preferences.get","planner.preferences.update","teams.keystone_selector","teams.keystone_planner","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
             }
         );
 

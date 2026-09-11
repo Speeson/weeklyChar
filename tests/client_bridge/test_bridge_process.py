@@ -161,7 +161,10 @@ class BridgeProcessTests(unittest.TestCase):
                 "characters.refresh",
                 "teams.list",
                 "teams.get",
+                "planner.preferences.get",
+                "planner.preferences.update",
                 "teams.keystone_selector",
+                "teams.keystone_planner",
                 "addon.get_status",
                 "addon.check",
                 "addon.install",
@@ -544,12 +547,22 @@ class BridgeProcessTests(unittest.TestCase):
         invalid_locale = self.bridge.send(
             {"protocolVersion": 1, "id": "selector-locale", "command": "teams.keystone_selector", "payload": {"teamId": 7, "challengeMapId": 588, "locale": "fr_FR"}}
         )
+        invalid_planner = self.bridge.send(
+            {"protocolVersion": 1, "id": "planner-bad", "command": "teams.keystone_planner", "payload": {"teamId": 7, "stoneCharacterId": True}}
+        )
+        invalid_preferences = self.bridge.send(
+            {"protocolVersion": 1, "id": "preferences-bad", "command": "planner.preferences.update", "payload": {"preferences": "all"}}
+        )
         self.assertFalse(invalid_team["ok"])
         self.assertEqual(invalid_team["error"]["code"], "INVALID_REQUEST")
         self.assertFalse(invalid_selector["ok"])
         self.assertEqual(invalid_selector["error"]["code"], "INVALID_REQUEST")
         self.assertFalse(invalid_locale["ok"])
         self.assertEqual(invalid_locale["error"]["code"], "INVALID_REQUEST")
+        self.assertFalse(invalid_planner["ok"])
+        self.assertEqual(invalid_planner["error"]["code"], "INVALID_REQUEST")
+        self.assertFalse(invalid_preferences["ok"])
+        self.assertEqual(invalid_preferences["error"]["code"], "INVALID_TEAM_REQUEST")
 
     def test_team_commands_return_structured_expired_session_without_tokens(self):
         response = self.bridge.send(

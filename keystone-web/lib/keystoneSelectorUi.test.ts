@@ -16,16 +16,16 @@ test('Team page replaces the exposed recommendation planner with the inline Sele
   assert.doesNotMatch(selector, /Composición recomendada/u)
 })
 
-test('Selector renders canonical dungeons, selectable zero-count controls and one inline panel', () => {
+test('Selector renders canonical dungeons, selectable zero-count controls and both Planner entries', () => {
   assert.match(selector, /selectorDungeonOptions/u)
   assert.match(selector, /aria-pressed/u)
   assert.match(selector, /stoneCount/u)
   assert.doesNotMatch(selector, /disabled=\{option\.stoneCount === 0\}/u)
   assert.match(selector, /Objetivos/u)
   assert.match(selector, /Planificar piedra/u)
-  assert.match(selector, /Próximamente/u)
-  assert.match(selector, /disabled/u)
-  assert.doesNotMatch(selector, /<dialog/u)
+  assert.match(selector, /Planificar sesión/u)
+  assert.match(selector, /KeystonePlannerPanel/u)
+  assert.match(selector, /aria-haspopup="dialog"/u)
 })
 
 test('selected dungeon is green while available dungeons retain the gold treatment', () => {

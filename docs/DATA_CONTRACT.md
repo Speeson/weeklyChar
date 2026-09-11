@@ -31,9 +31,8 @@ Primary files:
 - Addon source used for inspection: canonical external repository `Speeson/KeystoneSync`
 - Client parser/payload: `keystone-client/sidecar/sync_worker.py`
 - Worker write route: `keystone-worker/src/routes/keystones.ts`
-- D1 schema: `keystone-worker/migrations/0001_initial.sql`, `0002_keystone_loot.sql`,
-  `0003_keystone_loot_sharing.sql`, `0004_keystone_loot_item_metadata.sql`, and
-  `0005_keystone_loot_item_tooltip_metadata.sql`
+- D1 schema: `keystone-worker/migrations/`, currently through
+  `0010_keystone_planner.sql`
 - Worker response helpers: `keystone-worker/src/db.ts`
 - Web API helper: `keystone-web/lib/auth.ts`
 - Web consumers: `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, `keystone-web/app/teams/[id]/page.tsx`
@@ -384,10 +383,8 @@ Write response:
 
 ## D1 Storage Contract
 
-Schema source: `keystone-worker/migrations/0001_initial.sql` plus additive migrations
-`keystone-worker/migrations/0002_keystone_loot.sql` and
-`keystone-worker/migrations/0003_keystone_loot_sharing.sql`, and
-`keystone-worker/migrations/0004_keystone_loot_item_metadata.sql`.
+Schema source: `keystone-worker/migrations/`, currently through the additive
+`0010_keystone_planner.sql` migration.
 
 Tables:
 
@@ -401,6 +398,7 @@ Tables:
 | `team_invitations` | Pending/accepted/declined invitations. |
 | `rate_limits` | Rate-limit attempt JSON by key. |
 | `wow_item_metadata` | Region/locale/item cache for Blizzard-sourced safe display and tooltip metadata. |
+| `character_play_preferences` | Owner-authored Planner state per character/spec; role remains derived. |
 
 Character sync columns:
 
@@ -749,6 +747,163 @@ Recommendation responses contain character display fields, `specId`, score, and 
 counts only. They never contain favorites, item IDs/modifiers, `voidcore.usedItems`, or
 raw `keystoneLoot`. Owner `/api/me/characters` access is unchanged when sharing is off.
 
+## Planner Preference Contract
+
+Planner play preferences are owner-authored application data. They do not originate in the addon,
+SavedVariables, or KeystoneClient sync payload, and they do not change the
+`shareKeystoneLootWithTeams` privacy contract.
+
+Migration `0010_keystone_planner.sql` adds `character_play_preferences`:
+
+| Column | Contract |
+| --- | --- |
+| `character_id` | FK to `characters.id`, cascades on character deletion; first half of the PK. |
+| `spec_id` | Positive Retail specialization ID; second half of the PK. |
+| `play_preference` | Exactly `preferred`, `available`, `emergency`, or `disabled`. |
+| `loot_spec_id` | Positive Retail specialization ID used later for loot evaluation. |
+| `updated_at` | D1-generated UTC timestamp. |
+
+Role is intentionally absent from D1 and is derived from `spec_id` through the Worker-owned
+`wowComposition.ts` catalog. Both `spec_id` and `loot_spec_id` must belong to the character's
+canonical `wow_class`. When the request omits `lootSpecId`, the write contract stores
+`lootSpecId = specId`.
+
+Owner endpoints:
+
+- `GET /api/me/planner/preferences` requires a KeystoneSync access JWT and returns
+  `{ preferences: PlannerPreference[] }` in `(characterId, specId)` order. No rows is a normal
+  `200` response with an empty array.
+- `PUT /api/me/planner/preferences` requires a KeystoneSync access JWT and a strict
+  `{ preferences: [...] }` document. It is full replacement, including `[]` to clear all owner
+  rows. The full payload is validated before a transactional D1 batch replaces only rows belonging
+  to the authenticated owner's characters.
+- Sync-token authentication is not accepted. Foreign characters, invalid class/spec or loot-spec
+  pairs, invalid states, duplicates, unknown fields, unsafe IDs, missing character class, and
+  malformed JSON are rejected without changing persisted preferences.
+
+Each response preference is:
+
+```ts
+{
+  characterId: number
+  specId: number
+  role: 'tank' | 'healer' | 'dps'
+  playPreference: 'preferred' | 'available' | 'emergency' | 'disabled'
+  lootSpecId: number
+  updatedAt: string
+}
+```
+
+The Worker catalog also centralizes capability identities/providers and a conservative DPS-only
+`physical`/`magical` affinity. Hybrid or patch-sensitive specs may have `damageProfile: null`; no
+percentage or affinity is inferred.
+
+## Planner Solver Domain Contract
+
+`keystone-worker/src/keystonePlanner.ts` is a pure domain boundary. It receives 2–5 unique
+participant IDs, target level 1–20, normalized candidate assignments, stones, options, and optional
+assignment/character/role locks. Candidates contain separate played `specId` and `lootSpecId` plus
+already privacy-filtered objectives. Consequently, an empty objective list contributes zero loot
+without the solver reading raw KeystoneLoot or knowing the sharing setting.
+
+Played role, class, damage affinity, and capabilities are derived from the Worker catalog. The
+solver enforces one assignment per selected user, exact stone owner character, and a complete or
+completable 1 tank / 1 healer / 3 DPS shape. Disabled candidates are excluded. Unknown or absent
+playable candidates produce `unconfiguredUserIds`; contradictory locks are `invalid_input`, and a
+validly configured search with no solution is `no_valid_composition`.
+
+Loot filtering requires played assignment `lootSpecId`, `sourceType = dungeon`, an exact numeric
+challenge map ID, and a non-completed Voidcore state. Identity is source namespace + typed source
+ID + item ID + `variantKey`, matching Selector exact-variant behavior. Ranking is hierarchical:
+weighted shared tier score, players with objectives, target-level distance, structured preference
+counts, enabled utilities, known tier counts, then stable numeric stone/assignment identity. No
+coverage bonus is added to the weighted score.
+
+Output contains at most five ranked recommendations with stone, assignments, role vacancies,
+loot/level/preference/composition summaries, stable fingerprint, and reason codes. Capability
+aggregation is unique while member providers remain visible. Availability supports `guaranteed`,
+`conditional`, and `none`; Hunter-only Bloodlust is conditional. Null DPS affinity remains neutral.
+Block B adds no HTTP route, D1 read adapter, authorization logic, or schema change; those remain for
+Block C.
+
+Block C exposes `POST /api/teams/:teamId/keystone-planner`. The caller must have a valid access JWT
+and current Team membership. The strict request contains only:
+
+```ts
+{
+  participantUserIds: number[] // 2..5 unique current Team members
+  targetLevel: number           // integer 1..20
+  challengeMapId?: number | null
+  stoneCharacterId?: number | null // exact current-stone holder; requires challengeMapId
+  options: {
+    optimizeComposition: boolean
+    bloodlust: boolean
+    battleRez: boolean
+    classBuffs: boolean
+    damageSynergy: boolean
+  }
+  locks?: PlannerLock[]          // at most 15
+}
+```
+
+Unknown fields and client-supplied candidates, objectives, stones, roles, capabilities, preferences,
+snapshots, or scores are rejected. A non-null challenge map must belong to the current Worker pool.
+All participant memberships are reread from D1 for each request.
+
+When `stoneCharacterId` is present and non-null, the adapter restricts eligible stones to that
+exact character inside the selected participants and Team. The selected character must still own a
+latest same-week current stone for the requested `challengeMapId` and `targetLevel`; stale, moved, level-changed, or unavailable
+stones produce zero eligible stones. The solver's existing owner rule then fixes that exact
+character in every recommendation. Omitting the additive field preserves the legacy per-dungeon or
+session-wide behavior.
+
+The adapter loads only selected Team users, their characters/configured preferences, and each
+selected character's latest same-week real stone. Snapshot projection uses SQL `CASE` so users with
+`share_keystone_loot_with_teams = 0` retain playable candidates but expose `NULL` to the adapter and
+therefore `objectives: []`. Eligible stone dungeon IDs are established before snapshots are parsed.
+The shared objective normalizer retains only exact numeric dungeon sources and relevant loot specs,
+preserves exact variants, and excludes completed Voidcore targets.
+
+Public responses contain `teamId`, the requested `challengeMapId`, `targetLevel`,
+`availability.eligibleStoneCount`, solver status/diagnostics, and at most five recommendations.
+Recommendation objectives expose only item ID, nullable cached/enriched name/icon, tier, variant
+key, and Voidcore state. Capability names/types/icon spell IDs/stacking come from the central Worker
+catalog. Metadata misses do not change scoring or fail the Planner.
+
+HTTP mapping is 200 for `ok`, `unconfigured_participants`, `no_valid_composition`, and zero eligible
+stones; 400 for invalid requests, non-Team participants, or solver `invalid_input`; 401 for invalid
+authentication; 403 for a requester outside the Team; 404 for a missing Team; and 422 only when
+normalized server-side data exceeds a defensive limit. Limits are 5 participants, 15 locks, 150
+candidates, 100 stones, and 5,000 candidate-objective entries. Data is never silently truncated.
+Block C adds no D1 schema or migration.
+
+Block D consumes this contract through `keystone-web/lib/keystonePlanner.ts`. Its defensive parser
+requires the active Team/dungeon identity and validates all fixed statuses, diagnostic codes,
+reason codes and nested public recommendation fields before rendering. React sends only
+`participantUserIds`, `targetLevel`, `challengeMapId`, the five option booleans and visible locks;
+it never sends or reconstructs candidates, objectives, stones, roles, capabilities or scores.
+Owner preference editing expands the known same-class Web spec list into an explicit full
+replacement document, defaulting previously absent specs to `disabled` and `lootSpecId = specId`.
+Characters without `wowClass` remain unconfigurable and produce no invented spec IDs. The Web spec
+catalog retains 40 entries and maps Devourer (`1480`) to Demon Hunter.
+
+KeystoneClient consumes exact-stone planning through protocol-v1 command
+`teams.keystone_planner`. React sends Team ID, 2–5 selected user IDs, the selected stone holder's
+`characterId`, that stone's actual level, dungeon ID, option booleans and an empty `locks` array
+through the
+typed Tauri JSONL bridge. The Python sidecar owns the bearer token and projects the public Planner
+response through an explicit allowlist; TypeScript validates and projects it again. The level
+slider is local presentation state that only filters current-stone chips. It does not alter
+ranking. Client avatars are joined locally from the already-safe Team detail DTO rather than added
+to the Planner response.
+
+Team detail adds the privacy-safe boolean `plannerConfigured` per member. It is true only when the
+member owns at least one non-disabled character/spec preference; no private preference rows, played
+specs, loot specs, or roles are exposed. Older responses without the additive field remain
+provisionally selectable in KeystoneClient; the authenticated Planner response is authoritative
+and still reports genuinely unconfigured participants. Owner preference reads and full-replacement writes use the private
+`planner.preferences.get` and `planner.preferences.update` bridge commands.
+
 ## Web Consumption Contract
 
 API helper:
@@ -861,6 +1016,16 @@ JSON blocks:
 
 - Keep JSON blocks backward compatible.
 - Missing or invalid stored JSON currently reads as `null`.
+
+### Raider.IO tier-piece enrichment
+
+`equipment.tierPieces` is an optional additive array of `{ "tier": number, "count": number }`.
+KeystoneClient derives it from the `tier` value on each item in Raider.IO's existing `gear`
+response, groups equal tiers, sorts them ascending, and merges the result into the equipment JSON
+already transported through Worker/D1. It requires no new request and no D1 migration. Older
+clients and stored snapshots without the field remain valid; the desktop UI then falls back to the
+generic `setPieces` total. A fresh local SavedVariables equipment snapshot preserves the remote
+Raider.IO `tierPieces` enrichment instead of erasing it.
 
 Weekly data:
 

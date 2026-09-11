@@ -150,6 +150,11 @@ def _merge_local_snapshots(
                 continue
             sanitized = _sanitize_snapshot_value(_snapshot_for_json(local[field], field))
             if sanitized is not _INVALID_SNAPSHOT_VALUE:
+                if field == "equipment" and isinstance(sanitized, dict):
+                    remote_equipment = result.get("equipment")
+                    remote_tiers = remote_equipment.get("tierPieces") if isinstance(remote_equipment, dict) else None
+                    if remote_tiers and not sanitized.get("tierPieces"):
+                        sanitized = {**sanitized, "tierPieces": remote_tiers}
                 result[field] = sanitized
         merged.append(result)
     return merged
@@ -514,7 +519,8 @@ class CharacterService:
             from sync_worker import SyncWorker
 
             fetcher = SyncWorker(cfg)._fetch_raiderio
-        avatar, score, wow_class, ilvl = fetcher(name, realm, region)
+        raiderio = fetcher(name, realm, region)
+        avatar, score, wow_class, ilvl = raiderio[:4]
         enrichment: dict[str, Any] = {}
         if missing_avatar and _safe_avatar_url(avatar):
             character["avatarUrl"] = avatar

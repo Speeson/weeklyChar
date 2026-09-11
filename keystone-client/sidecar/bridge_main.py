@@ -282,6 +282,38 @@ def handle_teams_keystone_selector(payload: dict[str, Any]) -> dict[str, Any]:
         raise ProtocolError(exc.code, exc.message) from exc
 
 
+def handle_planner_preferences_get(payload: dict[str, Any]) -> dict[str, Any]:
+    _require_empty_payload(payload)
+    try:
+        return TEAM_SERVICE.get_planner_preferences(config_module.load())
+    except team_service.TeamServiceError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_planner_preferences_update(payload: dict[str, Any]) -> dict[str, Any]:
+    if set(payload) != {"preferences"}:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain only preferences.")
+    try:
+        return TEAM_SERVICE.update_planner_preferences(config_module.load(), payload["preferences"])
+    except team_service.TeamServiceError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_teams_keystone_planner(payload: dict[str, Any]) -> dict[str, Any]:
+    team_id = _require_positive_id(payload, "teamId")
+    expected = {
+        "teamId", "participantUserIds", "targetLevel", "challengeMapId", "stoneCharacterId",
+        "options", "locks",
+    }
+    if set(payload) != expected:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain the exact Planner request fields.")
+    request = {key: value for key, value in payload.items() if key != "teamId"}
+    try:
+        return TEAM_SERVICE.plan_keystone(config_module.load(), team_id, request)
+    except team_service.TeamServiceError as exc:
+        raise ProtocolError(exc.code, exc.message) from exc
+
+
 def handle_addon_get_status(payload: dict[str, Any]) -> dict[str, Any]:
     _require_empty_payload(payload)
     return ADDON_SERVICE.get_status(config_module.load())
@@ -343,7 +375,10 @@ COMMANDS: dict[str, Handler] = {
     "characters.refresh": handle_characters_refresh,
     "teams.list": handle_teams_list,
     "teams.get": handle_teams_get,
+    "planner.preferences.get": handle_planner_preferences_get,
+    "planner.preferences.update": handle_planner_preferences_update,
     "teams.keystone_selector": handle_teams_keystone_selector,
+    "teams.keystone_planner": handle_teams_keystone_planner,
     "addon.get_status": handle_addon_get_status,
     "addon.check": handle_addon_check,
     "addon.install": handle_addon_install,

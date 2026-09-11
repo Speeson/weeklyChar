@@ -61,6 +61,9 @@ Main implementation points:
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
 - `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses. Owner character lists load current keystones in one SQL query and include additive equipment/talents/Omnium JSON blocks.
 - `keystone-worker/src/routes/me.ts`: `GET /api/me/characters` exposes user characters.
+- Keystone Planner Block A stores JWT-owner-only per-character/spec play preferences in
+  `character_play_preferences`. `loot_spec_id` defaults to the played spec but may differ within
+  the same class; role is derived from the centralized Worker catalog and is not stored.
 - Battle.net Authentication V1 maps the official OIDC `sub` to the unchanged
   internal `users.id` through `user_identities`; BattleTag is display-only.
   Worker OAuth uses Authorization Code, cryptographic state, PKCE S256, and
@@ -74,6 +77,11 @@ Main implementation points:
   the resulting KeystoneSync session.
 - `keystone-worker/src/routes/teams.ts`: team detail responses expose member characters through shared DB helpers.
 - `keystone-web/lib/auth.ts`: `apiFetch()` centralizes Web API calls.
+- Keystone Planner V1 Web uses one shared `KeystonePlannerPanel` for session-wide and selected-
+  dungeon planning, a defensive `lib/keystonePlanner.ts` transport boundary, and an owner-only
+  `PlannerPreferencesDialog`. React does not reproduce solver, privacy, role, capability, or
+  scoring rules. Capability spell IDs are shown with accessible text badges because no reliable
+  direct Web icon resolver is currently part of the public contract.
 - `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, and `keystone-web/app/teams/[id]/page.tsx`: consume character and team character data.
 
 ## Current versions
@@ -86,6 +94,10 @@ Verified from checked-out files:
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
+- Keystone Planner production D1 migration `0010_keystone_planner.sql` was applied on 2026-09-10.
+  Production Worker version `2ec220c6-ee31-411f-a110-f3f44b804d0c` includes the Planner API,
+  exact-stone selection through the additive `stoneCharacterId` field, and the required CORS `PUT`
+  allowlist hardening. The Planner Web remains undeployed pending a separately authorized Web rollout.
 
 ## Deployment and release model
 
@@ -123,7 +135,9 @@ Verified from checked-out files:
 - Worker: `cd keystone-worker; npm run typecheck; npm test`. Worker tests cover weekly reset helpers plus route-level sync behavior using a local in-memory D1 test double.
 - Client: compile and test `keystone-client/sidecar/`, run Vitest/Vite/Playwright under `keystone-client/`, run Cargo checks/tests against `keystone-client/src-tauri/Cargo.toml`, and build the sidecar with `python scripts/build_client_sidecar.py --clean`. Client tests parse synthetic SavedVariables fixtures and validate the outbound Worker payload shape without live Raider.IO calls.
 - Addon updater tests live in `tests/client/test_addon_updater.py` and cover release metadata, ZIP security, cache fallback, safe install, rollback, and candidate selection.
-- Web: `cd keystone-web; npm run build; npm run lint`. As of Phase 8, build passes and lint fails with a pre-existing baseline of 13 errors and 25 warnings under `keystone-web/app/**`.
+- Web: `cd keystone-web; npm run lint; npm test; npm run build; npm run test:visual`. At the
+  Keystone Planner Block E checkpoint these pass with zero lint issues, 73 unit tests, a complete
+  Next.js production build, and 25 Playwright scenarios.
 - Shared fixtures live under `tests/fixtures/`.
 - Deployment Impact: `python scripts/deploy_impact.py --files <changed-paths>` and `python -m unittest discover -s tests/deploy_impact`.
 
@@ -142,6 +156,15 @@ Verified from checked-out files:
   `wow_item_metadata` is outside this lifecycle.
 - The root `KeystoneSync/` duplicate was removed in Phase 5. Phase 11 removed the remaining embedded Client addon bundle; do not recreate it without an explicit architecture change.
 - Deployment/release impact must be determined by `scripts/deploy_impact.py`, not by memory. Reporting remote impact does not authorize deployment, remote D1 migration, tag, release, or push.
+- Planner composition facts live in `keystone-worker/src/wowComposition.ts`: 40 current Retail
+  specs, class/role, conservative DPS physical/magical affinity, and unique capability providers.
+  Ambiguous hybrid affinity remains `null` until verified rather than being guessed.
+- Planner solving lives in the pure `keystone-worker/src/keystonePlanner.ts` domain boundary. It
+  consumes normalized privacy-filtered inputs, enforces holder and 1/1/3 constraints, and ranks a
+  deterministic Top 5 without D1, Hono, authorization, or presentation copy.
+- Planner API adaptation lives in `keystone-worker/src/keystonePlannerApi.ts`; the authenticated
+  Team route derives selected members, preferences, current stones, shareable objectives, item
+  metadata, and capability metadata server-side before exposing the solver result.
 
 ## Known risks / ambiguities
 
@@ -155,6 +178,17 @@ Verified from checked-out files:
 The application layers use the verified Midnight Season 2 pool (challenge map IDs 588, 587, 586, 584, 585, 249, 250, and 399) and canonical Season 2 currency keys. The standalone addon release `v0.2.3` implements Interface 120100, Season 2 currencies, Prey quest IDs, Trovehunter's Bounty, and the compatible KeystoneLoot V1 snapshot contract.
 
 ## Next planned milestone
+
+Keystone Planner V1 Blocks A through E are implemented. Production QA acceptance passed on
+2026-09-10 with an isolated five-member `KSPQA_*` Team: the live Worker/D1 produced and validated a
+Top 5, ranking criteria, 1/1/3 composition, utilities, locks, incomplete parties, per-stone mode and
+privacy behavior. The fixture remains intact pending separately authorized review or cleanup. The
+Web remains undeployed and any Web rollout still requires separate authorization.
+
+Production password authentication has a verified limitation: bcrypt comparisons using the
+product's cost-10 hashes can exceed the Worker's CPU allowance and return Cloudflare `1102`.
+Acceptance used an explicitly authorized cost-4 exception on only the five isolated QA identities;
+this is not a product fix and must not be applied to real accounts.
 
 Stone Selector S1 added the backend-only aggregate route
 `GET /api/teams/:teamId/keystone-loot/dungeons/:challengeMapId/summary`. It uses live Team
@@ -193,9 +227,40 @@ login flow. The Poison-aligned page keeps the member dashboard compact, preserve
 supports multi-spec filtering and ordered item grids, and separates completed Voidcore items.
 Its body-portal tooltip uses safe S2 metadata only and accounts for the fixed Client scale.
 Deterministic `teams-*` preview data sources cover single/multiple/no Team plus populated,
-multi-spec, empty, loading, and error Selector states. The disabled Planner remains future work.
+multi-spec, empty, loading, and error Selector states.
 Web, Worker, and Client intentionally retain small local Season 2 display allowlists until a
 separate shared-build-boundary decision is approved.
+
+KeystoneClient now exposes exact-stone planning from the existing Teams tab. Its 300 px
+configuration column uses the level slider only to filter visible current-stone chips; selecting a
+chip fixes `stoneCharacterId`, forces its owner into the manually selected 2–5 available members,
+and requires an explicit Top 5 calculation. Player characters/specs/roles are chosen automatically
+from owner-authored preferences; the Client never emits manual role locks. Entering Planner is
+blocked by a four-state (`preferred`, `available`, `emergency`, `disabled`) owner configuration
+dialog until the current user enables at least one specialization. Team detail exposes only the
+privacy-safe aggregate `plannerConfigured`; explicitly unconfigured teammates and their stones are
+unavailable, while a missing field from an older Worker stays provisionally selectable until the
+Planner endpoint validates it. Five equal full-width recommendation cards form an exclusive accordion; the
+expanded composition lays Tank/Healer above three DPS cards and then shows loot and utilities. A
+gold `Crown` group-leader marker identifies the exact stone owner in compact and expanded views,
+and role markers use Blizzard's LFG role artwork.
+The private flow is React → typed core → Tauri JSONL → Python sidecar → Worker, with no access token
+in React and no Client-side scoring. The Worker field is additive, so existing Web behavior remains
+compatible when `stoneCharacterId` is omitted.
+
+KeystoneClient disables Tauri's native window file-drop receiver with `dragDropEnabled: false`, as
+required by WebView2 on Windows for frontend HTML5 drag and drop. Planner preference cards can
+therefore move between active/inactive zones in the packaged client, with 50 % opacity and a subtle
+blur while dragging. The Characters rail uses the same interaction and stores inactive character
+IDs in versioned local client storage. Character inactivity is presentation-only: it does not stop
+synchronization, delete data, or alter the addon/Worker/D1/Web contract.
+The Characters rail groups account and realm selection into one hierarchical account-to-realms
+menu. Account/realm and Characters are independently collapsible, while Inactive is a compact
+closed drop tray whose content opens upward in normal layout flow. Rounded section headers are
+title-only and visually distinct from their slightly indented controls, without vertical guides.
+Active sizes to its cards and only yields height and scrolls when expanded Inactive would otherwise
+overlap it. The selected character
+illuminates the full card without scaling it or drawing an inner selection outline.
 
 The Client Teams page keeps its last valid Team/detail UI during event-driven list revalidation on
 picker open, window focus, and visibility restoration. Concurrent Team-list and per-dungeon
@@ -229,3 +294,11 @@ the owner/team objective routes, and only then deploy Web. Missing Blizzard cred
 break objective routes, but metadata falls back to `Objeto #<itemId>` and the generic icon;
 deployment is technically safe without them, while configuring them first is the recommended
 product rollout.
+
+KeystoneClient enriches its existing equipment JSON with optional Raider.IO-derived
+`tierPieces: [{ tier, count }]`, counted from `gear.items[*].tier` without another HTTP request or
+D1 migration. Local SavedVariables equipment remains authoritative while preserving this remote
+tier annotation. The Characters view displays mixed tier counts with a generic `setPieces`
+fallback and shows total Mythic+ rating in the Dungeons header (`mythicPlusSeason.rating`, then
+`rioScore`). The native WebView context menu is suppressed and authenticated users receive the
+compact client action menu; avatar selection now marks the card edge instead of its portrait.

@@ -1,5 +1,4 @@
 import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { I18nProvider } from "../core/i18n";
 import type { KeystoneSelectorObjective } from "../core/types";
@@ -18,20 +17,22 @@ function objective(overrides: Partial<KeystoneSelectorObjective> = {}): Keystone
 
 describe("TeamItemTooltip exact variant metadata", () => {
   it.each([
-    ["es", "Nivel de objeto 402"],
-    ["en", "Item Level 402"],
-  ] as const)("renders exact item level in %s", async (language, label) => {
-    const user = userEvent.setup();
+    ["es", "domain=es"],
+    ["en", "domain=www"],
+  ] as const)("passes the exact item variant to Wowhead in %s", (language, domain) => {
     renderWithTheme(<I18nProvider language={language}><TeamItemTooltip objective={objective()} /></I18nProvider>);
-    await user.hover(screen.getByRole("button", { name: "Exact item" }));
-    expect(await screen.findByText(label)).toBeInTheDocument();
-    expect(screen.getByRole("tooltip").querySelector(".teams-tooltip__name")).toHaveClass("teams-tooltip__name--quality-epic");
+    const link = screen.getByRole("link", { name: "Exact item" });
+    expect(link).toHaveAttribute("href", "https://www.wowhead.com/item=123");
+    expect(link).toHaveAttribute("data-wowhead", expect.stringContaining(domain));
+    expect(link).toHaveAttribute("data-wowhead", expect.stringContaining("bonus=1498:6652"));
+    expect(link).toHaveAttribute("data-wowhead", expect.stringContaining("ilvl=402"));
+    expect(link).toHaveAttribute("data-wowhead", expect.stringContaining("spec=62"));
   });
 
-  it("omits the item-level line for legacy objectives", async () => {
-    const user = userEvent.setup();
+  it("omits unavailable item-level and bonus parameters for legacy objectives", () => {
     renderWithTheme(<I18nProvider language="en"><TeamItemTooltip objective={objective({ itemLevel: null, variantKey: "base" })} /></I18nProvider>);
-    await user.hover(screen.getByRole("button", { name: "Exact item" }));
-    expect(screen.queryByText(/Item Level/u)).not.toBeInTheDocument();
+    const target = screen.getByRole("link", { name: "Exact item" });
+    expect(target.getAttribute("data-wowhead")).not.toContain("ilvl=");
+    expect(target.getAttribute("data-wowhead")).not.toContain("bonus=");
   });
 });

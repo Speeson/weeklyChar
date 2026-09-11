@@ -1,7 +1,7 @@
 import type { Context, Next } from 'hono'
 import type { Env } from './types'
 
-type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 410 | 429 | 500 | 502 | 503
+type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 410 | 422 | 429 | 500 | 502 | 503
 
 export function jsonError(c: Context<{ Bindings: Env }>, status: ErrorStatus, detail: string) {
   return c.json({ detail }, status)
@@ -24,7 +24,7 @@ export async function corsMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     c.header('Vary', 'Origin')
   }
 
-  c.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+  c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   c.header('Access-Control-Allow-Headers', 'Authorization,Content-Type')
 
   if (c.req.method === 'OPTIONS') {

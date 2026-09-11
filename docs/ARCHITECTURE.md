@@ -119,6 +119,14 @@ Owns:
   `keystone-worker/src/keystoneObjectives.ts` and Blizzard item enrichment/cache in
   `keystone-worker/src/blizzardItemMetadata.ts`.
 - D1 access helpers and read response shaping in `keystone-worker/src/db.ts`.
+- The centralized Planner composition domain in `keystone-worker/src/wowComposition.ts`, including
+  Retail specs, derived roles, conservative damage affinity, and unique capability providers.
+- The pure deterministic Planner solver in `keystone-worker/src/keystonePlanner.ts`, including
+  holder-aware role-constrained search, loot/preference/utility ranking, locks, vacancies, and Top 3.
+- The Planner Team/D1 adapter and public projection in `keystone-worker/src/keystonePlannerApi.ts`,
+  exposed through authenticated `POST /api/teams/:teamId/keystone-planner`.
+- JWT-only owner preference reads and atomic replacement writes at
+  `GET/PUT /api/me/planner/preferences`.
 - Character, profile, team, invitation, auth, privacy-preference, recommendation, and health API behavior.
 - Wrangler deployment and D1 migration scripts.
 - Battle.net Authorization Code handling, PKCE/state verification, identity
@@ -138,11 +146,13 @@ Current production persistence.
 Owns:
 
 - Durable storage for users, characters, current keystone snapshots, teams, team members, invitations, and rate limits.
+- Owner-configured Planner preferences per character/spec, with character-delete cascade and no
+  duplicated role column.
 - Battle.net identity mappings keyed by provider `sub` and expiring OAuth
   transactions containing only hashed public-facing secrets; BattleTags are
   display metadata and provider tokens are never stored.
-- The schema history in `keystone-worker/migrations/0001_initial.sql`,
-  `0002_keystone_loot.sql`, and `0003_keystone_loot_sharing.sql`.
+- The schema history in `keystone-worker/migrations/`, currently through
+  `0010_keystone_planner.sql`.
 
 Current database binding:
 
@@ -246,10 +256,8 @@ Local/deployment scripts are in `keystone-worker/package.json`:
 
 Production persistence is Cloudflare D1 database `keystone-sync`.
 
-The current schema is versioned through `keystone-worker/migrations/0001_initial.sql`
-and additive migrations `0002_keystone_loot.sql`, `0003_keystone_loot_sharing.sql`,
-`0004_keystone_loot_item_metadata.sql`, and
-`0005_keystone_loot_item_tooltip_metadata.sql`.
+The current schema is versioned through `keystone-worker/migrations/0001_initial.sql` and additive
+migrations through `0010_keystone_planner.sql`.
 
 ### Web
 
@@ -322,7 +330,7 @@ Rules:
 SavedVariables discovery: keystone-client/sidecar/wow_path.py
 SavedVariables parse/payload: keystone-client/sidecar/sync_worker.py
 Sync write endpoint: keystone-worker/src/routes/keystones.ts
-D1 schema: keystone-worker/migrations/0001_initial.sql + 0002_keystone_loot.sql + 0003_keystone_loot_sharing.sql
+D1 schema: keystone-worker/migrations/ (currently 0001 through 0010)
 Read response shaping: keystone-worker/src/db.ts
 User character reads: keystone-worker/src/routes/me.ts
 Team character reads: keystone-worker/src/routes/teams.ts
@@ -416,9 +424,20 @@ The inline panel owns compact summary, collapsed character cards, optional multi
 semantic tier grids, and a subdued completed-Voidcore disclosure. A shared portal-based
 `KeystoneLootItemTooltip` now presents the S2 safe metadata on Selector tiles and the existing
 owner/Team objective rows. It supports hover, keyboard focus, click/tap, outside dismissal, and
-Escape without exposing numeric stats. The prior `KeystonePlanner` visual components are removed;
-non-visual recommendation helpers remain isolated for the deferred planner. The Client Teams
-counterpart is implemented in S5; the composition planner remains deferred.
+Escape without exposing numeric stats. At the S3 checkpoint, the prior `KeystonePlanner` visual
+components were removed and non-visual recommendation helpers remained isolated. The Client Teams
+counterpart was implemented in S5 while the composition planner was still deferred.
+
+Keystone Planner V1 Block D activates that deferred Web composition planner without changing the
+Selector objective data path. `KeystonePlannerPanel` is the single modal planning surface used by
+the Selector's session action (`challengeMapId: null`) and selected-dungeon tab. It sends only the
+public request DTO to `POST /api/teams/:teamId/keystone-planner`; request generations and abort
+controllers reject stale responses. `PlannerPreferencesDialog` separately owns the current user's
+global full-replacement `GET/PUT /api/me/planner/preferences` workflow and never edits teammate
+preferences. The Web strictly parses public results and only presents Worker-derived assignments,
+roles, vacancies, objectives, capability metadata, composition summaries, reasons and diagnostics.
+Capability spell IDs currently have no established direct Web icon resolver, so accessible text
+badges are the intentional fallback and no parallel provider catalog or N+1 metadata fetch exists.
 
 Stone Selector S4 adds the Client data path without adding the Teams UI. React calls the typed
 `teams.list`, `teams.get`, and `teams.keystone_selector` core wrappers; Rust accepts only those

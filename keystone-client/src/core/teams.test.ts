@@ -72,13 +72,20 @@ describe("Teams core bridge", () => {
         wowAccount: "ACCOUNT", vault: { secret: true }, keystoneLoot: { raw: true },
       }] }],
     }, 7);
-    expect(parsed).toEqual({ id: 7, name: "Raid", members: [{ userId: 2, username: "ana", characters: [{
+    expect(parsed).toEqual({ id: 7, name: "Raid", members: [{ userId: 2, username: "ana", plannerConfigured: true, characters: [{
       characterId: 10, name: "Auralis", realm: "Zul'jin", region: "eu", wowClass: "Mage",
       avatarUrl: "https://cdn.test/avatar.jpg", ilvl: 300, rioScore: 2500,
       currentKeystone: { level: 12, challengeMapId: 588, dungeon: "Altar of Fangs" },
     }] }] });
     expect(JSON.stringify(parsed)).not.toMatch(/SECRET|ACCOUNT|vault|keystoneLoot|member\.jpg/);
     expect(parseTeamDetail({ id: 7, name: "Raid", members: [{ userId: -1, username: "ana", characters: [] }] }, 7)).toBeNull();
+  });
+
+  it("parses privacy-safe Planner readiness and keeps old responses provisionally selectable", () => {
+    const base = { id: 7, name: "Raid", members: [{ userId: 2, username: "ana", characters: [] }] };
+    expect(parseTeamDetail(base, 7)?.members[0].plannerConfigured).toBe(true);
+    expect(parseTeamDetail({ ...base, members: [{ ...base.members[0], plannerConfigured: true }] }, 7)?.members[0].plannerConfigured).toBe(true);
+    expect(parseTeamDetail({ ...base, members: [{ ...base.members[0], plannerConfigured: "yes" }] }, 7)).toBeNull();
   });
 
   it("accepts the sanitized bridge characterId and nullable keystone map contract", () => {
@@ -146,7 +153,7 @@ describe("Teams core bridge", () => {
   });
 
   it("derives Team stone counts without aggregate fan-out", () => {
-    const counts = teamStoneCounts({ id: 7, name: "Raid", members: [{ userId: 1, username: "one", characters: [
+    const counts = teamStoneCounts({ id: 7, name: "Raid", members: [{ userId: 1, username: "one", plannerConfigured: false, characters: [
       { characterId: 1, name: "A", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 10, challengeMapId: 399, dungeon: null } },
       { characterId: 2, name: "B", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 8, challengeMapId: 399, dungeon: null } },
       { characterId: 3, name: "C", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 8, challengeMapId: null, dungeon: null } },

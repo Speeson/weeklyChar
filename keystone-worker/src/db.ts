@@ -323,16 +323,24 @@ export async function selectorStonesForTeam(
 
 export async function teamDetailResponse(env: Env, team: TeamRow, currentUserId: number): Promise<Record<string, unknown>> {
   const { results } = await env.DB.prepare(`
-    SELECT u.id, u.username
+    SELECT u.id, u.username,
+      EXISTS (
+        SELECT 1
+        FROM character_play_preferences cpp
+        JOIN characters configured_character ON configured_character.id = cpp.character_id
+        WHERE configured_character.user_id = u.id
+          AND cpp.play_preference <> 'disabled'
+      ) AS planner_configured
     FROM team_members tm
     JOIN users u ON u.id = tm.user_id
     WHERE tm.team_id = ?
     ORDER BY u.username
-  `).bind(team.id).all<{ id: number, username: string }>()
+  `).bind(team.id).all<{ id: number, username: string, planner_configured: number }>()
 
   const members = await Promise.all(results.map(async member => ({
     userId: member.id,
     username: member.username,
+    plannerConfigured: member.planner_configured !== 0,
     characters: await charactersForUser(env, member.id),
   })))
 

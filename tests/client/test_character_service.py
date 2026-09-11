@@ -113,6 +113,13 @@ class CharacterServiceTests(unittest.TestCase):
         self.assertEqual(len(dto["talents"]["trees"]), 2)
         self.assertEqual(dto["omniumFolio"]["systemId"], 48)
 
+    def test_local_equipment_preserves_remote_raiderio_tier_pieces(self):
+        local = {"character": "Auralis", "realm": "Zul'jin", "region": "eu", "equipment": {"items": []}}
+        remote = character(equipment={"items": [{"itemId": 1}], "tierPieces": [{"tier": 35, "count": 2}, {"tier": 36, "count": 3}]})
+        service, _session = self.make_service([remote], local_snapshot_loader=lambda _cfg: [local])
+        dto = service.refresh()["characters"][0]
+        self.assertEqual(dto["equipment"]["tierPieces"], [{"tier": 35, "count": 2}, {"tier": 36, "count": 3}])
+
     def test_normalizes_empty_lua_array_fields_in_local_snapshots(self):
         local = {
             "character": "Auralis",

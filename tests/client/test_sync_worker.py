@@ -16,7 +16,7 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures"
 
 sys.path.insert(0, str(CLIENT_ROOT))
 
-from sync_worker import SyncWorker, _keystone_loot_for_json, _normalize_ilvl  # noqa: E402
+from sync_worker import SyncWorker, _keystone_loot_for_json, _normalize_ilvl, _normalize_tier_pieces  # noqa: E402
 
 
 class FakeResponse:
@@ -121,6 +121,27 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(_normalize_ilvl(642.6), 643)
         self.assertEqual(_normalize_ilvl("640"), 640)
         self.assertIsNone(_normalize_ilvl("invalid"))
+
+    def test_raiderio_tier_pieces_are_counted_and_sorted(self):
+        gear = {"items": {
+            "head": {"tier": "36"}, "shoulder": {"tier": 35},
+            "chest": {"tier": 36}, "hands": {"tier": 35.0},
+            "legs": {"tier": "invalid"}, "waist": None, "feet": {"tier": 36.5},
+        }}
+        self.assertEqual(_normalize_tier_pieces(gear), [
+            {"tier": 35, "count": 2}, {"tier": 36, "count": 2},
+        ])
+        self.assertEqual(_normalize_tier_pieces({"items": []}), [])
+
+    def test_raiderio_tier_pieces_are_merged_into_equipment_payload(self):
+        worker = SyncWorker(self.config)
+        posts = []
+        with (
+            mock.patch.object(worker, "_fetch_raiderio", return_value=(None, None, None, None, [{"tier": 36, "count": 4}])),
+            mock.patch("sync_worker.requests.post", side_effect=lambda url, json, headers, timeout: posts.append(json) or FakeResponse()),
+        ):
+            self.assertTrue(worker._sync(str(FIXTURE_ROOT / "savedvariables" / "basic.lua"), "ACCOUNT-1"))
+        self.assertEqual(posts[0]["equipment"]["tierPieces"], [{"tier": 36, "count": 4}])
 
     def test_all_savedvariables_fixtures_decode(self):
         for fixture in sorted((FIXTURE_ROOT / "savedvariables").glob("*.lua")):

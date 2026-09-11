@@ -22,7 +22,10 @@ export type CoreCommand =
   | "characters.refresh"
   | "teams.list"
   | "teams.get"
+  | "planner.preferences.get"
+  | "planner.preferences.update"
   | "teams.keystone_selector"
+  | "teams.keystone_planner"
   | "addon.get_status"
   | "addon.check"
   | "addon.install"
@@ -218,6 +221,7 @@ export type EquipmentItem = {
 export type EquipmentSnapshot = {
   averageItemLevel?: number | null;
   setPieces?: Array<{ setId?: number | null; count: number }>;
+  tierPieces?: Array<{ tier: number; count: number }>;
   items: EquipmentItem[];
 };
 
@@ -309,7 +313,7 @@ export type Character = {
   preyHunts?: Record<string, unknown> | null;
   currencies?: Record<string, CharacterCurrency> | null;
   money?: { gold?: number; silver?: number; copper?: number; copperOnly?: number; totalCopper?: number } | null;
-  mythicPlusSeason?: { dungeons?: Array<Record<string, unknown>> } | null;
+  mythicPlusSeason?: { rating?: number | null; dungeons?: Array<Record<string, unknown>> } | null;
   equipment?: EquipmentSnapshot | null;
   talents?: TalentsSnapshot | null;
   omniumFolio?: OmniumFolioSnapshot | null;
@@ -350,6 +354,7 @@ export type ClientTeamCharacter = {
 export type ClientTeamMember = {
   userId: number;
   username: string;
+  plannerConfigured: boolean;
   characters: ClientTeamCharacter[];
 };
 
@@ -433,6 +438,124 @@ export type KeystoneSelectorResponse = {
     tiers: KeystoneSelectorTierCounts;
   };
   characters: KeystoneSelectorCharacter[];
+};
+
+export type KeystonePlannerRole = "tank" | "healer" | "dps";
+export type KeystonePlannerPreference = "preferred" | "available" | "emergency";
+export type KeystonePlannerPreferenceState = KeystonePlannerPreference | "disabled";
+export type ClientPlannerPreference = {
+  characterId: number;
+  specId: number;
+  role: KeystonePlannerRole;
+  playPreference: KeystonePlannerPreferenceState;
+  lootSpecId: number;
+  updatedAt: string;
+};
+export type ClientPlannerPreferenceInput = Omit<ClientPlannerPreference, "role" | "updatedAt">;
+export type ClientPlannerPreferences = { preferences: ClientPlannerPreference[] };
+export type KeystonePlannerAvailability = "guaranteed" | "conditional" | "none";
+
+export type KeystonePlannerOptions = {
+  optimizeComposition: boolean;
+  bloodlust: boolean;
+  battleRez: boolean;
+  classBuffs: boolean;
+  damageSynergy: boolean;
+};
+
+export type KeystonePlannerLock =
+  | { type: "assignment"; userId: number; characterId: number; specId: number }
+  | { type: "character"; userId: number; characterId: number }
+  | { type: "role"; userId: number; role: KeystonePlannerRole };
+
+export type KeystonePlannerRequest = {
+  participantUserIds: number[];
+  targetLevel: number;
+  challengeMapId: number;
+  stoneCharacterId: number;
+  options: KeystonePlannerOptions;
+  locks: KeystonePlannerLock[];
+};
+
+export type KeystonePlannerObjective = {
+  itemId: number;
+  itemName: string | null;
+  iconUrl: string | null;
+  tier: number;
+  variantKey: string;
+  voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
+};
+
+export type KeystonePlannerCapability = {
+  capabilityId: string;
+  name: string;
+  type: "major_utility" | "class_buff" | "damage_debuff";
+  iconSpellId: number;
+  stacking: "unique";
+  mode?: "guaranteed" | "conditional";
+  condition?: string | null;
+  availability?: "guaranteed" | "conditional";
+};
+
+export type KeystonePlannerAssignment = {
+  userId: number;
+  username: string;
+  characterId: number;
+  characterName: string;
+  wowClass: string;
+  specId: number;
+  role: KeystonePlannerRole;
+  lootSpecId: number;
+  playPreference: KeystonePlannerPreference;
+  objectives: KeystonePlannerObjective[];
+  capabilities: KeystonePlannerCapability[];
+};
+
+export type KeystonePlannerRecommendation = {
+  rank: number;
+  fingerprint: string;
+  stone: {
+    characterId: number;
+    characterName: string;
+    ownerUserId: number;
+    ownerUsername: string;
+    challengeMapId: number;
+    dungeon: string;
+    level: number;
+  };
+  assignments: KeystonePlannerAssignment[];
+  vacancies: Array<{ role: KeystonePlannerRole; preferredCapabilities: string[] }>;
+  lootSummary: {
+    weightedScore: number;
+    playersWithObjectives: number;
+    totalObjectives: number;
+    tierCounts: { bestInSlot: number; mustHave: number; niceToHave: number; catalyst: number; transmog: number };
+  };
+  levelSummary: { targetLevel: number; stoneLevel: number; levelDistance: number };
+  preferenceSummary: { preferred: number; available: number; emergency: number };
+  compositionSummary: {
+    bloodlust: KeystonePlannerAvailability;
+    battleRez: KeystonePlannerAvailability;
+    uniqueCapabilities: KeystonePlannerCapability[];
+    damageProfile: "physical" | "magical" | "mixed" | "unknown";
+    magicalDpsCount: number;
+    physicalDpsCount: number;
+    unknownDpsCount: number;
+    chaosBrandBeneficiaries: number;
+    mysticTouchBeneficiaries: number;
+    uniqueClassBuffCount: number;
+  };
+  reasonCodes: string[];
+};
+
+export type KeystonePlannerResponse = {
+  teamId: number;
+  challengeMapId: number;
+  targetLevel: number;
+  availability: { eligibleStoneCount: number };
+  status: "ok" | "invalid_input" | "unconfigured_participants" | "no_valid_composition";
+  diagnostics: { codes: string[]; unconfiguredUserIds: number[]; lockIssues: string[] };
+  recommendations: KeystonePlannerRecommendation[];
 };
 
 export type SyncState = "idle" | "watching" | "syncing" | "success" | "error";

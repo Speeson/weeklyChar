@@ -1,6 +1,6 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { charactersPreview } from "../core/charactersPreview";
 import { I18nProvider } from "../core/i18n";
 import { renderWithTheme } from "../test/renderWithTheme";
@@ -13,6 +13,8 @@ function renderPage(characterState = state) {
 }
 
 describe("CharactersPage", () => {
+  beforeEach(() => localStorage.clear());
+
   it("renders the PNG structure with one-row gear, eight dungeons and ten currencies", () => {
     const { container } = renderPage();
     expect(container.querySelectorAll(".gear-item")).toHaveLength(16);
@@ -31,6 +33,30 @@ describe("CharactersPage", () => {
     expect(screen.getByText("Frontal de la Muerte")).toBeVisible();
     expect(screen.getByText("Arena Lacravacua")).toBeVisible();
     expect(container.querySelector(".money-card__icon img")).toHaveAttribute("src", expect.stringContaining("133785"));
+  });
+
+  it("shows a contained total-rating chip with season and Raider.IO fallbacks", () => {
+    const characters = charactersPreview();
+    characters[0].mythicPlusSeason = { ...characters[0].mythicPlusSeason, rating: 3214 };
+    const { container, rerender } = renderPage({ ...state, characters });
+    const chip = screen.getByText("Rating total").closest("span")!;
+    expect(chip).toHaveClass("dungeons-panel__rating");
+    expect(chip).toHaveTextContent("3214");
+    expect(container.querySelector(".dungeons-panel > h2")).toContainElement(chip);
+    characters[0].mythicPlusSeason = { dungeons: characters[0].mythicPlusSeason?.dungeons };
+    characters[0].rioScore = 2987;
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(screen.getByText("Rating total").closest("span")).toHaveTextContent("2987");
+  });
+
+  it("shows mixed Raider.IO tier counts and retains the generic fallback", () => {
+    const characters = charactersPreview();
+    characters[0].equipment!.tierPieces = [{ tier: 35, count: 2 }, { tier: 36, count: 3 }];
+    const { rerender } = renderPage({ ...state, characters });
+    expect(screen.getByText("2 Piezas de conjunto (T35) · 3 Piezas de conjunto (T36)")).toBeVisible();
+    delete characters[0].equipment!.tierPieces;
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(screen.getByText(/Piezas de conjunto/)).toBeVisible();
   });
 
   it("uses localized currency names in Spanish", () => {
@@ -58,6 +84,26 @@ describe("CharactersPage", () => {
     expect(extras.querySelector(".gear-item__enchant img")).toHaveAttribute("src", expect.stringContaining("133785"));
   });
 
+  it("remounts equipment cleanly and keeps duplicate necklace gems stable across character changes", async () => {
+    const user = userEvent.setup();
+    const characters = charactersPreview();
+    const { container } = renderPage({ ...state, characters });
+    const firstNeck = container.querySelectorAll(".gear-item__piece")[1];
+
+    for (let index = 0; index < 4; index += 1) {
+      await user.click(screen.getByRole("button", { name: /Makabe/ }));
+      expect(container.querySelectorAll(".gear-item__piece")[1]).not.toBe(firstNeck);
+      expect(container.querySelectorAll(".gear-item__gems")[1]).toHaveClass("gear-item__gems--stacked");
+      expect(container.querySelectorAll(".gear-item__gems")[1].querySelectorAll(".gear-item__gem")).toHaveLength(2);
+      await user.click(screen.getByRole("button", { name: /Bakuhatsu/ }));
+    }
+
+    await user.click(screen.getByRole("button", { name: /Makabe/ }));
+    expect(container.querySelectorAll(".gear-item__gems")[1]).toHaveClass("gear-item__gems--stacked");
+    expect(container.querySelectorAll(".gear-item__gems")[1].querySelectorAll(".gear-item__gem")).toHaveLength(2);
+    expect(container.querySelectorAll(".gear-item")).toHaveLength(15);
+  });
+
   it("uses an unclipped portal fallback and never treats enchantId as a spellId", () => {
     const characters = charactersPreview();
     characters[0].equipment!.items[0].enchant = { enchantId: 7961, spellId: null, name: "Hex de parasitismo potenciado", iconFileID: null };
@@ -72,11 +118,17 @@ describe("CharactersPage", () => {
     expect(tooltip).toHaveClass("floating-local-tooltip");
   });
 
-  it("replaces the native Account and Realm arrows with the character-card chevron", () => {
+  it("combines Account and Realm into one hierarchical selector", async () => {
+    const user = userEvent.setup();
     const { container } = renderPage();
     const selectors = container.querySelectorAll(".characters-select");
-    expect(selectors).toHaveLength(2);
-    selectors.forEach(selector => expect(selector.querySelector(".characters-select__trigger b[aria-hidden=true]")).toHaveTextContent("›"));
+    expect(selectors).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Cuenta y reino" }));
+    expect(screen.getByRole("menu", { name: "Cuenta y reino" })).toBeVisible();
+    const accountOption = screen.getByRole("menuitem", { name: /WOW Account 2/ });
+    expect(accountOption).toHaveAttribute("aria-expanded", "false");
+    await user.click(accountOption);
+    expect(screen.getByRole("menuitem", { name: "Sanguino" })).toBeVisible();
   });
 
   it("adds identity, Wowhead tooltips and a full-width action to the talent preview", () => {
@@ -141,22 +193,85 @@ describe("CharactersPage", () => {
   it("recalculates realms and characters when the account changes", async () => {
     const user = userEvent.setup();
     renderPage();
-    await user.click(screen.getByRole("button", { name: "CUENTA" }));
-    await user.click(screen.getByRole("option", { name: "WOW Account 2" }));
-    expect(screen.getByRole("button", { name: "REINO" })).toHaveTextContent("Sanguino");
+    await user.click(screen.getByRole("button", { name: "Cuenta y reino" }));
+    await user.click(screen.getByRole("menuitem", { name: /WOW Account 2/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Sanguino" }));
+    expect(screen.getByRole("button", { name: "Cuenta y reino" })).toHaveTextContent("WOW Account 2");
+    expect(screen.getByRole("button", { name: "Cuenta y reino" })).toHaveTextContent("Sanguino");
     expect(screen.getByRole("button", { name: /Morwyn/ })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Bakuhatsu/ })).not.toBeInTheDocument();
+  });
+
+  it("moves characters between active and inactive zones by drag and persists the choice", () => {
+    const { container, unmount } = renderPage();
+    const activeZone = container.querySelector<HTMLElement>('[data-zone="active"]')!;
+    const inactiveZone = container.querySelector<HTMLElement>('[data-zone="inactive"]')!;
+    let card = screen.getByRole("button", { name: /Makabe/ }).closest<HTMLElement>(".characters-card")!;
+    const values = new Map<string, string>();
+    const dataTransfer = {
+      dropEffect: "none", effectAllowed: "none",
+      getData: (type: string) => values.get(type) ?? "",
+      setData: (type: string, value: string) => values.set(type, value),
+    };
+
+    fireEvent.dragStart(card, { dataTransfer });
+    expect(card).toHaveClass("is-dragging");
+    fireEvent.dragOver(inactiveZone, { dataTransfer });
+    fireEvent.drop(inactiveZone, { dataTransfer });
+    expect(screen.queryByRole("button", { name: /Makabe/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Inactivos1/ })).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(screen.getByRole("button", { name: /Inactivos1/ }));
+    card = screen.getByRole("button", { name: /Makabe/ }).closest<HTMLElement>(".characters-card")!;
+    expect(card).not.toHaveClass("is-dragging");
+    expect(inactiveZone).toContainElement(card);
+    expect(card).toHaveClass("is-inactive");
+
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.drop(activeZone, { dataTransfer });
+    card = screen.getByRole("button", { name: /Makabe/ }).closest<HTMLElement>(".characters-card")!;
+    expect(activeZone).toContainElement(card);
+    expect(card).not.toHaveClass("is-inactive");
+
+    fireEvent.click(within(card).getByRole("button", { name: "Mover a inactivos" }));
+    unmount();
+    const remounted = renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Inactivos1/ }));
+    expect(remounted.container.querySelector('[data-zone="inactive"]')).toHaveTextContent("Makabe");
+  });
+
+  it("collapses both rail sections and illuminates the whole selected card", async () => {
+    const user = userEvent.setup();
+    const { container } = renderPage();
+    let selected = screen.getByRole("button", { name: /Bakuhatsu/ }).closest(".characters-card");
+    expect(selected).toHaveClass("is-selected");
+    expect(screen.getByRole("button", { name: /Bakuhatsu/ })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: /Makabe/ }));
+    selected = screen.getByRole("button", { name: /Makabe/ }).closest(".characters-card");
+    expect(selected).toHaveClass("is-selected");
+    expect(screen.getByRole("button", { name: /Bakuhatsu/ }).closest(".characters-card")).not.toHaveClass("is-selected");
+
+    await user.click(screen.getByRole("button", { name: /CUENTA Y REINO/ }));
+    expect(screen.queryByRole("button", { name: "Cuenta y reino" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /PERSONAJES/ }));
+    expect(container.querySelector(".characters-list")).not.toBeInTheDocument();
+  });
+
+  it("renders section headers as titles without selector-like secondary values", () => {
+    const { container } = renderPage();
+    const headers = [...container.querySelectorAll<HTMLElement>(".characters-rail-section__toggle")];
+    expect(headers).toHaveLength(2);
+    expect(headers.map(header => header.textContent)).toEqual(["CUENTA Y REINO", "PERSONAJES"]);
+    expect(headers.every(header => header.querySelector("small") === null)).toBe(true);
   });
 
   it("uses themed custom popovers and translates rail labels in English", async () => {
     const user = userEvent.setup();
     const { container } = renderWithTheme(<I18nProvider language="en"><CharactersPage state={state}/></I18nProvider>);
-    expect(screen.getByText("ACCOUNT")).toBeVisible();
-    expect(screen.getByText("REALM")).toBeVisible();
+    expect(screen.getByText("ACCOUNT AND REALM")).toBeVisible();
     expect(screen.getByText("CHARACTERS")).toBeVisible();
     expect(container.querySelector("select")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "ACCOUNT" }));
-    expect(screen.getByRole("listbox", { name: "ACCOUNT" })).toHaveClass("characters-select__popover");
+    await user.click(screen.getByRole("button", { name: "Account and realm" }));
+    expect(screen.getByRole("menu", { name: "Account and realm" })).toHaveClass("characters-select__popover");
   });
 
   it("opens the read-only full talent trees and copies the captured import string", async () => {

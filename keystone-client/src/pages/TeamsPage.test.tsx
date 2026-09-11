@@ -6,7 +6,7 @@ import type { TeamsDataSource } from "../core/teams";
 import {
   clearTeamsSessionCache, loadTeamDetail, loadTeams, setSelectedTeamId,
 } from "../core/teamsSessionCache";
-import type { ClientTeamDetail, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
+import type { ClientPlannerPreference, ClientPlannerPreferenceInput, ClientTeamDetail, KeystonePlannerResponse, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
 import { renderWithTheme } from "../test/renderWithTheme";
 import { TeamsPage } from "./TeamsPage";
 
@@ -22,11 +22,11 @@ const objective = (itemId: number, tier: number, overrides: Partial<KeystoneSele
 
 const detail: ClientTeamDetail = {
   id: 7, name: "Mythiqueros 2.0", members: [
-    { userId: 2, username: "Speeson", characters: [
+    { userId: 2, username: "Speeson", plannerConfigured: true, characters: [
       { characterId: 10, name: "Bakuhatsu", realm: "Zul'jin", region: "eu", wowClass: "Mage", avatarUrl: null, ilvl: 300, rioScore: 2500, currentKeystone: { level: 12, challengeMapId: 399, dungeon: "Ruby Life Pools" } },
       { characterId: 11, name: "Makabe", realm: "Zul'jin", region: "eu", wowClass: "Warrior", avatarUrl: null, ilvl: 299, rioScore: 2400, currentKeystone: { level: 10, challengeMapId: 250, dungeon: "Temple of Sethraliss" } },
     ] },
-    { userId: 3, username: "Ana con un nombre largo", characters: [
+    { userId: 3, username: "Ana con un nombre largo", plannerConfigured: true, characters: [
       { characterId: 12, name: "Spee", realm: "Dun Modr", region: "eu", wowClass: "Paladin", avatarUrl: null, ilvl: 295, rioScore: 2300, currentKeystone: { level: 8, challengeMapId: 399, dungeon: "Ruby Life Pools" } },
     ] },
   ],
@@ -48,18 +48,38 @@ const selector: KeystoneSelectorResponse = {
   ],
 };
 
+function plannerResponse(): KeystonePlannerResponse {
+  const assignments = [
+    { userId: 3, username: "Ana", characterId: 12, characterName: "Spee", wowClass: "Paladin", specId: 66, role: "tank" as const, lootSpecId: 66, playPreference: "preferred" as const, objectives: [{ itemId: 8, itemName: "Escudo", iconUrl: null, tier: 3, variantKey: "planner:8", voidcoreState: "pending" as const }], capabilities: [] },
+    { userId: 2, username: "Speeson", characterId: 10, characterName: "Bakuhatsu", wowClass: "Mage", specId: 62, role: "dps" as const, lootSpecId: 62, playPreference: "preferred" as const, objectives: [{ itemId: 1, itemName: "Báculo", iconUrl: null, tier: 2, variantKey: "planner:1", voidcoreState: "pending" as const }], capabilities: [] },
+  ];
+  const recommendation = (rank: number) => ({
+    rank, fingerprint: `planner-${rank}`,
+    stone: { characterId: 10, characterName: "Bakuhatsu", ownerUserId: 2, ownerUsername: "Speeson", challengeMapId: 399, dungeon: "Ruby Life Pools", level: 12 },
+    assignments, vacancies: [{ role: "healer" as const, preferredCapabilities: [] }],
+    lootSummary: { weightedScore: 100 - rank, playersWithObjectives: 2, totalObjectives: 2, tierCounts: { bestInSlot: 1, mustHave: 1, niceToHave: 0, catalyst: 0, transmog: 0 } },
+    levelSummary: { targetLevel: 12, stoneLevel: 12, levelDistance: 0 }, preferenceSummary: { preferred: 2, available: 0, emergency: 0 },
+    compositionSummary: { bloodlust: "guaranteed" as const, battleRez: "none" as const, uniqueCapabilities: [], damageProfile: "magical" as const, magicalDpsCount: 1, physicalDpsCount: 0, unknownDpsCount: 0, chaosBrandBeneficiaries: 1, mysticTouchBeneficiaries: 0, uniqueClassBuffCount: 1 },
+    reasonCodes: ["PARTY_INCOMPLETE", "HAS_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT"],
+  });
+  return { teamId: 7, challengeMapId: 399, targetLevel: 12, availability: { eligibleStoneCount: 1 }, status: "ok", diagnostics: { codes: [], unconfiguredUserIds: [], lockIssues: [] }, recommendations: [1, 2, 3, 4, 5].map(recommendation) };
+}
+
 function source(overrides: Partial<TeamsDataSource> = {}): TeamsDataSource {
   return {
     listTeams: vi.fn(async () => [{ id: 7, name: detail.name, memberCount: detail.members.length }]),
     getTeam: vi.fn(async () => detail),
     getKeystoneSelector: vi.fn(async () => selector),
+    getKeystonePlanner: vi.fn(async () => { throw { code: "API_UNAVAILABLE", message: "Planner unavailable" }; }),
+    getPlannerPreferences: vi.fn(async () => ({ preferences: [{ characterId: 10, specId: 62, role: "dps" as const, playPreference: "preferred" as const, lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }] })),
+    updatePlannerPreferences: vi.fn(async (preferences: ClientPlannerPreferenceInput[]) => ({ preferences: preferences.map(preference => ({ ...preference, role: "dps" as const, updatedAt: "2026-09-11T00:00:00Z" })) })),
     ...overrides,
   };
 }
 
 function renderPage(dataSource = source(), language: Language = "es", onSessionExpired = vi.fn()) {
   return { dataSource, onSessionExpired, ...renderWithTheme(
-    <I18nProvider language={language}><TeamsPage dataSource={dataSource} onOpenWeb={vi.fn()} onSessionExpired={onSessionExpired} /></I18nProvider>,
+    <I18nProvider language={language}><TeamsPage currentUsername="Speeson" dataSource={dataSource} onOpenWeb={vi.fn()} onSessionExpired={onSessionExpired} /></I18nProvider>,
   ) };
 }
 
@@ -116,7 +136,7 @@ describe("TeamsPage compact ranking", () => {
     let resolveDetailRefresh!: (value: ClientTeamDetail) => void;
     const refreshedDetail: ClientTeamDetail = {
       ...detail,
-      members: [...detail.members, { userId: 9, username: "New Member", characters: [] }],
+      members: [...detail.members, { userId: 9, username: "New Member", plannerConfigured: false, characters: [] }],
     };
     const dataSource = source({
       listTeams: vi.fn()
@@ -197,7 +217,7 @@ describe("TeamsPage compact ranking", () => {
     expect(dataSource.listTeams).toHaveBeenCalledOnce();
     expect(dataSource.getTeam).toHaveBeenCalledOnce();
 
-    view.rerender(<I18nProvider language="es"><TeamsPage dataSource={dataSource} onOpenWeb={vi.fn()} onSessionExpired={onSessionExpired} /></I18nProvider>);
+    view.rerender(<I18nProvider language="es"><TeamsPage currentUsername="Speeson" dataSource={dataSource} onOpenWeb={vi.fn()} onSessionExpired={onSessionExpired} /></I18nProvider>);
 
     expect(screen.getByRole("button", { name: detail.name })).toBeInTheDocument();
     expect(screen.queryByLabelText("Cargando equipos")).not.toBeInTheDocument();
@@ -407,7 +427,7 @@ describe("TeamsPage compact ranking", () => {
 
   it("ignores an older Team detail response after switching Teams", async () => {
     const user = userEvent.setup();
-    const second: ClientTeamDetail = { id: 8, name: "Second Team", members: [{ userId: 9, username: "Newest", characters: [] }] };
+    const second: ClientTeamDetail = { id: 8, name: "Second Team", members: [{ userId: 9, username: "Newest", plannerConfigured: false, characters: [] }] };
     const initialSource = source();
     await loadTeams(initialSource);
     await loadTeamDetail(initialSource, 7);
@@ -437,7 +457,7 @@ describe("TeamsPage compact ranking", () => {
     expect(within(rows[0]).getByText("#1")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Bakuhatsu")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Spee")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Planificar piedra/u })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Planificar piedra/u })).toBeEnabled();
     const expand = within(rows[0]).getByRole("button", { name: /Ver objetos.*Bakuhatsu/u });
     await user.click(expand);
     expect(rows[0]).toHaveAttribute("data-expanded", "true");
@@ -455,27 +475,192 @@ describe("TeamsPage compact ranking", () => {
     expect(rows[0]).toHaveAttribute("data-expanded", "true");
   });
 
-  it("opens the existing safe tooltip from the compact grid and dismisses it with Escape", async () => {
+  it("plans the Top 5 for the selected exact stone and marks its owner with the leader crown", async () => {
+    const user = userEvent.setup();
+    const planned = plannerResponse();
+    const overflowAssignment = planned.recommendations[0].assignments.find(assignment => assignment.characterName === "Bakuhatsu")!;
+    const baseObjective = overflowAssignment.objectives[0];
+    overflowAssignment.objectives = [3, 2, 1, 5, 4, 88].map((tier, index) => ({ ...baseObjective, itemId: 100 + index, itemName: `Objeto ${100 + index}`, tier, variantKey: `overflow:${index}` }));
+    const getKeystonePlanner = vi.fn(async () => planned);
+    renderPage(source({ getKeystonePlanner }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    expect(screen.getByRole("button", { name: "Configurar mis personajes" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    const ownerFilter = screen.getByRole("button", { name: /Filtrar por Speeson/u });
+    expect(ownerFilter).toHaveAttribute("aria-pressed", "true");
+    await user.click(ownerFilter);
+    expect(ownerFilter).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+    await user.click(screen.getByRole("button", { name: "Calcular Top 5" }));
+
+    await waitFor(() => expect(getKeystonePlanner).toHaveBeenCalledWith(7, expect.objectContaining({
+      participantUserIds: expect.arrayContaining([2, 3]), targetLevel: 12, challengeMapId: 399, stoneCharacterId: 10, locks: [],
+    })));
+    expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5);
+    expect(screen.getAllByLabelText("Dueño de la piedra").length).toBeGreaterThan(0);
+    const cards = [...document.querySelectorAll<HTMLElement>(".planner-recommendation")];
+    expect(cards[0]).toHaveAttribute("data-expanded", "false");
+    await user.click(within(cards[1]).getByRole("button"));
+    expect(cards[0]).toHaveAttribute("data-expanded", "false");
+    expect(cards[1]).toHaveAttribute("data-expanded", "true");
+    expect(within(cards[1]).getByText("Buffos y sinergias")).toBeInTheDocument();
+    expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Objetivos");
+    expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Preferidos");
+    expect(within(cards[1]).queryByText("Paladin · Protection")).not.toBeInTheDocument();
+    expect(within(cards[1]).queryByTitle("Paladin")).not.toBeInTheDocument();
+    expect(within(cards[1]).getByTitle("Protection").querySelector("img")).toHaveAttribute("src", expect.stringContaining("236264"));
+    expect(within(cards[1]).getByRole("link", { name: "Escudo" })).toHaveAttribute("data-wowhead", expect.stringContaining("spec=66"));
+    expect(within(cards[1]).queryByLabelText("Dueño de la piedra +12")).not.toBeInTheDocument();
+    await user.click(within(cards[1]).getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 6/u }));
+    const breakdown = screen.getByRole("dialog", { name: /Desglose de objetivos · Bakuhatsu/u });
+    expect(within(breakdown).getByText("BiS · 1")).toBeInTheDocument();
+    expect(within(breakdown).getByText("Must · 1")).toBeInTheDocument();
+    expect(within(breakdown).getByText("Catalyst · 1")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: /Desglose de objetivos/u })).not.toBeInTheDocument();
+  });
+
+  it("localizes the Planner configuration in English", async () => {
+    const user = userEvent.setup();
+    renderPage(source(), "en");
+    await user.click(await screen.findByRole("button", { name: /Ruby Life Pools/u }));
+    await user.click(screen.getByRole("button", { name: "Plan keystone" }));
+    expect(screen.getByRole("button", { name: "Configure my characters" })).toBeInTheDocument();
+    expect(screen.getByText("The slider only filters available keystones.")).toBeInTheDocument();
+  });
+
+  it("blocks Planner configuration until the current user enables a specialization", async () => {
+    const user = userEvent.setup();
+    const unconfigured = { ...detail, members: detail.members.map(member => member.userId === 2 ? {
+      ...member, plannerConfigured: false,
+      characters: member.characters.map((character, index) => index === 0 ? { ...character, avatarUrl: "https://img.test/bakuhatsu.jpg" } : character),
+    } : member) };
+    const updatePlannerPreferences = vi.fn(async (preferences: ClientPlannerPreferenceInput[]) => ({ preferences: preferences.map(preference => ({
+      ...preference, role: preference.specId === 66 || preference.specId === 73 ? "tank" as const : "dps" as const, updatedAt: "2026-09-11T00:00:00Z",
+    })) }));
+    renderPage(source({ getTeam: vi.fn(async () => unconfigured), getPlannerPreferences: vi.fn(async () => ({ preferences: [] })), updatePlannerPreferences }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Configura tus personajes" });
+    expect(within(dialog).getByRole("img", { name: "KeystoneSync" })).toBeInTheDocument();
+    expect(dialog.querySelector('img[src="https://img.test/bakuhatsu.jpg"]')).toBeInTheDocument();
+    expect(dialog.querySelector('[data-zone="active"] .planner-preference-character')).not.toBeInTheDocument();
+    expect(dialog.querySelectorAll('[data-zone="inactive"] .planner-preference-character')).toHaveLength(2);
+    expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "Activar Bakuhatsu" }));
+    expect(within(dialog).getByRole("button", { name: /Arcane · Desactivado/u })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: /Arcane · Desactivado/u }));
+    expect(within(dialog).getAllByRole("option", { name: "Preferido" }).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByRole("option", { name: "Disponible" }).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByRole("option", { name: "Emergencia" }).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByRole("option", { name: "Desactivado" }).length).toBeGreaterThan(0);
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "Bakuhatsu Arcane" }), "preferred");
+    await user.click(within(dialog).getByRole("button", { name: "Guardar y planificar" }));
+    await waitFor(() => expect(updatePlannerPreferences).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Configurar mis personajes" })).toBeInTheDocument();
+  });
+
+  it("checks saved preferences without flashing the mandatory configuration dialog", async () => {
+    const user = userEvent.setup();
+    let resolvePreferences!: (value: { preferences: ClientPlannerPreference[] }) => void;
+    const getPlannerPreferences = vi.fn(() => new Promise<{ preferences: ClientPlannerPreference[] }>(resolve => { resolvePreferences = resolve; }));
+    renderPage(source({ getPlannerPreferences }));
+    await selectRuby(user);
+
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+
+    expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Cargando configuración del Planner…" })).toBeInTheDocument();
+    await act(async () => resolvePreferences({ preferences: [{ characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }] }));
+    await waitFor(() => expect(screen.queryByRole("status", { name: "Cargando configuración del Planner…" })).not.toBeInTheDocument());
+    expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Configurar mis personajes" })).toBeInTheDocument();
+  });
+
+  it("keeps configuration mandatory when persisted Planner preferences were deleted", async () => {
+    const user = userEvent.setup();
+    renderPage(source({ getPlannerPreferences: vi.fn(async () => ({ preferences: [] })) }));
+    await selectRuby(user);
+
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Configura tus personajes" });
+    expect(dialog).toBeVisible();
+    expect(screen.getByRole("button", { name: "Planificar piedra" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(dialog).getByRole("button", { name: "Salir del Planner" }));
+    expect(screen.getByRole("button", { name: "Objetivos" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("revalidates preferences on every Planner entry and blocks after a remote deletion", async () => {
+    const user = userEvent.setup();
+    const configuredPreference: ClientPlannerPreference = { characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" };
+    const getPlannerPreferences = vi.fn()
+      .mockResolvedValueOnce({ preferences: [configuredPreference] })
+      .mockResolvedValueOnce({ preferences: [] });
+    renderPage(source({ getPlannerPreferences }));
+    await selectRuby(user);
+
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    expect(await screen.findByRole("button", { name: "Configurar mis personajes" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Objetivos" }));
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+
+    expect(await screen.findByRole("dialog", { name: "Configura tus personajes" })).toBeVisible();
+    expect(getPlannerPreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not restore specializations when an inactive character returns to the active zone", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(await screen.findByRole("button", { name: "Configurar mis personajes" }));
+    const dialog = screen.getByRole("dialog", { name: "Configura tus personajes" });
+
+    expect(dialog.querySelector('[data-zone="active"]')).toHaveTextContent("Bakuhatsu");
+    await user.click(within(dialog).getByRole("button", { name: "Desactivar Bakuhatsu" }));
+    expect(dialog.querySelector('[data-zone="inactive"]')).toHaveTextContent("Bakuhatsu");
+    await user.click(within(dialog).getByRole("button", { name: "Activar Bakuhatsu" }));
+
+    expect(dialog.querySelector('[data-zone="active"]')).toHaveTextContent("Bakuhatsu");
+    expect(within(dialog).getByRole("button", { name: /Arcane · Desactivado/u })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
+  });
+
+  it("disables unconfigured teammates and exposes no manual role locks", async () => {
+    const user = userEvent.setup();
+    const partiallyConfigured = { ...detail, members: detail.members.map(member => member.userId === 3 ? { ...member, plannerConfigured: false } : member) };
+    renderPage(source({ getTeam: vi.fn(async () => partiallyConfigured) }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toBeDisabled();
+    expect(screen.queryByLabelText(/Rol fijo/u)).not.toBeInTheDocument();
+    expect(document.querySelector(".planner-participant-list")).not.toBeInTheDocument();
+  });
+
+  it("uses Wowhead item tooltips from the compact objective grid", async () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
     await user.click(within(rows[0]).getByRole("button", { name: /Ver objetos.*Bakuhatsu/u }));
-    await user.click(within(rows[0]).getByRole("button", { name: "Objeto #1" }));
-    const tooltip = screen.getByRole("tooltip");
-    expect(tooltip).toHaveTextContent("Mano principal · Arma · Báculo");
-    expect(tooltip).toHaveTextContent("Intelecto");
-    expect(tooltip).toHaveAttribute("data-quality", "EPIC");
-    expect(within(tooltip).getByText("Objeto #1")).toHaveClass("teams-tooltip__name--quality-epic");
-    expect(within(tooltip).getByText("Intelecto")).toHaveClass("teams-tooltip__primary-stat");
-    expect(within(tooltip).getByText("Celeridad")).toHaveClass("teams-tooltip__secondary-stat");
-    expect(tooltip).not.toHaveTextContent(/\+\d/u);
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    const target = within(rows[0]).getByRole("link", { name: "Objeto #1" });
+    expect(target).toHaveAttribute("href", "https://www.wowhead.com/item=1");
+    expect(target).toHaveAttribute("data-wowhead", expect.stringContaining("domain=es"));
+    expect(target).toHaveAttribute("data-wowhead", expect.stringContaining("ilvl=402"));
+    expect(target).toHaveAttribute("data-wowhead", expect.stringContaining("spec=62"));
   });
 
   it("shows no-Team state and routes compact errors and session expiry", async () => {
     const onOpenWeb = vi.fn();
-    renderWithTheme(<I18nProvider language="es"><TeamsPage dataSource={source({ listTeams: vi.fn(async () => []) })} onOpenWeb={onOpenWeb} onSessionExpired={vi.fn()} /></I18nProvider>);
+    renderWithTheme(<I18nProvider language="es"><TeamsPage currentUsername="Speeson" dataSource={source({ listTeams: vi.fn(async () => []) })} onOpenWeb={onOpenWeb} onSessionExpired={vi.fn()} /></I18nProvider>);
     expect(await screen.findByText("Todavía no perteneces a ningún equipo.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Acceder a la Web" }));
     expect(onOpenWeb).toHaveBeenCalledOnce();
@@ -511,11 +696,10 @@ describe("TeamsPage compact ranking", () => {
     expect(dataSource.getKeystoneSelector).toHaveBeenCalledWith(7, 399, "en_US");
     const firstRow = (await screen.findAllByTestId("selector-character"))[0];
     await userEvent.click(within(firstRow).getByRole("button", { name: /Show items/u }));
-    await userEvent.click(within(firstRow).getByRole("button", { name: "Item #1" }));
-    const tooltip = screen.getByRole("tooltip");
-    expect(tooltip).toHaveTextContent("Source: Ruby Life Pools");
-    expect(tooltip).toHaveTextContent("Specialization: Arcane");
-    expect(tooltip).toHaveTextContent("Tier: 3");
-    expect(tooltip).toHaveTextContent("Voidcore pending");
+    const target = within(firstRow).getByRole("link", { name: "Item #1" });
+    expect(target).toHaveAttribute("href", "https://www.wowhead.com/item=1");
+    expect(target).toHaveAttribute("data-wowhead", expect.stringContaining("domain=www"));
+    expect(target).toHaveAttribute("data-wowhead", expect.stringContaining("ilvl=402"));
+    expect(target).toHaveAttribute("data-wowhead", expect.stringContaining("spec=62"));
   });
 });

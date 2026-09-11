@@ -5,6 +5,7 @@ import packageJson from "../package.json";
 import { ThemedIcon } from "./components/ThemedIcon";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
 import { ChangelogModal } from "./components/ChangelogModal";
+import { ClientContextMenu } from "./components/ClientContextMenu";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
 import { findPostUpdateChangelog, markChangelogSeen, type PostUpdateChangelog } from "./core/changelog";
@@ -26,6 +27,7 @@ import { getTeamsPreviewDataSource } from "./core/teamsPreview";
 import { clearTeamsSessionCache, prefetchTeamsSession } from "./core/teamsSessionCache";
 import { setProfileAvatar } from "./core/profile";
 import { updateSettings } from "./core/settings";
+import { forceSync } from "./core/sync";
 import { tauriUpdaterAdapter } from "./core/tauriUpdater";
 import { UpdateController, type UpdaterSnapshot } from "./core/updater";
 import { I18nProvider, translate } from "./core/i18n";
@@ -69,12 +71,10 @@ const initialUpdater: UpdaterSnapshot = {
 function AvatarChoice({
   avatarUrl,
   name,
-  selected,
   wowClass,
 }: {
   avatarUrl: string | null;
   name: string;
-  selected: boolean;
   wowClass: string | null;
 }) {
   const [failed, setFailed] = useState(false);
@@ -82,7 +82,6 @@ function AvatarChoice({
     <span className="ks-avatar-choice__portrait" style={{ backgroundColor: classColor(wowClass) }}>
       <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
       {avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={avatarUrl} /> : null}
-      {selected ? <ThemedIcon className="ks-avatar-choice__check" name="confirm" /> : null}
     </span>
   );
 }
@@ -121,12 +120,26 @@ function App() {
   const [updater, setUpdater] = useState<UpdaterSnapshot>(initialUpdater);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [postUpdateChangelog, setPostUpdateChangelog] = useState<PostUpdateChangelog | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const updaterController = useRef<UpdateController | null>(null);
   const teamsSessionOwner = useRef<string | null | undefined>(undefined);
   const settingsRef = useRef<ClientSettings | null>(null);
   const closeDialogOpenRef = useRef(false);
 
   settingsRef.current = settings;
+
+  const dismissContextMenu = useCallback(() => setContextMenu(null), []);
+
+  useEffect(() => {
+    const openContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      if (auth?.authenticated) setContextMenu({ x: event.clientX, y: event.clientY });
+    };
+    document.addEventListener("contextmenu", openContextMenu);
+    return () => document.removeEventListener("contextmenu", openContextMenu);
+  }, [auth?.authenticated]);
+
+  useEffect(() => { dismissContextMenu(); }, [currentView, dismissContextMenu]);
 
   const applySystemState = useCallback((state: SystemState) => {
     setAuth(state.auth);
@@ -384,6 +397,17 @@ function App() {
     }
   }
 
+  async function handleContextSync() {
+    setCurrentView("sync");
+    if (previewMode) return;
+    setError(null);
+    try {
+      setSync(await forceSync());
+    } catch (caught) {
+      setError(formatError(caught, t("sync.errorGeneric")));
+    }
+  }
+
   function openCloseDialog() {
     closeDialogOpenRef.current = true;
     setSettingsOpen(false);
@@ -486,6 +510,18 @@ function App() {
           onOpenWeb={() => void runNativeAction(openWeb)}
           onStartWindowDrag={() => void runNativeAction(startWindowDragging)}
         >
+          {contextMenu ? <ClientContextMenu
+            labels={[t("sync.now"), t("shell.changeAvatar"), t("shell.settings"), t("shell.minimizeTray")]}
+            onActions={[
+              () => void handleContextSync(),
+              () => { setSettingsOpen(false); setAvatarError(null); setAvatarPickerOpen(true); },
+              () => { setAvatarPickerOpen(false); setSettingsOpen(true); },
+              () => void runNativeAction(minimizeToTray),
+            ]}
+            onDismiss={dismissContextMenu}
+            x={contextMenu.x}
+            y={contextMenu.y}
+          /> : null}
           {error ? <p className="error ks-global-error" role="alert">{error}</p> : null}
           {currentView === "sync" ? (
             <SyncPage
@@ -500,6 +536,7 @@ function App() {
             <CharactersPage state={characters} />
           ) : currentView === "teams" ? (
             <TeamsPage
+              currentUsername={auth.username ?? ""}
               dataSource={teamsDataSource}
               onOpenWeb={() => void runNativeAction(openWeb)}
               onSessionExpired={handleSessionExpired}
@@ -583,10 +620,10 @@ function App() {
                           <AvatarChoice
                             avatarUrl={character.avatarUrl}
                             name={character.name}
-                            selected={Boolean(character.avatarUrl && auth.avatarUrl === character.avatarUrl)}
                             wowClass={character.wowClass}
                           />
-                          <span><strong>{character.name}</strong><small>{character.realm}</small></span>
+                          <span className="ks-avatar-choice__identity"><strong>{character.name}</strong><small>{character.realm}</small></span>
+                          {character.avatarUrl && auth.avatarUrl === character.avatarUrl ? <span className="ks-avatar-choice__check"><ThemedIcon name="confirm" size={16} /></span> : null}
                         </button>
                       ))}
                     </div>

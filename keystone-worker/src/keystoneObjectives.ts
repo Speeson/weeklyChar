@@ -125,6 +125,63 @@ function compareFavorites(left: KeystoneLootFavorite, right: KeystoneLootFavorit
     || (left.tier - right.tier)
 }
 
+function objectiveFromFavorite(
+  favorite: KeystoneLootFavorite,
+  usedItems: ReadonlySet<number> | null,
+): KeystoneLootObjectiveDTO {
+  return {
+    itemId: favorite.itemId,
+    itemName: null,
+    iconUrl: null,
+    tier: favorite.tier,
+    specId: favorite.specId,
+    sourceType: effectiveSourceType(favorite),
+    sourceId: favorite.sourceId,
+    slotId: favorite.slotId ?? null,
+    slotName: null,
+    itemClassName: null,
+    itemSubClassName: null,
+    statNames: [],
+    primaryStatNames: [],
+    secondaryStatNames: [],
+    otherStatNames: [],
+    qualityType: favorite.qualityType ?? null,
+    itemLevel: favorite.itemLevel ?? null,
+    variantKey: effectiveVariantKey(favorite),
+    voidcoreState: !usedItems
+      ? 'voidcore_not_checked'
+      : usedItems.has(favorite.itemId) ? 'completed_with_voidcore' : 'pending',
+  }
+}
+
+export function buildKeystoneLootPlannerObjectives(
+  value: unknown,
+  challengeMapIds: readonly number[],
+  specIds: readonly number[],
+): KeystoneLootObjectiveDTO[] {
+  const snapshot = classifyKeystoneLootSnapshot(value).snapshot
+  if (!snapshot) return []
+  const allowedDungeons = new Set(challengeMapIds)
+  const allowedSpecs = new Set(specIds)
+  const selected = new Map<string, KeystoneLootFavorite>()
+  for (const favorite of snapshot.favorites) {
+    if (favorite.sourceType !== 'dungeon'
+      || typeof favorite.sourceId !== 'number'
+      || !allowedDungeons.has(favorite.sourceId)
+      || !allowedSpecs.has(favorite.specId)) continue
+    const identity = displayIdentity(favorite)
+    const existing = selected.get(identity)
+    if (!existing || compareFavoriteRepresentation(favorite, existing) < 0) {
+      selected.set(identity, favorite)
+    }
+  }
+  const usedItems = snapshot.voidcore.checked ? new Set(snapshot.voidcore.usedItems) : null
+  return [...selected.values()]
+    .sort(compareFavorites)
+    .map(favorite => objectiveFromFavorite(favorite, usedItems))
+    .filter(objective => objective.voidcoreState !== 'completed_with_voidcore')
+}
+
 function filterFingerprint(filters: KeystoneLootObjectiveFilters): string {
   return JSON.stringify({
     sourceType: filters.sourceType ?? null,
@@ -201,29 +258,7 @@ export function buildKeystoneLootObjectivePage(
   const page = ordered.slice(offset, offset + filters.limit)
   const nextOffset = offset + page.length
   const usedItems = snapshot.voidcore.checked ? new Set(snapshot.voidcore.usedItems) : null
-  const objectives = page.map<KeystoneLootObjectiveDTO>(favorite => ({
-    itemId: favorite.itemId,
-    itemName: null,
-    iconUrl: null,
-    tier: favorite.tier,
-    specId: favorite.specId,
-    sourceType: effectiveSourceType(favorite),
-    sourceId: favorite.sourceId,
-    slotId: favorite.slotId ?? null,
-    slotName: null,
-    itemClassName: null,
-    itemSubClassName: null,
-    statNames: [],
-    primaryStatNames: [],
-    secondaryStatNames: [],
-    otherStatNames: [],
-    qualityType: favorite.qualityType ?? null,
-    itemLevel: favorite.itemLevel ?? null,
-    variantKey: effectiveVariantKey(favorite),
-    voidcoreState: !usedItems
-      ? 'voidcore_not_checked'
-      : usedItems.has(favorite.itemId) ? 'completed_with_voidcore' : 'pending',
-  }))
+  const objectives = page.map(favorite => objectiveFromFavorite(favorite, usedItems))
 
   return {
     status: ordered.length === 0 ? 'empty' : 'available',

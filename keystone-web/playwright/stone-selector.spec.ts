@@ -154,7 +154,7 @@ async function setup(page: Page, selectorHandler?: (route: Route, challengeMapId
     contentType: 'image/svg+xml',
     body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#7c3aed"/><path d="M14 14h36v36H14z" fill="#facc15"/></svg>',
   }))
-  await page.route('https://api-keystonesync.esgarpe.dev/**', async route => {
+  await page.route('**/api/**', async route => {
     const url = new URL(route.request().url())
     if (url.pathname === '/api/teams/7') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(team) })
@@ -177,12 +177,13 @@ async function setup(page: Page, selectorHandler?: (route: Route, challengeMapId
   await expect(page.getByRole('heading', { name: 'Poison Progression' })).toBeVisible()
 }
 
-test('Selector closed shows all eight canonical dungeons and removes the old header planner', async ({ page }, testInfo) => {
+test('Selector closed shows all eight canonical dungeons and the session Planner entry', async ({ page }, testInfo) => {
   await setup(page)
   await expect(page.getByRole('heading', { name: 'Selector de piedra' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Ruby Life Pools.*2 piedras/u })).toBeVisible()
   await expect(page.getByRole('button', { name: /Temple of Sethraliss.*1 piedra/u })).toBeVisible()
   await expect(page.getByRole('button', { name: /Voidscar Arena.*0 piedras/u })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Planificar sesión' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Planificar piedra' })).toHaveCount(0)
   await expect(page.getByRole('tabpanel')).toHaveCount(0)
   await screenshot(page, testInfo, 'desktop-selector-closed')
