@@ -153,6 +153,29 @@ test.describe("preview states", () => {
     await expectStableReleaseScreenshot(page, "update-available.png");
   });
 
+  test("keeps long release notes above the download progress footer", async ({ page }) => {
+    await page.goto("/?preview=sync-success&updater=downloading");
+
+    const modal = page.getByRole("dialog", { name: "Actualizacion 0.10.1" });
+    const body = modal.locator(".ks-update-modal__body");
+    const footer = modal.locator(".ks-update-modal__footer");
+    const progressbar = modal.getByRole("progressbar");
+
+    await expect(modal).toBeVisible();
+    await expect(progressbar).toHaveAttribute("aria-valuenow", "50");
+    expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+
+    const bodyBox = await body.boundingBox();
+    const footerBox = await footer.boundingBox();
+    const progressBox = await progressbar.boundingBox();
+    expect(bodyBox).not.toBeNull();
+    expect(footerBox).not.toBeNull();
+    expect(progressBox).not.toBeNull();
+    expect(bodyBox!.y + bodyBox!.height).toBeLessThanOrEqual(footerBox!.y + 0.5);
+    expect(progressBox!.y).toBeGreaterThanOrEqual(footerBox!.y);
+    expect(progressBox!.y + progressBox!.height).toBeLessThanOrEqual(footerBox!.y + footerBox!.height);
+  });
+
   test("renders the post-update changelog Markdown", async ({ page }) => {
     await page.goto("/?preview=sync-success&changelog=post-update");
 

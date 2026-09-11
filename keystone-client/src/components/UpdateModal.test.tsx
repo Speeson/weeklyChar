@@ -55,7 +55,13 @@ describe("UpdateModal", () => {
         snapshot={{ ...available, status: "downloading", downloadedBytes: 25, totalBytes: 100 }}
       />,
     );
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "25");
+    const progressbar = screen.getByRole("progressbar");
+    const footer = progressbar.closest(".ks-update-modal__footer");
+
+    expect(progressbar).toHaveAttribute("aria-valuenow", "25");
     expect(screen.getByText("25%" )).toBeInTheDocument();
+    expect(footer).not.toBeNull();
+    expect(footer).toContainElement(screen.getByRole("button", { name: "Actualizando..." }));
+    expect(progressbar.closest(".ks-update-modal__body")).toBeNull();
   });
 });

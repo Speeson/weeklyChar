@@ -233,6 +233,28 @@ function App() {
         });
         setUpdateModalOpen(true);
       }
+      if (import.meta.env.DEV && previewParams.get("updater") === "downloading") {
+        setUpdater({
+          ...initialUpdater,
+          status: "downloading",
+          availableVersion: "0.10.1",
+          notes: [
+            "# KeystoneClient 0.10.1",
+            "",
+            "## Cambios",
+            "",
+            ...Array.from(
+              { length: 24 },
+              (_, index) => `- Mejora incluida en la actualización ${index + 1} con detalles adicionales para validar notas extensas.`,
+            ),
+          ].join("\n"),
+          releaseDate: "2026-09-11T12:00:00Z",
+          downloadedBytes: 50,
+          totalBytes: 100,
+          lastCheckedAt: "2026-09-11T12:00:00Z",
+        });
+        setUpdateModalOpen(true);
+      }
       if (import.meta.env.DEV && previewParams.get("changelog") === "post-update") {
         setPostUpdateChangelog({ version: bundledRelease.version, notes: bundledRelease.notes });
       }
