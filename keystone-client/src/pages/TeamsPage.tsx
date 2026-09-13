@@ -25,7 +25,7 @@ import { useThemeAsset } from "../theme/useThemeAsset";
 import type {
   ClientTeamDetail, ClientTeamSummary, CoreError, KeystoneSelectorCharacter, KeystoneSelectorResponse,
   KeystoneSelectorStone, KeystoneSelectorTierCounts, KeystonePlannerAssignment, KeystonePlannerObjective, KeystonePlannerRecommendation,
-  ClientPlannerPreference, ClientPlannerPreferenceInput, KeystonePlannerResponse,
+  ClientPlannerPreferenceUpdate, ClientPlannerPreferences, KeystonePlannerResponse,
 } from "../core/types";
 
 type TeamsPageProps = { currentUsername?: string; dataSource?: TeamsDataSource; onOpenWeb: () => void; onSessionExpired: () => void };
@@ -449,7 +449,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(() => new Set());
   const [activeFeature, setActiveFeature] = useState<"objectives" | "planner">("objectives");
   const [plannerOwnerUserId, setPlannerOwnerUserId] = useState<number | null>(null);
-  const [plannerPreferences, setPlannerPreferences] = useState<ClientPlannerPreference[] | null>(null);
+  const [plannerPreferences, setPlannerPreferences] = useState<ClientPlannerPreferences | null>(null);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [preferencesLoading, setPreferencesLoading] = useState(false);
   const [preferencesSaving, setPreferencesSaving] = useState(false);
@@ -555,9 +555,11 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   };
 
   const closeSelector = () => { selectorGeneration.current += 1; setDungeonId(null); setSelector(null); setSelectorError(null); setSelectorLoading(false); setActiveFeature("objectives"); setPlannerOwnerUserId(null); };
+  const readyCharacterIds = new Set(plannerPreferences?.lootPreferences.map(preference => preference.characterId) ?? []);
   const toggleUser = (userId: number) => setSelectedUsers(current => {
     const member = detail?.members.find(item => item.userId === userId);
-    const configuredLocally = member?.characters.some(character => plannerPreferences?.some(preference => preference.characterId === character.characterId && preference.playPreference !== "disabled")) ?? false;
+    const configuredLocally = member?.characters.some(character => readyCharacterIds.has(character.characterId)
+      && plannerPreferences?.preferences.some(preference => preference.characterId === character.characterId && preference.playPreference !== "disabled")) ?? false;
     if (activeFeature === "planner" && member?.plannerConfigured === false && !configuredLocally) return current;
     const next = new Set(current);
     if (next.has(userId)) { if (activeFeature !== "planner" || userId !== plannerOwnerUserId) next.delete(userId); }
@@ -565,10 +567,10 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
     return next;
   });
   const ownMember = detail?.members.find(member => member.username.toLocaleLowerCase() === currentUsername.toLocaleLowerCase())
-    ?? detail?.members.find(member => member.characters.some(character => plannerPreferences?.some(preference => preference.characterId === character.characterId)))
+    ?? detail?.members.find(member => member.characters.some(character => plannerPreferences?.preferences.some(preference => preference.characterId === character.characterId)))
     ?? null;
   const plannerReady = plannerPreferences
-    ? plannerPreferences.some(preference => preference.playPreference !== "disabled")
+    ? plannerPreferences.preferences.some(preference => preference.playPreference !== "disabled" && readyCharacterIds.has(preference.characterId))
     : ownMember?.plannerConfigured ?? false;
   const plannerDetail = detail && ownMember ? {
     ...detail, members: detail.members.map(member => member.userId === ownMember.userId ? { ...member, plannerConfigured: plannerReady } : member),
@@ -579,8 +581,9 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const loadOwnPreferences = useCallback((blockUntilReady: boolean) => {
     setPreferencesError(null); setPreferencesLoading(true);
     return dataSource.getPlannerPreferences().then(result => {
-      const ready = result.preferences.some(preference => preference.playPreference !== "disabled");
-      setPlannerPreferences(result.preferences); setOwnPlannerReadiness(ready);
+      const lootCharacterIds = new Set(result.lootPreferences.map(preference => preference.characterId));
+      const ready = result.preferences.some(preference => preference.playPreference !== "disabled" && lootCharacterIds.has(preference.characterId));
+      setPlannerPreferences(result); setOwnPlannerReadiness(ready);
       setPreferencesOpen(blockUntilReady && !ready);
     }).catch(caught => {
       const parsed = errorInfo(caught, language === "es" ? "No se pudo cargar la configuración del Planner." : "Planner configuration could not be loaded.");
@@ -599,12 +602,13 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
     setPreferencesOpen(true);
     if (plannerPreferences === null) void loadOwnPreferences(true);
   };
-  const savePreferences = async (preferences: ClientPlannerPreferenceInput[]) => {
+  const savePreferences = async (update: ClientPlannerPreferenceUpdate) => {
     setPreferencesSaving(true); setPreferencesError(null);
     try {
-      const result = await dataSource.updatePlannerPreferences(preferences);
-      const ready = result.preferences.some(preference => preference.playPreference !== "disabled");
-      setPlannerPreferences(result.preferences); setOwnPlannerReadiness(ready);
+      const result = await dataSource.updatePlannerPreferences(update);
+      const lootCharacterIds = new Set(result.lootPreferences.map(preference => preference.characterId));
+      const ready = result.preferences.some(preference => preference.playPreference !== "disabled" && lootCharacterIds.has(preference.characterId));
+      setPlannerPreferences(result); setOwnPlannerReadiness(ready);
       if (ready) setPreferencesOpen(false);
     } catch (caught) {
       const parsed = errorInfo(caught, language === "es" ? "No se pudo guardar la configuración." : "The configuration could not be saved.");
@@ -678,7 +682,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
         </>}
       </section>
     </div>
-    {preferencesOpen ? <PlannerPreferencesModal characters={ownMember?.characters ?? []} error={preferencesError} initial={plannerPreferences ?? []} loading={preferencesLoading} onExit={() => {
+    {preferencesOpen ? <PlannerPreferencesModal characters={ownMember?.characters ?? []} error={preferencesError} initial={plannerPreferences ?? { preferences: [], lootPreferences: [], onboardingCompleted: false }} loading={preferencesLoading} onExit={() => {
       setPreferencesOpen(false); setPreferencesError(null); if (plannerPreferences === null || !plannerReady) setActiveFeature("objectives");
     }} onSave={savePreferences} saving={preferencesSaving} /> : null}
   </section>;

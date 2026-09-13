@@ -36,6 +36,7 @@ export class FakeD1Database {
     this.metadataReadItemIds = []
     this.snapshotReadCharacterIds = []
     this.plannerPreferences = []
+    this.plannerLootPreferences = []
     this.plannerQueryKinds = []
     this.plannerSharedSnapshotCharacterIds = []
   }
@@ -227,6 +228,8 @@ class FakeD1Statement {
             ? null
             : character.keystone_loot_json
           if (sharedSnapshot !== null) this.db.plannerSharedSnapshotCharacterIds.push(character.id)
+          const characterLoot = this.db.plannerLootPreferences.filter(row => row.character_id === character.id)
+          const primaryLoot = characterLoot.find(row => row.loot_priority === 'primary')
           results.push({
             user_id: owner.id,
             username: owner.username,
@@ -239,6 +242,9 @@ class FakeD1Statement {
             spec_id: preference?.spec_id ?? null,
             play_preference: preference?.play_preference ?? null,
             loot_spec_id: preference?.loot_spec_id ?? null,
+            primary_loot_spec_id: primaryLoot?.spec_id ?? preference?.loot_spec_id ?? null,
+            secondary_loot_spec_ids: characterLoot.filter(row => row.loot_priority === 'secondary')
+              .map(row => row.spec_id).sort((left, right) => left - right).join(',') || null,
           })
         }
       }
@@ -413,7 +419,9 @@ class FakeD1Statement {
           username: user.username,
           planner_configured: this.db.characters.some(character => character.user_id === user.id
             && this.db.plannerPreferences.some(preference => preference.character_id === character.id
-              && preference.play_preference !== 'disabled')) ? 1 : 0,
+              && preference.play_preference !== 'disabled')
+            && this.db.plannerLootPreferences.some(preference => preference.character_id === character.id
+              && preference.loot_priority === 'primary')) ? 1 : 0,
         }))
         .sort((left, right) => left.username.localeCompare(right.username))
       return { results }

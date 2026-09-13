@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider, type Language } from "../core/i18n";
@@ -6,7 +6,7 @@ import type { TeamsDataSource } from "../core/teams";
 import {
   clearTeamsSessionCache, loadTeamDetail, loadTeams, setSelectedTeamId,
 } from "../core/teamsSessionCache";
-import type { ClientPlannerPreference, ClientPlannerPreferenceInput, ClientTeamDetail, KeystonePlannerResponse, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
+import type { ClientPlannerPreference, ClientPlannerPreferenceUpdate, ClientPlannerPreferences, ClientTeamDetail, KeystonePlannerResponse, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
 import { renderWithTheme } from "../test/renderWithTheme";
 import { TeamsPage } from "./TeamsPage";
 
@@ -59,7 +59,7 @@ function plannerResponse(): KeystonePlannerResponse {
     assignments, vacancies: [{ role: "healer" as const, preferredCapabilities: [] }],
     lootSummary: { weightedScore: 100 - rank, playersWithObjectives: 2, totalObjectives: 2, tierCounts: { bestInSlot: 1, mustHave: 1, niceToHave: 0, catalyst: 0, transmog: 0 } },
     levelSummary: { targetLevel: 12, stoneLevel: 12, levelDistance: 0 }, preferenceSummary: { preferred: 2, available: 0, emergency: 0 },
-    compositionSummary: { bloodlust: "guaranteed" as const, battleRez: "none" as const, uniqueCapabilities: [], damageProfile: "magical" as const, magicalDpsCount: 1, physicalDpsCount: 0, unknownDpsCount: 0, chaosBrandBeneficiaries: 1, mysticTouchBeneficiaries: 0, uniqueClassBuffCount: 1 },
+    compositionSummary: { criticalRolesCovered: 1, bloodlust: "guaranteed" as const, battleRez: "none" as const, uniqueCapabilities: [], damageProfile: "magical" as const, magicalDpsCount: 1, physicalDpsCount: 0, unknownDpsCount: 0, chaosBrandBeneficiaries: 1, mysticTouchBeneficiaries: 0, uniqueClassBuffCount: 1, armorSynergy: { pairs: 0, dominantType: null, counts: { cloth: 1, leather: 0, mail: 0, plate: 1 } } },
     reasonCodes: ["PARTY_INCOMPLETE", "HAS_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT"],
   });
   return { teamId: 7, challengeMapId: 399, targetLevel: 12, availability: { eligibleStoneCount: 1 }, status: "ok", diagnostics: { codes: [], unconfiguredUserIds: [], lockIssues: [] }, recommendations: [1, 2, 3, 4, 5].map(recommendation) };
@@ -71,8 +71,8 @@ function source(overrides: Partial<TeamsDataSource> = {}): TeamsDataSource {
     getTeam: vi.fn(async () => detail),
     getKeystoneSelector: vi.fn(async () => selector),
     getKeystonePlanner: vi.fn(async () => { throw { code: "API_UNAVAILABLE", message: "Planner unavailable" }; }),
-    getPlannerPreferences: vi.fn(async () => ({ preferences: [{ characterId: 10, specId: 62, role: "dps" as const, playPreference: "preferred" as const, lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }] })),
-    updatePlannerPreferences: vi.fn(async (preferences: ClientPlannerPreferenceInput[]) => ({ preferences: preferences.map(preference => ({ ...preference, role: "dps" as const, updatedAt: "2026-09-11T00:00:00Z" })) })),
+    getPlannerPreferences: vi.fn(async () => ({ preferences: [{ characterId: 10, specId: 62, role: "dps" as const, playPreference: "preferred" as const, lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }], lootPreferences: [{ characterId: 10, primaryLootSpecId: 62, secondaryLootSpecIds: [], updatedAt: "2026-09-11T00:00:00Z" }], onboardingCompleted: true })),
+    updatePlannerPreferences: vi.fn(async (update: ClientPlannerPreferenceUpdate) => ({ preferences: update.preferences.map(preference => ({ ...preference, role: "dps" as const, lootSpecId: update.lootPreferences.find(loot => loot.characterId === preference.characterId)?.primaryLootSpecId ?? preference.specId, updatedAt: "2026-09-11T00:00:00Z" })), lootPreferences: update.lootPreferences.map(preference => ({ ...preference, updatedAt: "2026-09-11T00:00:00Z" })), onboardingCompleted: update.onboardingCompleted })),
     ...overrides,
   };
 }
@@ -537,38 +537,103 @@ describe("TeamsPage compact ranking", () => {
       ...member, plannerConfigured: false,
       characters: member.characters.map((character, index) => index === 0 ? { ...character, avatarUrl: "https://img.test/bakuhatsu.jpg" } : character),
     } : member) };
-    const updatePlannerPreferences = vi.fn(async (preferences: ClientPlannerPreferenceInput[]) => ({ preferences: preferences.map(preference => ({
-      ...preference, role: preference.specId === 66 || preference.specId === 73 ? "tank" as const : "dps" as const, updatedAt: "2026-09-11T00:00:00Z",
-    })) }));
-    renderPage(source({ getTeam: vi.fn(async () => unconfigured), getPlannerPreferences: vi.fn(async () => ({ preferences: [] })), updatePlannerPreferences }));
+    const updatePlannerPreferences = vi.fn(async (update: ClientPlannerPreferenceUpdate) => ({ preferences: update.preferences.map(preference => ({
+      ...preference, role: preference.specId === 66 || preference.specId === 73 ? "tank" as const : "dps" as const,
+      lootSpecId: update.lootPreferences.find(loot => loot.characterId === preference.characterId)?.primaryLootSpecId ?? preference.specId,
+      updatedAt: "2026-09-11T00:00:00Z",
+    })), lootPreferences: update.lootPreferences.map(preference => ({ ...preference, updatedAt: "2026-09-11T00:00:00Z" })), onboardingCompleted: update.onboardingCompleted }));
+    renderPage(source({ getTeam: vi.fn(async () => unconfigured), getPlannerPreferences: vi.fn(async () => ({ preferences: [], lootPreferences: [], onboardingCompleted: false })), updatePlannerPreferences }));
     await selectRuby(user);
     await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Configura tus personajes" });
+    expect(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }).querySelector("img"))
+      .toHaveAttribute("src", expect.stringContaining("133633"));
     expect(within(dialog).getByRole("img", { name: "KeystoneSync" })).toBeInTheDocument();
     expect(dialog.querySelector('img[src="https://img.test/bakuhatsu.jpg"]')).toBeInTheDocument();
     expect(dialog.querySelector('[data-zone="active"] .planner-preference-character')).not.toBeInTheDocument();
     expect(dialog.querySelectorAll('[data-zone="inactive"] .planner-preference-character')).toHaveLength(2);
     expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
-    await user.click(within(dialog).getByRole("button", { name: "Activar Bakuhatsu" }));
-    expect(within(dialog).getByRole("button", { name: /Arcane · Desactivado/u })).toBeEnabled();
+    await user.click(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }));
+    const initialNoInterest = within(dialog).getAllByRole("button", { name: /· none$/u });
+    expect(initialNoInterest).toHaveLength(3);
+    initialNoInterest.forEach(option => expect(option).toHaveAttribute("aria-pressed", "true"));
+    await user.click(within(dialog).getByRole("button", { name: "Arcane · primary" }));
+    await user.click(within(dialog).getByRole("button", { name: "Listo" }));
+    const inactiveCard = within(dialog).getByText("Bakuhatsu").closest(".planner-preference-character") as HTMLElement;
+    const activeZone = dialog.querySelector('[data-zone="active"]') as HTMLElement;
+    const transfer = { getData: () => "10", setData: vi.fn(), effectAllowed: "move", dropEffect: "move" };
+    fireEvent.dragStart(inactiveCard, { dataTransfer: transfer });
+    fireEvent.dragOver(activeZone, { dataTransfer: transfer });
+    fireEvent.drop(activeZone, { dataTransfer: transfer });
+    expect(within(dialog).getByRole("button", { name: /Arcane · Selecciona tu preferencia/u })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
-    await user.click(within(dialog).getByRole("button", { name: /Arcane · Desactivado/u }));
-    expect(within(dialog).getAllByRole("option", { name: "Preferido" }).length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByRole("option", { name: "Disponible" }).length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByRole("option", { name: "Emergencia" }).length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByRole("option", { name: "Desactivado" }).length).toBeGreaterThan(0);
-    await user.selectOptions(within(dialog).getByRole("combobox", { name: "Bakuhatsu Arcane" }), "preferred");
+    await user.click(within(dialog).getByRole("button", { name: /Arcane · Selecciona tu preferencia/u }));
+    expect(within(dialog).getAllByRole("option")).toHaveLength(4);
+    await user.click(within(dialog).getByRole("option", { name: /Preferida/u }));
     await user.click(within(dialog).getByRole("button", { name: "Guardar y planificar" }));
     await waitFor(() => expect(updatePlannerPreferences).toHaveBeenCalled());
     expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Configurar mis personajes" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Configurar mis personajes" }));
+    expect(screen.getByRole("dialog", { name: "Configura tus personajes" })).toBeVisible();
+    expect(document.querySelector(".planner-config-guide")).not.toBeInTheDocument();
+  });
+
+  it("requires clearing the current primary loot spec before selecting another", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(await screen.findByRole("button", { name: "Configurar mis personajes" }));
+    const dialog = screen.getByRole("dialog", { name: "Configura tus personajes" });
+    await user.click(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }));
+
+    const arcanePrimary = within(dialog).getByRole("button", { name: "Arcane · primary" });
+    const firePrimary = within(dialog).getByRole("button", { name: "Fire · primary" });
+    const fireSecondary = within(dialog).getByRole("button", { name: "Fire · secondary" });
+    expect(arcanePrimary).toHaveAttribute("aria-pressed", "true");
+    await user.click(fireSecondary);
+    expect(fireSecondary).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(firePrimary);
+    expect(screen.getByRole("alertdialog", { name: "Sólo puede haber una especialización primaria" })).toBeVisible();
+    expect(arcanePrimary).toHaveAttribute("aria-pressed", "true");
+    expect(fireSecondary).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Entendido" }));
+
+    await user.click(arcanePrimary);
+    expect(arcanePrimary).toHaveAttribute("aria-pressed", "false");
+    expect(within(dialog).getByRole("button", { name: "Listo" })).toBeDisabled();
+    await user.click(firePrimary);
+    expect(firePrimary).toHaveAttribute("aria-pressed", "true");
+    expect(fireSecondary).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("toggles multiple secondary and no-interest loot specs independently", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(await screen.findByRole("button", { name: "Configurar mis personajes" }));
+    const dialog = screen.getByRole("dialog", { name: "Configura tus personajes" });
+    await user.click(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }));
+
+    const fireSecondary = within(dialog).getByRole("button", { name: "Fire · secondary" });
+    const frostSecondary = within(dialog).getByRole("button", { name: "Frost · secondary" });
+    const frostNone = within(dialog).getByRole("button", { name: "Frost · none" });
+    await user.click(fireSecondary);
+    await user.click(frostSecondary);
+    expect(fireSecondary).toHaveAttribute("aria-pressed", "true");
+    expect(frostSecondary).toHaveAttribute("aria-pressed", "true");
+    await user.click(frostSecondary);
+    expect(frostSecondary).toHaveAttribute("aria-pressed", "false");
+    expect(frostNone).toHaveAttribute("aria-pressed", "true");
   });
 
   it("checks saved preferences without flashing the mandatory configuration dialog", async () => {
     const user = userEvent.setup();
-    let resolvePreferences!: (value: { preferences: ClientPlannerPreference[] }) => void;
-    const getPlannerPreferences = vi.fn(() => new Promise<{ preferences: ClientPlannerPreference[] }>(resolve => { resolvePreferences = resolve; }));
+    let resolvePreferences!: (value: ClientPlannerPreferences) => void;
+    const getPlannerPreferences = vi.fn(() => new Promise<ClientPlannerPreferences>(resolve => { resolvePreferences = resolve; }));
     renderPage(source({ getPlannerPreferences }));
     await selectRuby(user);
 
@@ -576,7 +641,7 @@ describe("TeamsPage compact ranking", () => {
 
     expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
     expect(screen.getByRole("status", { name: "Cargando configuración del Planner…" })).toBeInTheDocument();
-    await act(async () => resolvePreferences({ preferences: [{ characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }] }));
+    await act(async () => resolvePreferences({ preferences: [{ characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }], lootPreferences: [{ characterId: 10, primaryLootSpecId: 62, secondaryLootSpecIds: [], updatedAt: "2026-09-11T00:00:00Z" }], onboardingCompleted: true }));
     await waitFor(() => expect(screen.queryByRole("status", { name: "Cargando configuración del Planner…" })).not.toBeInTheDocument());
     expect(screen.queryByRole("dialog", { name: "Configura tus personajes" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Configurar mis personajes" })).toBeInTheDocument();
@@ -584,7 +649,7 @@ describe("TeamsPage compact ranking", () => {
 
   it("keeps configuration mandatory when persisted Planner preferences were deleted", async () => {
     const user = userEvent.setup();
-    renderPage(source({ getPlannerPreferences: vi.fn(async () => ({ preferences: [] })) }));
+    renderPage(source({ getPlannerPreferences: vi.fn(async () => ({ preferences: [], lootPreferences: [], onboardingCompleted: false })) }));
     await selectRuby(user);
 
     await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
@@ -596,12 +661,26 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByRole("button", { name: "Objetivos" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("keeps configuration mandatory when a playable spec has no primary loot preference", async () => {
+    const user = userEvent.setup();
+    renderPage(source({ getPlannerPreferences: vi.fn(async () => ({
+      preferences: [{ characterId: 10, specId: 62, role: "dps" as const, playPreference: "preferred" as const, lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" }],
+      lootPreferences: [],
+      onboardingCompleted: true,
+    })) }));
+    await selectRuby(user);
+
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+
+    expect(await screen.findByRole("dialog", { name: "Configura tus personajes" })).toBeVisible();
+  });
+
   it("revalidates preferences on every Planner entry and blocks after a remote deletion", async () => {
     const user = userEvent.setup();
     const configuredPreference: ClientPlannerPreference = { characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" };
     const getPlannerPreferences = vi.fn()
-      .mockResolvedValueOnce({ preferences: [configuredPreference] })
-      .mockResolvedValueOnce({ preferences: [] });
+      .mockResolvedValueOnce({ preferences: [configuredPreference], lootPreferences: [{ characterId: 10, primaryLootSpecId: 62, secondaryLootSpecIds: [], updatedAt: "2026-09-11T00:00:00Z" }], onboardingCompleted: true })
+      .mockResolvedValueOnce({ preferences: [], lootPreferences: [], onboardingCompleted: true });
     renderPage(source({ getPlannerPreferences }));
     await selectRuby(user);
 
@@ -624,12 +703,21 @@ describe("TeamsPage compact ranking", () => {
     const dialog = screen.getByRole("dialog", { name: "Configura tus personajes" });
 
     expect(dialog.querySelector('[data-zone="active"]')).toHaveTextContent("Bakuhatsu");
-    await user.click(within(dialog).getByRole("button", { name: "Desactivar Bakuhatsu" }));
+    const inactiveZone = dialog.querySelector('[data-zone="inactive"]') as HTMLElement;
+    const activeZone = dialog.querySelector('[data-zone="active"]') as HTMLElement;
+    const transfer = { getData: () => "10", setData: vi.fn(), effectAllowed: "move", dropEffect: "move" };
+    const activeCard = within(dialog).getByText("Bakuhatsu").closest(".planner-preference-character") as HTMLElement;
+    fireEvent.dragStart(activeCard, { dataTransfer: transfer });
+    fireEvent.dragOver(inactiveZone, { dataTransfer: transfer });
+    fireEvent.drop(inactiveZone, { dataTransfer: transfer });
     expect(dialog.querySelector('[data-zone="inactive"]')).toHaveTextContent("Bakuhatsu");
-    await user.click(within(dialog).getByRole("button", { name: "Activar Bakuhatsu" }));
+    const inactiveCard = within(dialog).getByText("Bakuhatsu").closest(".planner-preference-character") as HTMLElement;
+    fireEvent.dragStart(inactiveCard, { dataTransfer: transfer });
+    fireEvent.dragOver(activeZone, { dataTransfer: transfer });
+    fireEvent.drop(activeZone, { dataTransfer: transfer });
 
     expect(dialog.querySelector('[data-zone="active"]')).toHaveTextContent("Bakuhatsu");
-    expect(within(dialog).getByRole("button", { name: /Arcane · Desactivado/u })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: /Arcane · Desactivada/u })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
   });
 

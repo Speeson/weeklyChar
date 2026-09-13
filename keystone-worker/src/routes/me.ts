@@ -13,10 +13,12 @@ import {
 import { wowSpecialization } from '../wowComposition'
 import type {
   PlannerCharacterClass,
+  PlannerLootPreferenceDTO,
+  PlannerPreferenceDocumentInput,
   PlannerPreferenceDTO,
-  PlannerPreferenceInput,
 } from '../plannerPreferences'
 import type { CharacterPlayPreferenceRow, CharacterRow, Env } from '../types'
+import type { CharacterLootPreferenceRow } from '../types'
 
 export const meRoutes = new Hono<{ Bindings: Env }>()
 
@@ -210,16 +212,53 @@ meRoutes.get('/api/me/characters', async c => {
   }))
 })
 
-async function plannerPreferencesForUser(env: Env, userId: number): Promise<PlannerPreferenceDTO[]> {
-  const result = await env.DB.prepare(`
+type PlannerPreferenceDocumentDTO = {
+  preferences: PlannerPreferenceDTO[]
+  lootPreferences: PlannerLootPreferenceDTO[]
+  onboardingCompleted: boolean
+}
+
+async function plannerPreferencesForUser(env: Env, userId: number): Promise<PlannerPreferenceDocumentDTO> {
+  const [playResult, lootResult, settings] = await Promise.all([env.DB.prepare(`
     SELECT cpp.character_id, cpp.spec_id, cpp.play_preference, cpp.loot_spec_id, cpp.updated_at
     FROM character_play_preferences cpp
     INNER JOIN characters c ON c.id = cpp.character_id
     WHERE c.user_id = ?
     ORDER BY cpp.character_id, cpp.spec_id
-  `).bind(userId).all<CharacterPlayPreferenceRow>()
+  `).bind(userId).all<CharacterPlayPreferenceRow>(), env.DB.prepare(`
+    SELECT clp.character_id, clp.spec_id, clp.loot_priority, clp.updated_at
+    FROM character_loot_preferences clp
+    INNER JOIN characters c ON c.id = clp.character_id
+    WHERE c.user_id = ?
+    ORDER BY clp.character_id, clp.loot_priority, clp.spec_id
+  `).bind(userId).all<CharacterLootPreferenceRow>(), env.DB.prepare(`
+    SELECT onboarding_completed
+    FROM planner_user_settings
+    WHERE user_id = ?
+  `).bind(userId).first<{ onboarding_completed: number }>()])
 
-  return result.results.map(row => {
+  const lootRows = new Map<number, CharacterLootPreferenceRow[]>()
+  for (const row of lootResult.results) {
+    const rows = lootRows.get(row.character_id) ?? []
+    rows.push(row)
+    lootRows.set(row.character_id, rows)
+  }
+  const primaryByCharacter = new Map<number, number>()
+  const lootPreferences: PlannerLootPreferenceDTO[] = []
+  for (const [characterId, rows] of [...lootRows.entries()].sort(([left], [right]) => left - right)) {
+    const primary = rows.find(row => row.loot_priority === 'primary')
+    if (!primary) continue
+    primaryByCharacter.set(characterId, primary.spec_id)
+    lootPreferences.push({
+      characterId,
+      primaryLootSpecId: primary.spec_id,
+      secondaryLootSpecIds: rows.filter(row => row.loot_priority === 'secondary')
+        .map(row => row.spec_id).sort((left, right) => left - right),
+      updatedAt: rows.map(row => row.updated_at).sort().at(-1) ?? primary.updated_at,
+    })
+  }
+
+  const preferences = playResult.results.map(row => {
     const specialization = wowSpecialization(row.spec_id)
     if (!specialization) throw new Error(`Planner preference references unknown spec ${row.spec_id}`)
     return {
@@ -227,16 +266,17 @@ async function plannerPreferencesForUser(env: Env, userId: number): Promise<Plan
       specId: row.spec_id,
       role: specialization.role,
       playPreference: row.play_preference,
-      lootSpecId: row.loot_spec_id,
+      lootSpecId: primaryByCharacter.get(row.character_id) ?? row.loot_spec_id,
       updatedAt: row.updated_at,
     }
   })
+  return { preferences, lootPreferences, onboardingCompleted: settings?.onboarding_completed === 1 }
 }
 
 meRoutes.get('/api/me/planner/preferences', async c => {
   const currentUser = await getCurrentUser(c)
   if (isResponse(currentUser)) return currentUser
-  return c.json({ preferences: await plannerPreferencesForUser(c.env, currentUser.id) })
+  return c.json(await plannerPreferencesForUser(c.env, currentUser.id))
 })
 
 meRoutes.put('/api/me/planner/preferences', async c => {
@@ -244,9 +284,9 @@ meRoutes.put('/api/me/planner/preferences', async c => {
   if (isResponse(currentUser)) return currentUser
 
   const payload = await c.req.json<unknown>().catch(() => null)
-  let preferences: PlannerPreferenceInput[]
+  let document: PlannerPreferenceDocumentInput
   try {
-    preferences = parsePlannerPreferencePayload(payload)
+    document = parsePlannerPreferencePayload(payload)
   } catch (error) {
     return jsonError(c, 400, error instanceof Error ? error.message : 'Preferencias no válidas')
   }
@@ -257,17 +297,23 @@ meRoutes.put('/api/me/planner/preferences', async c => {
     ORDER BY id
   `).bind(currentUser.id).all<PlannerCharacterClass>()
   try {
-    validatePlannerPreferenceDomain(preferences, characters.results)
+    validatePlannerPreferenceDomain(document, characters.results)
   } catch (error) {
     return jsonError(c, 400, error instanceof Error ? error.message : 'Preferencias no válidas')
   }
 
+  const primaryByCharacter = new Map(document.lootPreferences.map(preference => [
+    preference.characterId, preference.primaryLootSpecId,
+  ]))
   const statements: D1PreparedStatement[] = [c.env.DB.prepare(`
     DELETE FROM character_play_preferences
     WHERE character_id IN (SELECT id FROM characters WHERE user_id = ?)
+  `).bind(currentUser.id), c.env.DB.prepare(`
+    DELETE FROM character_loot_preferences
+    WHERE character_id IN (SELECT id FROM characters WHERE user_id = ?)
   `).bind(currentUser.id)]
-  for (let offset = 0; offset < preferences.length; offset += PLANNER_PREFERENCE_INSERT_CHUNK) {
-    const chunk = preferences.slice(offset, offset + PLANNER_PREFERENCE_INSERT_CHUNK)
+  for (let offset = 0; offset < document.preferences.length; offset += PLANNER_PREFERENCE_INSERT_CHUNK) {
+    const chunk = document.preferences.slice(offset, offset + PLANNER_PREFERENCE_INSERT_CHUNK)
     const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
     statements.push(c.env.DB.prepare(`
       INSERT INTO character_play_preferences (
@@ -277,11 +323,34 @@ meRoutes.put('/api/me/planner/preferences', async c => {
       preference.characterId,
       preference.specId,
       preference.playPreference,
-      preference.lootSpecId,
+      primaryByCharacter.get(preference.characterId) ?? preference.lootSpecId,
     ])))
   }
+  const lootRows = document.lootPreferences.flatMap(preference => [
+    { characterId: preference.characterId, specId: preference.primaryLootSpecId, priority: 'primary' },
+    ...preference.secondaryLootSpecIds.map(specId => ({
+      characterId: preference.characterId, specId, priority: 'secondary',
+    })),
+  ])
+  for (let offset = 0; offset < lootRows.length; offset += PLANNER_PREFERENCE_INSERT_CHUNK) {
+    const chunk = lootRows.slice(offset, offset + PLANNER_PREFERENCE_INSERT_CHUNK)
+    const placeholders = chunk.map(() => '(?, ?, ?)').join(', ')
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO character_loot_preferences (character_id, spec_id, loot_priority)
+      VALUES ${placeholders}
+    `).bind(...chunk.flatMap(row => [row.characterId, row.specId, row.priority])))
+  }
+  if (document.onboardingCompleted !== undefined) {
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO planner_user_settings (user_id, onboarding_completed, updated_at)
+      VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      ON CONFLICT(user_id) DO UPDATE SET
+        onboarding_completed = MAX(planner_user_settings.onboarding_completed, excluded.onboarding_completed),
+        updated_at = excluded.updated_at
+    `).bind(currentUser.id, document.onboardingCompleted ? 1 : 0))
+  }
   await c.env.DB.batch(statements)
-  return c.json({ preferences: await plannerPreferencesForUser(c.env, currentUser.id) })
+  return c.json(await plannerPreferencesForUser(c.env, currentUser.id))
 })
 
 meRoutes.get('/api/me/characters/:characterId/keystone-loot/objectives', async c => {

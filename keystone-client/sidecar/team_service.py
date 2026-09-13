@@ -153,20 +153,40 @@ def sanitize_team_detail(value: Any, expected_team_id: int) -> dict[str, Any] | 
 
 
 def _planner_preference(value: Any, *, response: bool) -> dict[str, Any] | None:
-    required = {"characterId", "specId", "playPreference", "lootSpecId"}
+    required = {"characterId", "specId", "playPreference"}
     if not isinstance(value, dict) or not required.issubset(value) \
-            or not all(_positive(value.get(key)) for key in ("characterId", "specId", "lootSpecId")) \
+            or not all(_positive(value.get(key)) for key in ("characterId", "specId")) \
             or value.get("playPreference") not in _PLANNER_SAVE_PREFERENCES:
         return None
     if response:
-        if value.get("role") not in _PLANNER_ROLES or not _text(value.get("updatedAt"), 64):
+        if value.get("role") not in _PLANNER_ROLES or not _positive(value.get("lootSpecId")) \
+                or not _text(value.get("updatedAt"), 64):
             return None
         return {key: value[key] for key in (
             "characterId", "specId", "role", "playPreference", "lootSpecId", "updatedAt",
         )}
     if set(value) != required:
         return None
-    return {key: value[key] for key in ("characterId", "specId", "playPreference", "lootSpecId")}
+    return {key: value[key] for key in ("characterId", "specId", "playPreference")}
+
+
+def _planner_loot_preference(value: Any, *, response: bool) -> dict[str, Any] | None:
+    required = {"characterId", "primaryLootSpecId", "secondaryLootSpecIds"}
+    if not isinstance(value, dict) or not required.issubset(value) \
+            or not _positive(value.get("characterId")) or not _positive(value.get("primaryLootSpecId")) \
+            or not isinstance(value.get("secondaryLootSpecIds"), list) \
+            or len(value["secondaryLootSpecIds"]) > 64 \
+            or not all(_positive(spec_id) for spec_id in value["secondaryLootSpecIds"]) \
+            or len(set(value["secondaryLootSpecIds"])) != len(value["secondaryLootSpecIds"]) \
+            or value["primaryLootSpecId"] in value["secondaryLootSpecIds"]:
+        return None
+    if response:
+        if not _text(value.get("updatedAt"), 64):
+            return None
+        return {**{key: value[key] for key in required}, "updatedAt": value["updatedAt"]}
+    if set(value) != required:
+        return None
+    return {key: value[key] for key in required}
 
 
 def sanitize_planner_preferences(value: Any) -> dict[str, Any] | None:
@@ -176,17 +196,37 @@ def sanitize_planner_preferences(value: Any) -> dict[str, Any] | None:
     preferences = [_planner_preference(entry, response=True) for entry in value["preferences"]]
     if any(entry is None for entry in preferences):
         return None
-    return {"preferences": preferences}
-
-
-def sanitize_planner_preference_request(value: Any) -> list[dict[str, Any]] | None:
-    if not isinstance(value, list) or len(value) > 500:
+    if "lootPreferences" not in value:
+        return {"preferences": preferences, "lootPreferences": [],
+                "onboardingCompleted": False}
+    if not isinstance(value.get("lootPreferences"), list) or len(value["lootPreferences"]) > 100 \
+            or not isinstance(value.get("onboardingCompleted"), bool):
         return None
-    preferences = [_planner_preference(entry, response=False) for entry in value]
+    loot_preferences = [_planner_loot_preference(entry, response=True) for entry in value["lootPreferences"]]
+    if any(entry is None for entry in loot_preferences) \
+            or len({entry["characterId"] for entry in loot_preferences}) != len(loot_preferences):
+        return None
+    return {"preferences": preferences, "lootPreferences": loot_preferences,
+            "onboardingCompleted": value["onboardingCompleted"]}
+
+
+def sanitize_planner_preference_request(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict) or set(value) != {"preferences", "lootPreferences", "onboardingCompleted"} \
+            or not isinstance(value["preferences"], list) or len(value["preferences"]) > 500 \
+            or not isinstance(value["lootPreferences"], list) or len(value["lootPreferences"]) > 100 \
+            or not isinstance(value["onboardingCompleted"], bool):
+        return None
+    preferences = [_planner_preference(entry, response=False) for entry in value["preferences"]]
     if any(entry is None for entry in preferences):
         return None
     identities = [(entry["characterId"], entry["specId"]) for entry in preferences]
-    return preferences if len(set(identities)) == len(identities) else None
+    loot_preferences = [_planner_loot_preference(entry, response=False) for entry in value["lootPreferences"]]
+    loot_characters = [entry["characterId"] for entry in loot_preferences if entry is not None]
+    if len(set(identities)) != len(identities) or any(entry is None for entry in loot_preferences) \
+            or len(set(loot_characters)) != len(loot_characters):
+        return None
+    return {"preferences": preferences, "lootPreferences": loot_preferences,
+            "onboardingCompleted": value["onboardingCompleted"]}
 
 
 def _objective(value: Any) -> dict[str, Any] | None:
@@ -386,6 +426,18 @@ def _planner_recommendation(value: Any, challenge_map_id: int, stone_character_i
     if any(item is None for item in capability_list) \
             or not all(_non_negative(composition.get(key)) for key in composition_counts):
         return None
+    armor = composition.get("armorSynergy")
+    armor_types = ("cloth", "leather", "mail", "plate")
+    if armor is None:
+        armor = {"pairs": 0, "dominantType": None, "counts": {key: 0 for key in armor_types}}
+    if not isinstance(armor, dict) or not _non_negative(armor.get("pairs")) \
+            or armor.get("dominantType") not in {*armor_types, None} \
+            or not isinstance(armor.get("counts"), dict) \
+            or not all(_non_negative(armor["counts"].get(key)) for key in armor_types):
+        return None
+    critical_roles_covered = composition.get("criticalRolesCovered", 0)
+    if not _non_negative(critical_roles_covered) or critical_roles_covered > 2:
+        return None
     return {
         "rank": value["rank"], "fingerprint": value["fingerprint"], "stone": stone,
         "assignments": assignments, "vacancies": vacancies,
@@ -400,6 +452,11 @@ def _planner_recommendation(value: Any, challenge_map_id: int, stone_character_i
                 "bloodlust", "battleRez", "damageProfile", *composition_counts,
             )},
             "uniqueCapabilities": capability_list,
+            "criticalRolesCovered": critical_roles_covered,
+            "armorSynergy": {
+                "pairs": armor["pairs"], "dominantType": armor["dominantType"],
+                "counts": {key: armor["counts"][key] for key in armor_types},
+            },
         },
         "reasonCodes": list(value["reasonCodes"]),
     }
@@ -530,8 +587,8 @@ class TeamService:
         )
 
     def update_planner_preferences(self, cfg: dict[str, Any], value: Any) -> dict[str, Any]:
-        preferences = sanitize_planner_preference_request(value)
-        if preferences is None:
+        document = sanitize_planner_preference_request(value)
+        if document is None:
             raise TeamServiceError(INVALID_TEAM_REQUEST, "Las preferencias del Planner no son válidas.")
         token = cfg.get("access_token")
         if not isinstance(token, str) or not token or not config_module.is_session_valid(cfg):
@@ -540,7 +597,7 @@ class TeamService:
         try:
             response = self._session.put(
                 url, headers={"Authorization": f"Bearer {token}"},
-                json={"preferences": preferences}, timeout=10,
+                json=document, timeout=10,
             )
         except requests.Timeout as exc:
             raise TeamServiceError(API_TIMEOUT, "La API tardó demasiado en responder.") from exc

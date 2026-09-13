@@ -122,7 +122,8 @@ Owns:
 - The centralized Planner composition domain in `keystone-worker/src/wowComposition.ts`, including
   Retail specs, derived roles, conservative damage affinity, and unique capability providers.
 - The pure deterministic Planner solver in `keystone-worker/src/keystonePlanner.ts`, including
-  holder-aware role-constrained search, loot/preference/utility ranking, locks, vacancies, and Top 3.
+  holder-aware role-constrained search, critical-role/preference/utility/armor/loot ranking, locks,
+  vacancies, and Top 5.
 - The Planner Team/D1 adapter and public projection in `keystone-worker/src/keystonePlannerApi.ts`,
   exposed through authenticated `POST /api/teams/:teamId/keystone-planner`.
 - JWT-only owner preference reads and atomic replacement writes at
@@ -146,13 +147,13 @@ Current production persistence.
 Owns:
 
 - Durable storage for users, characters, current keystone snapshots, teams, team members, invitations, and rate limits.
-- Owner-configured Planner preferences per character/spec, with character-delete cascade and no
-  duplicated role column.
+- Owner-configured Planner played preferences per character/spec plus normalized primary/secondary
+  loot priorities per character, with delete cascades and no duplicated role column.
 - Battle.net identity mappings keyed by provider `sub` and expiring OAuth
   transactions containing only hashed public-facing secrets; BattleTags are
   display metadata and provider tokens are never stored.
 - The schema history in `keystone-worker/migrations/`, currently through
-  `0010_keystone_planner.sql`.
+  `0011_planner_play_loot_separation.sql`.
 
 Current database binding:
 
@@ -464,7 +465,22 @@ cards preserve Worker order and expose optional local spec filters, ordered acti
 and a separate completed-Voidcore disclosure. `TeamItemTooltip` renders through `document.body` to
 avoid scroll clipping and converts fixed-canvas coordinates using the active Client scale. It
 accepts only the safe S2 tooltip projection and never renders numeric stat values. The Planner
-control is visible but disabled and is not connected to recommendations.
+control now opens exact-stone planning without changing the Selector objective transport.
+
+KeystoneClient's Planner uses the typed React-to-sidecar bridge for both recommendations and the
+owner-only configuration document. Played specialization state and character-level loot priorities
+are separate throughout React, Python, Worker, and D1. Clicking a spec opens the four-state played
+preference selector; the square loot control uses the official WoW loot-bag fallback and opens a
+matrix with exactly one primary, zero or more secondaries, and all remaining specs marked
+no-interest. The UI rejects a second primary until the current selection is explicitly cleared.
+The persisted two-step tutorial is stored
+in `planner_user_settings`, not local presentation storage. The solver first covers critical tank
+and healer roles, then evaluates level distance, played preferences and requested utilities. Same-
+armor sharing and loot objectives are later tie-breakers and can never change the played spec.
+Migration `0011_planner_play_loot_separation.sql` must precede the Worker; the Worker retains the
+legacy preference request and response mirror so the currently published Web and older clients do
+not require a synchronized cutover. The new Client requires that Worker contract and is released
+after migration plus Worker readiness.
 
 KeystoneLoot V2-D validated the complete local chain with the current real SavedVariables,
 the canonical Client parser, a disposable D1 migrated through `0001`-`0004`, the actual local

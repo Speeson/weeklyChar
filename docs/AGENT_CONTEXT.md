@@ -61,9 +61,11 @@ Main implementation points:
 - `keystone-worker/src/routes/keystones.ts`: receives sync payloads and persists character JSON blocks plus current keystone snapshots.
 - `keystone-worker/src/db.ts`: `characterResponse()`, `charactersForUser()`, and `latestRealKeystone()` build read responses. Owner character lists load current keystones in one SQL query and include additive equipment/talents/Omnium JSON blocks.
 - `keystone-worker/src/routes/me.ts`: `GET /api/me/characters` exposes user characters.
-- Keystone Planner Block A stores JWT-owner-only per-character/spec play preferences in
-  `character_play_preferences`. `loot_spec_id` defaults to the played spec but may differ within
-  the same class; role is derived from the centralized Worker catalog and is not stored.
+- Keystone Planner stores JWT-owner-only played preferences in `character_play_preferences` and,
+  from additive migration `0011_planner_play_loot_separation.sql`, one primary plus zero or more
+  secondary loot specs per character in `character_loot_preferences`. The old `loot_spec_id`
+  column is only a compatibility mirror of the primary. `planner_user_settings` persists completion
+  of the Client's two-step configuration guide. Role is derived from the Worker catalog, not stored.
 - Battle.net Authentication V1 maps the official OIDC `sub` to the unchanged
   internal `users.id` through `user_identities`; BattleTag is display-only.
   Worker OAuth uses Authorization Code, cryptographic state, PKCE S256, and
@@ -89,8 +91,8 @@ Main implementation points:
 Verified from checked-out files:
 
 - Canonical addon repo `Speeson/KeystoneSync`: released `v0.2.8`, `Version: 0.2.8`, `Interface: 120100`.
-- Canonical Windows client `keystone-client/VERSION`: `0.6.11`
-- Current public Tauri release: `0.6.11`, tag `client-v0.6.11`, at commit `67b464de2cba1a53872c61f28b90d5e990737811`
+- Canonical Windows client `keystone-client/VERSION`: `0.10.1`
+- Current public Tauri release: `0.10.1`, tag `client-v0.10.1`.
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
@@ -98,6 +100,10 @@ Verified from checked-out files:
   Production Worker version `2ec220c6-ee31-411f-a110-f3f44b804d0c` includes the Planner API,
   exact-stone selection through the additive `stoneCharacterId` field, and the required CORS `PUT`
   allowlist hardening. The Planner Web remains undeployed pending a separately authorized Web rollout.
+- Planner play/loot separation migration `0011_planner_play_loot_separation.sql` has passed local
+  application tests and deliberately leaves legacy loot interests unselected; it has not been
+  applied remotely. Its Worker and Client changes
+  are likewise local only until a separately authorized backend-first rollout.
 
 ## Deployment and release model
 
@@ -161,7 +167,11 @@ Verified from checked-out files:
   Ambiguous hybrid affinity remains `null` until verified rather than being guessed.
 - Planner solving lives in the pure `keystone-worker/src/keystonePlanner.ts` domain boundary. It
   consumes normalized privacy-filtered inputs, enforces holder and 1/1/3 constraints, and ranks a
-  deterministic Top 5 without D1, Hono, authorization, or presentation copy.
+  deterministic Top 5 without D1, Hono, authorization, or presentation copy. Ranking covers tank
+  and healer first, then level distance, fewer emergency and more preferred/available played specs,
+  enabled utilities, same-armor sharing synergy, personal loot and stable identity. Loot choice
+  never selects the played spec; primary loot wins when actionable, otherwise the strongest
+  actionable secondary is used.
 - Planner API adaptation lives in `keystone-worker/src/keystonePlannerApi.ts`; the authenticated
   Team route derives selected members, preferences, current stones, shareable objectives, item
   metadata, and capability metadata server-side before exposing the solver result.
@@ -237,7 +247,15 @@ chip fixes `stoneCharacterId`, forces its owner into the manually selected 2–5
 and requires an explicit Top 5 calculation. Player characters/specs/roles are chosen automatically
 from owner-authored preferences; the Client never emits manual role locks. Entering Planner is
 blocked by a four-state (`preferred`, `available`, `emergency`, `disabled`) owner configuration
-dialog until the current user enables at least one specialization. Team detail exposes only the
+dialog until the current user enables at least one specialization and chooses a primary loot spec
+for each active character. Clicking a spec opens a themed direct selector with semantic heart,
+check, warning and X states. A separate square control uses the official WoW loot-bag icon until a
+primary is selected, then shows that specialization icon and opens the one-primary/many-secondary/
+no-interest loot matrix. A second primary is rejected with an explicit warning until the current
+one is cleared; promoting a secondary removes it from that set. Moving characters between active
+and inactive remains drag/drop-only; inactivation disables every played spec. The first configuration
+shows a persisted two-step loot-then-play guide whose completion is owner data rather than local UI
+state. Team detail exposes only the
 privacy-safe aggregate `plannerConfigured`; explicitly unconfigured teammates and their stones are
 unavailable, while a missing field from an older Worker stays provisionally selectable until the
 Planner endpoint validates it. Five equal full-width recommendation cards form an exclusive accordion; the

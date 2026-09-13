@@ -330,6 +330,12 @@ export async function teamDetailResponse(env: Env, team: TeamRow, currentUserId:
         JOIN characters configured_character ON configured_character.id = cpp.character_id
         WHERE configured_character.user_id = u.id
           AND cpp.play_preference <> 'disabled'
+          AND EXISTS (
+            SELECT 1
+            FROM character_loot_preferences clp
+            WHERE clp.character_id = configured_character.id
+              AND clp.loot_priority = 'primary'
+          )
       ) AS planner_configured
     FROM team_members tm
     JOIN users u ON u.id = tm.user_id

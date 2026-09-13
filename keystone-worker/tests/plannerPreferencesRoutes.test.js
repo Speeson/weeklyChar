@@ -34,6 +34,8 @@ class PlannerD1 {
       { id: 20, user_id: 2, wow_class: 'Mage' },
     ]
     this.preferences = []
+    this.lootPreferences = []
+    this.settings = []
     this.clock = 0
   }
 
@@ -43,12 +45,16 @@ class PlannerD1 {
 
   async batch(statements) {
     const before = structuredClone(this.preferences)
+    const beforeLoot = structuredClone(this.lootPreferences)
+    const beforeSettings = structuredClone(this.settings)
     try {
       const results = []
       for (const statement of statements) results.push(await statement.run())
       return results
     } catch (error) {
       this.preferences = before
+      this.lootPreferences = beforeLoot
+      this.settings = beforeSettings
       throw error
     }
   }
@@ -70,6 +76,9 @@ class PlannerStatement {
     if (this.sql === 'SELECT * FROM users WHERE id = ?') {
       return this.db.users.find(row => row.id === this.values[0]) ?? null
     }
+    if (this.sql.includes('FROM planner_user_settings')) {
+      return this.db.settings.find(row => row.user_id === this.values[0]) ?? null
+    }
     throw new Error(`Unhandled PlannerD1 first query: ${this.sql}`)
   }
 
@@ -81,6 +90,16 @@ class PlannerStatement {
         results: this.db.preferences
           .filter(row => ownedIds.has(row.character_id))
           .sort((left, right) => left.character_id - right.character_id || left.spec_id - right.spec_id),
+      }
+    }
+    if (this.sql.includes('FROM character_loot_preferences clp')) {
+      const userId = this.values[0]
+      const ownedIds = new Set(this.db.characters.filter(row => row.user_id === userId).map(row => row.id))
+      return {
+        results: this.db.lootPreferences
+          .filter(row => ownedIds.has(row.character_id))
+          .sort((left, right) => left.character_id - right.character_id
+            || left.loot_priority.localeCompare(right.loot_priority) || left.spec_id - right.spec_id),
       }
     }
     if (this.sql === 'SELECT id, wow_class FROM characters WHERE user_id = ? ORDER BY id') {
@@ -102,6 +121,13 @@ class PlannerStatement {
       this.db.preferences = this.db.preferences.filter(row => !ownedIds.has(row.character_id))
       return { meta: { changes: before - this.db.preferences.length } }
     }
+    if (this.sql.includes('DELETE FROM character_loot_preferences')) {
+      const userId = this.values[0]
+      const ownedIds = new Set(this.db.characters.filter(row => row.user_id === userId).map(row => row.id))
+      const before = this.db.lootPreferences.length
+      this.db.lootPreferences = this.db.lootPreferences.filter(row => !ownedIds.has(row.character_id))
+      return { meta: { changes: before - this.db.lootPreferences.length } }
+    }
     if (this.sql.startsWith('INSERT INTO character_play_preferences')) {
       for (let offset = 0; offset < this.values.length; offset += 4) {
         const [characterId, specId, playPreference, lootSpecId] = this.values.slice(offset, offset + 4)
@@ -119,6 +145,30 @@ class PlannerStatement {
       }
       return { meta: { changes: this.values.length / 4 } }
     }
+    if (this.sql.startsWith('INSERT INTO character_loot_preferences')) {
+      for (let offset = 0; offset < this.values.length; offset += 3) {
+        const [characterId, specId, lootPriority] = this.values.slice(offset, offset + 3)
+        if (this.db.lootPreferences.some(row => row.character_id === characterId && row.spec_id === specId)
+          || (lootPriority === 'primary' && this.db.lootPreferences.some(row => row.character_id === characterId && row.loot_priority === 'primary'))) {
+          throw new Error('UNIQUE constraint failed')
+        }
+        this.db.clock += 1
+        this.db.lootPreferences.push({
+          character_id: characterId,
+          spec_id: specId,
+          loot_priority: lootPriority,
+          updated_at: `2026-09-10T00:00:${String(this.db.clock).padStart(2, '0')}.000Z`,
+        })
+      }
+      return { meta: { changes: this.values.length / 3 } }
+    }
+    if (this.sql.startsWith('INSERT INTO planner_user_settings')) {
+      const [userId, onboardingCompleted] = this.values
+      const current = this.db.settings.find(row => row.user_id === userId)
+      if (current) current.onboarding_completed = Math.max(current.onboarding_completed, onboardingCompleted)
+      else this.db.settings.push({ user_id: userId, onboarding_completed: onboardingCompleted })
+      return { meta: { changes: 1 } }
+    }
     throw new Error(`Unhandled PlannerD1 run query: ${this.sql}`)
   }
 }
@@ -133,6 +183,14 @@ async function put(env, token, preferences) {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ preferences }),
+  }, env)
+}
+
+async function putDocument(env, token, document) {
+  return app.request('/api/me/planner/preferences', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(document),
   }, env)
 }
 
@@ -153,10 +211,34 @@ test('GET requires JWT auth and returns an empty owner-scoped preference set', a
   assert.equal(unauthenticated.status, 401)
   assert.equal(syncToken.status, 401)
   assert.equal(response.status, 200)
-  assert.deepEqual(await response.json(), { preferences: [] })
+  assert.deepEqual(await response.json(), {
+    preferences: [], lootPreferences: [], onboardingCompleted: false,
+  })
 })
 
-test('PUT creates all four states, defaults lootSpecId and returns roles derived from spec', async () => {
+test('PUT persists independent loot priorities and onboarding completion', async () => {
+  const { env, token } = await fixture()
+  const response = await putDocument(env, token, {
+    preferences: [
+      { characterId: 10, specId: 66, playPreference: 'preferred' },
+      { characterId: 10, specId: 70, playPreference: 'available' },
+    ],
+    lootPreferences: [{ characterId: 10, primaryLootSpecId: 70, secondaryLootSpecIds: [66] }],
+    onboardingCompleted: true,
+  })
+  const body = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.equal(body.onboardingCompleted, true)
+  assert.deepEqual(body.lootPreferences.map(row => ({
+    characterId: row.characterId,
+    primaryLootSpecId: row.primaryLootSpecId,
+    secondaryLootSpecIds: row.secondaryLootSpecIds,
+  })), [{ characterId: 10, primaryLootSpecId: 70, secondaryLootSpecIds: [66] }])
+  assert.deepEqual(body.preferences.map(row => row.lootSpecId), [70, 70])
+})
+
+test('legacy PUT creates all four states and mirrors its derived primary loot spec', async () => {
   const { env, token } = await fixture()
   const response = await put(env, token, [
     { characterId: 10, specId: 65, playPreference: 'preferred' },
@@ -175,8 +257,8 @@ test('PUT creates all four states, defaults lootSpecId and returns roles derived
     lootSpecId: row.lootSpecId,
   })), [
     { characterId: 10, specId: 65, role: 'healer', playPreference: 'preferred', lootSpecId: 65 },
-    { characterId: 10, specId: 66, role: 'tank', playPreference: 'available', lootSpecId: 70 },
-    { characterId: 10, specId: 70, role: 'dps', playPreference: 'emergency', lootSpecId: 70 },
+    { characterId: 10, specId: 66, role: 'tank', playPreference: 'available', lootSpecId: 65 },
+    { characterId: 10, specId: 70, role: 'dps', playPreference: 'emergency', lootSpecId: 65 },
     { characterId: 11, specId: 105, role: 'healer', playPreference: 'disabled', lootSpecId: 105 },
   ])
   assert.ok(body.preferences.every(row => typeof row.updatedAt === 'string'))
@@ -254,5 +336,7 @@ test('PUT requires JWT auth and supports clearing all owner preferences', async 
   ])).status, 200)
   const cleared = await put(env, token, [])
   assert.equal(cleared.status, 200)
-  assert.deepEqual(await cleared.json(), { preferences: [] })
+  assert.deepEqual(await cleared.json(), {
+    preferences: [], lootPreferences: [], onboardingCompleted: false,
+  })
 })

@@ -260,6 +260,43 @@ test('adapter loads configured played/loot specs and produces a real exact 1/1/3
   assert.deepEqual(env.DB.plannerQueryKinds, ['participants', 'stones', 'characters_preferences'])
 })
 
+test('adapter recommends character primary loot before a stronger secondary independently of played spec', async () => {
+  const env = fixture()
+  env.DB.plannerLootPreferences = [
+    { character_id: 10, spec_id: 73, loot_priority: 'primary' },
+    { character_id: 10, spec_id: 71, loot_priority: 'secondary' },
+  ]
+  env.DB.characters.find(entry => entry.id === 10).keystone_loot_json = JSON.stringify(supported([
+    favorite(101, 1, { specId: 73 }),
+    favorite(102, 3, { specId: 71 }),
+  ]))
+
+  const result = await (await plan(env)).json()
+  const owner = result.recommendations[0].assignments.find(entry => entry.userId === 1)
+  assert.equal(owner.specId, 73)
+  assert.equal(owner.lootSpecId, 73)
+  assert.deepEqual(owner.objectives.map(entry => entry.itemId), [101])
+})
+
+test('adapter falls back to the strongest configured secondary when primary has no dungeon target', async () => {
+  const env = fixture()
+  env.DB.plannerLootPreferences = [
+    { character_id: 10, spec_id: 73, loot_priority: 'primary' },
+    { character_id: 10, spec_id: 71, loot_priority: 'secondary' },
+    { character_id: 10, spec_id: 72, loot_priority: 'secondary' },
+  ]
+  env.DB.characters.find(entry => entry.id === 10).keystone_loot_json = JSON.stringify(supported([
+    favorite(101, 1, { specId: 71 }),
+    favorite(102, 3, { specId: 72 }),
+  ]))
+
+  const result = await (await plan(env)).json()
+  const owner = result.recommendations[0].assignments.find(entry => entry.userId === 1)
+  assert.equal(owner.specId, 73)
+  assert.equal(owner.lootSpecId, 72)
+  assert.deepEqual(owner.objectives.map(entry => entry.itemId), [102])
+})
+
 test('sharing disabled keeps candidates but suppresses snapshot parsing and raw data', async () => {
   const env = fixture()
   env.DB.users.find(entry => entry.id === 3).share_keystone_loot_with_teams = 0
@@ -472,7 +509,7 @@ test('endpoint returns deterministic Top 5 with holder binding, level and utilit
   const firstResponse = await (await plan(env, body({ targetLevel: 11 }))).json()
   const secondResponse = await (await plan(env, body({ targetLevel: 11 }))).json()
   assert.equal(firstResponse.recommendations.length, 5)
-  assert.deepEqual(firstResponse.recommendations.map(entry => entry.stone.level), [10, 11, 12, 13, 14])
+  assert.deepEqual(firstResponse.recommendations.map(entry => entry.stone.level), [11, 10, 12, 13, 14])
   assert.ok(firstResponse.recommendations.every(entry => entry.assignments.some(
     assignment => assignment.userId === entry.stone.ownerUserId
       && assignment.characterId === entry.stone.characterId,

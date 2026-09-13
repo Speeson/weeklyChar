@@ -753,30 +753,40 @@ Planner play preferences are owner-authored application data. They do not origin
 SavedVariables, or KeystoneClient sync payload, and they do not change the
 `shareKeystoneLootWithTeams` privacy contract.
 
-Migration `0010_keystone_planner.sql` adds `character_play_preferences`:
+Migration `0010_keystone_planner.sql` adds `character_play_preferences`. Migration
+`0011_planner_play_loot_separation.sql` adds normalized character loot priorities and the
+per-user configuration tutorial state:
 
 | Column | Contract |
 | --- | --- |
 | `character_id` | FK to `characters.id`, cascades on character deletion; first half of the PK. |
 | `spec_id` | Positive Retail specialization ID; second half of the PK. |
 | `play_preference` | Exactly `preferred`, `available`, `emergency`, or `disabled`. |
-| `loot_spec_id` | Positive Retail specialization ID used later for loot evaluation. |
+| `loot_spec_id` | Legacy compatibility mirror of the character's primary loot spec. New clients do not author it independently per played spec. |
 | `updated_at` | D1-generated UTC timestamp. |
 
-Role is intentionally absent from D1 and is derived from `spec_id` through the Worker-owned
-`wowComposition.ts` catalog. Both `spec_id` and `loot_spec_id` must belong to the character's
-canonical `wow_class`. When the request omits `lootSpecId`, the write contract stores
-`lootSpecId = specId`.
+`character_loot_preferences` stores one `primary` row and zero or more `secondary` rows per
+configured character. A partial unique index enforces at most one primary. `planner_user_settings`
+stores the owner-level `onboarding_completed` boolean so the two-step Client tutorial remains
+completed across devices. Both tables cascade on owner character/user deletion. Role is absent
+from D1 and is derived from `spec_id` through the Worker-owned `wowComposition.ts` catalog. Every
+played and loot spec must belong to the character's canonical `wow_class`.
+Migration `0011` deliberately does not infer loot priorities from existing played-spec rows:
+until the owner makes an explicit selection, all loot specs begin as no interest.
 
 Owner endpoints:
 
 - `GET /api/me/planner/preferences` requires a KeystoneSync access JWT and returns
-  `{ preferences: PlannerPreference[] }` in `(characterId, specId)` order. No rows is a normal
-  `200` response with an empty array.
+  `{ preferences, lootPreferences, onboardingCompleted }`. No rows is a normal `200` response
+  with empty arrays and `onboardingCompleted: false`.
 - `PUT /api/me/planner/preferences` requires a KeystoneSync access JWT and a strict
-  `{ preferences: [...] }` document. It is full replacement, including `[]` to clear all owner
-  rows. The full payload is validated before a transactional D1 batch replaces only rows belonging
-  to the authenticated owner's characters.
+  `{ preferences, lootPreferences, onboardingCompleted }` document. Play and loot arrays are full
+  replacements. The full payload is validated before one D1 batch replaces only rows belonging to
+  the authenticated owner's characters. Every character with at least one non-disabled played spec
+  requires exactly one primary loot spec. Completion is monotonic and cannot be reset to false.
+- The Worker continues accepting the legacy `{ preferences: [...] }` PUT shape. It derives one
+  deterministic primary and the remaining distinct same-class loot specs as secondaries, while
+  response play rows mirror the primary through `lootSpecId` for published clients.
 - Sync-token authentication is not accepted. Foreign characters, invalid class/spec or loot-spec
   pairs, invalid states, duplicates, unknown fields, unsafe IDs, missing character class, and
   malformed JSON are rejected without changing persisted preferences.
@@ -794,6 +804,17 @@ Each response preference is:
 }
 ```
 
+Each normalized loot preference is:
+
+```ts
+{
+  characterId: number
+  primaryLootSpecId: number
+  secondaryLootSpecIds: number[]
+  updatedAt: string
+}
+```
+
 The Worker catalog also centralizes capability identities/providers and a conservative DPS-only
 `physical`/`magical` affinity. Hybrid or patch-sensitive specs may have `damageProfile: null`; no
 percentage or affinity is inferred.
@@ -802,7 +823,8 @@ percentage or affinity is inferred.
 
 `keystone-worker/src/keystonePlanner.ts` is a pure domain boundary. It receives 2–5 unique
 participant IDs, target level 1–20, normalized candidate assignments, stones, options, and optional
-assignment/character/role locks. Candidates contain separate played `specId` and `lootSpecId` plus
+assignment/character/role locks. Candidates contain a played `specId`, one primary loot spec and
+zero or more secondary loot specs plus
 already privacy-filtered objectives. Consequently, an empty objective list contributes zero loot
 without the solver reading raw KeystoneLoot or knowing the sharing setting.
 
@@ -812,12 +834,15 @@ completable 1 tank / 1 healer / 3 DPS shape. Disabled candidates are excluded. U
 playable candidates produce `unconfiguredUserIds`; contradictory locks are `invalid_input`, and a
 validly configured search with no solution is `no_valid_composition`.
 
-Loot filtering requires played assignment `lootSpecId`, `sourceType = dungeon`, an exact numeric
-challenge map ID, and a non-completed Voidcore state. Identity is source namespace + typed source
-ID + item ID + `variantKey`, matching Selector exact-variant behavior. Ranking is hierarchical:
-weighted shared tier score, players with objectives, target-level distance, structured preference
-counts, enabled utilities, known tier counts, then stable numeric stone/assignment identity. No
-coverage bonus is added to the weighted score.
+Loot filtering first evaluates the character's primary loot spec. If it has no actionable target
+for the selected dungeon, the strongest configured secondary with actionable targets is used;
+otherwise the primary remains selected. Loot selection never changes the played spec or role.
+Identity is source namespace + typed source ID + item ID + `variantKey`, matching Selector
+exact-variant behavior. Ranking is lexicographic: critical tank/healer coverage, target-level
+distance, fewer emergency assignments, more preferred then available assignments, enabled
+utilities, same-armor sharing pairs, weighted personal loot, known tier counts, then stable numeric
+stone/assignment identity. This lets an available tank/healer outrank a preferred DPS when that
+critical role is otherwise missing, while loot remains only a late tie-breaker.
 
 Output contains at most five ranked recommendations with stone, assignments, role vacancies,
 loot/level/preference/composition summaries, stable fingerprint, and reason codes. Capability
@@ -882,8 +907,9 @@ requires the active Team/dungeon identity and validates all fixed statuses, diag
 reason codes and nested public recommendation fields before rendering. React sends only
 `participantUserIds`, `targetLevel`, `challengeMapId`, the five option booleans and visible locks;
 it never sends or reconstructs candidates, objectives, stones, roles, capabilities or scores.
-Owner preference editing expands the known same-class Web spec list into an explicit full
-replacement document, defaulting previously absent specs to `disabled` and `lootSpecId = specId`.
+The current Web preference editor continues using the accepted legacy document. It expands the
+known same-class spec list into an explicit full replacement, defaulting absent specs to
+`disabled` and `lootSpecId = specId`.
 Characters without `wowClass` remain unconfigurable and produce no invented spec IDs. The Web spec
 catalog retains 40 entries and maps Devourer (`1480`) to Demon Hunter.
 
@@ -898,11 +924,16 @@ ranking. Client avatars are joined locally from the already-safe Team detail DTO
 to the Planner response.
 
 Team detail adds the privacy-safe boolean `plannerConfigured` per member. It is true only when the
-member owns at least one non-disabled character/spec preference; no private preference rows, played
-specs, loot specs, or roles are exposed. Older responses without the additive field remain
+member owns at least one non-disabled character/spec preference whose character also has a primary
+loot specialization; no private preference rows, played specs, loot specs, or roles are exposed.
+Older responses without the additive field remain
 provisionally selectable in KeystoneClient; the authenticated Planner response is authoritative
-and still reports genuinely unconfigured participants. Owner preference reads and full-replacement writes use the private
-`planner.preferences.get` and `planner.preferences.update` bridge commands.
+and still reports genuinely unconfigured participants. Owner preference reads and full-replacement
+writes use the private `planner.preferences.get` and `planner.preferences.update` bridge commands.
+KeystoneClient sends played preferences, character-level loot priorities, and onboarding completion
+separately. Its configuration surface uses direct four-state spec selectors, a one-primary/many-
+secondary loot matrix, and a persisted two-step guide; inactive characters remain disabled and
+drag/drop controls their participation.
 
 ## Web Consumption Contract
 

@@ -139,6 +139,47 @@ test('preferred beats available and available beats emergency at equal higher cr
   assert.equal(available.assignments.find(entry => entry.userId === 3).specId, 261)
 })
 
+test('available critical role beats preferred DPS when it is the only support option', () => {
+  const recommendation = first(solveKeystonePlanner(input([
+    candidate(1, 66, { playPreference: 'available' }),
+    candidate(1, 70, { playPreference: 'preferred' }),
+    candidate(2, 62, { playPreference: 'preferred' }),
+  ], { participantUserIds: [1, 2] })))
+
+  assert.equal(recommendation.assignments.find(entry => entry.userId === 1).specId, 66)
+  assert.deepEqual(recommendation.vacancies.map(entry => entry.role), ['healer', 'dps', 'dps'])
+})
+
+test('loot cannot make an available played spec beat the preferred played spec', () => {
+  const recommendation = first(solveKeystonePlanner(input([
+    candidate(1, 66, { playPreference: 'preferred', lootSpecId: 70 }),
+    candidate(1, 70, {
+      playPreference: 'available', lootSpecId: 70,
+      objectives: [objective(7, 3, { specId: 70 })],
+    }),
+    candidate(2, 62, { playPreference: 'preferred' }),
+  ], { participantUserIds: [1, 2] })))
+
+  assert.equal(recommendation.assignments.find(entry => entry.userId === 1).specId, 66)
+})
+
+test('same-armor party synergy breaks an otherwise equal tank assignment tie', () => {
+  const recommendation = first(solveKeystonePlanner(input([
+    candidate(1, 104, { playPreference: 'available' }),
+    candidate(1, 250, { characterId: 11, playPreference: 'available' }),
+    candidate(2, 260, { playPreference: 'preferred' }),
+    candidate(3, 259, { playPreference: 'preferred' }),
+    candidate(4, 269, { playPreference: 'preferred' }),
+  ], {
+    participantUserIds: [1, 2, 3, 4],
+    stones: [stone({ ownerUserId: 2, characterId: 20 })],
+  })))
+
+  assert.equal(recommendation.assignments.find(entry => entry.userId === 1).specId, 104)
+  assert.equal(recommendation.compositionSummary.armorSynergy.pairs, 6)
+  assert.equal(recommendation.compositionSummary.armorSynergy.dominantType, 'leather')
+})
+
 test('emergency can save the only valid party', () => {
   const recommendation = first(solveKeystonePlanner(input([
     candidate(1, 104, { playPreference: 'emergency' }),
@@ -194,7 +235,7 @@ test('played spec derives role while lootSpec exclusively selects objectives', (
   assert.equal(recommendation.lootSummary.weightedScore, 100)
 })
 
-test('weighted loot outranks both a closer level and better utilities', () => {
+test('target level and enabled utilities outrank personal loot', () => {
   const options = { ...off, optimizeComposition: true, bloodlust: true, battleRez: true }
   const candidates = [
     candidate(1, 104), candidate(2, 105),
@@ -209,11 +250,11 @@ test('weighted loot outranks both a closer level and better utilities', () => {
       stone({ challengeMapId: 200, level: 1, dungeon: 'Loot' }),
     ],
   }))
-  assert.equal(first(result).stone.challengeMapId, 200)
-  assert.equal(first(result).assignments.find(entry => entry.userId === 3).specId, 260)
+  assert.equal(first(result).stone.challengeMapId, 100)
+  assert.equal(first(result).assignments.find(entry => entry.userId === 3).specId, 262)
 })
 
-test('equal weighted loot prefers more players with objectives before level', () => {
+test('target level distance precedes equal personal loot and player coverage', () => {
   const candidates = [
     candidate(1, 104),
     candidate(2, 105, { objectives: [objective(2, 1, { specId: 105, sourceId: 200 })] }),
@@ -229,8 +270,8 @@ test('equal weighted loot prefers more players with objectives before level', ()
     stones: [stone({ challengeMapId: 100, level: 10 }), stone({ challengeMapId: 200, level: 20 })],
   })))
   assert.equal(recommendation.lootSummary.weightedScore, 85)
-  assert.equal(recommendation.lootSummary.playersWithObjectives, 2)
-  assert.equal(recommendation.stone.challengeMapId, 200)
+  assert.equal(recommendation.lootSummary.playersWithObjectives, 1)
+  assert.equal(recommendation.stone.challengeMapId, 100)
 })
 
 test('level distance breaks ties only after loot and player coverage', () => {
@@ -350,7 +391,7 @@ test('disabled Bloodlust option and optimizeComposition false remove utility ran
 })
 
 test('Battle Resurrection comparator can be enabled and disabled independently', () => {
-  const candidates = [candidate(1, 73), candidate(2, 270), candidate(3, 62), candidate(3, 102)]
+  const candidates = [candidate(1, 73), candidate(2, 270), candidate(3, 62), candidate(3, 265)]
   const disabled = first(solveKeystonePlanner(input(candidates, {
     participantUserIds: [1, 2, 3], options: { ...off, optimizeComposition: true },
   })))
@@ -359,7 +400,7 @@ test('Battle Resurrection comparator can be enabled and disabled independently',
     participantUserIds: [1, 2, 3],
     options: { ...off, optimizeComposition: true, battleRez: true },
   })))
-  assert.equal(enabled.assignments.find(entry => entry.userId === 3).specId, 102)
+  assert.equal(enabled.assignments.find(entry => entry.userId === 3).specId, 265)
   assert.equal(enabled.compositionSummary.battleRez, 'guaranteed')
 })
 

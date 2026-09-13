@@ -1,0 +1,11 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Separa las preferencias de juego y botín del planificador de piedras.",
+  "details": [
+    "La configuración permite elegir directamente la disponibilidad de cada especialización; el botín comienza sin intereses preseleccionados y permite definir por personaje una especialización primaria y varias secundarias.",
+    "El nuevo tutorial guiado explica ambos controles una sola vez y conserva su finalización entre dispositivos.",
+    "El Top 5 prioriza la cobertura de tanque y sanador y utiliza la sinergia de armadura y los objetivos de botín únicamente como desempates posteriores."
+  ]
+}

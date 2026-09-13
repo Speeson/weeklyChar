@@ -451,8 +451,24 @@ export type ClientPlannerPreference = {
   lootSpecId: number;
   updatedAt: string;
 };
-export type ClientPlannerPreferenceInput = Omit<ClientPlannerPreference, "role" | "updatedAt">;
-export type ClientPlannerPreferences = { preferences: ClientPlannerPreference[] };
+export type ClientPlannerPreferenceInput = Pick<ClientPlannerPreference, "characterId" | "specId" | "playPreference">;
+export type ClientPlannerLootPreference = {
+  characterId: number;
+  primaryLootSpecId: number;
+  secondaryLootSpecIds: number[];
+  updatedAt: string;
+};
+export type ClientPlannerLootPreferenceInput = Omit<ClientPlannerLootPreference, "updatedAt">;
+export type ClientPlannerPreferences = {
+  preferences: ClientPlannerPreference[];
+  lootPreferences: ClientPlannerLootPreference[];
+  onboardingCompleted: boolean;
+};
+export type ClientPlannerPreferenceUpdate = {
+  preferences: ClientPlannerPreferenceInput[];
+  lootPreferences: ClientPlannerLootPreferenceInput[];
+  onboardingCompleted: boolean;
+};
 export type KeystonePlannerAvailability = "guaranteed" | "conditional" | "none";
 
 export type KeystonePlannerOptions = {
@@ -534,6 +550,7 @@ export type KeystonePlannerRecommendation = {
   levelSummary: { targetLevel: number; stoneLevel: number; levelDistance: number };
   preferenceSummary: { preferred: number; available: number; emergency: number };
   compositionSummary: {
+    criticalRolesCovered: number;
     bloodlust: KeystonePlannerAvailability;
     battleRez: KeystonePlannerAvailability;
     uniqueCapabilities: KeystonePlannerCapability[];
@@ -544,6 +561,11 @@ export type KeystonePlannerRecommendation = {
     chaosBrandBeneficiaries: number;
     mysticTouchBeneficiaries: number;
     uniqueClassBuffCount: number;
+    armorSynergy: {
+      pairs: number;
+      dominantType: "cloth" | "leather" | "mail" | "plate" | null;
+      counts: { cloth: number; leather: number; mail: number; plate: number };
+    };
   };
   reasonCodes: string[];
 };

@@ -1,4 +1,5 @@
 export type WowRole = 'tank' | 'healer' | 'dps'
+export type WowArmorType = 'cloth' | 'leather' | 'mail' | 'plate'
 export type WowDamageProfile = 'physical' | 'magical' | null
 export type WowClassName =
   | 'Death Knight'
@@ -58,6 +59,26 @@ export type ResolvedCapability = {
   capabilityId: CapabilityId
   mode: CapabilityProviderMode
   condition: string | null
+}
+
+const WOW_CLASS_ARMOR: Readonly<Record<WowClassName, WowArmorType>> = {
+  'Death Knight': 'plate',
+  'Demon Hunter': 'leather',
+  Druid: 'leather',
+  Evoker: 'mail',
+  Hunter: 'mail',
+  Mage: 'cloth',
+  Monk: 'leather',
+  Paladin: 'plate',
+  Priest: 'cloth',
+  Rogue: 'leather',
+  Shaman: 'mail',
+  Warlock: 'cloth',
+  Warrior: 'plate',
+}
+
+export function armorTypeForClass(wowClass: WowClassName): WowArmorType {
+  return WOW_CLASS_ARMOR[wowClass]
 }
 
 // Verified 2026-09-10. Primary class/role references:

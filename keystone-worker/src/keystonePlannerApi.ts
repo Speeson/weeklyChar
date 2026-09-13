@@ -52,6 +52,8 @@ type PlannerCharacterPreferenceRow = {
   spec_id: number | null
   play_preference: 'preferred' | 'available' | 'emergency' | 'disabled' | null
   loot_spec_id: number | null
+  primary_loot_spec_id: number | null
+  secondary_loot_spec_ids: string | null
 }
 
 type PlannerStoneRow = {
@@ -302,7 +304,18 @@ async function plannerCharacterPreferences(
         THEN c.keystone_loot_json ELSE NULL END AS keystone_loot_json,
       cpp.spec_id,
       cpp.play_preference,
-      cpp.loot_spec_id
+      cpp.loot_spec_id,
+      COALESCE((
+        SELECT clp.spec_id
+        FROM character_loot_preferences clp
+        WHERE clp.character_id = c.id AND clp.loot_priority = 'primary'
+        LIMIT 1
+      ), cpp.loot_spec_id) AS primary_loot_spec_id,
+      (
+        SELECT GROUP_CONCAT(clp.spec_id, ',')
+        FROM character_loot_preferences clp
+        WHERE clp.character_id = c.id AND clp.loot_priority = 'secondary'
+      ) AS secondary_loot_spec_ids
     FROM team_members tm
     JOIN users u ON u.id = tm.user_id
     JOIN characters c ON c.user_id = u.id
@@ -320,7 +333,10 @@ function candidateSeeds(rows: readonly PlannerCharacterPreferenceRow[]): Candida
       || row.play_preference === 'disabled') continue
     const wowClass = normalizeWowClass(row.wow_class)
     const played = wowSpecialization(row.spec_id)
-    const loot = wowSpecialization(row.loot_spec_id)
+    const primaryLootSpecId = row.primary_loot_spec_id ?? row.loot_spec_id
+    const secondaryLootSpecIds = (row.secondary_loot_spec_ids ?? '').split(',')
+      .filter(Boolean).map(Number).filter(specId => Number.isSafeInteger(specId) && specId > 0)
+    const loot = wowSpecialization(primaryLootSpecId)
     if (!wowClass || !played || !loot || played.wowClass !== wowClass || loot.wowClass !== wowClass) continue
     seeds.push({
       userId: row.user_id,
@@ -328,7 +344,9 @@ function candidateSeeds(rows: readonly PlannerCharacterPreferenceRow[]): Candida
       characterId: row.character_id,
       characterName: row.character_name,
       specId: row.spec_id,
-      lootSpecId: row.loot_spec_id,
+      lootSpecId: primaryLootSpecId,
+      primaryLootSpecId,
+      secondaryLootSpecIds,
       playPreference: row.play_preference,
       objectives: [],
       region: row.region,
@@ -368,7 +386,10 @@ function attachObjectives(
   for (const [characterId, characterSeeds] of seedsByCharacter) {
     const row = rowsByCharacter.get(characterId)
     if (!row || row.share_keystone_loot_with_teams === 0 || row.keystone_loot_json === null) continue
-    const lootSpecIds = [...new Set(characterSeeds.map(seed => seed.lootSpecId))]
+    const lootSpecIds = [...new Set(characterSeeds.flatMap(seed => [
+      seed.primaryLootSpecId ?? seed.lootSpecId,
+      ...(seed.secondaryLootSpecIds ?? []),
+    ]))]
     const objectives = buildKeystoneLootPlannerObjectives(
       row.keystone_loot_json,
       challengeMapIds,
@@ -381,7 +402,12 @@ function attachObjectives(
       bySpec.set(objective.specId, entries)
     }
     for (const seed of characterSeeds) {
-      seed.objectives = (bySpec.get(seed.lootSpecId) ?? []).map(objective => ({ ...objective }))
+      const relevantSpecIds = new Set([
+        seed.primaryLootSpecId ?? seed.lootSpecId,
+        ...(seed.secondaryLootSpecIds ?? []),
+      ])
+      seed.objectives = [...relevantSpecIds].flatMap(specId =>
+        (bySpec.get(specId) ?? []).map(objective => ({ ...objective })))
       objectiveCount += seed.objectives.length
       assertPlannerDataLimit('objectives', objectiveCount)
     }

@@ -109,7 +109,7 @@ const previewPlannerParty: KeystonePlannerAssignment[] = [
 let previewPreferences: ClientPlannerPreferences = { preferences: [
   { characterId: 10, specId: 62, role: "dps", playPreference: "preferred", lootSpecId: 62, updatedAt: "2026-09-11T00:00:00Z" },
   { characterId: 10, specId: 63, role: "dps", playPreference: "available", lootSpecId: 63, updatedAt: "2026-09-11T00:00:00Z" },
-] };
+], lootPreferences: [{ characterId: 10, primaryLootSpecId: 62, secondaryLootSpecIds: [63], updatedAt: "2026-09-11T00:00:00Z" }], onboardingCompleted: true };
 
 function previewPlannerRecommendation(rank: number, request: KeystonePlannerRequest): KeystonePlannerRecommendation {
   const stone = fullSelector.availability.stones.find(item => item.characterId === request.stoneCharacterId) ?? fullSelector.availability.stones[0];
@@ -121,9 +121,11 @@ function previewPlannerRecommendation(rank: number, request: KeystonePlannerRequ
     levelSummary: { targetLevel: request.targetLevel, stoneLevel: stone.level, levelDistance: Math.abs(request.targetLevel - stone.level) },
     preferenceSummary: { preferred: 5, available: 0, emergency: 0 },
     compositionSummary: {
+      criticalRolesCovered: 2,
       bloodlust: "guaranteed", battleRez: "guaranteed", damageProfile: "mixed",
       magicalDpsCount: 2, physicalDpsCount: 1, unknownDpsCount: 0, chaosBrandBeneficiaries: 2,
       mysticTouchBeneficiaries: 1, uniqueClassBuffCount: 2,
+      armorSynergy: { pairs: 2, dominantType: "cloth", counts: { cloth: 3, leather: 1, mail: 0, plate: 1 } },
       uniqueCapabilities: [
         { capabilityId: "bloodlust", name: "Ansia de sangre", type: "major_utility", iconSpellId: 2825, stacking: "unique", availability: "guaranteed" },
         { capabilityId: "battle_rez", name: "Resurrección en combate", type: "major_utility", iconSpellId: 20484, stacking: "unique", availability: "guaranteed" },
@@ -188,13 +190,15 @@ export function getTeamsPreviewDataSource(): TeamsDataSource | null {
       return selectorForDungeon(challengeMapId, language);
     },
     getKeystonePlanner: async (_teamId, request) => previewPlanner(request),
-    getPlannerPreferences: async () => scenario === "teams-planner-unconfigured" ? { preferences: [] } : previewPreferences,
-    updatePlannerPreferences: async preferences => {
-      previewPreferences = { preferences: preferences.map(preference => ({
+    getPlannerPreferences: async () => scenario === "teams-planner-unconfigured" ? { preferences: [], lootPreferences: [], onboardingCompleted: false } : previewPreferences,
+    updatePlannerPreferences: async update => {
+      const primaryByCharacter = new Map(update.lootPreferences.map(preference => [preference.characterId, preference.primaryLootSpecId]));
+      previewPreferences = { preferences: update.preferences.map(preference => ({
         ...preference,
         role: WOW_SPECIALIZATIONS.find(spec => spec.id === preference.specId)?.role ?? "dps",
+        lootSpecId: primaryByCharacter.get(preference.characterId) ?? preference.specId,
         updatedAt: "2026-09-11T00:00:00Z",
-      })) };
+      })), lootPreferences: update.lootPreferences.map(preference => ({ ...preference, updatedAt: "2026-09-11T00:00:00Z" })), onboardingCompleted: update.onboardingCompleted };
       return previewPreferences;
     },
   };

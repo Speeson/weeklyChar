@@ -33,8 +33,8 @@ function source(overrides: Partial<TeamsDataSource> = {}): TeamsDataSource {
     getTeam: vi.fn(async () => detail),
     getKeystoneSelector: vi.fn(async () => selector),
     getKeystonePlanner: vi.fn(async () => { throw new Error("Unused Planner mock"); }),
-    getPlannerPreferences: vi.fn(async () => ({ preferences: [] })),
-    updatePlannerPreferences: vi.fn(async () => ({ preferences: [] })),
+    getPlannerPreferences: vi.fn(async () => ({ preferences: [], lootPreferences: [], onboardingCompleted: false })),
+    updatePlannerPreferences: vi.fn(async () => ({ preferences: [], lootPreferences: [], onboardingCompleted: false })),
     ...overrides,
   };
 }

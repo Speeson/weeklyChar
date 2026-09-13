@@ -4,12 +4,14 @@ import { keystoneLootTierWeight } from './keystoneRecommendations'
 import {
   WOW_CAPABILITIES,
   WOW_SPECIALIZATIONS,
+  armorTypeForClass,
   capabilitiesForSpec,
   wowSpecialization,
 } from './wowComposition'
 import type {
   CapabilityId,
   ResolvedCapability,
+  WowArmorType,
   WowClassName,
   WowDamageProfile,
   WowRole,
@@ -40,6 +42,8 @@ export type PlannerCandidate = {
   characterName: string
   specId: number
   lootSpecId: number
+  primaryLootSpecId?: number
+  secondaryLootSpecIds?: readonly number[]
   playPreference: PlayPreference
   objectives: readonly PlannerObjective[]
 }
@@ -127,6 +131,12 @@ export type PlannerCompositionSummary = {
   chaosBrandBeneficiaries: number
   mysticTouchBeneficiaries: number
   uniqueClassBuffCount: number
+  criticalRolesCovered: number
+  armorSynergy: {
+    pairs: number
+    dominantType: WowArmorType | null
+    counts: Record<WowArmorType, number>
+  }
 }
 
 export type PlannerReasonCode =
@@ -250,10 +260,14 @@ function strongerObjective(candidate: PlannerObjective, selected: PlannerObjecti
   return weightDifference > 0 || (weightDifference === 0 && candidate.tier > selected.tier)
 }
 
-function scoringObjectives(candidate: NormalizedCandidate, challengeMapId: number): PlannerObjective[] {
+function scoringObjectives(
+  candidate: NormalizedCandidate,
+  challengeMapId: number,
+  lootSpecId: number,
+): PlannerObjective[] {
   const selected = new Map<string, PlannerObjective>()
   for (const objective of candidate.objectives) {
-    if (objective.specId !== candidate.lootSpecId
+    if (objective.specId !== lootSpecId
       || objective.sourceType !== 'dungeon'
       || typeof objective.sourceId !== 'number'
       || objective.sourceId !== challengeMapId
@@ -305,7 +319,9 @@ function compositionSummary(candidates: readonly NormalizedCandidate[]): Planner
   let magicalDpsCount = 0
   let physicalDpsCount = 0
   let unknownDpsCount = 0
+  const armorCounts: Record<WowArmorType, number> = { cloth: 0, leather: 0, mail: 0, plate: 0 }
   for (const candidate of candidates) {
+    armorCounts[armorTypeForClass(candidate.specialization.wowClass)] += 1
     if (candidate.specialization.role !== 'dps') continue
     if (candidate.specialization.damageProfile === 'magical') magicalDpsCount += 1
     else if (candidate.specialization.damageProfile === 'physical') physicalDpsCount += 1
@@ -323,6 +339,13 @@ function compositionSummary(candidates: readonly NormalizedCandidate[]): Planner
     })
   const uniqueClassBuffCount = WOW_CAPABILITIES.filter(definition => definition.type === 'class_buff'
     && capabilityAvailability.has(definition.id)).length
+  const armorOrder: readonly WowArmorType[] = ['cloth', 'leather', 'mail', 'plate']
+  const armorPairs = armorOrder.reduce((total, armorType) => {
+    const count = armorCounts[armorType]
+    return total + (count * (count - 1)) / 2
+  }, 0)
+  const dominantType = armorPairs === 0 ? null : [...armorOrder].sort((left, right) =>
+    armorCounts[right] - armorCounts[left] || armorOrder.indexOf(left) - armorOrder.indexOf(right))[0]
 
   return {
     bloodlust: capabilityStatus(capabilityAvailability, 'BLOODLUST'),
@@ -335,7 +358,34 @@ function compositionSummary(candidates: readonly NormalizedCandidate[]): Planner
     chaosBrandBeneficiaries: capabilityAvailability.has('CHAOS_BRAND') ? magicalDpsCount : 0,
     mysticTouchBeneficiaries: capabilityAvailability.has('MYSTIC_TOUCH') ? physicalDpsCount : 0,
     uniqueClassBuffCount,
+    criticalRolesCovered: Number(candidates.some(candidate => candidate.specialization.role === 'tank'))
+      + Number(candidates.some(candidate => candidate.specialization.role === 'healer')),
+    armorSynergy: { pairs: armorPairs, dominantType, counts: armorCounts },
   }
+}
+
+function lootSelection(
+  candidate: NormalizedCandidate,
+  challengeMapId: number,
+): { lootSpecId: number, objectives: PlannerObjective[] } {
+  const primaryLootSpecId = candidate.primaryLootSpecId ?? candidate.lootSpecId
+  const primaryObjectives = scoringObjectives(candidate, challengeMapId, primaryLootSpecId)
+  if (primaryObjectives.length > 0) return { lootSpecId: primaryLootSpecId, objectives: primaryObjectives }
+
+  const secondaries = [...new Set(candidate.secondaryLootSpecIds ?? [])]
+    .filter(specId => specId !== primaryLootSpecId)
+    .map(lootSpecId => ({
+      lootSpecId,
+      objectives: scoringObjectives(candidate, challengeMapId, lootSpecId),
+    }))
+    .filter(selection => selection.objectives.length > 0)
+    .sort((left, right) => {
+      const leftScore = left.objectives.reduce((total, objective) => total + keystoneLootTierWeight(objective.tier), 0)
+      const rightScore = right.objectives.reduce((total, objective) => total + keystoneLootTierWeight(objective.tier), 0)
+      return rightScore - leftScore || right.objectives.length - left.objectives.length
+        || left.lootSpecId - right.lootSpecId
+    })
+  return secondaries[0] ?? { lootSpecId: primaryLootSpecId, objectives: [] }
 }
 
 function vacancyRoles(roleCounts: Readonly<RoleCounts>): WowRole[] {
@@ -369,6 +419,7 @@ function vacanciesFor(
 
 function assignmentFor(
   candidate: NormalizedCandidate,
+  lootSpecId: number,
   objectives: PlannerObjective[],
 ): PlannerAssignment {
   return {
@@ -379,7 +430,7 @@ function assignmentFor(
     wowClass: candidate.specialization.wowClass,
     specId: candidate.specId,
     role: candidate.specialization.role,
-    lootSpecId: candidate.lootSpecId,
+    lootSpecId,
     playPreference: candidate.playPreference,
     objectives: objectives.map(objective => ({ ...objective })),
     capabilities: candidate.capabilities.map(capability => ({ ...capability })),
@@ -422,9 +473,10 @@ function compareRecommendations(
   right: UnrankedRecommendation,
   options: PlannerOptions,
 ): number {
-  const primary = compareDescending(left.lootSummary.weightedScore, right.lootSummary.weightedScore)
-    || compareDescending(left.lootSummary.playersWithObjectives, right.lootSummary.playersWithObjectives)
-    || (left.levelSummary.levelDistance - right.levelSummary.levelDistance)
+  const primary = compareDescending(
+    left.compositionSummary.criticalRolesCovered,
+    right.compositionSummary.criticalRolesCovered,
+  ) || (left.levelSummary.levelDistance - right.levelSummary.levelDistance)
     || (left.preferenceSummary.emergency - right.preferenceSummary.emergency)
     || compareDescending(left.preferenceSummary.preferred, right.preferenceSummary.preferred)
     || compareDescending(left.preferenceSummary.available, right.preferenceSummary.available)
@@ -470,6 +522,16 @@ function compareRecommendations(
     }
   }
 
+  const armorSynergy = compareDescending(
+    left.compositionSummary.armorSynergy.pairs,
+    right.compositionSummary.armorSynergy.pairs,
+  )
+  if (armorSynergy !== 0) return armorSynergy
+
+  const loot = compareDescending(left.lootSummary.weightedScore, right.lootSummary.weightedScore)
+    || compareDescending(left.lootSummary.playersWithObjectives, right.lootSummary.playersWithObjectives)
+  if (loot !== 0) return loot
+
   const tiers = compareDescending(left.lootSummary.tierCounts.bestInSlot, right.lootSummary.tierCounts.bestInSlot)
     || compareDescending(left.lootSummary.tierCounts.mustHave, right.lootSummary.tierCounts.mustHave)
     || compareDescending(left.lootSummary.tierCounts.niceToHave, right.lootSummary.tierCounts.niceToHave)
@@ -490,14 +552,14 @@ function buildRecommendation(
   let playersWithObjectives = 0
   let totalObjectives = 0
   const assignments = ordered.map(candidate => {
-    const objectives = scoringObjectives(candidate, stone.challengeMapId)
+    const { lootSpecId, objectives } = lootSelection(candidate, stone.challengeMapId)
     if (objectives.length > 0) playersWithObjectives += 1
     totalObjectives += objectives.length
     for (const objective of objectives) {
       weightedScore += keystoneLootTierWeight(objective.tier)
       incrementTier(tierCounts, objective.tier)
     }
-    return assignmentFor(candidate, objectives)
+    return assignmentFor(candidate, lootSpecId, objectives)
   })
   const composition = compositionSummary(ordered)
   const vacancies = vacanciesFor(roleCounts, composition, input.options)
@@ -610,7 +672,14 @@ function normalizeCandidates(input: KeystonePlannerInput): {
   for (const candidate of input.candidates) {
     if (!participants.has(candidate.userId) || candidate.playPreference === 'disabled') continue
     const specialization = wowSpecialization(candidate.specId)
-    if (!specialization || !wowSpecialization(candidate.lootSpecId)) continue
+    const lootSpecIds = [
+      candidate.primaryLootSpecId ?? candidate.lootSpecId,
+      ...(candidate.secondaryLootSpecIds ?? []),
+    ]
+    if (!specialization || lootSpecIds.some(specId => {
+      const loot = wowSpecialization(specId)
+      return !loot || loot.wowClass !== specialization.wowClass
+    })) continue
     const identity = candidateIdentity(candidate)
     if (identities.has(identity)) {
       duplicate = true

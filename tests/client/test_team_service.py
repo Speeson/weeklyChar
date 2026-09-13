@@ -80,30 +80,50 @@ class TeamServiceTests(unittest.TestCase):
             "characterId": 10, "specId": 66, "role": "tank",
             "playPreference": "preferred", "lootSpecId": 65,
             "updatedAt": "2026-09-11T00:00:00.000Z", "secret": "discard",
-        }]}
+        }], "lootPreferences": [{
+            "characterId": 10, "primaryLootSpecId": 65, "secondaryLootSpecIds": [70],
+            "updatedAt": "2026-09-11T00:00:00.000Z",
+        }], "onboardingCompleted": True}
         session = FakeSession([FakeResponse(saved), FakeResponse(saved)])
         service = TeamService(session=session)
 
         loaded = service.get_planner_preferences(self.cfg)
-        updated = service.update_planner_preferences(self.cfg, [{
-            "characterId": 10, "specId": 66,
-            "playPreference": "preferred", "lootSpecId": 65,
-        }])
+        update = {"preferences": [{
+            "characterId": 10, "specId": 66, "playPreference": "preferred",
+        }], "lootPreferences": [{
+            "characterId": 10, "primaryLootSpecId": 65, "secondaryLootSpecIds": [70],
+        }], "onboardingCompleted": True}
+        updated = service.update_planner_preferences(self.cfg, update)
 
         expected = {"preferences": [{
             "characterId": 10, "specId": 66, "role": "tank",
             "playPreference": "preferred", "lootSpecId": 65,
             "updatedAt": "2026-09-11T00:00:00.000Z",
-        }]}
+        }], "lootPreferences": [{
+            "characterId": 10, "primaryLootSpecId": 65, "secondaryLootSpecIds": [70],
+            "updatedAt": "2026-09-11T00:00:00.000Z",
+        }], "onboardingCompleted": True}
         self.assertEqual(loaded, expected)
         self.assertEqual(updated, expected)
         self.assertTrue(session.calls[0][0].endswith("/api/me/planner/preferences"))
         self.assertTrue(session.calls[1][0].endswith("/api/me/planner/preferences"))
-        self.assertEqual(session.calls[1][1]["json"], {"preferences": [{
-            "characterId": 10, "specId": 66,
-            "playPreference": "preferred", "lootSpecId": 65,
-        }]})
+        self.assertEqual(session.calls[1][1]["json"], update)
         self.assertNotIn("access-secret", str((loaded, updated)))
+
+    def test_legacy_owner_preferences_start_with_all_loot_specs_unselected(self):
+        legacy = {"preferences": [{
+            "characterId": 10, "specId": 66, "role": "tank",
+            "playPreference": "preferred", "lootSpecId": 65,
+            "updatedAt": "2026-09-11T00:00:00.000Z",
+        }]}
+
+        loaded = TeamService(session=FakeSession([FakeResponse(legacy)])).get_planner_preferences(self.cfg)
+
+        self.assertEqual(loaded, {
+            "preferences": legacy["preferences"],
+            "lootPreferences": [],
+            "onboardingCompleted": False,
+        })
 
     def test_old_team_detail_without_readiness_keeps_member_provisionally_selectable(self):
         detail = {"id": 7, "name": "Raid", "members": [{
@@ -115,7 +135,9 @@ class TeamServiceTests(unittest.TestCase):
     def test_owner_planner_preferences_reject_bad_save_before_network(self):
         session = FakeSession([])
         service = TeamService(session=session)
-        malformed = [{"characterId": 10, "specId": 66, "playPreference": "sometimes", "lootSpecId": 65}]
+        malformed = {"preferences": [{"characterId": 10, "specId": 66, "playPreference": "sometimes"}],
+                     "lootPreferences": [{"characterId": 10, "primaryLootSpecId": 65,
+                                          "secondaryLootSpecIds": []}], "onboardingCompleted": False}
         with self.assertRaises(TeamServiceError) as caught:
             service.update_planner_preferences(self.cfg, malformed)
         self.assertEqual(caught.exception.code, "INVALID_TEAM_REQUEST")

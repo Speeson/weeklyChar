@@ -551,7 +551,9 @@ class BridgeProcessTests(unittest.TestCase):
             {"protocolVersion": 1, "id": "planner-bad", "command": "teams.keystone_planner", "payload": {"teamId": 7, "stoneCharacterId": True}}
         )
         invalid_preferences = self.bridge.send(
-            {"protocolVersion": 1, "id": "preferences-bad", "command": "planner.preferences.update", "payload": {"preferences": "all"}}
+            {"protocolVersion": 1, "id": "preferences-bad", "command": "planner.preferences.update", "payload": {
+                "preferences": "all", "lootPreferences": [], "onboardingCompleted": False,
+            }}
         )
         self.assertFalse(invalid_team["ok"])
         self.assertEqual(invalid_team["error"]["code"], "INVALID_REQUEST")

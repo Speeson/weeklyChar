@@ -61,6 +61,11 @@ export function wowSpecializationIconUrl(specId: number): string | null {
   return fileDataId ? `https://render.worldofwarcraft.com/eu/icons/56/${fileDataId}.jpg` : null;
 }
 
+// Blizzard FileData ID 133633 is the in-game INV_Misc_Bag_08 texture.
+export function wowLootBagIconUrl(): string {
+  return "https://render.worldofwarcraft.com/eu/icons/56/133633.jpg";
+}
+
 export function specializationsForClass(wowClass: string | null): readonly ClientWowSpecialization[] {
   if (!wowClass) return [];
   const roleOrder: Readonly<Record<KeystonePlannerRole, number>> = { tank: 0, healer: 1, dps: 2 };

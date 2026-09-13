@@ -121,6 +121,12 @@ function parseRecommendation(
     ? { role: item.role as KeystonePlannerRole, preferredCapabilities: item.preferredCapabilities as string[] }
     : null);
   const capabilities = value.compositionSummary.uniqueCapabilities.map(item => parseCapability(item, true));
+  const rawArmor = value.compositionSummary.armorSynergy;
+  const armorTypes = ["cloth", "leather", "mail", "plate"] as const;
+  const armor = rawArmor === undefined
+    ? { pairs: 0, dominantType: null, counts: { cloth: 0, leather: 0, mail: 0, plate: 0 } }
+    : rawArmor;
+  const armorCounts = record(armor) && record(armor.counts) ? armor.counts : null;
   const counts = [
     value.lootSummary.weightedScore, value.lootSummary.playersWithObjectives, value.lootSummary.totalObjectives,
     value.lootSummary.tierCounts.bestInSlot, value.lootSummary.tierCounts.mustHave,
@@ -130,14 +136,17 @@ function parseRecommendation(
     value.preferenceSummary.emergency, value.compositionSummary.magicalDpsCount,
     value.compositionSummary.physicalDpsCount, value.compositionSummary.unknownDpsCount,
     value.compositionSummary.chaosBrandBeneficiaries, value.compositionSummary.mysticTouchBeneficiaries,
-    value.compositionSummary.uniqueClassBuffCount,
+    value.compositionSummary.uniqueClassBuffCount, value.compositionSummary.criticalRolesCovered ?? 0,
   ];
   if (assignments.some(item => item === null) || vacancies.some(item => item === null)
     || capabilities.some(item => item === null) || !value.reasonCodes.every(reason => typeof reason === "string" && REASONS.has(reason))
     || counts.some(count => !integer(count))
     || typeof value.compositionSummary.bloodlust !== "string" || !AVAILABILITY.has(value.compositionSummary.bloodlust)
     || typeof value.compositionSummary.battleRez !== "string" || !AVAILABILITY.has(value.compositionSummary.battleRez)
-    || !["physical", "magical", "mixed", "unknown"].includes(String(value.compositionSummary.damageProfile))) return null;
+    || !["physical", "magical", "mixed", "unknown"].includes(String(value.compositionSummary.damageProfile))
+    || !record(armor) || !integer(armor.pairs)
+    || ![...armorTypes, null].includes(armor.dominantType as typeof armorTypes[number] | null)
+    || armorCounts === null || !armorTypes.every(type => integer(armorCounts[type]))) return null;
   return {
     rank: value.rank, fingerprint: value.fingerprint,
     stone: {
@@ -168,6 +177,7 @@ function parseRecommendation(
       emergency: value.preferenceSummary.emergency as number,
     },
     compositionSummary: {
+      criticalRolesCovered: (value.compositionSummary.criticalRolesCovered ?? 0) as number,
       bloodlust: value.compositionSummary.bloodlust as KeystonePlannerRecommendation["compositionSummary"]["bloodlust"],
       battleRez: value.compositionSummary.battleRez as KeystonePlannerRecommendation["compositionSummary"]["battleRez"],
       uniqueCapabilities: capabilities as KeystonePlannerCapability[],
@@ -178,6 +188,14 @@ function parseRecommendation(
       chaosBrandBeneficiaries: value.compositionSummary.chaosBrandBeneficiaries as number,
       mysticTouchBeneficiaries: value.compositionSummary.mysticTouchBeneficiaries as number,
       uniqueClassBuffCount: value.compositionSummary.uniqueClassBuffCount as number,
+      armorSynergy: {
+        pairs: armor.pairs as number,
+        dominantType: armor.dominantType as KeystonePlannerRecommendation["compositionSummary"]["armorSynergy"]["dominantType"],
+        counts: {
+          cloth: armorCounts.cloth as number, leather: armorCounts.leather as number,
+          mail: armorCounts.mail as number, plate: armorCounts.plate as number,
+        },
+      },
     },
     reasonCodes: value.reasonCodes as string[],
   };

@@ -247,7 +247,7 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   const inactiveZone = dialog.locator('[data-zone="inactive"]');
   const inactiveCard = inactiveZone.locator(".planner-preference-character").filter({ hasText: "Bakuhatsu" });
   await expect(inactiveCard).toHaveClass(/is-inactive/u);
-  await expect(inactiveCard.getByRole("button", { name: /Guardian · Desactivado/u })).toBeDisabled();
+  await expect(inactiveCard.getByRole("button", { name: /Guardian · Selecciona tu preferencia/u })).toBeDisabled();
   await inactiveCard.evaluate(element => element.dispatchEvent(new DragEvent("dragstart", {
     bubbles: true, dataTransfer: new DataTransfer(),
   })));
@@ -263,7 +263,7 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   await expect(inactiveCard).toHaveClass(/is-inactive/u);
   await inactiveCard.dragTo(activeZone);
   await expect(characterCard).not.toHaveClass(/is-inactive/u);
-  await expect(characterCard).toContainText("Configura al menos una spec");
+  await expect(characterCard).toContainText("Configura juego y botín");
   await expect(dialog.getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
   const roleCards = characterCard.locator(".planner-preference-spec");
   await expect(roleCards).toHaveCount(4);
@@ -274,10 +274,63 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   const cardTops = await roleCards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
   expect(Math.max(...cardTops) - Math.min(...cardTops)).toBeLessThan(1);
   const characterHeight = await characterCard.evaluate(element => element.getBoundingClientRect().height);
+  const lootGuide = page.locator(".planner-config-guide").filter({ hasText: "1. Configura el botín" });
+  await expect(lootGuide).toBeVisible();
+  const guideBounds = await lootGuide.evaluate(element => {
+    const bounds = element.getBoundingClientRect();
+    return { top: bounds.top, left: bounds.left, right: bounds.right, bottom: bounds.bottom };
+  });
+  expect(guideBounds.top).toBeGreaterThanOrEqual(0);
+  expect(guideBounds.left).toBeGreaterThanOrEqual(0);
+  expect(guideBounds.right).toBeLessThanOrEqual(1672);
+  expect(guideBounds.bottom).toBeLessThanOrEqual(941);
+  await capture(page, "17a-planner-config-guide.png");
+  const lootButton = characterCard.getByRole("button", { name: "Configurar botín de Bakuhatsu" });
+  const lootButtonBounds = await lootButton.evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
+  });
+  expect(lootButtonBounds.width).toBeCloseTo(lootButtonBounds.height, 0);
+  await lootButton.click();
+  const lootDialog = dialog.locator(".planner-loot-config-popover");
+  await expect(lootDialog).toBeVisible();
+  const initialNoInterest = lootDialog.getByRole("button", { name: /· none$/u });
+  await expect(initialNoInterest).toHaveCount(4);
+  for (const option of await initialNoInterest.all()) await expect(option).toHaveAttribute("aria-pressed", "true");
+  const availabilityGuide = page.locator(".planner-config-guide").filter({ hasText: "2. Indica qué quieres jugar" });
+  await expect(availabilityGuide).toBeHidden();
+  const guardianPrimary = lootDialog.getByRole("button", { name: "Guardian · primary" });
+  const balancePrimary = lootDialog.getByRole("button", { name: "Balance · primary" });
+  await guardianPrimary.click();
+  const matrixToggleBounds = await guardianPrimary.evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
+  });
+  expect(matrixToggleBounds.width).toBeCloseTo(matrixToggleBounds.height, 0);
+  await balancePrimary.click();
+  const primaryError = page.getByRole("alertdialog", { name: "Sólo puede haber una especialización primaria" });
+  await expect(primaryError).toBeVisible();
+  await capture(page, "18a-planner-primary-error.png");
+  await primaryError.getByRole("button", { name: "Entendido" }).click();
+  await guardianPrimary.click();
+  await balancePrimary.click();
+  await lootDialog.getByRole("button", { name: "Guardian · secondary" }).click();
+  await expect(lootDialog.getByRole("button", { name: "Guardian · secondary" })).toHaveAttribute("aria-pressed", "true");
+  await capture(page, "18-planner-loot.png");
+  await lootDialog.getByRole("button", { name: "Listo" }).click();
+  await expect(availabilityGuide).toBeVisible();
+  const availabilityGuideBounds = await availabilityGuide.evaluate(element => {
+    const bounds = element.getBoundingClientRect();
+    return { top: bounds.top, left: bounds.left, right: bounds.right, bottom: bounds.bottom };
+  });
+  expect(availabilityGuideBounds.top).toBeGreaterThanOrEqual(0);
+  expect(availabilityGuideBounds.left).toBeGreaterThanOrEqual(0);
+  expect(availabilityGuideBounds.right).toBeLessThanOrEqual(1672);
+  expect(availabilityGuideBounds.bottom).toBeLessThanOrEqual(941);
+  await capture(page, "18b-planner-availability-guide.png");
   await roleCards.first().getByRole("button").click();
-  await expect(roleCards.first().getByRole("combobox", { name: "Bakuhatsu Guardian", exact: true })).toBeVisible();
+  await expect(dialog.locator(".planner-availability-popover")).toBeVisible();
+  await expect(dialog.getByRole("option")).toHaveCount(4);
   expect(await characterCard.evaluate(element => element.getBoundingClientRect().height)).toBeCloseTo(characterHeight, 0);
-  await capture(page, "18-planner-preferences.png");
+  await capture(page, "19-planner-preferences.png");
 });
 
 test("reviews lifecycle stability, themed empty prompt, cached navigation and rarity tooltips in both themes", async ({ page }) => {

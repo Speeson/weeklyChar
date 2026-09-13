@@ -291,10 +291,10 @@ def handle_planner_preferences_get(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def handle_planner_preferences_update(payload: dict[str, Any]) -> dict[str, Any]:
-    if set(payload) != {"preferences"}:
-        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain only preferences.")
+    if set(payload) != {"preferences", "lootPreferences", "onboardingCompleted"}:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain Planner play, loot and onboarding preferences.")
     try:
-        return TEAM_SERVICE.update_planner_preferences(config_module.load(), payload["preferences"])
+        return TEAM_SERVICE.update_planner_preferences(config_module.load(), payload)
     except team_service.TeamServiceError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
 

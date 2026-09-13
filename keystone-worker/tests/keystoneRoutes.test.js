@@ -609,6 +609,15 @@ test('team detail exposes only privacy-safe Planner readiness for each member', 
   env.DB.plannerPreferences[0].play_preference = 'available'
   response = await readTeam(env, 1)
   team = await response.json()
+  assert.equal(team.members[0].plannerConfigured, false)
+
+  env.DB.plannerLootPreferences = [{
+    character_id: env.DB.characters[0].id,
+    spec_id: 62,
+    loot_priority: 'primary',
+  }]
+  response = await readTeam(env, 1)
+  team = await response.json()
   assert.equal(team.members[0].plannerConfigured, true)
   assert.equal('plannerPreferences' in team.members[0], false)
 })

@@ -1570,3 +1570,40 @@ Antes del cleanup y la subida de la rama se implementará el diseño aprobado en
 
 No se autoriza aún push, release, deploy ni cleanup. Esas acciones se evaluarán después de completar
 y validar estas correcciones.
+
+## 47.14 Separación definitiva entre juego y botín
+
+Esta decisión sustituye el selector combinado descrito en 47.10 y las acciones visibles de
+Activar/Desactivar descritas en 47.12. El Planner configura dos dimensiones independientes:
+
+- **Especialización jugada:** cada spec se marca como Preferida, Disponible, Emergencia o
+  Desactivada. Al pulsar su tarjeta se abre directamente un selector temático con corazón, check
+  verde, aviso y X. Una spec sin valor muestra `Selecciona tu preferencia`; la selección aparece
+  como icono antes del desplegable.
+- **Especialización de botín:** cada personaje tiene exactamente una primaria, cero o más
+  secundarias y el resto Sin interés. El control cuadrado ocupa el antiguo hueco de mover a
+  activos/inactivos y muestra el icono oficial de la primaria. Su minitabla flotante ordena las
+  specs por Tank, Healer y DPS. La primaria actual puede desmarcarse, pero intentar marcar una
+  segunda primaria muestra un aviso y no modifica la selección. Antes de elegir otra hay que
+  desmarcar la actual. Elegir como primaria una spec secundaria la retira de las secundarias.
+- Las tarjetas siguen moviéndose entre Activos e Inactivos por drag and drop. No se muestran
+  botones redundantes de mover; al entrar en Inactivos todas las specs jugadas quedan desactivadas.
+- La primera configuración muestra una guía persistente de dos pasos: primero botín y después
+  preferencia jugada. Los avisos se renderizan sobre la aplicación y se mantienen dentro del área
+  visible; el segundo no aparece encima de la tabla de botín, sino después de cerrarla. Se completa
+  al abrir ambos controles y se guarda por usuario en el Worker para no reaparecer en otros
+  dispositivos.
+
+El solver no usa el botín para decidir qué spec se juega. Primero maximiza cobertura de Tank y
+Healer, incluso usando una spec Disponible frente a una DPS Preferida cuando falta ese rol; luego
+considera nivel objetivo, Emergencia, Preferida/Disponible y utilidades. La sinergia de armadura
+(`cloth`, `leather`, `mail`, `plate`) es un desempate técnico posterior. Para objetivos se evalúa
+primero el botín primario; sólo si no tiene objetivos accionables en la mazmorra se usa la secundaria
+con mayor valor. No se analiza comerciabilidad exacta por pieza.
+
+La migración aditiva `0011_planner_play_loot_separation.sql` normaliza estas preferencias sin
+inferir intereses de botín anteriores: todos comienzan en Sin interés hasta que el usuario elige
+explícitamente una primaria. Mantiene
+`character_play_preferences.loot_spec_id` como espejo compatible para clientes anteriores. El
+Worker acepta el documento legacy de la Web publicada. El orden seguro futuro es migración D1,
+Worker y finalmente KeystoneClient; esta implementación local no autoriza esas operaciones remotas.

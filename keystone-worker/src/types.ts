@@ -107,6 +107,13 @@ export type CharacterPlayPreferenceRow = {
   updated_at: string
 }
 
+export type CharacterLootPreferenceRow = {
+  character_id: number
+  spec_id: number
+  loot_priority: 'primary' | 'secondary'
+  updated_at: string
+}
+
 export type KeystoneRow = {
   id: number
   character_id: number
