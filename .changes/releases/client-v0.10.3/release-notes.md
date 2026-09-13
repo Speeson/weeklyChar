@@ -1,0 +1,11 @@
+# KeystoneClient 0.10.3
+
+## Correcciones
+
+- Corrige y clarifica las recomendaciones del planificador de piedras.
+  - Evita alternativas funcionalmente redundantes en el Top 5 sin ocultar cambios relevantes de rol, estilo de combate, daño o utilidad; el botín ya no duplica por sí solo una composición.
+  - Recalcula automáticamente al cambiar las prioridades del grupo y conserva los resultados visibles sin bloquear el cliente.
+  - Distingue visualmente la especialización jugada, la especialización de botín, el rol y el dueño de la piedra en las vistas compacta y detallada.
+  - Restaura los iconos completos de objetivos, alinea horizontalmente el valor de botín y usa el icono de Handmade Leather Bag superpuesto al marco de clase para identificar la especialización de botín.
+  - Compacta el detalle con las especializaciones centradas arriba y la identidad en una sola fila para ampliar el espacio disponible para los objetivos.
+  - Centra horizontalmente el bloque de objetivos de cada personaje, incluido el acceso a los objetos adicionales.

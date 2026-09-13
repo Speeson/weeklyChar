@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.10.2",
+  "version": "0.10.3",
+  "bump": "patch",
+  "tag": "client-v0.10.3",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "keystone-planner-functional-top5.json"
+  ]
+}
