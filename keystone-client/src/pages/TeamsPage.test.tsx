@@ -501,6 +501,12 @@ describe("TeamsPage compact ranking", () => {
     expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5);
     expect(screen.getAllByLabelText("Dueño de la piedra").length).toBeGreaterThan(0);
     const cards = [...document.querySelectorAll<HTMLElement>(".planner-recommendation")];
+    const compactLootMarker = cards[0].querySelector<HTMLElement>(".planner-spec-marker--loot");
+    expect(compactLootMarker?.querySelector(":scope > .planner-loot-pouch img")).toHaveAttribute("src", expect.stringContaining("inv_misc_bag_10.jpg"));
+    expect(compactLootMarker?.querySelector(":scope > .planner-spec-icon .planner-loot-pouch")).not.toBeInTheDocument();
+    const compactScore = cards[0].querySelector<HTMLElement>(".planner-score");
+    expect(compactScore?.firstElementChild?.tagName).toBe("SMALL");
+    expect(compactScore?.lastElementChild?.tagName).toBe("B");
     expect(cards[0]).toHaveAttribute("data-expanded", "false");
     await user.click(within(cards[1]).getByRole("button"));
     expect(cards[0]).toHaveAttribute("data-expanded", "false");
@@ -508,11 +514,23 @@ describe("TeamsPage compact ranking", () => {
     expect(within(cards[1]).getByText("Buffos y sinergias")).toBeInTheDocument();
     expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Objetivos");
     expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Preferidos");
+    expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protection" }).length).toBeGreaterThan(0);
+    expect(within(cards[1]).getAllByRole("img", { name: "Especialización de botín: Protection" }).length).toBeGreaterThan(0);
+    expect(within(cards[1]).getAllByText("Ana").length).toBeGreaterThan(0);
     expect(within(cards[1]).queryByText("Paladin · Protection")).not.toBeInTheDocument();
     expect(within(cards[1]).queryByTitle("Paladin")).not.toBeInTheDocument();
-    expect(within(cards[1]).getByTitle("Protection").querySelector("img")).toHaveAttribute("src", expect.stringContaining("236264"));
+    expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protection" })[0].querySelector(".planner-spec-icon__specialization")).toHaveAttribute("src", expect.stringContaining("236264"));
     expect(within(cards[1]).getByRole("link", { name: "Escudo" })).toHaveAttribute("data-wowhead", expect.stringContaining("spec=66"));
     expect(within(cards[1]).queryByLabelText("Dueño de la piedra +12")).not.toBeInTheDocument();
+    const expandedOwnerCard = cards[1].querySelector(".planner-player-card .planner-owner-crown")?.closest(".planner-player-card");
+    expect(expandedOwnerCard?.querySelector(":scope > .planner-role-watermark")).toBeInTheDocument();
+    expect(expandedOwnerCard?.querySelector(".planner-player-role")).not.toBeInTheDocument();
+    expect(expandedOwnerCard?.querySelectorAll(".planner-player-card__specs > .planner-spec-marker")).toHaveLength(2);
+    expect(expandedOwnerCard?.querySelector(".planner-spec-marker--loot > .planner-loot-pouch img")).toHaveAttribute("src", expect.stringContaining("inv_misc_bag_10.jpg"));
+    expect(expandedOwnerCard?.querySelector(".planner-spec-marker--loot > .planner-spec-icon .planner-loot-pouch")).not.toBeInTheDocument();
+    const objectiveRow = expandedOwnerCard?.querySelector(".planner-objective-icons");
+    expect(objectiveRow?.querySelector(".planner-objective-cluster")).not.toBeInTheDocument();
+    expect([...objectiveRow!.children].filter(child => child.matches(".planner-objective-icon"))).toHaveLength(5);
     await user.click(within(cards[1]).getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 6/u }));
     const breakdown = screen.getByRole("dialog", { name: /Desglose de objetivos · Bakuhatsu/u });
     expect(within(breakdown).getByText("BiS · 1")).toBeInTheDocument();
@@ -520,6 +538,70 @@ describe("TeamsPage compact ranking", () => {
     expect(within(breakdown).getByText("Catalyst · 1")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: /Desglose de objetivos/u })).not.toBeInTheDocument();
+  });
+
+  it("keeps results visible and recalculates automatically when a group priority changes", async () => {
+    const user = userEvent.setup();
+    const planned = plannerResponse();
+    let resolveRecalculation: ((value: KeystonePlannerResponse) => void) | undefined;
+    const getKeystonePlanner = vi.fn()
+      .mockResolvedValueOnce(planned)
+      .mockImplementationOnce(() => new Promise<KeystonePlannerResponse>(resolve => { resolveRecalculation = resolve; }));
+    renderPage(source({ getKeystonePlanner }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+    await user.click(screen.getByRole("button", { name: "Calcular Top 5" }));
+
+    await waitFor(() => expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5));
+    expect(screen.getByRole("button", { name: "Recalcular Top 5" })).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "Ansia de sangre" }));
+
+    const results = screen.getByRole("region", { name: "Top 5 de configuraciones" });
+    expect(results).toHaveAttribute("data-recalculating", "true");
+    expect(results.querySelectorAll(".planner-recommendation")).toHaveLength(5);
+    expect(screen.getByRole("button", { name: "Recalculando…" })).toBeDisabled();
+    await waitFor(() => expect(getKeystonePlanner).toHaveBeenCalledTimes(2));
+    expect(getKeystonePlanner).toHaveBeenLastCalledWith(7, expect.objectContaining({
+      options: expect.objectContaining({ bloodlust: false }),
+    }));
+
+    act(() => resolveRecalculation?.(planned));
+    await waitFor(() => expect(results).toHaveAttribute("data-recalculating", "false"));
+    expect(screen.getByRole("button", { name: "Recalcular Top 5" })).toBeInTheDocument();
+  });
+
+  it("ignores an older live recalculation when priorities change again", async () => {
+    const user = userEvent.setup();
+    const initial = plannerResponse();
+    const stale = structuredClone(initial);
+    const latest = structuredClone(initial);
+    stale.recommendations[0].lootSummary.weightedScore = 777;
+    latest.recommendations[0].lootSummary.weightedScore = 42;
+    let resolveStale: ((value: KeystonePlannerResponse) => void) | undefined;
+    let resolveLatest: ((value: KeystonePlannerResponse) => void) | undefined;
+    const getKeystonePlanner = vi.fn()
+      .mockResolvedValueOnce(initial)
+      .mockImplementationOnce(() => new Promise<KeystonePlannerResponse>(resolve => { resolveStale = resolve; }))
+      .mockImplementationOnce(() => new Promise<KeystonePlannerResponse>(resolve => { resolveLatest = resolve; }));
+    renderPage(source({ getKeystonePlanner }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+    await user.click(screen.getByRole("button", { name: "Calcular Top 5" }));
+    await waitFor(() => expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5));
+
+    await user.click(screen.getByRole("checkbox", { name: "Ansia de sangre" }));
+    await waitFor(() => expect(getKeystonePlanner).toHaveBeenCalledTimes(2));
+    await user.click(screen.getByRole("checkbox", { name: "Resurrección en combate" }));
+    await waitFor(() => expect(getKeystonePlanner).toHaveBeenCalledTimes(3));
+
+    await act(async () => { resolveStale?.(stale); await Promise.resolve(); });
+    expect(document.querySelector(".planner-score b")).toHaveTextContent("99");
+    act(() => resolveLatest?.(latest));
+    await waitFor(() => expect(document.querySelector(".planner-score b")).toHaveTextContent("42"));
   });
 
   it("localizes the Planner configuration in English", async () => {
@@ -548,7 +630,7 @@ describe("TeamsPage compact ranking", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Configura tus personajes" });
     expect(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }).querySelector("img"))
-      .toHaveAttribute("src", expect.stringContaining("133633"));
+      .toHaveAttribute("src", expect.stringContaining("inv_misc_bag_10.jpg"));
     expect(within(dialog).getByRole("img", { name: "KeystoneSync" })).toBeInTheDocument();
     expect(dialog.querySelector('img[src="https://img.test/bakuhatsu.jpg"]')).toBeInTheDocument();
     expect(dialog.querySelector('[data-zone="active"] .planner-preference-character')).not.toBeInTheDocument();

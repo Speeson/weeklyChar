@@ -19,7 +19,7 @@ import {
   getCachedSelector, getCachedTeamDetail, getTeamsSessionSnapshot, loadSelector, loadTeamDetail,
   loadTeams, removeTeamFromSessionCache, setSelectedTeamId,
 } from "../core/teamsSessionCache";
-import { specName, wowSpecializationIconUrl } from "../core/wowSpecs";
+import { specName, wowLootBagIconUrl, wowSpecializationIconUrl } from "../core/wowSpecs";
 import { DEFAULT_KEYSTONE_PLANNER_OPTIONS } from "../core/keystonePlanner";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import type {
@@ -54,7 +54,7 @@ function TierSummary({ counts }: { counts: KeystoneSelectorTierCounts }) {
 const PLANNER_COPY = {
   es: {
     noObjectives: "Sin objetivos", owner: "Dueño de la piedra", ownerTitle: "Dueño de la piedra · líder",
-    noLoot: "Sin objetivos de botín", item: "Objeto", value: "Puntuación", buffs: "Buffos y sinergias",
+    noLoot: "Sin objetivos de botín", item: "Objeto", value: "Valor de botín", buffs: "Buffos y sinergias",
     objectives: "objetivos", players: "jugadores", preferred: "Preferidos", available: "disponibles",
     damage: "Daño", vacancies: "huecos", bloodlust: "Ansia de sangre", battleRez: "Resurrección en combate",
     composition: "Composición", utilities: "Utilidades", objectiveSummary: "Objetivos", preferenceSummary: "Preferidos",
@@ -63,8 +63,9 @@ const PLANNER_COPY = {
     filterHelp: "La barra solo filtra las piedras disponibles.", stones: "Piedras disponibles",
     noStones: "No hay piedras visibles con este filtro.", options: "Prioridades del grupo", configure: "Configurar mis personajes",
     loadingPreferences: "Cargando configuración del Planner…",
-    classBuffs: "Buffos de clase", damageSynergy: "Sinergia de daño", calculate: "Calcular Top 5",
-    calculating: "Calculando…", results: "Top 5 de configuraciones", resultTitle: "Top 5 para la piedra seleccionada",
+    classBuffs: "Buffos de clase", damageSynergy: "Sinergia de daño", calculate: "Calcular Top 5", recalculate: "Recalcular Top 5",
+    calculating: "Calculando…", recalculating: "Recalculando…", results: "Top 5 de configuraciones", resultTitle: "Top 5 para la piedra seleccionada",
+    playedSpec: "Especialización jugada", lootSpec: "Especialización de botín",
     selectError: "Selecciona una piedra exacta y entre 2 y 5 participantes.", requestError: "No se pudo calcular el Top 5.",
     stale: "La piedra exacta ya no está disponible. Actualiza el equipo y vuelve a seleccionarla.",
     unconfigured: "Hay participantes sin preferencias configuradas para el Planner.",
@@ -77,7 +78,7 @@ const PLANNER_COPY = {
   },
   en: {
     noObjectives: "No objectives", owner: "Keystone owner", ownerTitle: "Keystone owner · leader",
-    noLoot: "No loot objectives", item: "Item", value: "Score", buffs: "Buffs and synergies",
+    noLoot: "No loot objectives", item: "Item", value: "Loot value", buffs: "Buffs and synergies",
     objectives: "objectives", players: "players", preferred: "Preferred", available: "available",
     damage: "Damage", vacancies: "vacancies", bloodlust: "Bloodlust", battleRez: "Battle Resurrection",
     composition: "Composition", utilities: "Utilities", objectiveSummary: "Objectives", preferenceSummary: "Preferred",
@@ -86,8 +87,9 @@ const PLANNER_COPY = {
     filterHelp: "The slider only filters available keystones.", stones: "Available keystones",
     noStones: "No keystones are visible with this filter.", options: "Group priorities", configure: "Configure my characters",
     loadingPreferences: "Loading Planner configuration…",
-    classBuffs: "Class buffs", damageSynergy: "Damage synergy", calculate: "Calculate Top 5",
-    calculating: "Calculating…", results: "Top 5 configurations", resultTitle: "Top 5 for the selected keystone",
+    classBuffs: "Class buffs", damageSynergy: "Damage synergy", calculate: "Calculate Top 5", recalculate: "Recalculate Top 5",
+    calculating: "Calculating…", recalculating: "Recalculating…", results: "Top 5 configurations", resultTitle: "Top 5 for the selected keystone",
+    playedSpec: "Played specialization", lootSpec: "Loot specialization",
     selectError: "Select one exact keystone and between 2 and 5 participants.", requestError: "The Top 5 could not be calculated.",
     stale: "The exact keystone is no longer available. Refresh the Team and select it again.",
     unconfigured: "Some participants have no Planner preferences configured.",
@@ -122,13 +124,27 @@ function plannerCapabilityIcon(spellId: number, type: KeystonePlannerRecommendat
     : type === "damage_debuff" ? damageSynergyIcon : classBuffsIcon;
 }
 
+function PlannerSpecIcon({ loot = false, specId }: { loot?: boolean; specId: number }) {
+  const copy = usePlannerCopy();
+  const specializationIcon = wowSpecializationIconUrl(specId);
+  const label = `${loot ? copy.lootSpec : copy.playedSpec}: ${specName(specId)}`;
+  return <span className={`planner-spec-marker${loot ? " planner-spec-marker--loot" : ""}`}>
+    <span aria-label={label} className="planner-spec-icon" role="img" title={label}>
+      {specializationIcon ? <img alt="" className="planner-spec-icon__specialization" src={specializationIcon} /> : <span aria-hidden="true">?</span>}
+    </span>
+    {loot ? <span aria-hidden="true" className="planner-loot-pouch"><img alt="" src={wowLootBagIconUrl()} /></span> : null}
+  </span>;
+}
+
 function PlannerAssignmentPreview({ assignment, avatarUrl, owner }: { assignment: KeystonePlannerAssignment; avatarUrl: string | null; owner: boolean }) {
   const copy = usePlannerCopy();
-  return <span className="planner-assignment-preview" style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
-    <span className="planner-role-frame"><WowRoleIcon role={assignment.role} /></span>
+  return <span className="planner-assignment-preview" data-role={assignment.role} style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
+    <span className="planner-role-watermark"><WowRoleIcon role={assignment.role} /></span>
     {owner ? <span aria-label={copy.owner} className="planner-owner-crown" role="img" title={copy.ownerTitle}><Crown aria-hidden="true" /></span> : null}
+    <PlannerSpecIcon specId={assignment.specId} />
+    <PlannerSpecIcon loot specId={assignment.lootSpecId} />
     <Portrait avatarUrl={avatarUrl} name={assignment.characterName} wowClass={assignment.wowClass} />
-    <strong>{assignment.characterName}</strong>
+    <span className="planner-assignment-preview__identity"><strong>{assignment.characterName}</strong><small>{assignment.username}</small></span>
   </span>;
 }
 
@@ -159,16 +175,15 @@ function PlannerLootBreakdown({ assignment, onClose }: { assignment: KeystonePla
 
 function PlannerAssignmentCard({ assignment, owner }: { assignment: KeystonePlannerAssignment; owner: boolean }) {
   const copy = usePlannerCopy();
-  const specializationIcon = wowSpecializationIconUrl(assignment.specId);
   const [lootOpen, setLootOpen] = useState(false);
   const hasOverflow = assignment.objectives.length >= 6;
   const visibleObjectives = hasOverflow ? assignment.objectives.slice(0, 5) : assignment.objectives;
   return <article className="planner-player-card" data-role={assignment.role} style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
+    <span className="planner-role-watermark"><WowRoleIcon role={assignment.role} /></span>
+    {owner ? <span aria-label={copy.owner} className="planner-owner-crown" role="img" title={copy.ownerTitle}><Crown aria-hidden="true" /></span> : null}
     <header>
-      <span className="planner-player-role"><WowRoleIcon role={assignment.role} /></span>
-      <span className="planner-wow-icon" title={specName(assignment.specId)}>{specializationIcon ? <img alt="" src={specializationIcon} /> : "?"}</span>
+      <span className="planner-player-card__specs"><PlannerSpecIcon specId={assignment.specId} /><PlannerSpecIcon loot specId={assignment.lootSpecId} /></span>
       <span className="planner-player-card__identity"><strong style={{ color: classColor(assignment.wowClass) }}>{assignment.characterName}</strong><small>{assignment.username}</small></span>
-      {owner ? <span aria-label={copy.owner} className="planner-owner-crown" role="img" title={copy.ownerTitle}><Crown aria-hidden="true" /></span> : null}
     </header>
     <div className="planner-objective-icons">{assignment.objectives.length > 0
       ? <>{visibleObjectives.map(objective => <PlannerObjectiveIcon assignment={assignment} key={objective.variantKey} objective={objective} />)}{hasOverflow ? <button aria-label={`${copy.moreLoot} · ${assignment.characterName} · ${assignment.objectives.length}`} className="planner-objective-more" onClick={() => setLootOpen(true)} title={copy.moreLoot} type="button">+</button> : null}</>
@@ -199,7 +214,7 @@ function PlannerRecommendationCard({ avatarUrls, expanded, onToggle, recommendat
         <span><b>{recommendation.preferenceSummary.preferred}</b> {copy.preferenceSummary}</span>
       </span>
       <span className="planner-recommendation__party">{ordered.map(assignment => <PlannerAssignmentPreview assignment={assignment} avatarUrl={avatarUrls.get(assignment.characterId) ?? null} key={assignment.userId} owner={assignment.characterId === recommendation.stone.characterId} />)}</span>
-      <span className="planner-score"><b>{recommendation.lootSummary.weightedScore}</b><small>{copy.value}</small></span>
+      <span className="planner-score"><small>{copy.value}</small><b>{recommendation.lootSummary.weightedScore}</b></span>
       <ChevronDown aria-hidden="true" />
     </button>
     {expanded ? <div className="planner-recommendation__detail">
@@ -236,6 +251,7 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
   const [plannerError, setPlannerError] = useState<string | null>(null);
   const [options, setOptions] = useState(() => ({ ...DEFAULT_KEYSTONE_PLANNER_OPTIONS }));
   const generation = useRef(0);
+  const previousOptions = useRef(options);
   const stones = selector?.availability.stones ?? [];
   const visibleStones = stones.filter(stone => stone.level >= minimumLevel);
   const selectedStone = stones.find(stone => stone.characterId === selectedStoneId) ?? null;
@@ -243,15 +259,18 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
   useEffect(() => () => { generation.current += 1; }, []);
   useEffect(() => {
     generation.current += 1; setResponse(null); setExpanded(null); setPlannerError(null); setLoading(false);
-  }, [options, selectedUsers]);
+  }, [dungeonId, selectedUsers, teamId]);
   useEffect(() => {
     if (selectedStone && selectedStone.level < minimumLevel) {
+      generation.current += 1;
       setSelectedStoneId(null); onOwnerChange(null); setResponse(null); setExpanded(null);
+      setLoading(false);
     }
   }, [minimumLevel, onOwnerChange, selectedStone]);
 
   const selectStone = (stone: KeystoneSelectorStone) => {
     const previousOwnerUserId = selectedStone?.ownerUserId ?? null;
+    generation.current += 1;
     setSelectedStoneId(stone.characterId); onOwnerChange(stone.ownerUserId); setResponse(null); setExpanded(null); setPlannerError(null);
     setSelectedUsers(current => {
       const next = new Set(current);
@@ -263,15 +282,16 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
       return next;
     });
   };
-  const calculate = () => {
+  const calculate = useCallback((requestedOptions = options, preserveResults = response !== null) => {
     if (!selectedStone || teamId === null || selectedUsers.size < 2 || selectedUsers.size > 5) {
       setPlannerError(copy.selectError); return;
     }
     const currentGeneration = ++generation.current;
-    setLoading(true); setPlannerError(null); setResponse(null); setExpanded(null);
+    setLoading(true); setPlannerError(null); setExpanded(null);
+    if (!preserveResults) setResponse(null);
     dataSource.getKeystonePlanner(teamId, {
       participantUserIds: [...selectedUsers], targetLevel: selectedStone.level, challengeMapId: dungeonId,
-      stoneCharacterId: selectedStone.characterId, options, locks: [],
+      stoneCharacterId: selectedStone.characterId, options: requestedOptions, locks: [],
     }).then(result => {
       if (currentGeneration !== generation.current) return;
       setResponse(result); setExpanded(null);
@@ -280,7 +300,21 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
       const parsed = errorInfo(caught, copy.requestError);
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired(); else setPlannerError(parsed.message);
     }).finally(() => { if (currentGeneration === generation.current) setLoading(false); });
-  };
+  }, [copy.requestError, copy.selectError, dataSource, dungeonId, onSessionExpired, options, response, selectedStone, selectedUsers, teamId]);
+
+  useEffect(() => {
+    if (previousOptions.current === options) return;
+    previousOptions.current = options;
+    generation.current += 1;
+    setExpanded(null); setPlannerError(null);
+    if (!response) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const timer = window.setTimeout(() => calculate(options, true), 250);
+    return () => window.clearTimeout(timer);
+  }, [calculate, options, response]);
   const unconfiguredSelected = detail?.members.some(member => selectedUsers.has(member.userId) && !member.plannerConfigured) ?? false;
   const avatarUrls = new Map(detail?.members.flatMap(member => member.characters.map(character => [character.characterId, character.avatarUrl] as const)) ?? []);
   const emptyResult = response
@@ -310,15 +344,19 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
         {([
           ["bloodlust", copy.bloodlust, bloodlustIcon], ["battleRez", copy.battleRez, battleRezIcon],
           ["classBuffs", copy.classBuffs, classBuffsIcon], ["damageSynergy", copy.damageSynergy, damageSynergyIcon],
-        ] as const).map(([key, label, icon]) => <label key={key}><img alt="" aria-hidden="true" src={icon} /><span>{label}</span><input checked={options[key]} onChange={event => setOptions(current => ({ ...current, [key]: event.currentTarget.checked }))} type="checkbox" /></label>)}
+        ] as const).map(([key, label, icon]) => <label key={key}><img alt="" aria-hidden="true" src={icon} /><span>{label}</span><input aria-label={label} checked={options[key]} onChange={event => {
+          const checked = event.currentTarget.checked;
+          setOptions(current => ({ ...current, [key]: checked }));
+        }} type="checkbox" /></label>)}
       </div>
-      <button className="planner-calculate" disabled={loading || !selectedStone || selectedUsers.size < 2 || selectedUsers.size > 5 || unconfiguredSelected} onClick={calculate} type="button">{loading ? copy.calculating : copy.calculate}</button>
+      <button className="planner-calculate" disabled={loading || !selectedStone || selectedUsers.size < 2 || selectedUsers.size > 5 || unconfiguredSelected} onClick={() => calculate(options, response !== null)} type="button">{loading ? response ? copy.recalculating : copy.calculating : response ? copy.recalculate : copy.calculate}</button>
       {unconfiguredSelected ? <p className="planner-readiness-warning">{copy.unconfigured}</p> : null}
       {plannerError ? <p className="error planner-error" role="alert">{plannerError}</p> : null}
     </aside>
-    <section className="keystone-planner__results" aria-label={copy.results}>
+    <section aria-busy={loading} className="keystone-planner__results" data-recalculating={loading && response !== null} aria-label={copy.results} role="region">
       {response?.recommendations.length ? response.recommendations.map(recommendation => <PlannerRecommendationCard avatarUrls={avatarUrls} expanded={expanded === recommendation.fingerprint} key={recommendation.fingerprint} onToggle={() => setExpanded(current => current === recommendation.fingerprint ? null : recommendation.fingerprint)} recommendation={recommendation} />)
         : <div className="planner-results-empty"><Crown aria-hidden="true" /><strong>{copy.resultTitle}</strong><span>{emptyResult}</span></div>}
+      {loading && response ? <span className="planner-recalculating-status" role="status">{copy.recalculating}</span> : null}
     </section>
   </div>;
 }

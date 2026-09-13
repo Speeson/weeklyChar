@@ -6,6 +6,7 @@ import {
   WOW_SPECIALIZATIONS,
   armorTypeForClass,
   capabilitiesForSpec,
+  combatStyleForSpec,
   wowSpecialization,
 } from './wowComposition'
 import type {
@@ -446,6 +447,30 @@ function recommendationFingerprint(stone: PlannerStone, assignments: readonly Pl
   })
 }
 
+function recommendationDiversityIdentity(recommendation: UnrankedRecommendation): string {
+  return JSON.stringify({
+    stone: [
+      recommendation.stone.ownerUserId,
+      recommendation.stone.characterId,
+      recommendation.stone.challengeMapId,
+      recommendation.stone.level,
+    ],
+    assignments: recommendation.assignments.map(assignment => {
+      const specialization = wowSpecialization(assignment.specId)
+      return [
+        assignment.userId,
+        assignment.characterId,
+        assignment.role,
+        combatStyleForSpec(assignment.specId),
+        specialization?.damageProfile ?? null,
+        assignment.capabilities.map(capability =>
+          `${capability.capabilityId}\u0000${capability.mode}\u0000${capability.condition ?? ''}`,
+        ).sort(),
+      ]
+    }),
+  })
+}
+
 function compareStable(left: UnrankedRecommendation, right: UnrankedRecommendation): number {
   const stoneComparison = (left.stone.challengeMapId - right.stone.challengeMapId)
     || (left.stone.ownerUserId - right.stone.ownerUserId)
@@ -780,9 +805,13 @@ export function solveKeystonePlanner(input: KeystonePlannerInput): KeystonePlann
   ))
   all.sort((left, right) => compareRecommendations(left, right, input.options))
   const seen = new Set<string>()
+  const seenDiversityProfiles = new Set<string>()
   const top = all.filter(recommendation => {
     if (seen.has(recommendation.fingerprint)) return false
     seen.add(recommendation.fingerprint)
+    const diversityIdentity = recommendationDiversityIdentity(recommendation)
+    if (seenDiversityProfiles.has(diversityIdentity)) return false
+    seenDiversityProfiles.add(diversityIdentity)
     return true
   }).slice(0, 5).map((recommendation, index) => ({ ...recommendation, rank: index + 1 }))
 

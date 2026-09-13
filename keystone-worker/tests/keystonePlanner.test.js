@@ -543,6 +543,78 @@ test('exact duplicate stone plus assignments is emitted once', () => {
   assert.equal(result.recommendations.length, 1)
 })
 
+test('Top 5 collapses dominated same-character specialization variants with one functional profile', () => {
+  const sharedObjectives = [objective(1, 3, { specId: 62 })]
+  const result = solveKeystonePlanner(input([
+    candidate(1, 104),
+    candidate(2, 62, {
+      playPreference: 'preferred', lootSpecId: 62, primaryLootSpecId: 62,
+      objectives: sharedObjectives,
+    }),
+    candidate(2, 64, {
+      playPreference: 'available', lootSpecId: 62, primaryLootSpecId: 62,
+      objectives: sharedObjectives,
+    }),
+  ], { participantUserIds: [1, 2] }))
+
+  assert.equal(result.status, 'ok')
+  assert.equal(result.recommendations.length, 1)
+  assert.equal(result.recommendations[0].assignments.find(entry => entry.userId === 2).specId, 62)
+})
+
+test('Top 5 collapses loot-only variants and keeps the highest-ranked functional recommendation', () => {
+  const result = solveKeystonePlanner(input([
+    candidate(1, 104),
+    candidate(2, 62, {
+      lootSpecId: 62,
+      objectives: [objective(1, 1, { specId: 62, variantKey: 'arcane' })],
+    }),
+    candidate(2, 64, {
+      lootSpecId: 64,
+      objectives: [objective(2, 3, { specId: 64, variantKey: 'frost' })],
+    }),
+  ], { participantUserIds: [1, 2] }))
+
+  assert.equal(result.status, 'ok')
+  assert.equal(result.recommendations.length, 1)
+  assert.equal(result.recommendations[0].assignments.find(entry => entry.userId === 2).specId, 64)
+  assert.equal(result.recommendations[0].lootSummary.weightedScore, 100)
+})
+
+test('Top 5 preserves same-character melee and ranged alternatives', () => {
+  for (const specIds of [[102, 103], [253, 255]]) {
+    const result = solveKeystonePlanner(input([
+      candidate(1, 104),
+      candidate(2, specIds[0], { characterId: 20 }),
+      candidate(2, specIds[1], { characterId: 20 }),
+    ], { participantUserIds: [1, 2] }))
+
+    assert.equal(result.status, 'ok')
+    assert.deepEqual(new Set(result.recommendations.map(recommendation =>
+      recommendation.assignments.find(entry => entry.userId === 2).specId)), new Set(specIds))
+  }
+})
+
+test('Top 5 preserves role and damage-profile distinctions', () => {
+  const cases = [
+    [
+      [candidate(1, 105), candidate(2, 66, { lootSpecId: 70 }), candidate(2, 70, { lootSpecId: 70 })],
+      new Set([66, 70]),
+    ],
+    [
+      [candidate(1, 104), candidate(2, 259, { lootSpecId: 260 }), candidate(2, 260, { lootSpecId: 260 })],
+      new Set([259, 260]),
+    ],
+  ]
+
+  for (const [candidates, expectedSpecs] of cases) {
+    const result = solveKeystonePlanner(input(candidates, { participantUserIds: [1, 2] }))
+    assert.equal(result.status, 'ok')
+    assert.deepEqual(new Set(result.recommendations.map(recommendation =>
+      recommendation.assignments.find(entry => entry.userId === 2).specId)), expectedSpecs)
+  }
+})
+
 test('candidate input order cannot change recommendation order or payload', () => {
   const candidates = [
     candidate(1, 104), candidate(2, 105), candidate(3, 260), candidate(3, 261),

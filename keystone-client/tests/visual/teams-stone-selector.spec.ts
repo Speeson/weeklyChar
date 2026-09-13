@@ -201,18 +201,155 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   const firstPreviewHeight = await recommendations.first().locator(".planner-assignment-preview").first().evaluate(element => element.getBoundingClientRect().height);
   expect(firstPreviewHeight).toBeGreaterThan(compactHeights[0] * 0.69);
   await expect(page.getByLabel("Dueño de la piedra").first()).toBeVisible();
+  await expect(recommendations.first().getByRole("img", { name: /Especialización jugada:/u }).first()).toBeVisible();
+  await expect(recommendations.first().getByRole("img", { name: /Especialización de botín:/u }).first()).toBeVisible();
+  const compactLootMarker = recommendations.first().locator(".planner-spec-marker--loot").first();
+  const compactLootSpec = compactLootMarker.locator(":scope > .planner-spec-icon");
+  const compactPouch = compactLootMarker.locator(":scope > .planner-loot-pouch");
+  await expect(compactLootMarker).toHaveCSS("overflow", "visible");
+  await expect(compactLootSpec).toHaveCSS("overflow", "hidden");
+  await expect(compactPouch).toBeVisible();
+  await expect(compactPouch.locator("img")).toHaveAttribute("src", /inv_misc_bag_10\.jpg$/u);
+  await expect(compactPouch).toHaveCSS("border-radius", "50%");
+  await expect(recommendations.first().locator(".planner-role-watermark").first()).toBeVisible();
+  const ownerPlacement = await page.getByLabel("Dueño de la piedra").first().evaluate(element => {
+    const crown = element.getBoundingClientRect();
+    const card = element.parentElement!.getBoundingClientRect();
+    return { crownTop: crown.top, crownLeft: crown.left, crownWidth: crown.width, cardTop: card.top, cardLeft: card.left };
+  });
+  expect(ownerPlacement.crownTop).toBeLessThan(ownerPlacement.cardTop);
+  expect(ownerPlacement.crownLeft).toBeLessThan(ownerPlacement.cardLeft);
+  expect(ownerPlacement.crownWidth).toBeLessThanOrEqual(17);
+  const compactPouchPlacement = await compactLootMarker.evaluate(element => {
+    const pouch = element.querySelector(":scope > .planner-loot-pouch")!.getBoundingClientRect();
+    const spec = element.querySelector(":scope > .planner-spec-icon")!.getBoundingClientRect();
+    return {
+      pouchTop: pouch.top, pouchLeft: pouch.left, pouchBottom: pouch.bottom, pouchRight: pouch.right,
+      pouchCenterX: (pouch.left + pouch.right) / 2, pouchCenterY: (pouch.top + pouch.bottom) / 2,
+      specTop: spec.top, specLeft: spec.left,
+    };
+  });
+  expect(compactPouchPlacement.pouchTop).toBeLessThan(compactPouchPlacement.specTop);
+  expect(compactPouchPlacement.pouchLeft).toBeLessThan(compactPouchPlacement.specLeft);
+  expect(compactPouchPlacement.pouchBottom).toBeGreaterThan(compactPouchPlacement.specTop);
+  expect(compactPouchPlacement.pouchRight).toBeGreaterThan(compactPouchPlacement.specLeft);
+  expect(compactPouchPlacement.pouchCenterX).toBeCloseTo(compactPouchPlacement.specLeft, 0);
+  expect(compactPouchPlacement.pouchCenterY).toBeCloseTo(compactPouchPlacement.specTop, 0);
+  const compactAvatarSize = await recommendations.first().locator(".planner-assignment-preview .teams-portrait").first().evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
+  });
+  expect(compactAvatarSize.width).toBe(37);
+  expect(compactAvatarSize.height).toBe(37);
+  const compactRoleOpacity = Number.parseFloat(await recommendations.first().locator(".planner-role-watermark").first().evaluate(element => getComputedStyle(element).opacity));
+  expect(compactRoleOpacity).toBeGreaterThanOrEqual(0.45);
+  expect(compactRoleOpacity).toBeLessThanOrEqual(0.5);
+  const compactScoreOrder = await recommendations.first().locator(".planner-score").evaluate(element => {
+    const label = element.querySelector("small")!.getBoundingClientRect();
+    const value = element.querySelector("b")!.getBoundingClientRect();
+    return { labelRight: label.right, valueLeft: value.left, centerDelta: Math.abs((label.top + label.bottom) / 2 - (value.top + value.bottom) / 2) };
+  });
+  expect(compactScoreOrder.labelRight).toBeLessThanOrEqual(compactScoreOrder.valueLeft);
+  expect(compactScoreOrder.centerDelta).toBeLessThan(4);
   await capture(page, "15-planner-compact.png");
+
+  await prioritySwitches.first().click();
+  await expect(page.getByRole("button", { name: "Recalcular Top 5" })).toBeVisible();
+  await expect(recommendations).toHaveCount(5);
 
   await recommendations.first().getByRole("button").click();
   await expect(recommendations.first()).toHaveAttribute("data-expanded", "true");
   await expect(recommendations.nth(1)).toHaveAttribute("data-expanded", "false");
   await expect(recommendations.nth(1)).toHaveCSS("display", "none");
-  await expect(recommendations.first().locator(".planner-player-card").getByLabel("Dueño de la piedra")).toBeVisible();
+  const expandedOwnerCard = recommendations.first().locator(".planner-player-card").filter({ has: page.getByLabel("Dueño de la piedra") });
+  const expandedCrown = expandedOwnerCard.getByLabel("Dueño de la piedra");
+  await expect(expandedCrown).toBeVisible();
   await expect(page.getByLabel("Dueño de la piedra +12")).toHaveCount(0);
   await expect(page.getByText("Buffos y sinergias")).toBeVisible();
   await expect(recommendations.first().locator('.planner-player-card img[src*="classicon_"]')).toHaveCount(0);
-  await expect(recommendations.first().locator('.planner-player-role').first()).toBeVisible();
-  await expect(recommendations.first().locator('.planner-objective-icon[data-wowhead]').first()).toBeVisible();
+  await expect(recommendations.first().locator('.planner-player-role')).toHaveCount(0);
+  await expect(expandedOwnerCard.locator(":scope > .planner-role-watermark")).toBeVisible();
+  const expandedPlayedSpec = expandedOwnerCard.getByRole("img", { name: /Especialización jugada:/u });
+  const expandedLootSpec = expandedOwnerCard.getByRole("img", { name: /Especialización de botín:/u });
+  await expect(expandedLootSpec).toBeVisible();
+  const expandedIconSizes = await Promise.all([expandedPlayedSpec, expandedLootSpec].map(locator => locator.evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
+  })));
+  expect(expandedIconSizes[1]).toEqual(expandedIconSizes[0]);
+  const expandedIdentityLayout = await expandedOwnerCard.evaluate(element => {
+    const card = element.getBoundingClientRect();
+    const played = element.querySelector('[aria-label^="Especialización jugada"]')!.getBoundingClientRect();
+    const loot = element.querySelector('[aria-label^="Especialización de botín"]')!.getBoundingClientRect();
+    const identity = element.querySelector('.planner-player-card__identity')!.getBoundingClientRect();
+    const name = element.querySelector('.planner-player-card__identity strong')!.getBoundingClientRect();
+    const username = element.querySelector('.planner-player-card__identity small')!.getBoundingClientRect();
+    const objectives = element.querySelector('.planner-objective-icons')!.getBoundingClientRect();
+    return {
+      cardTop: card.top, cardCenterX: (card.left + card.right) / 2,
+      playedTop: played.top, playedLeft: played.left, playedRight: played.right, playedBottom: played.bottom,
+      lootTop: loot.top, lootLeft: loot.left, lootRight: loot.right, lootBottom: loot.bottom,
+      iconGroupCenterX: (played.left + loot.right) / 2,
+      identityTop: identity.top, identityCenterX: (identity.left + identity.right) / 2,
+      nameCenterY: (name.top + name.bottom) / 2, usernameCenterY: (username.top + username.bottom) / 2,
+      separatorTop: objectives.top,
+    };
+  });
+  expect(expandedIdentityLayout.lootTop).toBeCloseTo(expandedIdentityLayout.playedTop, 0);
+  expect(expandedIdentityLayout.lootLeft).toBeGreaterThan(expandedIdentityLayout.playedRight);
+  expect(expandedIdentityLayout.iconGroupCenterX).toBeCloseTo(expandedIdentityLayout.cardCenterX, 0);
+  expect(expandedIdentityLayout.playedTop - expandedIdentityLayout.cardTop).toBeLessThanOrEqual(14);
+  expect(expandedIdentityLayout.identityTop).toBeGreaterThan(Math.max(expandedIdentityLayout.playedBottom, expandedIdentityLayout.lootBottom));
+  expect(expandedIdentityLayout.identityCenterX).toBeCloseTo(expandedIdentityLayout.cardCenterX, 0);
+  expect(Math.abs(expandedIdentityLayout.nameCenterY - expandedIdentityLayout.usernameCenterY)).toBeLessThan(2);
+  expect(expandedIdentityLayout.separatorTop - expandedIdentityLayout.cardTop).toBeLessThan(92);
+  const expandedCrownPlacement = await expandedCrown.evaluate(element => {
+    const crown = element.getBoundingClientRect();
+    const card = element.closest(".planner-player-card")!.getBoundingClientRect();
+    return { crownTop: crown.top, crownRight: crown.right, cardTop: card.top, cardRight: card.right };
+  });
+  expect(expandedCrownPlacement.crownTop).toBeGreaterThanOrEqual(expandedCrownPlacement.cardTop);
+  expect(expandedCrownPlacement.crownRight).toBeLessThanOrEqual(expandedCrownPlacement.cardRight);
+  const expandedLootMarker = expandedLootSpec.locator("xpath=parent::*");
+  await expect(expandedLootMarker).toHaveClass(/planner-spec-marker--loot/u);
+  await expect(expandedLootMarker).toHaveCSS("overflow", "visible");
+  await expect(expandedLootSpec).toHaveCSS("overflow", "hidden");
+  const expandedPouchPlacement = await expandedLootMarker.evaluate(element => {
+    const pouch = element.querySelector(":scope > .planner-loot-pouch")!.getBoundingClientRect();
+    const spec = element.querySelector(":scope > .planner-spec-icon")!.getBoundingClientRect();
+    return {
+      pouchTop: pouch.top, pouchLeft: pouch.left,
+      pouchCenterX: (pouch.left + pouch.right) / 2, pouchCenterY: (pouch.top + pouch.bottom) / 2,
+      specTop: spec.top, specLeft: spec.left,
+    };
+  });
+  expect(expandedPouchPlacement.pouchTop).toBeLessThan(expandedPouchPlacement.specTop);
+  expect(expandedPouchPlacement.pouchLeft).toBeLessThan(expandedPouchPlacement.specLeft);
+  expect(expandedPouchPlacement.pouchCenterX).toBeCloseTo(expandedPouchPlacement.specLeft, 0);
+  expect(expandedPouchPlacement.pouchCenterY).toBeCloseTo(expandedPouchPlacement.specTop, 0);
+  const expandedObjectiveRow = expandedOwnerCard.locator(".planner-objective-icons");
+  await expect(expandedObjectiveRow).toHaveCSS("border-top-style", "solid");
+  await expect(expandedObjectiveRow.locator(":scope > .planner-objective-icon").first()).toBeVisible();
+  await expect(expandedObjectiveRow.locator(".planner-objective-cluster")).toHaveCount(0);
+  const expandedItemSize = await expandedObjectiveRow.locator(":scope > .planner-objective-icon").first().evaluate(element => {
+    const icon = element.getBoundingClientRect();
+    const content = element.firstElementChild!.getBoundingClientRect();
+    return { width: icon.width, height: icon.height, contentWidth: content.width, contentHeight: content.height };
+  });
+  expect(expandedItemSize).toEqual({ width: 42, height: 42, contentWidth: 38, contentHeight: 38 });
+  const expandedObjectiveAlignment = await expandedObjectiveRow.evaluate(element => {
+    const row = element.getBoundingClientRect();
+    const items = Array.from(element.children)
+      .filter(child => getComputedStyle(child).display !== "none")
+      .map(child => child.getBoundingClientRect());
+    const gaps = items.slice(1).map((item, index) => item.left - items[index].right);
+    return {
+      rowCenterX: (row.left + row.right) / 2,
+      groupCenterX: (items[0].left + items.at(-1)!.right) / 2,
+      smallestGap: Math.min(...gaps),
+      largestGap: Math.max(...gaps),
+    };
+  });
+  expect(expandedObjectiveAlignment.groupCenterX).toBeCloseTo(expandedObjectiveAlignment.rowCenterX, 0);
+  expect(expandedObjectiveAlignment.largestGap - expandedObjectiveAlignment.smallestGap).toBeLessThan(2);
   await expect(recommendations.first().getByText("Sin objetivos de botín")).toHaveCSS("font-size", "13px");
   await expect(recommendations.first().locator(".planner-recommendation__detail")).toHaveCSS("overflow-y", "auto");
   await recommendations.first().getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 7/u }).click();

@@ -61,9 +61,9 @@ export function wowSpecializationIconUrl(specId: number): string | null {
   return fileDataId ? `https://render.worldofwarcraft.com/eu/icons/56/${fileDataId}.jpg` : null;
 }
 
-// Blizzard FileData ID 133633 is the in-game INV_Misc_Bag_08 texture.
+// Wowhead item 11845 (Handmade Leather Bag) uses the in-game INV_Misc_Bag_10 texture.
 export function wowLootBagIconUrl(): string {
-  return "https://render.worldofwarcraft.com/eu/icons/56/133633.jpg";
+  return "https://wow.zamimg.com/images/wow/icons/large/inv_misc_bag_10.jpg";
 }
 
 export function specializationsForClass(wowClass: string | null): readonly ClientWowSpecialization[] {

@@ -4,6 +4,7 @@ import {
   WOW_CAPABILITIES,
   WOW_SPECIALIZATIONS,
   capabilitiesForSpec,
+  combatStyleForSpec,
   normalizeWowClass,
   wowSpecialization,
   wowSpecializationsForClass,
@@ -49,6 +50,15 @@ test('class and role lookups use the same specialization source of truth', () =>
   assert.deepEqual(wowSpecializationsForClass('Paladin').map(spec => [spec.id, spec.role]), [
     [65, 'healer'], [66, 'tank'], [70, 'dps'],
   ])
+})
+
+test('combat style distinguishes meaningful melee, ranged and hybrid specialization alternatives', () => {
+  assert.equal(combatStyleForSpec(102), 'ranged')
+  assert.equal(combatStyleForSpec(103), 'melee')
+  assert.equal(combatStyleForSpec(253), 'ranged')
+  assert.equal(combatStyleForSpec(255), 'melee')
+  assert.equal(combatStyleForSpec(1480), 'hybrid')
+  assert.equal(combatStyleForSpec(999999), null)
 })
 
 test('capability catalog is unique, internally consistent and duplicate-free per spec', () => {

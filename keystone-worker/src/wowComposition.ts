@@ -1,6 +1,7 @@
 export type WowRole = 'tank' | 'healer' | 'dps'
 export type WowArmorType = 'cloth' | 'leather' | 'mail' | 'plate'
 export type WowDamageProfile = 'physical' | 'magical' | null
+export type WowCombatStyle = 'melee' | 'ranged' | 'hybrid'
 export type WowClassName =
   | 'Death Knight'
   | 'Demon Hunter'
@@ -79,6 +80,29 @@ const WOW_CLASS_ARMOR: Readonly<Record<WowClassName, WowArmorType>> = {
 
 export function armorTypeForClass(wowClass: WowClassName): WowArmorType {
   return WOW_CLASS_ARMOR[wowClass]
+}
+
+// Verified against Blizzard's current class pages on 2026-09-13. The distinction is deliberately
+// coarse: it protects materially different party alternatives without claiming interrupt cooldowns
+// or performance. Devourer is hybrid because Blizzard describes both mid-range and melee gameplay.
+// https://worldofwarcraft.blizzard.com/en-us/game/classes/druid
+// https://worldofwarcraft.blizzard.com/en-us/game/classes/hunter
+// https://worldofwarcraft.blizzard.com/en-gb/news/24262570
+const MELEE_SPECIALIZATION_IDS = new Set([
+  65, 66, 70, 71, 72, 73, 103, 104, 250, 251, 252, 255, 259, 260, 261, 263,
+  268, 269, 270, 577, 581,
+])
+const RANGED_SPECIALIZATION_IDS = new Set([
+  62, 63, 64, 102, 105, 253, 254, 256, 257, 258, 262, 264, 265, 266, 267,
+  1467, 1468, 1473,
+])
+const HYBRID_SPECIALIZATION_IDS = new Set([1480])
+
+export function combatStyleForSpec(specId: number): WowCombatStyle | null {
+  if (MELEE_SPECIALIZATION_IDS.has(specId)) return 'melee'
+  if (RANGED_SPECIALIZATION_IDS.has(specId)) return 'ranged'
+  if (HYBRID_SPECIALIZATION_IDS.has(specId)) return 'hybrid'
+  return null
 }
 
 // Verified 2026-09-10. Primary class/role references:

@@ -1607,3 +1607,37 @@ explícitamente una primaria. Mantiene
 `character_play_preferences.loot_spec_id` como espejo compatible para clientes anteriores. El
 Worker acepta el documento legacy de la Web publicada. El orden seguro futuro es migración D1,
 Worker y finalmente KeystoneClient; esta implementación local no autoriza esas operaciones remotas.
+
+## 47.15 Diversidad funcional, recálculo vivo y lectura de especializaciones
+
+El Top 5 no debe ocupar varias posiciones con la misma selección de personajes cuando cambiar una
+spec no altera su aportación funcional. Tras ordenar canónicamente, el Worker conserva sólo la mejor
+variante para cada identidad formada por personajes, roles, estilo melee/ranged, perfil de daño y
+utilidades. La spec de botín y sus objetivos no crean por sí solos otra recomendación: de las
+variantes funcionalmente equivalentes sobrevive la mejor puntuada. Cambios materiales como
+Tank/DPS, Balance/Feral o Beast Mastery/Survival siguen produciendo alternativas diferentes.
+
+Después del primer cálculo, modificar una prioridad del grupo recalcula automáticamente con un
+debounce corto. Las tarjetas anteriores permanecen visibles y atenuadas hasta sustituirse de forma
+atómica; nunca se limpia el panel al cambiar el interruptor. El botón pasa de **Calcular Top 5** a
+**Recalcular Top 5** y queda disponible como reintento manual.
+
+En la preview, el icono visible superior izquierdo pasa a ser la spec jugada. El rol se representa
+mediante un icono de fondo de opacidad contenida y resplandor cromático de tarjeta; el avatar se
+reduce ligeramente para no competir con la información funcional. La spec de botín se muestra en un
+control cuadrado del mismo tamaño, arriba a la derecha, con el icono redondo de Handmade Leather Bag
+(`inv_misc_bag_10`, objeto 11845) apoyado sobre su esquina superior izquierda. El centro del pouch se
+ancla al vértice exterior y se renderiza en una capa hermana independiente para que no quede
+contenido ni recortado por el marco de la spec. El marco del pouch y el borde de la tarjeta usan el
+color de clase. Nombre y username aparecen juntos. El owner usa una corona compacta superpuesta sobre
+la esquina superior izquierda, ligeramente fuera del borde.
+
+El detalle sustituye el icono frontal del rol por la misma marca de agua. Coloca la spec jugada y la
+spec de botín juntas en una fila centrada junto al borde superior; debajo muestra nombre y username
+centrados en una sola línea y mantiene la corona dentro de la esquina superior derecha. La spec de
+botín conserva exactamente el tamaño de la jugada y reutiliza el pouch redondo apoyado sobre su
+vértice exterior. La cabecera compacta eleva el separador simple del color de clase para ampliar la
+zona de objetivos, cuyos iconos se centran verticalmente y permanecen completos, sin etiquetas ni
+agrupaciones intermedias; el borde de tier y el desglose completo siguen aportando la clasificación.
+En la cabecera y en la preview, `Valor de botín` se alinea a la izquierda de su cifra y la cabecera
+reserva separación vertical respecto a su divisor.
