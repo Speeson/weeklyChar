@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.10.1",
+  "version": "0.10.2",
+  "bump": "patch",
+  "tag": "client-v0.10.2",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "planner-play-loot-separation.json"
+  ]
+}
