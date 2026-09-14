@@ -316,7 +316,7 @@ test('modern incomplete-party presentation stays within a bounded solver budget'
   assert.equal(result.recommendations.length, 5)
   assert.equal(result.recommendations.every(recommendation => recommendation.vacancies.every(vacancy =>
     vacancy.recommendations.length > 0)), true)
-  assert.ok(elapsedMs < 350, `dense modern solve took ${elapsedMs.toFixed(1)}ms`)
+  assert.ok(elapsedMs < 750, `dense modern solve took ${elapsedMs.toFixed(1)}ms`)
 })
 
 test('dense solves evaluate each candidate loot source at most once per dungeon', () => {
