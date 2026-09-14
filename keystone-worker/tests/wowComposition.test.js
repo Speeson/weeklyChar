@@ -31,12 +31,17 @@ test('Retail specialization catalog has unique IDs, valid roles and conservative
     wowClass: 'Demon Hunter',
     role: 'dps',
     damageProfile: 'magical',
+    primaryStat: 'attack_power',
   })
 
   for (const specialization of WOW_SPECIALIZATIONS) {
     assert.ok(['tank', 'healer', 'dps'].includes(specialization.role))
     assert.ok(['physical', 'magical', null].includes(specialization.damageProfile))
-    if (specialization.role !== 'dps') assert.equal(specialization.damageProfile, null)
+    assert.ok(['intellect', 'attack_power', null].includes(specialization.primaryStat))
+    if (specialization.role !== 'dps') {
+      assert.equal(specialization.damageProfile, null)
+      assert.equal(specialization.primaryStat, null)
+    }
   }
   assert.equal(wowSpecialization(251).damageProfile, null)
   assert.equal(wowSpecialization(263).damageProfile, null)
@@ -50,6 +55,15 @@ test('class and role lookups use the same specialization source of truth', () =>
   assert.deepEqual(wowSpecializationsForClass('Paladin').map(spec => [spec.id, spec.role]), [
     [65, 'healer'], [66, 'tank'], [70, 'dps'],
   ])
+})
+
+test('DPS primary stat distinguishes intellect and attack power independently from damage profile', () => {
+  assert.equal(wowSpecialization(62).primaryStat, 'intellect')
+  assert.equal(wowSpecialization(71).primaryStat, 'attack_power')
+  assert.equal(wowSpecialization(269).primaryStat, 'attack_power')
+  assert.equal(wowSpecialization(1480).damageProfile, 'magical')
+  assert.equal(wowSpecialization(1480).primaryStat, 'attack_power')
+  assert.equal(wowSpecialization(104).primaryStat, null)
 })
 
 test('combat style distinguishes meaningful melee, ranged and hybrid specialization alternatives', () => {

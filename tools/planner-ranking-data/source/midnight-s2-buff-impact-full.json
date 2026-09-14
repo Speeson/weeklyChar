@@ -1,0 +1,1490 @@
+{
+  "generatedAtUtc": "2026-09-13T21:54:31.435487+00:00",
+  "generator": "keystone-planner-buff-sims-poc",
+  "mode": "single",
+  "schemaVersion": 1,
+  "season": "MID2",
+  "settings": {
+    "buffs": [
+      {
+        "id": "MARK_OF_THE_WILD",
+        "override": "mark_of_the_wild"
+      },
+      {
+        "id": "BATTLE_SHOUT",
+        "override": "battle_shout"
+      },
+      {
+        "id": "ARCANE_INTELLECT",
+        "override": "arcane_intellect"
+      },
+      {
+        "id": "SKYFURY",
+        "override": "skyfury"
+      },
+      {
+        "id": "CHAOS_BRAND",
+        "override": "chaos_brand"
+      },
+      {
+        "id": "MYSTIC_TOUCH",
+        "override": "mystic_touch"
+      },
+      {
+        "id": "HUNTERS_MARK",
+        "override": "hunters_mark"
+      }
+    ],
+    "iterations": 5000,
+    "mplusWeights": {
+      "aoe8": 0.6,
+      "singleTarget": 0.4
+    },
+    "profilesetWorkThreads": 1,
+    "scenarios": [
+      {
+        "desiredTargets": 1,
+        "fightStyle": "Patchwerk",
+        "id": "singleTarget"
+      },
+      {
+        "desiredTargets": 8,
+        "fightStyle": "Patchwerk",
+        "id": "aoe8"
+      }
+    ],
+    "threads": 32
+  },
+  "simulationCraft": {
+    "gitCommit": null,
+    "version": "SimulationCraft 1210-01 for World of Warcraft 12.1.0.69587 Live (hotfix 2026-09-04/69587, git build midnight c1935b9)"
+  },
+  "specs": {
+    "1480": {
+      "name": "Devourer Demon Hunter",
+      "profile": "MID2_Demon_Hunter_Devourer.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.030082515487674044,
+            "singleTarget": 0.03085855978293406
+          },
+          "mplusWeightedDelta": 0.03039293320577805,
+          "mplusWeightedRatio": 1.030392933205778
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": -9.154801937760748e-05,
+            "singleTarget": 0.0007858367608690742
+          },
+          "mplusWeightedDelta": 0.0002594058927210652,
+          "mplusWeightedRatio": 1.000259405892721
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.0004711785833124704,
+            "singleTarget": -0.00019066355817765057
+          },
+          "mplusWeightedDelta": 0.00020644172671642198,
+          "mplusWeightedRatio": 1.0002064417267165
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.009255184919005899,
+            "singleTarget": 0.03033053721945045
+          },
+          "mplusWeightedDelta": 0.017685325839183717,
+          "mplusWeightedRatio": 1.0176853258391838
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.02985663449431808,
+            "singleTarget": 0.029792968454095625
+          },
+          "mplusWeightedDelta": 0.0298311680782291,
+          "mplusWeightedRatio": 1.029831168078229
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.00027756329133143964,
+            "singleTarget": 0.0002708370218165168
+          },
+          "mplusWeightedDelta": 0.00027487278352547053,
+          "mplusWeightedRatio": 1.0002748727835256
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.017974560477308055,
+            "singleTarget": 0.018293189209898975
+          },
+          "mplusWeightedDelta": 0.018102011970344424,
+          "mplusWeightedRatio": 1.0181020119703443
+        }
+      }
+    },
+    "251": {
+      "name": "Frost Death Knight",
+      "profile": "MID2_Death_Knight_Frost.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0004690636963177175,
+            "singleTarget": -0.0005566931265803543
+          },
+          "mplusWeightedDelta": -0.0005041154684227722,
+          "mplusWeightedRatio": 0.9994958845315772
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04890323332722435,
+            "singleTarget": 0.045865675374050285
+          },
+          "mplusWeightedDelta": 0.04768821014595473,
+          "mplusWeightedRatio": 1.0476882101459548
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.02973295677162424,
+            "singleTarget": 0.024945311878449283
+          },
+          "mplusWeightedDelta": 0.027817898814354258,
+          "mplusWeightedRatio": 1.0278178988143543
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.007587350271865079,
+            "singleTarget": 0.029802343180765245
+          },
+          "mplusWeightedDelta": 0.016473347435425147,
+          "mplusWeightedRatio": 1.016473347435425
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.03061274464748065,
+            "singleTarget": 0.030015918858873558
+          },
+          "mplusWeightedDelta": 0.030374014332037815,
+          "mplusWeightedRatio": 1.030374014332038
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.003016707328000745,
+            "singleTarget": 0.007324279461894845
+          },
+          "mplusWeightedDelta": 0.004739736181558385,
+          "mplusWeightedRatio": 1.0047397361815584
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.05417822771539993,
+            "singleTarget": 0.052968222060948866
+          },
+          "mplusWeightedDelta": 0.05369422545361951,
+          "mplusWeightedRatio": 1.0536942254536195
+        }
+      }
+    },
+    "252": {
+      "name": "Unholy Death Knight",
+      "profile": "MID2_Death_Knight_Unholy.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.000495990400942059,
+            "singleTarget": -0.0007261725519622786
+          },
+          "mplusWeightedDelta": -0.0005880632613501468,
+          "mplusWeightedRatio": 0.9994119367386498
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04740249795282514,
+            "singleTarget": 0.04632854202294179
+          },
+          "mplusWeightedDelta": 0.0469729155808718,
+          "mplusWeightedRatio": 1.0469729155808718
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.027483941507312926,
+            "singleTarget": 0.023543340607709906
+          },
+          "mplusWeightedDelta": 0.02590770114747172,
+          "mplusWeightedRatio": 1.0259077011474718
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.00891054326019658,
+            "singleTarget": 0.030470847071270457
+          },
+          "mplusWeightedDelta": 0.017534664784626133,
+          "mplusWeightedRatio": 1.0175346647846262
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.029964782331742157,
+            "singleTarget": 0.028987657920450882
+          },
+          "mplusWeightedDelta": 0.02957393256722565,
+          "mplusWeightedRatio": 1.0295739325672257
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0037168659869133425,
+            "singleTarget": 0.012569542842518766
+          },
+          "mplusWeightedDelta": 0.0072579367291555116,
+          "mplusWeightedRatio": 1.0072579367291554
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.019590602237285593,
+            "singleTarget": 0.025086846105407234
+          },
+          "mplusWeightedDelta": 0.02178909978453425,
+          "mplusWeightedRatio": 1.0217890997845342
+        }
+      }
+    },
+    "253": {
+      "name": "Beast Mastery Hunter",
+      "profile": "MID2_Hunter_Beast_Mastery.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.0002866904319278607,
+            "singleTarget": -5.359336511423507e-05
+          },
+          "mplusWeightedDelta": 0.00015057691311102237,
+          "mplusWeightedRatio": 1.000150576913111
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04954077922488698,
+            "singleTarget": 0.0477826361343201
+          },
+          "mplusWeightedDelta": 0.04883752198866023,
+          "mplusWeightedRatio": 1.0488375219886603
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.00063086023490877,
+            "singleTarget": 0.0004884980754624735
+          },
+          "mplusWeightedDelta": 0.0005739153711302515,
+          "mplusWeightedRatio": 1.0005739153711302
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.01652917127351694,
+            "singleTarget": 0.029914762355812696
+          },
+          "mplusWeightedDelta": 0.021883407706435244,
+          "mplusWeightedRatio": 1.0218834077064352
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.03022217914708647,
+            "singleTarget": 0.029621234071333102
+          },
+          "mplusWeightedDelta": 0.029981801116785122,
+          "mplusWeightedRatio": 1.0299818011167852
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.05073133218032466,
+            "singleTarget": 0.049441232978550964
+          },
+          "mplusWeightedDelta": 0.05021529249961518,
+          "mplusWeightedRatio": 1.050215292499615
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.017566530436528893,
+            "singleTarget": 0.015018639064935835
+          },
+          "mplusWeightedDelta": 0.01654737388789167,
+          "mplusWeightedRatio": 1.0165473738878916
+        }
+      }
+    },
+    "254": {
+      "name": "Marksmanship Hunter",
+      "profile": "MID2_Hunter_Marksmanship.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.000581249200306666,
+            "singleTarget": 0.0015927733293159552
+          },
+          "mplusWeightedDelta": 0.00028835981154238247,
+          "mplusWeightedRatio": 1.0002883598115424
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04921669031419684,
+            "singleTarget": 0.047683509060093776
+          },
+          "mplusWeightedDelta": 0.048603417812555616,
+          "mplusWeightedRatio": 1.0486034178125556
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.015223892225447289,
+            "singleTarget": 0.009900673157092532
+          },
+          "mplusWeightedDelta": 0.013094604598105386,
+          "mplusWeightedRatio": 1.0130946045981053
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.012427047462389984,
+            "singleTarget": 0.03145386390057525
+          },
+          "mplusWeightedDelta": 0.020037774037664092,
+          "mplusWeightedRatio": 1.020037774037664
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.028520344157017208,
+            "singleTarget": 0.029353431707795474
+          },
+          "mplusWeightedDelta": 0.028853579177328514,
+          "mplusWeightedRatio": 1.0288535791773286
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.02303506443400294,
+            "singleTarget": 0.03485633746225392
+          },
+          "mplusWeightedDelta": 0.02776357364530333,
+          "mplusWeightedRatio": 1.0277635736453032
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.014108231338298305,
+            "singleTarget": 0.016288214715296734
+          },
+          "mplusWeightedDelta": 0.014980224689097675,
+          "mplusWeightedRatio": 1.0149802246890978
+        }
+      }
+    },
+    "255": {
+      "name": "Survival Hunter",
+      "profile": "MID2_Hunter_Survival.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.00037645669706731777,
+            "singleTarget": 0.0005438541322604351
+          },
+          "mplusWeightedDelta": -8.332365336216602e-06,
+          "mplusWeightedRatio": 0.9999916676346637
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.047725274764690795,
+            "singleTarget": 0.04739623705077478
+          },
+          "mplusWeightedDelta": 0.04759365967912439,
+          "mplusWeightedRatio": 1.0475936596791244
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.010479303110349392,
+            "singleTarget": 0.007852759950709665
+          },
+          "mplusWeightedDelta": 0.009428685846493501,
+          "mplusWeightedRatio": 1.0094286858464936
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.009695999301885694,
+            "singleTarget": 0.03054888402145206
+          },
+          "mplusWeightedDelta": 0.018037153189712243,
+          "mplusWeightedRatio": 1.0180371531897123
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.030020645661684497,
+            "singleTarget": 0.02995374364422676
+          },
+          "mplusWeightedDelta": 0.029993884854701402,
+          "mplusWeightedRatio": 1.0299938848547014
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.03105355291239631,
+            "singleTarget": 0.03771106313743933
+          },
+          "mplusWeightedDelta": 0.033716557002413515,
+          "mplusWeightedRatio": 1.0337165570024136
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.020856622463297114,
+            "singleTarget": 0.027408837607046488
+          },
+          "mplusWeightedDelta": 0.023477508520796865,
+          "mplusWeightedRatio": 1.0234775085207968
+        }
+      }
+    },
+    "258": {
+      "name": "Shadow Priest",
+      "profile": "MID2_Priest_Shadow.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.0302440820458465,
+            "singleTarget": 0.02984913385907184
+          },
+          "mplusWeightedDelta": 0.030086102771136637,
+          "mplusWeightedRatio": 1.0300861027711365
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": -0.0003184604901075305,
+            "singleTarget": -0.00028071516437944144
+          },
+          "mplusWeightedDelta": -0.00030336235981629487,
+          "mplusWeightedRatio": 0.9996966376401837
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.030351705921776384,
+            "singleTarget": 0.02973179141032789
+          },
+          "mplusWeightedDelta": 0.030103740117196985,
+          "mplusWeightedRatio": 1.030103740117197
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.010360731510498766,
+            "singleTarget": 0.029784565754360948
+          },
+          "mplusWeightedDelta": 0.01813026520804364,
+          "mplusWeightedRatio": 1.0181302652080437
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.029547672558531968,
+            "singleTarget": 0.029251400932406524
+          },
+          "mplusWeightedDelta": 0.02942916390808179,
+          "mplusWeightedRatio": 1.0294291639080817
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.000338661899142334,
+            "singleTarget": -0.000266801028085184
+          },
+          "mplusWeightedDelta": 9.647672825132679e-05,
+          "mplusWeightedRatio": 1.0000964767282514
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.016754892340954397,
+            "singleTarget": 0.01706368900933586
+          },
+          "mplusWeightedDelta": 0.016878411008306983,
+          "mplusWeightedRatio": 1.016878411008307
+        }
+      }
+    },
+    "259": {
+      "name": "Assassination Rogue",
+      "profile": "MID2_Rogue_Assassination.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0002809878464880011,
+            "singleTarget": -0.00041870451404757425
+          },
+          "mplusWeightedDelta": -0.0003360745135118304,
+          "mplusWeightedRatio": 0.9996639254864882
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04498011837145954,
+            "singleTarget": 0.04344875593962927
+          },
+          "mplusWeightedDelta": 0.04436757339872743,
+          "mplusWeightedRatio": 1.0443675733987274
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.008231291779046357,
+            "singleTarget": 0.01572064735627232
+          },
+          "mplusWeightedDelta": 0.011227034009936743,
+          "mplusWeightedRatio": 1.0112270340099367
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.009082706628247061,
+            "singleTarget": 0.0298704601916413
+          },
+          "mplusWeightedDelta": 0.01739780805360476,
+          "mplusWeightedRatio": 1.0173978080536048
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.02931724530753188,
+            "singleTarget": 0.028926301610560312
+          },
+          "mplusWeightedDelta": 0.029160867828743255,
+          "mplusWeightedRatio": 1.0291608678287432
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.035201567938881295,
+            "singleTarget": 0.022470424421259683
+          },
+          "mplusWeightedDelta": 0.03010911053183265,
+          "mplusWeightedRatio": 1.0301091105318327
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.03815833759381326,
+            "singleTarget": 0.061721080393919214
+          },
+          "mplusWeightedDelta": 0.04758343471385565,
+          "mplusWeightedRatio": 1.0475834347138557
+        }
+      }
+    },
+    "260": {
+      "name": "Outlaw Rogue",
+      "profile": "MID2_Rogue_Outlaw.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.0013128466681822104,
+            "singleTarget": 0.0022701543236791633
+          },
+          "mplusWeightedDelta": 0.0016957697303809915,
+          "mplusWeightedRatio": 1.001695769730381
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04764007740106391,
+            "singleTarget": 0.04584012657180092
+          },
+          "mplusWeightedDelta": 0.046920097069358714,
+          "mplusWeightedRatio": 1.0469200970693586
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.0034927418901129492,
+            "singleTarget": 0.003038300704907959
+          },
+          "mplusWeightedDelta": 0.0033109654160309535,
+          "mplusWeightedRatio": 1.003310965416031
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.009708530249475045,
+            "singleTarget": 0.03191621802296263
+          },
+          "mplusWeightedDelta": 0.018591605358870077,
+          "mplusWeightedRatio": 1.0185916053588702
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.025735222290259818,
+            "singleTarget": 0.026743171772315888
+          },
+          "mplusWeightedDelta": 0.026138402083082247,
+          "mplusWeightedRatio": 1.0261384020830822
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0466360729049764,
+            "singleTarget": 0.04805115425245443
+          },
+          "mplusWeightedDelta": 0.047202105443967614,
+          "mplusWeightedRatio": 1.0472021054439675
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.05736209908825263,
+            "singleTarget": 0.047432268880696515
+          },
+          "mplusWeightedDelta": 0.05339016700523019,
+          "mplusWeightedRatio": 1.0533901670052301
+        }
+      }
+    },
+    "261": {
+      "name": "Subtlety Rogue",
+      "profile": "MID2_Rogue_Subtlety.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0002546870982440552,
+            "singleTarget": 0.0002338442348481795
+          },
+          "mplusWeightedDelta": -5.927456500716131e-05,
+          "mplusWeightedRatio": 0.9999407254349928
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04890341249169228,
+            "singleTarget": 0.04674921963923517
+          },
+          "mplusWeightedDelta": 0.048041735350709436,
+          "mplusWeightedRatio": 1.0480417353507094
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.017823035252985786,
+            "singleTarget": 0.017360184991006777
+          },
+          "mplusWeightedDelta": 0.017637895148194183,
+          "mplusWeightedRatio": 1.0176378951481941
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.007243016858045737,
+            "singleTarget": 0.02973338338643683
+          },
+          "mplusWeightedDelta": 0.016239163469402174,
+          "mplusWeightedRatio": 1.0162391634694021
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.027304209702991855,
+            "singleTarget": 0.027019187963502
+          },
+          "mplusWeightedDelta": 0.027190201007195915,
+          "mplusWeightedRatio": 1.0271902010071958
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.020673849106602527,
+            "singleTarget": 0.021144887332085194
+          },
+          "mplusWeightedDelta": 0.020862264396795595,
+          "mplusWeightedRatio": 1.0208622643967955
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.027492862827839026,
+            "singleTarget": 0.042876727705695616
+          },
+          "mplusWeightedDelta": 0.03364640877898166,
+          "mplusWeightedRatio": 1.0336464087789816
+        }
+      }
+    },
+    "262": {
+      "name": "Elemental Shaman",
+      "profile": "MID2_Shaman_Elemental.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.030342435064793172,
+            "singleTarget": 0.029773100629932436
+          },
+          "mplusWeightedDelta": 0.030114701290848877,
+          "mplusWeightedRatio": 1.030114701290849
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.0006464846927642931,
+            "singleTarget": -0.00010349305165846534
+          },
+          "mplusWeightedDelta": 0.0003464935949951897,
+          "mplusWeightedRatio": 1.0003464935949953
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.030909554221366653,
+            "singleTarget": 0.02966272159761707
+          },
+          "mplusWeightedDelta": 0.03041082117186682,
+          "mplusWeightedRatio": 1.0304108211718668
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.0053866133095685775,
+            "singleTarget": 0.030009227429978358
+          },
+          "mplusWeightedDelta": 0.01523565895773249,
+          "mplusWeightedRatio": 1.0152356589577325
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.0296401081526243,
+            "singleTarget": 0.028882892180420727
+          },
+          "mplusWeightedDelta": 0.02933722176374287,
+          "mplusWeightedRatio": 1.0293372217637429
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.00046839255154207393,
+            "singleTarget": 0.00019193535486472513
+          },
+          "mplusWeightedDelta": 0.0003578096728711344,
+          "mplusWeightedRatio": 1.0003578096728711
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.019388392308573144,
+            "singleTarget": 0.015902301414806752
+          },
+          "mplusWeightedDelta": 0.017993955951066586,
+          "mplusWeightedRatio": 1.0179939559510667
+        }
+      }
+    },
+    "263": {
+      "name": "Enhancement Shaman",
+      "profile": "MID2_Shaman_Enhancement.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0006210519699838546,
+            "singleTarget": 0.0003039395002615297
+          },
+          "mplusWeightedDelta": -0.0002510553818857008,
+          "mplusWeightedRatio": 0.9997489446181143
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.048118833986946496,
+            "singleTarget": 0.04732082074112598
+          },
+          "mplusWeightedDelta": 0.04779962868861829,
+          "mplusWeightedRatio": 1.0477996286886182
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.03193524569727191,
+            "singleTarget": 0.02328415794697425
+          },
+          "mplusWeightedDelta": 0.028474810597152844,
+          "mplusWeightedRatio": 1.0284748105971528
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.008541227899712789,
+            "singleTarget": 0.03172346873915588
+          },
+          "mplusWeightedDelta": 0.017814124235490027,
+          "mplusWeightedRatio": 1.0178141242354901
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.029470731241996395,
+            "singleTarget": 0.02909308012016143
+          },
+          "mplusWeightedDelta": 0.029319670793262406,
+          "mplusWeightedRatio": 1.0293196707932624
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0072120084831051035,
+            "singleTarget": 0.014417881328487647
+          },
+          "mplusWeightedDelta": 0.010094357621258121,
+          "mplusWeightedRatio": 1.0100943576212582
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.031127923888846887,
+            "singleTarget": 0.0400606348309529
+          },
+          "mplusWeightedDelta": 0.034701008265689295,
+          "mplusWeightedRatio": 1.0347010082656893
+        }
+      }
+    },
+    "265": {
+      "name": "Affliction Warlock",
+      "profile": "MID2_Warlock_Affliction.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.029696504536854906,
+            "singleTarget": 0.029135959625359753
+          },
+          "mplusWeightedDelta": 0.029472286572256846,
+          "mplusWeightedRatio": 1.0294722865722568
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.0005087613582233086,
+            "singleTarget": -1.1823798094834359e-05
+          },
+          "mplusWeightedDelta": 0.0003005272956960514,
+          "mplusWeightedRatio": 1.000300527295696
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.030291493465431474,
+            "singleTarget": 0.029378906913944514
+          },
+          "mplusWeightedDelta": 0.02992645884483669,
+          "mplusWeightedRatio": 1.0299264588448367
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.00824519539608315,
+            "singleTarget": 0.030609725632914087
+          },
+          "mplusWeightedDelta": 0.017191007490815525,
+          "mplusWeightedRatio": 1.0171910074908155
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.027962391105440965,
+            "singleTarget": 0.027568152661353595
+          },
+          "mplusWeightedDelta": 0.027804695727806018,
+          "mplusWeightedRatio": 1.027804695727806
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0012668889149480833,
+            "singleTarget": 0.0007592406578453836
+          },
+          "mplusWeightedDelta": 0.0010638296121070034,
+          "mplusWeightedRatio": 1.001063829612107
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.01633373684968209,
+            "singleTarget": 0.011971015058263479
+          },
+          "mplusWeightedDelta": 0.014588648133114647,
+          "mplusWeightedRatio": 1.0145886481331146
+        }
+      }
+    },
+    "266": {
+      "name": "Demonology Warlock",
+      "profile": "MID2_Warlock_Demonology.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.02998164134996051,
+            "singleTarget": 0.029969689073573225
+          },
+          "mplusWeightedDelta": 0.029976860439405596,
+          "mplusWeightedRatio": 1.0299768604394055
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.00011401457494741862,
+            "singleTarget": 0.00017166238992616378
+          },
+          "mplusWeightedDelta": 0.0001370737009389167,
+          "mplusWeightedRatio": 1.000137073700939
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.027876959577548543,
+            "singleTarget": 0.027296189987684683
+          },
+          "mplusWeightedDelta": 0.027644651741603,
+          "mplusWeightedRatio": 1.027644651741603
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.010928419116819965,
+            "singleTarget": 0.02969241873573436
+          },
+          "mplusWeightedDelta": 0.018434018964385724,
+          "mplusWeightedRatio": 1.0184340189643857
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.030137657924880212,
+            "singleTarget": 0.02933852184037966
+          },
+          "mplusWeightedDelta": 0.029818003491079992,
+          "mplusWeightedRatio": 1.02981800349108
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.007416530857639714,
+            "singleTarget": 0.004845519917758834
+          },
+          "mplusWeightedDelta": 0.006388126481687362,
+          "mplusWeightedRatio": 1.0063881264816874
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.015339073806628578,
+            "singleTarget": 0.014513330582293538
+          },
+          "mplusWeightedDelta": 0.015008776516894563,
+          "mplusWeightedRatio": 1.0150087765168945
+        }
+      }
+    },
+    "267": {
+      "name": "Destruction Warlock",
+      "profile": "MID2_Warlock_Destruction.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.030955222011801897,
+            "singleTarget": 0.02955619866678716
+          },
+          "mplusWeightedDelta": 0.030395612673796004,
+          "mplusWeightedRatio": 1.030395612673796
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.00043015234036869465,
+            "singleTarget": -0.001027338710400616
+          },
+          "mplusWeightedDelta": -0.00015284407993902964,
+          "mplusWeightedRatio": 0.999847155920061
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.03075043958105006,
+            "singleTarget": 0.03000306158672994
+          },
+          "mplusWeightedDelta": 0.030451488383322012,
+          "mplusWeightedRatio": 1.030451488383322
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.007951097960878561,
+            "singleTarget": 0.029317845358995287
+          },
+          "mplusWeightedDelta": 0.016497796920125252,
+          "mplusWeightedRatio": 1.0164977969201252
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.030276384036261206,
+            "singleTarget": 0.02974642504665792
+          },
+          "mplusWeightedDelta": 0.030064400440419893,
+          "mplusWeightedRatio": 1.0300644004404198
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0003034567751143413,
+            "singleTarget": -9.096238246519839e-05
+          },
+          "mplusWeightedDelta": 0.00014568911208252542,
+          "mplusWeightedRatio": 1.0001456891120826
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.01699712879057813,
+            "singleTarget": 0.015749713105261964
+          },
+          "mplusWeightedDelta": 0.016498162516451663,
+          "mplusWeightedRatio": 1.0164981625164518
+        }
+      }
+    },
+    "269": {
+      "name": "Windwalker Monk",
+      "profile": "MID2_Monk_Windwalker.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0003167507755174048,
+            "singleTarget": 0.00016504910898240688
+          },
+          "mplusWeightedDelta": -0.00012403082171748013,
+          "mplusWeightedRatio": 0.9998759691782825
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04873911336989645,
+            "singleTarget": 0.04625887184315558
+          },
+          "mplusWeightedDelta": 0.047747016759200095,
+          "mplusWeightedRatio": 1.0477470167592
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.005658348123844581,
+            "singleTarget": 0.00583147519445415
+          },
+          "mplusWeightedDelta": 0.0057275989520884085,
+          "mplusWeightedRatio": 1.0057275989520884
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.007370604374865142,
+            "singleTarget": 0.029216109886166297
+          },
+          "mplusWeightedDelta": 0.016108806579385605,
+          "mplusWeightedRatio": 1.0161088065793855
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.02919366046516947,
+            "singleTarget": 0.02998142669994519
+          },
+          "mplusWeightedDelta": 0.02950876695907976,
+          "mplusWeightedRatio": 1.0295087669590797
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": -0.0004115058795722826,
+            "singleTarget": 0.0007554770669000455
+          },
+          "mplusWeightedDelta": 5.528729901664868e-05,
+          "mplusWeightedRatio": 1.0000552872990167
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.039500873298949024,
+            "singleTarget": 0.04734612978942243
+          },
+          "mplusWeightedDelta": 0.04263897589513839,
+          "mplusWeightedRatio": 1.0426389758951384
+        }
+      }
+    },
+    "577": {
+      "name": "Havoc Demon Hunter",
+      "profile": "MID2_Demon_Hunter_Havoc.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.00022497583762071116,
+            "singleTarget": -0.0006084731935938059
+          },
+          "mplusWeightedDelta": -0.0003783747800099491,
+          "mplusWeightedRatio": 0.9996216252199901
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04695931465079872,
+            "singleTarget": 0.04631810209425624
+          },
+          "mplusWeightedDelta": 0.04670282962818173,
+          "mplusWeightedRatio": 1.0467028296281817
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.00048407212434220526,
+            "singleTarget": -0.0006608930233595878
+          },
+          "mplusWeightedDelta": 2.6086065261488034e-05,
+          "mplusWeightedRatio": 1.0000260860652614
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.010725470168676976,
+            "singleTarget": 0.029093879949656065
+          },
+          "mplusWeightedDelta": 0.018072834081068613,
+          "mplusWeightedRatio": 1.0180728340810685
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.028775133286321752,
+            "singleTarget": 0.027645260181980547
+          },
+          "mplusWeightedDelta": 0.02832318404458527,
+          "mplusWeightedRatio": 1.0283231840445852
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.012899720826633043,
+            "singleTarget": 0.015926529717708693
+          },
+          "mplusWeightedDelta": 0.014110444383063303,
+          "mplusWeightedRatio": 1.0141104443830633
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.028977656094037796,
+            "singleTarget": 0.05154081375425168
+          },
+          "mplusWeightedDelta": 0.038002919158123344,
+          "mplusWeightedRatio": 1.0380029191581233
+        }
+      }
+    },
+    "62": {
+      "name": "Arcane Mage",
+      "profile": "MID2_Mage_Arcane.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0007739112040271445,
+            "singleTarget": 0.0014037036580039075
+          },
+          "mplusWeightedDelta": 9.71347407852763e-05,
+          "mplusWeightedRatio": 1.0000971347407852
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": -0.0005887198626678414,
+            "singleTarget": 0.00048432572426637677
+          },
+          "mplusWeightedDelta": -0.00015950162789415409,
+          "mplusWeightedRatio": 0.9998404983721059
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.03117443193045366,
+            "singleTarget": 0.030986584776329984
+          },
+          "mplusWeightedDelta": 0.03109929306880419,
+          "mplusWeightedRatio": 1.031099293068804
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.010775568317783923,
+            "singleTarget": 0.031131095595118508
+          },
+          "mplusWeightedDelta": 0.01891777922871776,
+          "mplusWeightedRatio": 1.0189177792287178
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.025311135999800616,
+            "singleTarget": 0.026221622202788453
+          },
+          "mplusWeightedDelta": 0.02567533048099575,
+          "mplusWeightedRatio": 1.0256753304809958
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": -0.0006750281707336159,
+            "singleTarget": 0.00017848678674226015
+          },
+          "mplusWeightedDelta": -0.0003336221877432655,
+          "mplusWeightedRatio": 0.9996663778122568
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.013012180364953885,
+            "singleTarget": 0.016749459015565682
+          },
+          "mplusWeightedDelta": 0.014507091825198604,
+          "mplusWeightedRatio": 1.0145070918251986
+        }
+      }
+    },
+    "63": {
+      "name": "Fire Mage",
+      "profile": "MID2_Mage_Fire.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.00021101932663469825,
+            "singleTarget": -0.00023647921000702343
+          },
+          "mplusWeightedDelta": -0.00022120327998362833,
+          "mplusWeightedRatio": 0.9997787967200163
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": -9.79959672580133e-05,
+            "singleTarget": 0.0008776378643182703
+          },
+          "mplusWeightedDelta": 0.00029225756537250015,
+          "mplusWeightedRatio": 1.0002922575653725
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.030809488131740892,
+            "singleTarget": 0.028620944858170905
+          },
+          "mplusWeightedDelta": 0.029934070822312895,
+          "mplusWeightedRatio": 1.0299340708223128
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.005382737656282499,
+            "singleTarget": 0.02863610184512355
+          },
+          "mplusWeightedDelta": 0.01468408333181892,
+          "mplusWeightedRatio": 1.014684083331819
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.025733430926919265,
+            "singleTarget": 0.025626894690476743
+          },
+          "mplusWeightedDelta": 0.025690816432342257,
+          "mplusWeightedRatio": 1.0256908164323422
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0012909783237022854,
+            "singleTarget": 0.0004370739655223943
+          },
+          "mplusWeightedDelta": 0.0009494165804303289,
+          "mplusWeightedRatio": 1.0009494165804302
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.012339082354736686,
+            "singleTarget": 0.013136724771715791
+          },
+          "mplusWeightedDelta": 0.012658139321528327,
+          "mplusWeightedRatio": 1.0126581393215284
+        }
+      }
+    },
+    "64": {
+      "name": "Frost Mage",
+      "profile": "MID2_Mage_Frost.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.00045610269022100525,
+            "singleTarget": -0.00010794004826064629
+          },
+          "mplusWeightedDelta": 0.00023048559482834462,
+          "mplusWeightedRatio": 1.0002304855948283
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 7.23908593269762e-06,
+            "singleTarget": 0.0001879616781421678
+          },
+          "mplusWeightedDelta": 7.95281228164857e-05,
+          "mplusWeightedRatio": 1.0000795281228165
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.030533921251960194,
+            "singleTarget": 0.02997987468710983
+          },
+          "mplusWeightedDelta": 0.030312302626020048,
+          "mplusWeightedRatio": 1.0303123026260201
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.016529075153035366,
+            "singleTarget": 0.029788099030924053
+          },
+          "mplusWeightedDelta": 0.021832684704190843,
+          "mplusWeightedRatio": 1.0218326847041908
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.029444226913199145,
+            "singleTarget": 0.029405922284338804
+          },
+          "mplusWeightedDelta": 0.029428905061655006,
+          "mplusWeightedRatio": 1.029428905061655
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.0005864202088041726,
+            "singleTarget": -5.674564212754252e-05
+          },
+          "mplusWeightedDelta": 0.00032915386843148655,
+          "mplusWeightedRatio": 1.0003291538684316
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.017661882434257814,
+            "singleTarget": 0.016674941047886582
+          },
+          "mplusWeightedDelta": 0.01726710587970932,
+          "mplusWeightedRatio": 1.0172671058797094
+        }
+      }
+    },
+    "70": {
+      "name": "Retribution Paladin",
+      "profile": "MID2_Paladin_Retribution.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.00039376995678575,
+            "singleTarget": 0.0009149842946531983
+          },
+          "mplusWeightedDelta": 0.0006022556919327293,
+          "mplusWeightedRatio": 1.0006022556919327
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.0477271821896772,
+            "singleTarget": 0.048005590689813804
+          },
+          "mplusWeightedDelta": 0.04783854558973184,
+          "mplusWeightedRatio": 1.0478385455897319
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.03051142776222049,
+            "singleTarget": 0.027654067142676375
+          },
+          "mplusWeightedDelta": 0.029368483514402844,
+          "mplusWeightedRatio": 1.0293684835144028
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.008637482054097312,
+            "singleTarget": 0.031091461785465402
+          },
+          "mplusWeightedDelta": 0.01761907394664455,
+          "mplusWeightedRatio": 1.0176190739466446
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.03015915823239812,
+            "singleTarget": 0.030912204186484438
+          },
+          "mplusWeightedDelta": 0.03046037661403265,
+          "mplusWeightedRatio": 1.0304603766140326
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.00261325269048851,
+            "singleTarget": 0.006355632194534611
+          },
+          "mplusWeightedDelta": 0.00411020449210695,
+          "mplusWeightedRatio": 1.0041102044921069
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.03333950831936461,
+            "singleTarget": 0.03445299307192129
+          },
+          "mplusWeightedDelta": 0.03378490222038728,
+          "mplusWeightedRatio": 1.0337849022203873
+        }
+      }
+    },
+    "71": {
+      "name": "Arms Warrior",
+      "profile": "MID2_Warrior_Arms.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": -0.0009216509448513044,
+            "singleTarget": -0.0006156232953207219
+          },
+          "mplusWeightedDelta": -0.0007992398850390713,
+          "mplusWeightedRatio": 0.999200760114961
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04557950775585762,
+            "singleTarget": 0.046764220451885
+          },
+          "mplusWeightedDelta": 0.04605339283426857,
+          "mplusWeightedRatio": 1.0460533928342686
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": -0.0007184054832405362,
+            "singleTarget": 0.0007437557253866522
+          },
+          "mplusWeightedDelta": -0.0001335409997896608,
+          "mplusWeightedRatio": 0.9998664590002103
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.007247132299586623,
+            "singleTarget": 0.029264120921895564
+          },
+          "mplusWeightedDelta": 0.0160539277485102,
+          "mplusWeightedRatio": 1.01605392774851
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.027555463003505754,
+            "singleTarget": 0.02902867435017864
+          },
+          "mplusWeightedDelta": 0.028144747542174907,
+          "mplusWeightedRatio": 1.028144747542175
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.047482771203900764,
+            "singleTarget": 0.04865590446134305
+          },
+          "mplusWeightedDelta": 0.047952024506877675,
+          "mplusWeightedRatio": 1.0479520245068776
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.019966694756380132,
+            "singleTarget": 0.0444583266453944
+          },
+          "mplusWeightedDelta": 0.029763347511985838,
+          "mplusWeightedRatio": 1.0297633475119858
+        }
+      }
+    },
+    "72": {
+      "name": "Fury Warrior",
+      "profile": "MID2_Warrior_Fury.simc",
+      "results": {
+        "ARCANE_INTELLECT": {
+          "deltaByScenario": {
+            "aoe8": 0.0001941643218790201,
+            "singleTarget": 0.00021551352367787935
+          },
+          "mplusWeightedDelta": 0.0002027040025985638,
+          "mplusWeightedRatio": 1.0002027040025985
+        },
+        "BATTLE_SHOUT": {
+          "deltaByScenario": {
+            "aoe8": 0.04582411408341702,
+            "singleTarget": 0.04500394051202572
+          },
+          "mplusWeightedDelta": 0.0454960446548605,
+          "mplusWeightedRatio": 1.0454960446548605
+        },
+        "CHAOS_BRAND": {
+          "deltaByScenario": {
+            "aoe8": 0.0010601801591649807,
+            "singleTarget": 2.9629908291584073e-05
+          },
+          "mplusWeightedDelta": 0.000647960058815622,
+          "mplusWeightedRatio": 1.0006479600588156
+        },
+        "HUNTERS_MARK": {
+          "deltaByScenario": {
+            "aoe8": 0.014158924292245523,
+            "singleTarget": 0.029592901464970955
+          },
+          "mplusWeightedDelta": 0.020332515161335697,
+          "mplusWeightedRatio": 1.0203325151613356
+        },
+        "MARK_OF_THE_WILD": {
+          "deltaByScenario": {
+            "aoe8": 0.029229211288257728,
+            "singleTarget": 0.02769627415201259
+          },
+          "mplusWeightedDelta": 0.02861603643375967,
+          "mplusWeightedRatio": 1.0286160364337598
+        },
+        "MYSTIC_TOUCH": {
+          "deltaByScenario": {
+            "aoe8": 0.048087273891134874,
+            "singleTarget": 0.04842940464121437
+          },
+          "mplusWeightedDelta": 0.04822412619116667,
+          "mplusWeightedRatio": 1.0482241261911667
+        },
+        "SKYFURY": {
+          "deltaByScenario": {
+            "aoe8": 0.04050993431777461,
+            "singleTarget": 0.046161028886121835
+          },
+          "mplusWeightedDelta": 0.0427703721451135,
+          "mplusWeightedRatio": 1.0427703721451136
+        }
+      }
+    }
+  }
+}

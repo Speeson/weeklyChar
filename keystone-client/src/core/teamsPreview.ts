@@ -2,7 +2,7 @@ import type { TeamsDataSource } from "./teams";
 import type {
   ClientPlannerPreferences, ClientTeamDetail, ClientTeamSummary, KeystoneSelectorObjective, KeystoneSelectorResponse,
   KeystoneSelectorTierCounts, KeystonePlannerAssignment, KeystonePlannerRecommendation,
-  KeystonePlannerRequest, KeystonePlannerResponse, KeystonePlannerRole,
+  KeystonePlannerRequest, KeystonePlannerResponse, KeystonePlannerRole, KeystonePlannerVacancyRecommendation,
 } from "./types";
 import { WOW_SPECIALIZATIONS } from "./wowSpecs";
 
@@ -102,8 +102,15 @@ const previewPlannerParty: KeystonePlannerAssignment[] = [
   plannerAssignment(2, "GuardianaDeLosSecretosDelVacío", 12, "Auralisdelaluzeterna", "Paladin", 66, "tank", 241002),
   plannerAssignment(6, "Nightshift", 16, "Nocturna", "Priest", 257, "healer", 241006),
   plannerAssignment(1, "Speeson", 10, "Bakuhatsu", "Mage", 62, "dps", 241001),
-  plannerAssignment(4, "Voidwalker", 14, "Umbrael", "Warlock", 267, "dps", 241004),
   { ...plannerAssignment(7, "Ironforge", 17, "Cogspinner", "Rogue", 260, "dps", 241007), objectives: [] },
+];
+
+const previewExternalClasses = [
+  { wowClass: "Evoker", contributions: [{ capabilityId: "BLOODLUST", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+  { wowClass: "Mage", contributions: [{ capabilityId: "BLOODLUST", availability: "guaranteed" as const }, { capabilityId: "ARCANE_INTELLECT", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const, "BUFFS_INTELLECT" as const] },
+  { wowClass: "Shaman", contributions: [{ capabilityId: "BLOODLUST", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+  { wowClass: "Hunter", contributions: [{ capabilityId: "BLOODLUST", availability: "conditional" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+  { wowClass: "Demon Hunter", contributions: [{ capabilityId: "CHAOS_BRAND", availability: "guaranteed" as const }], reasonCodes: ["AMPLIFIES_MAGICAL_DAMAGE" as const] },
 ];
 
 let previewPreferences: ClientPlannerPreferences = { preferences: [
@@ -113,13 +120,91 @@ let previewPreferences: ClientPlannerPreferences = { preferences: [
 
 function previewPlannerRecommendation(rank: number, request: KeystonePlannerRequest): KeystonePlannerRecommendation {
   const stone = fullSelector.availability.stones.find(item => item.characterId === request.stoneCharacterId) ?? fullSelector.availability.stones[0];
+  const quickCandidates = previewExternalClasses.slice(0, 5);
+  const advancedSpecs = [
+    { wowClass: "Warrior", specId: 72, specName: "Fury" },
+    { wowClass: "Shaman", specId: 263, specName: "Enhancement" },
+    { wowClass: "Druid", specId: 103, specName: "Feral" },
+    { wowClass: "Mage", specId: 64, specName: "Frost" },
+    { wowClass: "Demon Hunter", specId: 577, specName: "Havoc" },
+  ];
+  const advanced = advancedSpecs[rank - 1];
+  const selectedClass = request.options.recommendationMode === "advanced"
+    ? advanced.wowClass : quickCandidates[rank - 1].wowClass;
+  const selectedCandidate = previewExternalClasses.find(candidate => candidate.wowClass === selectedClass)
+    ?? { wowClass: selectedClass, contributions: [], reasonCodes: [] };
+  const utilityByClass = {
+    Warrior: ["Pummel", 6552], Shaman: ["Purge", 370], Druid: ["Soothe", 2908],
+    Mage: ["Counterspell", 2139], "Demon Hunter": ["Disrupt", 183752],
+    Evoker: ["Quell", 351338], Hunter: ["Counter Shot", 147362],
+  } as const;
+  const buffByClass = {
+    Warrior: ["BATTLE_SHOUT", "Battle Shout", 6673], Shaman: ["SKYFURY", "Skyfury", 462854],
+    Druid: ["MARK_OF_THE_WILD", "Mark of the Wild", 1126], Mage: ["ARCANE_INTELLECT", "Arcane Intellect", 1459],
+    "Demon Hunter": ["CHAOS_BRAND", "Chaos Brand", 1490],
+  } as const;
+  const rawAlternatives: Array<{ wowClass: string; specId?: number; specName?: string }> = request.options.recommendationMode === "advanced"
+    ? advancedSpecs
+    : quickCandidates.map(candidate => ({ wowClass: candidate.wowClass }));
+  const orderedAlternatives = [
+    ...rawAlternatives.filter(candidate => candidate.wowClass === selectedClass),
+    ...rawAlternatives.filter(candidate => candidate.wowClass !== selectedClass),
+  ];
+  const quickDamageProfiles: Record<string, KeystonePlannerVacancyRecommendation["damageProfile"]> = {
+    Mage: "magical",
+  };
+  const advancedDamageProfiles: Record<number, KeystonePlannerVacancyRecommendation["damageProfile"]> = {
+    72: "physical", 103: "physical", 64: "magical",
+  };
+  const recommendations: KeystonePlannerVacancyRecommendation[] = orderedAlternatives.map((candidate, index) => {
+    const utility = utilityByClass[candidate.wowClass as keyof typeof utilityByClass];
+    const buff = buffByClass[candidate.wowClass as keyof typeof buffByClass];
+    return {
+      id: `${request.options.recommendationMode}:${candidate.wowClass}:${candidate.specId ?? "dps"}`,
+      wowClass: candidate.wowClass,
+      ...(candidate.specId ? { specId: candidate.specId, specName: candidate.specName } : {}),
+      damageProfile: candidate.specId
+        ? advancedDamageProfiles[candidate.specId] ?? "unknown"
+        : quickDamageProfiles[candidate.wowClass] ?? "unknown",
+      offensiveGainPct: 0.0455 - index * 0.004,
+      buffsDebuffs: buff ? [{ capabilityId: buff[0], name: buff[1], spellId: buff[2], availability: "guaranteed" as const }] : [],
+      utilities: utility ? [{ capabilityId: "INTERRUPT", name: utility[0], spellId: utility[1], availability: "guaranteed" as const }] : [],
+      ...(request.options.recommendationMode === "advanced" && candidate.wowClass === "Warrior" ? {
+        groupDefensives: [{ capabilityId: "EXTERNAL", name: "Rallying Cry", spellId: 97462, availability: "guaranteed" as const, tier: "S" as const, relevance: 3, score: 1000 }],
+        dungeonUtilities: [
+          { capabilityId: "AOE_STOP", name: "Shockwave", spellId: 46968, availability: "guaranteed" as const, tier: "A" as const, relevance: 3, score: 1000 },
+          { capabilityId: "AOE_DISORIENT", name: "Intimidating Shout", spellId: 5246, availability: "conditional" as const, tier: "A" as const, relevance: 2, score: 667 },
+          { capabilityId: "FEAR_BREAK", name: "Berserker Rage", spellId: 18499, availability: "guaranteed" as const, tier: "B" as const, relevance: 1, score: 333 },
+          { capabilityId: "MOBILITY", name: "Heroic Leap", spellId: 6544, availability: "guaranteed" as const, tier: "C" as const, relevance: 1, score: 167 },
+        ],
+      } : {}),
+    };
+  });
+  const vacancy = {
+    role: "dps" as const,
+    preferredCapabilities: ["BLOODLUST"],
+    candidateClasses: [selectedCandidate],
+    recommendationMode: request.options.recommendationMode,
+    recommendedClass: selectedClass,
+    ...(request.options.recommendationMode === "advanced"
+      ? { recommendedSpecId: advanced.specId, recommendedSpecName: advanced.specName } : {}),
+    offensiveGainPct: 0.048 - rank * 0.0025,
+    offensiveBand: rank < 4 ? 0 : 1,
+    offensiveReasons: ["BATTLE_SHOUT: +4.55% estimated normalized uplift"],
+    offensiveProvenance: [{ specId: 251, source: "simc" as const, confidence: "high" as const, method: "exact_profile" }],
+    defensiveContribution: { tiers: { S: rank === 1 ? 1000 : 750, A: 0, B: 0, C: 0 }, reasons: rank === 1 ? ["Rallying Cry"] : [] },
+    defensiveBand: 0,
+    dungeonUtilityContribution: { tiers: { S: 0, A: 500, B: 0, C: 0 }, reasons: ["Interrupt: relevance 3/3"] },
+    dungeonUtilityBand: 0,
+    recommendations,
+  };
   return {
     rank, fingerprint: `preview-${rank}-${stone.characterId}`,
     stone: { ...stone, challengeMapId: request.challengeMapId, dungeon: "Ruby Life Pools" },
-    assignments: previewPlannerParty, vacancies: [],
-    lootSummary: { weightedScore: 128 - rank * 7, playersWithObjectives: 5, totalObjectives: previewPlannerParty.reduce((total, assignment) => total + assignment.objectives.length, 0), tierCounts: { bestInSlot: 2, mustHave: 3, niceToHave: 1, catalyst: 1, transmog: 1 } },
+    assignments: previewPlannerParty, vacancies: [vacancy],
+    lootSummary: { weightedScore: 128 - rank * 7, playersWithObjectives: 4, totalObjectives: previewPlannerParty.reduce((total, assignment) => total + assignment.objectives.length, 0), tierCounts: { bestInSlot: 2, mustHave: 3, niceToHave: 1, catalyst: 1, transmog: 1 } },
     levelSummary: { targetLevel: request.targetLevel, stoneLevel: stone.level, levelDistance: Math.abs(request.targetLevel - stone.level) },
-    preferenceSummary: { preferred: 5, available: 0, emergency: 0 },
+    preferenceSummary: { preferred: 4, available: 0, emergency: 0 },
     compositionSummary: {
       criticalRolesCovered: 2,
       bloodlust: "guaranteed", battleRez: "guaranteed", damageProfile: "mixed",
@@ -132,8 +217,20 @@ function previewPlannerRecommendation(rank: number, request: KeystonePlannerRequ
         { capabilityId: "arcane_intellect", name: "Intelecto Arcano", type: "class_buff", iconSpellId: 1459, stacking: "unique", availability: "guaranteed" },
         { capabilityId: "power_word_fortitude", name: "Palabra de poder: entereza", type: "class_buff", iconSpellId: 21562, stacking: "unique", availability: "guaranteed" },
       ],
+      ...(request.options.recommendationMode === "advanced" && request.options.groupDefense ? { groupDefensives: [
+        { capabilityId: "MAJOR_GROUP_DR", name: "Rallying Cry", spellId: 97462, availability: "guaranteed" as const, tier: "S" as const, relevance: 3, score: 1000 },
+        { capabilityId: "EXTERNAL", name: "Zephyr", spellId: 374227, availability: "conditional" as const, tier: "A" as const, relevance: 3, score: 500 },
+      ] } : {}),
+      ...(request.options.recommendationMode === "advanced" && request.options.dungeonUtility ? { dungeonUtilities: [
+        { capabilityId: "INTERRUPT", name: "Pummel", spellId: 6552, availability: "guaranteed" as const, tier: "S" as const, relevance: 3, score: 1000 },
+        { capabilityId: "PURGE_MAGIC", name: "Purge", spellId: 370, availability: "guaranteed" as const, tier: "A" as const, relevance: 3, score: 1000 },
+        { capabilityId: "SOOTHE", name: "Soothe", spellId: 2908, availability: "guaranteed" as const, tier: "A" as const, relevance: 2, score: 667 },
+        { capabilityId: "AOE_STOP", name: "Chaos Nova", spellId: 179057, availability: "conditional" as const, tier: "A" as const, relevance: 2, score: 333 },
+        { capabilityId: "DISPEL_CURSE", name: "Remove Curse", spellId: 475, availability: "guaranteed" as const, tier: "B" as const, relevance: 1, score: 333 },
+        { capabilityId: "ST_STOP", name: "Imprison", spellId: 217832, availability: "conditional" as const, tier: "B" as const, relevance: 1, score: 167 },
+      ] } : {}),
     },
-    reasonCodes: ["PARTY_COMPLETE", "HAS_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT", "BLOODLUST_GUARANTEED", "BATTLE_REZ_PRESENT"],
+    reasonCodes: ["PARTY_INCOMPLETE", "HAS_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT", "BLOODLUST_GUARANTEED", "BATTLE_REZ_PRESENT"],
   };
 }
 

@@ -14,6 +14,11 @@ describe("WoW Planner icon catalog", () => {
     expect(wowSpecializationIconUrl(999_999)).toBeNull();
   });
 
+  it("maps the two Monk damage and healing specialization artworks correctly", () => {
+    expect(wowSpecializationIconUrl(269)).toBe("https://render.worldofwarcraft.com/eu/icons/56/608953.jpg");
+    expect(wowSpecializationIconUrl(270)).toBe("https://render.worldofwarcraft.com/eu/icons/56/608952.jpg");
+  });
+
   it("orders tank specializations before healers and damage dealers", () => {
     expect(specializationsForClass("Druid").map(specialization => `${specialization.role}:${specialization.name}`)).toEqual([
       "tank:Guardian", "healer:Restoration", "dps:Balance", "dps:Feral",

@@ -1,0 +1,12 @@
+{
+  "components": ["client", "worker"],
+  "type": "patch",
+  "category": "added",
+  "summary": "Permite calcular el Planner con o sin completar los huecos de la composición.",
+  "details": [
+    "Añade un switch Rellenar la composición antes del selector Quick/Advanced y lo mantiene activado por defecto.",
+    "Cuando se desactiva, el Worker ordena únicamente a los miembros elegidos y no devuelve tarjetas externas.",
+    "Centra las tarjetas restantes por filas de Tank/Healer y DPS cuando el grupo está incompleto.",
+    "Oculta la barra de scroll del panel lateral y muestra una flecha overlay sólo mientras queda contenido inferior."
+  ]
+}

@@ -12,6 +12,23 @@ const off = {
   damageSynergy: false,
 }
 
+const quick = {
+  optimizeComposition: true,
+  recommendationMode: 'quick',
+  bloodlust: true,
+  battleRez: true,
+  offensiveSynergy: true,
+  groupDefense: false,
+  dungeonUtility: false,
+}
+
+const advanced = {
+  ...quick,
+  recommendationMode: 'advanced',
+  groupDefense: true,
+  dungeonUtility: true,
+}
+
 function objective(itemId, tier, overrides = {}) {
   return {
     itemId,
@@ -139,6 +156,230 @@ test('preferred beats available and available beats emergency at equal higher cr
   assert.equal(available.assignments.find(entry => entry.userId === 3).specId, 261)
 })
 
+test('modern Quick returns jointly ranked classes while Advanced returns exact specs', () => {
+  const candidates = [candidate(1, 104), candidate(2, 105), candidate(3, 251)]
+  const quickResult = solveKeystonePlanner(input(candidates, {
+    options: quick,
+    stones: [stone({ challengeMapId: 586 })],
+  }))
+  assert.equal(quickResult.status, 'ok')
+  assert.equal(quickResult.recommendations.length, 5)
+  assert.equal(quickResult.recommendations.every(recommendation => recommendation.vacancies.every(vacancy =>
+    vacancy.recommendationMode === 'quick' && vacancy.recommendedClass && vacancy.recommendedSpecId === undefined)), true)
+  for (const recommendation of quickResult.recommendations) {
+    for (const vacancy of recommendation.vacancies) {
+      assert.ok(vacancy.recommendations.length > 0)
+      assert.equal(vacancy.recommendations[0].wowClass, vacancy.recommendedClass)
+      for (const alternative of vacancy.recommendations) {
+        assert.equal(alternative.specId, undefined)
+        assert.equal(typeof alternative.id, 'string')
+        assert.equal(typeof alternative.offensiveGainPct, 'number')
+        assert.ok(alternative.buffsDebuffs.every(capability => Number.isInteger(capability.spellId)))
+        assert.ok(alternative.utilities.every(capability => Number.isInteger(capability.spellId)))
+      }
+    }
+  }
+  assert.equal(new Set(quickResult.recommendations.map(recommendation => recommendation.fingerprint)).size, 5)
+
+  const advancedResult = solveKeystonePlanner(input(candidates, {
+    options: advanced,
+    stones: [stone({ challengeMapId: 586 })],
+  }))
+  assert.equal(advancedResult.status, 'ok')
+  assert.equal(advancedResult.recommendations.every(recommendation => recommendation.vacancies.every(vacancy =>
+    vacancy.recommendationMode === 'advanced' && Number.isInteger(vacancy.recommendedSpecId)
+      && typeof vacancy.recommendedSpecName === 'string')), true)
+  assert.equal(advancedResult.recommendations.every(recommendation => recommendation.vacancies.every(vacancy =>
+    vacancy.recommendations[0].specId === vacancy.recommendedSpecId
+      && vacancy.recommendations.every(alternative => Number.isInteger(alternative.specId)
+        && typeof alternative.specName === 'string'))), true)
+})
+
+test('modern vacancy recommendations expose party essentials supplied by their selected externals', () => {
+  const candidates = [candidate(1, 73), candidate(2, 257), candidate(3, 260)]
+  for (const options of [quick, advanced]) {
+    const recommendation = first(solveKeystonePlanner(input(candidates, {
+      options,
+      stones: [stone({ challengeMapId: 586 })],
+    })))
+    const selectedUtilityIds = new Set(recommendation.vacancies.flatMap(vacancy =>
+      vacancy.recommendations[0].utilities.map(capability => capability.capabilityId)))
+    assert.equal(selectedUtilityIds.has('BLOODLUST'), true)
+    assert.equal(selectedUtilityIds.has('BATTLE_REZ'), true)
+  }
+})
+
+test('modern optional fill can rank only selected members without external vacancies', () => {
+  const candidates = [candidate(1, 104), candidate(2, 105)]
+  const result = solveKeystonePlanner(input(candidates, {
+    options: { ...quick, fillComposition: false },
+    stones: [stone({ challengeMapId: 586 })],
+  }))
+
+  assert.equal(result.status, 'ok')
+  assert.ok(result.recommendations.length > 0)
+  assert.equal(result.recommendations.every(recommendation => recommendation.assignments.length === 2), true)
+  assert.equal(result.recommendations.every(recommendation => recommendation.vacancies.length === 0), true)
+  assert.equal(result.recommendations.every(recommendation =>
+    recommendation.reasonCodes.includes('PARTY_INCOMPLETE')), true)
+})
+
+test('Quick external DPS do not collapse to zero gain when the selected party has only supports', () => {
+  const result = solveKeystonePlanner(input([candidate(1, 250), candidate(2, 257)], {
+    options: quick,
+    stones: [stone({ challengeMapId: 586 })],
+  }))
+
+  assert.equal(result.status, 'ok')
+  assert.ok(result.recommendations.length > 0)
+  const vacancies = result.recommendations[0].vacancies
+  assert.equal(vacancies.length, 3)
+  assert.equal(vacancies.every(vacancy => vacancy.offensiveGainPct > 0), true)
+  assert.equal(vacancies.every(vacancy => vacancy.recommendations.length < 13), true)
+})
+
+test('modern recommendations collapse equivalent external completions and expose only their stratum', () => {
+  const result = solveKeystonePlanner(input([
+    candidate(1, 66), candidate(2, 257), candidate(3, 265), candidate(4, 266),
+  ], {
+    options: advanced,
+    stones: [stone({ challengeMapId: 588 })],
+  }))
+
+  assert.equal(result.status, 'ok')
+  assert.ok(result.recommendations.length > 1)
+  const firstVacancy = result.recommendations[0].vacancies[0]
+  assert.deepEqual(firstVacancy.recommendations.map(alternative => alternative.specId), [62, 63, 64])
+  assert.equal(firstVacancy.recommendedSpecId, 62)
+  assert.equal(result.recommendations.length <= 5, true)
+})
+
+test('modern vacancy alternatives expose presentation-safe damage profiles', () => {
+  const candidates = [candidate(1, 66), candidate(2, 257), candidate(3, 265), candidate(4, 266)]
+  const advancedResult = first(solveKeystonePlanner(input(candidates, {
+    options: { ...advanced, optimizeComposition: false },
+    stones: [stone({ challengeMapId: 588 })],
+  })))
+  const advancedAlternatives = advancedResult.vacancies[0].recommendations
+  assert.equal(advancedAlternatives.find(item => item.specId === 102)?.damageProfile, 'magical')
+  assert.equal(advancedAlternatives.find(item => item.specId === 103)?.damageProfile, 'physical')
+  assert.equal(advancedAlternatives.find(item => item.specId === 71)?.damageProfile, 'physical')
+
+  const quickResult = first(solveKeystonePlanner(input(candidates, {
+    options: { ...quick, optimizeComposition: false },
+    stones: [stone({ challengeMapId: 588 })],
+  })))
+  const quickAlternatives = quickResult.vacancies[0].recommendations
+  assert.equal(quickAlternatives.find(item => item.wowClass === 'Mage')?.damageProfile, 'magical')
+  assert.equal(quickAlternatives.find(item => item.wowClass === 'Warrior')?.damageProfile, 'physical')
+  assert.equal(quickAlternatives.find(item => item.wowClass === 'Druid')?.damageProfile, 'mixed')
+})
+
+test('Advanced recommendations expose ranked group-defense and dungeon-utility abilities', () => {
+  const recommendation = first(solveKeystonePlanner(input(completeParty(), {
+    options: advanced,
+    stones: [stone({ challengeMapId: 588 })],
+  })))
+
+  assert.ok(recommendation.compositionSummary.groupDefensives.length > 0)
+  assert.ok(recommendation.compositionSummary.dungeonUtilities.length > 4)
+  for (const capability of [
+    ...recommendation.compositionSummary.groupDefensives,
+    ...recommendation.compositionSummary.dungeonUtilities,
+  ]) {
+    assert.equal(typeof capability.name, 'string')
+    assert.equal(Number.isInteger(capability.spellId), true)
+    assert.match(capability.tier, /^[SABC]$/u)
+    assert.equal(Number.isInteger(capability.relevance), true)
+    assert.equal(Number.isInteger(capability.score), true)
+  }
+})
+
+test('modern incomplete-party presentation stays within a bounded solver budget', () => {
+  const holder = [250, 251, 252].map(specId => candidate(1, specId, { characterId: 10 }))
+  const alternatives = [105, 66, 260, 62, 253, 267, 577, 263]
+  const candidates = [
+    ...holder,
+    ...[2, 3, 4].flatMap(userId => alternatives.map((specId, index) => candidate(userId, specId, {
+      characterId: userId * 100 + index,
+    }))),
+  ]
+  const startedAt = performance.now()
+  const result = solveKeystonePlanner(input(candidates, {
+    participantUserIds: [1, 2, 3, 4],
+    options: advanced,
+    stones: [stone({ challengeMapId: 586 })],
+  }))
+  const elapsedMs = performance.now() - startedAt
+
+  assert.equal(result.status, 'ok')
+  assert.equal(result.recommendations.length, 5)
+  assert.equal(result.recommendations.every(recommendation => recommendation.vacancies.every(vacancy =>
+    vacancy.recommendations.length > 0)), true)
+  assert.ok(elapsedMs < 350, `dense modern solve took ${elapsedMs.toFixed(1)}ms`)
+})
+
+test('dense solves evaluate each candidate loot source at most once per dungeon', () => {
+  let objectiveIterations = 0
+  const trackedObjectives = (specId, itemId) => new Proxy([
+    objective(itemId, 3, { specId }),
+  ], {
+    get(target, property, receiver) {
+      if (property !== Symbol.iterator) return Reflect.get(target, property, receiver)
+      return function iterator() {
+        objectiveIterations += 1
+        return target[Symbol.iterator]()
+      }
+    },
+  })
+  const holder = [250, 251, 252].map((specId, index) => candidate(1, specId, {
+    characterId: 10,
+    objectives: trackedObjectives(specId, 1000 + index),
+  }))
+  const alternatives = [105, 66, 260, 62, 253, 267, 577, 263]
+  const candidates = [
+    ...holder,
+    ...[2, 3, 4].flatMap(userId => alternatives.map((specId, index) => candidate(userId, specId, {
+      characterId: userId * 100 + index,
+      objectives: trackedObjectives(specId, userId * 1000 + index),
+    }))),
+  ]
+
+  const result = solveKeystonePlanner(input(candidates, {
+    participantUserIds: [1, 2, 3, 4],
+    options: quick,
+  }))
+
+  assert.equal(result.status, 'ok')
+  assert.ok(objectiveIterations <= candidates.length,
+    `candidate objective sources were scanned ${objectiveIterations} times for ${candidates.length} candidates`)
+})
+
+test('modern explanations stay neutral when composition optimization is disabled', () => {
+  const result = solveKeystonePlanner(input([
+    candidate(1, 104), candidate(2, 105), candidate(3, 251),
+  ], { options: { ...quick, optimizeComposition: false } }))
+  assert.equal(result.status, 'ok')
+  assert.equal(result.recommendations.every(recommendation => recommendation.vacancies.every(vacancy =>
+    vacancy.offensiveGainPct === 0
+      && vacancy.offensiveBand === 0
+      && vacancy.offensiveReasons.length === 0
+      && vacancy.defensiveContribution.tiers.S === 0
+      && vacancy.dungeonUtilityContribution.tiers.S === 0)), true)
+})
+
+test('modern equivalence bands return loot to the foreground before exact offensive gain', () => {
+  const richerLoot = candidate(3, 251, { objectives: [objective(777, 1, { specId: 251, sourceId: 100 })] })
+  const alternatives = [
+    candidate(1, 104), candidate(2, 105),
+    richerLoot,
+    candidate(3, 72, { characterId: 31, characterName: 'lower-loot-warrior' }),
+  ]
+  const result = first(solveKeystonePlanner(input(alternatives, { options: quick })))
+  assert.equal(result.assignments.find(assignment => assignment.userId === 3)?.specId, 251)
+  assert.equal(result.lootSummary.weightedScore > 0, true)
+})
+
 test('available critical role beats preferred DPS when it is the only support option', () => {
   const recommendation = first(solveKeystonePlanner(input([
     candidate(1, 66, { playPreference: 'available' }),
@@ -178,6 +419,27 @@ test('same-armor party synergy breaks an otherwise equal tank assignment tie', (
   assert.equal(recommendation.assignments.find(entry => entry.userId === 1).specId, 104)
   assert.equal(recommendation.compositionSummary.armorSynergy.pairs, 6)
   assert.equal(recommendation.compositionSummary.armorSynergy.dominantType, 'leather')
+})
+
+test('modern loot ranking precedes the same-armor sharing heuristic', () => {
+  const recommendation = first(solveKeystonePlanner(input([
+    candidate(1, 104, { playPreference: 'available' }),
+    candidate(1, 250, {
+      characterId: 11,
+      playPreference: 'available',
+      objectives: [objective(778, 1, { specId: 250, sourceId: 100 })],
+    }),
+    candidate(2, 260, { playPreference: 'preferred' }),
+    candidate(3, 259, { playPreference: 'preferred' }),
+    candidate(4, 269, { playPreference: 'preferred' }),
+  ], {
+    participantUserIds: [1, 2, 3, 4],
+    options: { ...quick, optimizeComposition: false },
+    stones: [stone({ ownerUserId: 2, characterId: 20 })],
+  })))
+
+  assert.equal(recommendation.assignments.find(entry => entry.userId === 1).specId, 250)
+  assert.equal(recommendation.lootSummary.weightedScore > 0, true)
 })
 
 test('emergency can save the only valid party', () => {
@@ -456,11 +718,62 @@ test('null affinity is neutral and damage profile covers magical physical mixed 
   }
 })
 
-test('incomplete DPS vacancy recommends Bloodlust without naming a class', () => {
+test('incomplete DPS vacancy recommends Bloodlust classes once with guaranteed providers first', () => {
   const recommendation = first(solveKeystonePlanner(input([
     candidate(1, 104), candidate(2, 105), candidate(3, 260), candidate(4, 258),
   ], { options: { ...off, optimizeComposition: true, bloodlust: true } })))
-  assert.deepEqual(recommendation.vacancies, [{ role: 'dps', preferredCapabilities: ['BLOODLUST'] }])
+  const vacancy = recommendation.vacancies[0]
+  assert.deepEqual(vacancy.preferredCapabilities, ['BLOODLUST'])
+  assert.deepEqual(vacancy.candidateClasses.slice(0, 4).map(item => item.wowClass), [
+    'Evoker', 'Mage', 'Shaman', 'Hunter',
+  ])
+  assert.equal(new Set(vacancy.candidateClasses.map(item => item.wowClass)).size, vacancy.candidateClasses.length)
+  assert.deepEqual(vacancy.candidateClasses[0].contributions.find(
+    contribution => contribution.capabilityId === 'BLOODLUST',
+  ), { capabilityId: 'BLOODLUST', availability: 'guaranteed' })
+  assert.deepEqual(vacancy.candidateClasses[3].contributions.find(
+    contribution => contribution.capabilityId === 'BLOODLUST',
+  ), { capabilityId: 'BLOODLUST', availability: 'conditional' })
+})
+
+test('external offensive recommendations compare effective magical and physical beneficiaries', () => {
+  const magical = first(solveKeystonePlanner(input([
+    candidate(1, 66), candidate(2, 257), candidate(3, 265), candidate(4, 266),
+  ], { options: { ...off, optimizeComposition: true, classBuffs: true, damageSynergy: true } })))
+  const magicalClasses = magical.vacancies[0].candidateClasses.map(item => item.wowClass)
+  assert.ok(magicalClasses.indexOf('Mage') < magicalClasses.indexOf('Warrior'))
+  assert.ok(magicalClasses.indexOf('Demon Hunter') < magicalClasses.indexOf('Warrior'))
+  assert.ok(magicalClasses.indexOf('Warrior') < magicalClasses.indexOf('Rogue'))
+
+  const physical = first(solveKeystonePlanner(input([
+    candidate(1, 66), candidate(2, 257), candidate(3, 260), candidate(4, 103),
+  ], { options: { ...off, optimizeComposition: true, classBuffs: true, damageSynergy: true } })))
+  const physicalClasses = physical.vacancies[0].candidateClasses.map(item => item.wowClass)
+  assert.ok(physicalClasses.indexOf('Monk') < physicalClasses.indexOf('Mage'))
+  assert.ok(physicalClasses.indexOf('Warrior') < physicalClasses.indexOf('Mage'))
+})
+
+test('external vacancies expose role-compatible classes without specialization IDs', () => {
+  const recommendation = first(solveKeystonePlanner(input([
+    candidate(1, 104), candidate(2, 260),
+  ], { options: { ...off, optimizeComposition: true, bloodlust: true, battleRez: true } })))
+  assert.deepEqual(recommendation.vacancies.map(item => item.role), ['healer', 'dps', 'dps'])
+  for (const vacancy of recommendation.vacancies) {
+    assert.ok(vacancy.candidateClasses.length > 0)
+    assert.equal('recommendations' in vacancy, false)
+    assert.equal(new Set(vacancy.candidateClasses.map(item => item.wowClass)).size, vacancy.candidateClasses.length)
+    assert.ok(vacancy.candidateClasses.every(item => !('specId' in item) && !('specIds' in item)))
+  }
+})
+
+test('disabled composition optimization uses stable class order for external vacancies', () => {
+  const recommendation = first(solveKeystonePlanner(input([
+    candidate(1, 104), candidate(2, 105), candidate(3, 260), candidate(4, 258),
+  ], { options: off })))
+  assert.deepEqual(recommendation.vacancies[0].candidateClasses.map(item => item.wowClass), [
+    'Death Knight', 'Demon Hunter', 'Druid', 'Evoker', 'Hunter', 'Mage', 'Monk', 'Paladin', 'Priest',
+    'Rogue', 'Shaman', 'Warlock', 'Warrior',
+  ])
 })
 
 test('assignment character and role locks constrain candidates', () => {

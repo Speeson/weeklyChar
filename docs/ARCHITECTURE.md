@@ -122,8 +122,15 @@ Owns:
 - The centralized Planner composition domain in `keystone-worker/src/wowComposition.ts`, including
   Retail specs, derived roles, conservative damage affinity, and unique capability providers.
 - The pure deterministic Planner solver in `keystone-worker/src/keystonePlanner.ts`, including
-  holder-aware role-constrained search, critical-role/preference/utility/armor/loot ranking, locks,
-  vacancies, and Top 5.
+  holder-aware role-constrained search, critical-role/preference/composition-band/loot ranking,
+  locks, jointly completed external vacancies, and Top 5.
+- Generated Planner ranking data and its pure vacancy scorer in
+  `keystone-worker/src/plannerRankingDataGenerated.ts` and
+  `keystone-worker/src/plannerVacancyScoring.ts`. Modern Quick recommendations resolve classes;
+  Advanced recommendations resolve exact specs. Both preserve loot as the primary criterion inside
+  equivalent composition bands. Their additive `fillComposition` option can instead rank only the
+  selected members; omission remains equivalent to enabled so older modern clients keep their
+  external-completion behavior.
 - The Planner Team/D1 adapter and public projection in `keystone-worker/src/keystonePlannerApi.ts`,
   exposed through authenticated `POST /api/teams/:teamId/keystone-planner`.
 - JWT-only owner preference reads and atomic replacement writes at

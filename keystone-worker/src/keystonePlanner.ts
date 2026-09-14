@@ -15,15 +15,39 @@ import type {
   WowArmorType,
   WowClassName,
   WowDamageProfile,
+  WowPrimaryStat,
   WowRole,
 } from './wowComposition'
+import {
+  assignOffensiveBands,
+  assignTierVectorBands,
+  rankVacancyAlternatives,
+  rankVacancyCompletions,
+  scoreAdvancedOffensive,
+  scoreDungeonUtility,
+  scoreGroupDefense,
+} from './plannerVacancyScoring'
+import { OFFENSIVE_PROVIDER_BY_CLASS, dungeonRelevance, utilityEntriesForSpec } from './plannerRankingData'
+import type {
+  ModernRecommendationMode,
+  RankedVacancyCompletion,
+  ScoredUtilityCapability,
+  TierVector,
+  VacancyScoringOptions,
+  VacancySelection,
+} from './plannerVacancyScoring'
 
 export type PlannerOptions = {
   optimizeComposition: boolean
   bloodlust: boolean
   battleRez: boolean
-  classBuffs: boolean
-  damageSynergy: boolean
+  classBuffs?: boolean
+  damageSynergy?: boolean
+  recommendationMode?: ModernRecommendationMode
+  fillComposition?: boolean
+  offensiveSynergy?: boolean
+  groupDefense?: boolean
+  dungeonUtility?: boolean
 }
 
 export type PlannerObjective = {
@@ -116,6 +140,89 @@ export type PlannerTierCounts = {
 export type PlannerVacancy = {
   role: WowRole
   preferredCapabilities: CapabilityId[]
+  candidateClasses?: PlannerExternalClassCandidate[]
+  recommendationMode?: ModernRecommendationMode
+  recommendedClass?: WowClassName
+  recommendedSpecId?: number
+  recommendedSpecName?: string
+  offensiveGainPct?: number
+  offensiveBand?: number
+  offensiveReasons?: string[]
+  offensiveProvenance?: Array<{
+    specId: number
+    source: 'simc' | 'archetype_estimate'
+    confidence: 'high' | 'medium' | 'low'
+    method?: string
+    donorSpecIds?: number[]
+  }>
+  defensiveContribution?: { tiers: TierVector, reasons: string[] }
+  defensiveBand?: number
+  dungeonUtilityContribution?: { tiers: TierVector, reasons: string[] }
+  dungeonUtilityBand?: number
+  recommendations?: PlannerVacancyRecommendation[]
+}
+
+export type PlannerVacancyCapability = {
+  capabilityId: string
+  name: string
+  spellId: number
+  availability: Exclude<CapabilityAvailability, 'none'>
+}
+
+export type PlannerAdvancedUtilityCapability = PlannerVacancyCapability & {
+  tier: 'S' | 'A' | 'B' | 'C'
+  relevance: number
+  score: number
+}
+
+export type PlannerVacancyRecommendation = {
+  id: string
+  wowClass: WowClassName
+  specId?: number
+  specName?: string
+  damageProfile: Exclude<WowDamageProfile, null> | 'mixed' | 'unknown'
+  offensiveGainPct: number
+  buffsDebuffs: PlannerVacancyCapability[]
+  utilities: PlannerVacancyCapability[]
+  groupDefensives?: PlannerAdvancedUtilityCapability[]
+  dungeonUtilities?: PlannerAdvancedUtilityCapability[]
+}
+
+function vacancySelectionDamageProfile(
+  selection: VacancySelection,
+): PlannerVacancyRecommendation['damageProfile'] {
+  if (selection.role !== 'dps') return 'unknown'
+  if (selection.specId) return wowSpecialization(selection.specId)?.damageProfile ?? 'unknown'
+
+  const profiles = WOW_SPECIALIZATIONS
+    .filter(spec => spec.role === 'dps' && spec.wowClass === selection.wowClass)
+    .map(spec => spec.damageProfile)
+  const knownProfiles = new Set(profiles.filter(
+    (profile): profile is Exclude<WowDamageProfile, null> => profile !== null,
+  ))
+  if (knownProfiles.size > 1) return 'mixed'
+  if (knownProfiles.size === 1 && profiles.every(profile => profile !== null)) {
+    return [...knownProfiles][0]
+  }
+  return 'unknown'
+}
+
+export type PlannerExternalClassReasonCode =
+  | 'PROVIDES_BLOODLUST'
+  | 'PROVIDES_BATTLE_REZ'
+  | 'BUFFS_INTELLECT'
+  | 'BUFFS_ATTACK_POWER'
+  | 'AMPLIFIES_MAGICAL_DAMAGE'
+  | 'AMPLIFIES_PHYSICAL_DAMAGE'
+  | 'ADDS_CLASS_BUFF'
+
+export type PlannerExternalClassCandidate = {
+  wowClass: WowClassName
+  contributions: Array<{
+    capabilityId: CapabilityId
+    availability: Exclude<CapabilityAvailability, 'none'>
+  }>
+  reasonCodes: PlannerExternalClassReasonCode[]
 }
 
 export type PlannerCompositionSummary = {
@@ -138,6 +245,8 @@ export type PlannerCompositionSummary = {
     dominantType: WowArmorType | null
     counts: Record<WowArmorType, number>
   }
+  groupDefensives?: PlannerAdvancedUtilityCapability[]
+  dungeonUtilities?: PlannerAdvancedUtilityCapability[]
 }
 
 export type PlannerReasonCode =
@@ -205,7 +314,27 @@ type NormalizedCandidate = PlannerCandidate & {
 }
 
 type RoleCounts = Record<WowRole, number>
-type UnrankedRecommendation = Omit<KeystonePlannerRecommendation, 'rank'>
+type ExternalCompletionScore = {
+  bloodlust: number
+  battleRez: number
+  effectiveOffensiveBeneficiaries: number
+  newClassCapabilities: number
+}
+
+type UnrankedRecommendation = Omit<KeystonePlannerRecommendation, 'rank'> & {
+  externalCompletionScore: ExternalCompletionScore
+  modernCompletion: RankedVacancyCompletion | null
+}
+
+type ModernCompletionCache = Map<string, readonly RankedVacancyCompletion[]>
+type CandidateLootEvaluation = {
+  assignment: PlannerAssignment
+  weightedScore: number
+  hasObjectives: boolean
+  totalObjectives: number
+  tierCounts: PlannerTierCounts
+}
+type CandidateLootCache = Map<string, CandidateLootEvaluation>
 
 const ROLE_CAPACITY: Readonly<RoleCounts> = { tank: 1, healer: 1, dps: 3 }
 const ROLE_ORDER: readonly WowRole[] = ['tank', 'healer', 'dps']
@@ -401,13 +530,192 @@ function roleCanProvide(role: WowRole, capabilityId: CapabilityId): boolean {
     && capabilitiesForSpec(spec.id).some(capability => capability.capabilityId === capabilityId))
 }
 
+type ExternalSpec = {
+  wowClass: WowClassName
+  role: WowRole
+  damageProfile: WowDamageProfile
+  primaryStat: WowPrimaryStat
+  capabilities: readonly ResolvedCapability[]
+}
+
+type ExternalCompletion = {
+  specs: readonly ExternalSpec[]
+  score: ExternalCompletionScore
+}
+
+const EMPTY_EXTERNAL_SCORE: Readonly<ExternalCompletionScore> = {
+  bloodlust: 0,
+  battleRez: 0,
+  effectiveOffensiveBeneficiaries: 0,
+  newClassCapabilities: 0,
+}
+
+function compareExternalScores(left: ExternalCompletionScore, right: ExternalCompletionScore): number {
+  return compareDescending(left.bloodlust, right.bloodlust)
+    || compareDescending(left.battleRez, right.battleRez)
+    || compareDescending(left.effectiveOffensiveBeneficiaries, right.effectiveOffensiveBeneficiaries)
+    || compareDescending(left.newClassCapabilities, right.newClassCapabilities)
+}
+
+function aggregateExternalCapabilities(
+  existing: readonly NormalizedCandidate[],
+  external: readonly ExternalSpec[],
+): Map<CapabilityId, Exclude<CapabilityAvailability, 'none'>> {
+  const availability = aggregateCapabilityAvailability(existing)
+  for (const member of external) {
+    for (const capability of member.capabilities) {
+      const current = availability.get(capability.capabilityId)
+      if (current !== 'guaranteed') availability.set(capability.capabilityId, capability.mode)
+    }
+  }
+  return availability
+}
+
+function externalCompletionScore(
+  existing: readonly NormalizedCandidate[],
+  external: readonly ExternalSpec[],
+  options: PlannerOptions,
+): ExternalCompletionScore {
+  if (!options.optimizeComposition) return { ...EMPTY_EXTERNAL_SCORE }
+  const availability = aggregateExternalCapabilities(existing, external)
+  const dps = [
+    ...existing.filter(candidate => candidate.specialization.role === 'dps').map(candidate => candidate.specialization),
+    ...external.filter(candidate => candidate.role === 'dps'),
+  ]
+  let effectiveOffensiveBeneficiaries = 0
+  if (options.classBuffs) {
+    if (availability.has('ARCANE_INTELLECT')) {
+      effectiveOffensiveBeneficiaries += dps.filter(member => member.primaryStat === 'intellect').length
+    }
+    if (availability.has('BATTLE_SHOUT')) {
+      effectiveOffensiveBeneficiaries += dps.filter(member => member.primaryStat === 'attack_power').length
+    }
+  }
+  if (options.damageSynergy) {
+    if (availability.has('CHAOS_BRAND')) {
+      effectiveOffensiveBeneficiaries += dps.filter(member => member.damageProfile === 'magical').length
+    }
+    if (availability.has('MYSTIC_TOUCH')) {
+      effectiveOffensiveBeneficiaries += dps.filter(member => member.damageProfile === 'physical').length
+    }
+  }
+  const enabledCapabilityTypes = new Set<string>()
+  if (options.classBuffs) enabledCapabilityTypes.add('class_buff')
+  if (options.damageSynergy) enabledCapabilityTypes.add('damage_debuff')
+  return {
+    bloodlust: options.bloodlust
+      ? AVAILABILITY_RANK[capabilityStatus(availability, 'BLOODLUST')]
+      : 0,
+    battleRez: options.battleRez
+      ? AVAILABILITY_RANK[capabilityStatus(availability, 'BATTLE_REZ')]
+      : 0,
+    effectiveOffensiveBeneficiaries,
+    newClassCapabilities: WOW_CAPABILITIES.filter(definition =>
+      enabledCapabilityTypes.has(definition.type) && availability.has(definition.id)).length,
+  }
+}
+
+function externalSpecsForRole(role: WowRole): ExternalSpec[] {
+  return WOW_SPECIALIZATIONS.filter(spec => spec.role === role).map(spec => ({
+    wowClass: spec.wowClass,
+    role: spec.role,
+    damageProfile: spec.damageProfile,
+    primaryStat: spec.primaryStat,
+    capabilities: capabilitiesForSpec(spec.id),
+  }))
+}
+
+function enumerateExternalCompletions(
+  roles: readonly WowRole[],
+  existing: readonly NormalizedCandidate[],
+  options: PlannerOptions,
+): ExternalCompletion[] {
+  const completions: ExternalCompletion[] = []
+  const selected: ExternalSpec[] = []
+  const visit = (index: number) => {
+    if (index === roles.length) {
+      completions.push({ specs: [...selected], score: externalCompletionScore(existing, selected, options) })
+      return
+    }
+    for (const candidate of externalSpecsForRole(roles[index])) {
+      selected.push(candidate)
+      visit(index + 1)
+      selected.pop()
+    }
+  }
+  visit(0)
+  return completions
+}
+
+function externalClassContributions(role: WowRole, wowClass: WowClassName): PlannerExternalClassCandidate['contributions'] {
+  const eligibleSpecs = externalSpecsForRole(role).filter(spec => spec.wowClass === wowClass)
+  return WOW_CAPABILITIES.flatMap(definition => {
+    const providers = eligibleSpecs.map(spec => spec.capabilities.find(capability =>
+      capability.capabilityId === definition.id))
+    const present = providers.filter((provider): provider is ResolvedCapability => provider !== undefined)
+    if (present.length === 0) return []
+    const availability = present.length === eligibleSpecs.length
+      && present.every(provider => provider.mode === 'guaranteed') ? 'guaranteed' : 'conditional'
+    return [{ capabilityId: definition.id, availability }]
+  })
+}
+
+function externalReasonCodes(
+  contributions: PlannerExternalClassCandidate['contributions'],
+): PlannerExternalClassReasonCode[] {
+  const capabilities = new Set(contributions.map(contribution => contribution.capabilityId))
+  const reasons: PlannerExternalClassReasonCode[] = []
+  if (capabilities.has('BLOODLUST')) reasons.push('PROVIDES_BLOODLUST')
+  if (capabilities.has('BATTLE_REZ')) reasons.push('PROVIDES_BATTLE_REZ')
+  if (capabilities.has('ARCANE_INTELLECT')) reasons.push('BUFFS_INTELLECT')
+  if (capabilities.has('BATTLE_SHOUT')) reasons.push('BUFFS_ATTACK_POWER')
+  if (capabilities.has('CHAOS_BRAND')) reasons.push('AMPLIFIES_MAGICAL_DAMAGE')
+  if (capabilities.has('MYSTIC_TOUCH')) reasons.push('AMPLIFIES_PHYSICAL_DAMAGE')
+  if (contributions.some(contribution => WOW_CAPABILITIES.some(definition =>
+    definition.id === contribution.capabilityId && definition.type === 'class_buff'
+      && !['ARCANE_INTELLECT', 'BATTLE_SHOUT'].includes(definition.id)))) {
+    reasons.push('ADDS_CLASS_BUFF')
+  }
+  return reasons
+}
+
+function rankedExternalClasses(
+  role: WowRole,
+  vacancyIndex: number,
+  completions: readonly ExternalCompletion[],
+): PlannerExternalClassCandidate[] {
+  const bestByClass = new Map<WowClassName, ExternalCompletionScore>()
+  for (const completion of completions) {
+    const wowClass = completion.specs[vacancyIndex]?.wowClass
+    if (!wowClass) continue
+    const current = bestByClass.get(wowClass)
+    if (!current || compareExternalScores(completion.score, current) < 0) {
+      bestByClass.set(wowClass, completion.score)
+    }
+  }
+  return [...bestByClass.entries()]
+    .sort(([leftClass, leftScore], [rightClass, rightScore]) =>
+      compareExternalScores(leftScore, rightScore) || leftClass.localeCompare(rightClass))
+    .map(([wowClass]) => {
+      const contributions = externalClassContributions(role, wowClass)
+      return { wowClass, contributions, reasonCodes: externalReasonCodes(contributions) }
+    })
+}
+
 function vacanciesFor(
   roleCounts: Readonly<RoleCounts>,
   summary: PlannerCompositionSummary,
   options: PlannerOptions,
-): PlannerVacancy[] {
-  const vacancies = vacancyRoles(roleCounts).map(role => ({ role, preferredCapabilities: [] as CapabilityId[] }))
-  if (!options.optimizeComposition) return vacancies
+  existing: readonly NormalizedCandidate[],
+): { vacancies: PlannerVacancy[], bestScore: ExternalCompletionScore } {
+  const roles = vacancyRoles(roleCounts)
+  const completions = enumerateExternalCompletions(roles, existing, options)
+  const vacancies = roles.map((role, index) => ({
+    role,
+    preferredCapabilities: [] as CapabilityId[],
+    candidateClasses: rankedExternalClasses(role, index, completions),
+  }))
+  if (!options.optimizeComposition) return { vacancies, bestScore: { ...EMPTY_EXTERNAL_SCORE } }
   const requested: CapabilityId[] = []
   if (options.bloodlust && summary.bloodlust === 'none') requested.push('BLOODLUST')
   if (options.battleRez && summary.battleRez === 'none') requested.push('BATTLE_REZ')
@@ -415,7 +723,256 @@ function vacanciesFor(
     const vacancy = vacancies.find(candidate => roleCanProvide(candidate.role, capabilityId))
     if (vacancy) vacancy.preferredCapabilities.push(capabilityId)
   }
-  return vacancies
+  const bestScore = completions.sort((left, right) => compareExternalScores(left.score, right.score))[0]?.score
+    ?? { ...EMPTY_EXTERNAL_SCORE }
+  return { vacancies, bestScore }
+}
+
+function isModernOptions(options: PlannerOptions): options is PlannerOptions & {
+  recommendationMode: ModernRecommendationMode
+} {
+  return options.recommendationMode === 'quick' || options.recommendationMode === 'advanced'
+}
+
+function shouldFillComposition(options: PlannerOptions): boolean {
+  return !isModernOptions(options) || options.fillComposition !== false
+}
+
+const UTILITY_TIER_RANK = { S: 4, A: 3, B: 2, C: 1 } as const
+
+function vacancyScoringOptions(options: PlannerOptions & {
+  recommendationMode: ModernRecommendationMode
+}): VacancyScoringOptions {
+  return {
+    mode: options.recommendationMode,
+    bloodlust: options.optimizeComposition && options.bloodlust,
+    battleRez: options.optimizeComposition && options.battleRez,
+    offensiveSynergy: options.optimizeComposition && Boolean(options.offensiveSynergy),
+    groupDefense: options.optimizeComposition && Boolean(options.groupDefense),
+    dungeonUtility: options.optimizeComposition && Boolean(options.dungeonUtility),
+  }
+}
+
+function sameVacancySelection(left: VacancySelection, right: VacancySelection): boolean {
+  return left.role === right.role && left.wowClass === right.wowClass && left.specId === right.specId
+}
+
+function utilityAvailability(availability: string): Exclude<CapabilityAvailability, 'none'> {
+  return availability === 'baseline' || availability === 'spec_only' ? 'guaranteed' : 'conditional'
+}
+
+function publicScoredUtilities(
+  capabilities: readonly ScoredUtilityCapability[],
+): PlannerAdvancedUtilityCapability[] {
+  const seen = new Set<string>()
+  return capabilities.flatMap(capability => {
+    if (seen.has(capability.abilityKey)) return []
+    seen.add(capability.abilityKey)
+    const { abilityKey: _abilityKey, ...result } = capability
+    return [result]
+  })
+}
+
+function completionStratumKey(
+  completion: RankedVacancyCompletion,
+  options: PlannerOptions & { recommendationMode: ModernRecommendationMode },
+): string {
+  return JSON.stringify([
+    options.optimizeComposition && options.bloodlust ? completion.bloodlust : 0,
+    options.optimizeComposition && options.battleRez ? completion.battleRez : 0,
+    options.optimizeComposition && options.offensiveSynergy ? completion.offensiveBand : 0,
+    options.optimizeComposition && options.recommendationMode === 'advanced' && options.groupDefense
+      ? completion.defenseBand : 0,
+    options.optimizeComposition && options.recommendationMode === 'advanced' && options.dungeonUtility
+      ? completion.dungeonUtilityBand : 0,
+  ])
+}
+
+function utilityCapabilitiesForSelection(
+  selection: VacancySelection,
+  challengeMapId: number,
+): PlannerVacancyCapability[] {
+  const specIds = selection.specId ? [selection.specId] : WOW_SPECIALIZATIONS
+    .filter(spec => spec.role === selection.role && spec.wowClass === selection.wowClass)
+    .map(spec => spec.id)
+  if (specIds.length === 0) return []
+  const essentials = (['BLOODLUST', 'BATTLE_REZ'] as const).flatMap(capabilityId => {
+    const resolved = specIds.map(specId => capabilitiesForSpec(specId)
+      .find(capability => capability.capabilityId === capabilityId))
+    if (!resolved.every((capability): capability is ResolvedCapability => Boolean(capability))) return []
+    const definition = WOW_CAPABILITIES.find(capability => capability.id === capabilityId)
+    return definition ? [{
+      capabilityId,
+      name: definition.name,
+      spellId: definition.iconSpellId,
+      availability: resolved.every(capability => capability.mode === 'guaranteed')
+        ? 'guaranteed' as const : 'conditional' as const,
+    }] : []
+  })
+  const entries = specIds.flatMap(specId => utilityEntriesForSpec(specId)
+    .filter((entry): entry is typeof entry & { spellId: number } =>
+      typeof entry.spellId === 'number' && Number.isInteger(entry.spellId) && entry.spellId > 0)
+    .map(entry => ({ ...entry, specId })))
+  const byAbility = new Map<string, typeof entries>()
+  for (const entry of entries) byAbility.set(entry.abilityKey, [...(byAbility.get(entry.abilityKey) ?? []), entry])
+  const utilities = [...byAbility.values()].flatMap(group => {
+    if (!selection.specId && new Set(group.map(entry => entry.specId)).size !== specIds.length) return []
+    const representative = [...group].sort((left, right) =>
+      dungeonRelevance(challengeMapId, right.capabilityId) - dungeonRelevance(challengeMapId, left.capabilityId)
+      || UTILITY_TIER_RANK[right.tier] - UTILITY_TIER_RANK[left.tier]
+      || right.availabilityFactor - left.availabilityFactor
+      || left.capabilityId.localeCompare(right.capabilityId))[0]
+    return representative ? [{
+      capabilityId: representative.capabilityId,
+      name: representative.abilityName,
+      spellId: representative.spellId,
+      availability: group.every(entry => utilityAvailability(entry.availability) === 'guaranteed')
+        ? 'guaranteed' as const : 'conditional' as const,
+      relevance: dungeonRelevance(challengeMapId, representative.capabilityId),
+      tier: representative.tier,
+    }] : []
+  }).sort((left, right) => right.relevance - left.relevance
+    || UTILITY_TIER_RANK[right.tier] - UTILITY_TIER_RANK[left.tier]
+    || (right.availability === 'guaranteed' ? 1 : 0) - (left.availability === 'guaranteed' ? 1 : 0)
+    || left.name.localeCompare(right.name))
+    .slice(0, 8)
+    .map(({ relevance: _relevance, tier: _tier, ...capability }) => capability)
+  return [...essentials, ...utilities]
+}
+
+function buffsForSelection(
+  selection: VacancySelection,
+  existingSpecIds: readonly number[],
+  otherSelections: readonly VacancySelection[],
+): PlannerVacancyCapability[] {
+  const buffId = OFFENSIVE_PROVIDER_BY_CLASS.get(selection.wowClass)
+  if (!buffId) return []
+  const coveredClasses = new Set([
+    ...existingSpecIds.flatMap(specId => {
+      const spec = wowSpecialization(specId)
+      return spec ? [spec.wowClass] : []
+    }),
+    ...otherSelections.map(candidate => candidate.wowClass),
+  ])
+  if (coveredClasses.has(selection.wowClass)) return []
+  const capability = WOW_CAPABILITIES.find(candidate => candidate.id === buffId)
+  return capability ? [{
+    capabilityId: capability.id,
+    name: capability.name,
+    spellId: capability.iconSpellId,
+    availability: 'guaranteed',
+  }] : []
+}
+
+function vacancyRecommendations(
+  role: WowRole,
+  selected: VacancySelection,
+  otherSelections: readonly VacancySelection[],
+  existingSpecIds: readonly number[],
+  challengeMapId: number,
+  options: PlannerOptions & { recommendationMode: ModernRecommendationMode },
+): { recommendations: PlannerVacancyRecommendation[], representative: RankedVacancyCompletion | null } {
+  const scoringOptions = vacancyScoringOptions(options)
+  const ranked = rankVacancyAlternatives(
+    existingSpecIds, otherSelections, role, challengeMapId, scoringOptions,
+  )
+  const selectedCompletion = ranked.find(candidate => {
+    const alternative = candidate.selections.at(-1)
+    return Boolean(alternative && sameVacancySelection(alternative, selected))
+  })
+  const selectedStratum = completionStratumKey(selectedCompletion ?? ranked[0], options)
+  const ordered = ranked.filter(candidate => completionStratumKey(candidate, options) === selectedStratum)
+  return {
+    representative: ordered[0] ?? null,
+    recommendations: ordered.flatMap(candidate => {
+    const alternative = candidate.selections.at(-1)
+    if (!alternative) return []
+    const otherSpecIds = otherSelections.flatMap(item => item.specId ? [item.specId] : [])
+    const defensive = alternative.specId && scoringOptions.groupDefense
+      ? scoreGroupDefense([...existingSpecIds, ...otherSpecIds], [alternative.specId]) : null
+    const dungeon = alternative.specId && scoringOptions.dungeonUtility
+      ? scoreDungeonUtility([...existingSpecIds, ...otherSpecIds], [alternative.specId], challengeMapId) : null
+    return [{
+      id: `${options.recommendationMode}:${alternative.wowClass}:${alternative.specId ?? alternative.role}`,
+      wowClass: alternative.wowClass,
+      ...(alternative.specId ? { specId: alternative.specId, specName: alternative.specName } : {}),
+      damageProfile: vacancySelectionDamageProfile(alternative),
+      offensiveGainPct: candidate.offensive.gainPct,
+      buffsDebuffs: buffsForSelection(alternative, existingSpecIds, otherSelections),
+      utilities: utilityCapabilitiesForSelection(alternative, challengeMapId),
+      ...(defensive ? { groupDefensives: publicScoredUtilities(defensive.capabilities) } : {}),
+      ...(dungeon ? { dungeonUtilities: publicScoredUtilities(dungeon.capabilities) } : {}),
+    }]
+    }),
+  }
+}
+
+function modernVacancies(
+  roles: readonly WowRole[],
+  completion: RankedVacancyCompletion,
+  existingSpecIds: readonly number[],
+  challengeMapId: number,
+  options: PlannerOptions,
+): PlannerVacancy[] {
+  if (!isModernOptions(options)) return []
+  return roles.map((role, index) => {
+    const selection = completion.selections[index]
+    if (!selection) return { role, preferredCapabilities: [] }
+    const compositionScoringEnabled = options.optimizeComposition
+    const otherSelections = completion.selections.filter((_candidate, candidateIndex) => candidateIndex !== index)
+    const rankedRecommendations = vacancyRecommendations(
+      role, selection, otherSelections, existingSpecIds, challengeMapId, options,
+    )
+    const displayedSelection = rankedRecommendations.representative?.selections.at(-1) ?? selection
+    const otherCandidateSpecIds = completion.selections.flatMap((candidate, candidateIndex) =>
+      candidateIndex !== index && candidate.specId ? [candidate.specId] : [])
+    const offensive = !(compositionScoringEnabled && options.offensiveSynergy)
+      ? { gainPct: 0, recipients: [], interactions: [], reasons: [], provenance: [] }
+      : displayedSelection.specId
+        ? scoreAdvancedOffensive([...existingSpecIds, ...otherCandidateSpecIds], [displayedSelection.specId])
+        : rankedRecommendations.representative?.offensive ?? completion.offensive
+    const defense = displayedSelection.specId && compositionScoringEnabled && options.groupDefense
+      ? scoreGroupDefense([...existingSpecIds, ...otherCandidateSpecIds], [displayedSelection.specId])
+      : { tiers: { S: 0, A: 0, B: 0, C: 0 }, reasons: [], capabilities: [] }
+    const dungeonUtility = displayedSelection.specId && compositionScoringEnabled && options.dungeonUtility
+      ? scoreDungeonUtility([...existingSpecIds, ...otherCandidateSpecIds], [displayedSelection.specId], challengeMapId)
+      : { tiers: { S: 0, A: 0, B: 0, C: 0 }, reasons: [], capabilities: [] }
+    const contributions = externalClassContributions(role, displayedSelection.wowClass)
+    return {
+      role,
+      preferredCapabilities: [],
+      candidateClasses: [{
+        wowClass: displayedSelection.wowClass,
+        contributions,
+        reasonCodes: externalReasonCodes(contributions),
+      }],
+      recommendationMode: displayedSelection.specId ? 'advanced' : 'quick',
+      recommendedClass: displayedSelection.wowClass,
+      ...(displayedSelection.specId ? {
+        recommendedSpecId: displayedSelection.specId,
+        recommendedSpecName: displayedSelection.specName,
+      } : {}),
+      offensiveGainPct: offensive.gainPct,
+      offensiveBand: rankedRecommendations.representative?.offensiveBand ?? completion.offensiveBand,
+      offensiveReasons: offensive.reasons.slice(0, 8),
+      offensiveProvenance: offensive.provenance.slice(0, 5).map(item => {
+        const { donorSpecIds, ...provenance } = item
+        return { ...provenance, ...(donorSpecIds ? { donorSpecIds: [...donorSpecIds] } : {}) }
+      }),
+      defensiveContribution: {
+        tiers: { ...defense.tiers },
+        reasons: defense.reasons.slice(0, 8),
+      },
+      defensiveBand: rankedRecommendations.representative?.defenseBand ?? completion.defenseBand,
+      dungeonUtilityContribution: {
+        tiers: { ...dungeonUtility.tiers },
+        reasons: dungeonUtility.reasons.slice(0, 8),
+      },
+      dungeonUtilityBand: rankedRecommendations.representative?.dungeonUtilityBand
+        ?? completion.dungeonUtilityBand,
+      recommendations: rankedRecommendations.recommendations,
+    }
+  })
 }
 
 function assignmentFor(
@@ -438,16 +995,25 @@ function assignmentFor(
   }
 }
 
-function recommendationFingerprint(stone: PlannerStone, assignments: readonly PlannerAssignment[]): string {
+function recommendationFingerprint(
+  stone: PlannerStone,
+  assignments: readonly PlannerAssignment[],
+  vacancyKey = '',
+): string {
   return JSON.stringify({
     stone: [stone.ownerUserId, stone.characterId, stone.challengeMapId, stone.level],
     assignments: assignments.map(assignment => [
       assignment.userId, assignment.characterId, assignment.specId, assignment.lootSpecId,
     ]),
+    ...(vacancyKey ? { vacancyKey } : {}),
   })
 }
 
-function recommendationDiversityIdentity(recommendation: UnrankedRecommendation): string {
+function recommendationDiversityIdentity(
+  recommendation: UnrankedRecommendation,
+  options: PlannerOptions,
+): string {
+  const modernOptions = isModernOptions(options) ? options : null
   return JSON.stringify({
     stone: [
       recommendation.stone.ownerUserId,
@@ -468,6 +1034,9 @@ function recommendationDiversityIdentity(recommendation: UnrankedRecommendation)
         ).sort(),
       ]
     }),
+    vacancyKey: recommendation.modernCompletion && modernOptions
+      ? completionStratumKey(recommendation.modernCompletion, modernOptions)
+      : recommendation.modernCompletion?.stableKey ?? '',
   })
 }
 
@@ -486,7 +1055,7 @@ function compareStable(left: UnrankedRecommendation, right: UnrankedRecommendati
       || (leftAssignment.lootSpecId - rightAssignment.lootSpecId)
     if (assignmentComparison !== 0) return assignmentComparison
   }
-  return 0
+  return (left.modernCompletion?.stableKey ?? '').localeCompare(right.modernCompletion?.stableKey ?? '')
 }
 
 function compareDescending(left: number, right: number): number {
@@ -507,7 +1076,33 @@ function compareRecommendations(
     || compareDescending(left.preferenceSummary.available, right.preferenceSummary.available)
   if (primary !== 0) return primary
 
-  if (options.optimizeComposition) {
+  const modern = isModernOptions(options)
+  if (options.optimizeComposition && modern) {
+    const leftCompletion = left.modernCompletion
+    const rightCompletion = right.modernCompletion
+    if (leftCompletion && rightCompletion) {
+      if (options.bloodlust) {
+        const comparison = compareDescending(leftCompletion.bloodlust, rightCompletion.bloodlust)
+        if (comparison !== 0) return comparison
+      }
+      if (options.battleRez) {
+        const comparison = compareDescending(leftCompletion.battleRez, rightCompletion.battleRez)
+        if (comparison !== 0) return comparison
+      }
+      if (options.offensiveSynergy) {
+        const comparison = leftCompletion.offensiveBand - rightCompletion.offensiveBand
+        if (comparison !== 0) return comparison
+      }
+      if (options.recommendationMode === 'advanced' && options.groupDefense) {
+        const comparison = leftCompletion.defenseBand - rightCompletion.defenseBand
+        if (comparison !== 0) return comparison
+      }
+      if (options.recommendationMode === 'advanced' && options.dungeonUtility) {
+        const comparison = leftCompletion.dungeonUtilityBand - rightCompletion.dungeonUtilityBand
+        if (comparison !== 0) return comparison
+      }
+    }
+  } else if (options.optimizeComposition) {
     if (options.bloodlust) {
       const comparison = compareDescending(
         AVAILABILITY_RANK[left.compositionSummary.bloodlust],
@@ -545,13 +1140,17 @@ function compareRecommendations(
       )
       if (comparison !== 0) return comparison
     }
+    const external = compareExternalScores(left.externalCompletionScore, right.externalCompletionScore)
+    if (external !== 0) return external
   }
 
-  const armorSynergy = compareDescending(
-    left.compositionSummary.armorSynergy.pairs,
-    right.compositionSummary.armorSynergy.pairs,
-  )
-  if (armorSynergy !== 0) return armorSynergy
+  if (!modern) {
+    const armorSynergy = compareDescending(
+      left.compositionSummary.armorSynergy.pairs,
+      right.compositionSummary.armorSynergy.pairs,
+    )
+    if (armorSynergy !== 0) return armorSynergy
+  }
 
   const loot = compareDescending(left.lootSummary.weightedScore, right.lootSummary.weightedScore)
     || compareDescending(left.lootSummary.playersWithObjectives, right.lootSummary.playersWithObjectives)
@@ -562,64 +1161,246 @@ function compareRecommendations(
     || compareDescending(left.lootSummary.tierCounts.niceToHave, right.lootSummary.tierCounts.niceToHave)
     || compareDescending(left.lootSummary.tierCounts.catalyst, right.lootSummary.tierCounts.catalyst)
     || compareDescending(left.lootSummary.tierCounts.transmog, right.lootSummary.tierCounts.transmog)
-  return tiers || compareStable(left, right)
+  if (tiers !== 0) return tiers
+
+  if (modern) {
+    const armorSynergy = compareDescending(
+      left.compositionSummary.armorSynergy.pairs,
+      right.compositionSummary.armorSynergy.pairs,
+    )
+    if (armorSynergy !== 0) return armorSynergy
+  }
+
+  if (modern && options.optimizeComposition && options.offensiveSynergy
+    && left.modernCompletion && right.modernCompletion) {
+    const exactOffensive = compareDescending(
+      left.modernCompletion.offensive.gainPct,
+      right.modernCompletion.offensive.gainPct,
+    )
+    if (exactOffensive !== 0) return exactOffensive
+  }
+  return compareStable(left, right)
 }
 
-function buildRecommendation(
+function modernHigherPriorityKey(recommendation: UnrankedRecommendation, options: PlannerOptions): string {
+  const completion = recommendation.modernCompletion
+  return JSON.stringify([
+    recommendation.compositionSummary.criticalRolesCovered,
+    recommendation.levelSummary.levelDistance,
+    recommendation.preferenceSummary.emergency,
+    recommendation.preferenceSummary.preferred,
+    recommendation.preferenceSummary.available,
+    options.bloodlust ? completion?.bloodlust ?? 0 : 0,
+    options.battleRez ? completion?.battleRez ?? 0 : 0,
+  ])
+}
+
+function assignModernEquivalenceBands(
+  recommendations: readonly UnrankedRecommendation[],
+  options: PlannerOptions,
+): void {
+  if (!isModernOptions(options)) return
+  const offensiveGroups = new Map<string, UnrankedRecommendation[]>()
+  for (const recommendation of recommendations) {
+    if (!recommendation.modernCompletion) continue
+    const key = modernHigherPriorityKey(recommendation, options)
+    offensiveGroups.set(key, [...(offensiveGroups.get(key) ?? []), recommendation])
+  }
+  for (const group of offensiveGroups.values()) {
+    const bands = options.optimizeComposition && options.offensiveSynergy
+      ? assignOffensiveBands(group.map(item => item.modernCompletion!.offensive.gainPct))
+      : group.map(() => 0)
+    group.forEach((item, index) => { item.modernCompletion!.offensiveBand = bands[index] })
+  }
+
+  const defenseGroups = new Map<string, UnrankedRecommendation[]>()
+  for (const recommendation of recommendations) {
+    if (!recommendation.modernCompletion) continue
+    const key = `${modernHigherPriorityKey(recommendation, options)}:${recommendation.modernCompletion.offensiveBand}`
+    defenseGroups.set(key, [...(defenseGroups.get(key) ?? []), recommendation])
+  }
+  for (const group of defenseGroups.values()) {
+    const bands = options.optimizeComposition && options.recommendationMode === 'advanced' && options.groupDefense
+      ? assignTierVectorBands(group.map(item => item.modernCompletion!.defense.tiers))
+      : group.map(() => 0)
+    group.forEach((item, index) => { item.modernCompletion!.defenseBand = bands[index] })
+  }
+
+  const utilityGroups = new Map<string, UnrankedRecommendation[]>()
+  for (const recommendation of recommendations) {
+    if (!recommendation.modernCompletion) continue
+    const completion = recommendation.modernCompletion
+    const key = `${modernHigherPriorityKey(recommendation, options)}:${completion.offensiveBand}:${completion.defenseBand}`
+    utilityGroups.set(key, [...(utilityGroups.get(key) ?? []), recommendation])
+  }
+  for (const group of utilityGroups.values()) {
+    const bands = options.optimizeComposition && options.recommendationMode === 'advanced' && options.dungeonUtility
+      ? assignTierVectorBands(group.map(item => item.modernCompletion!.dungeonUtility.tiers))
+      : group.map(() => 0)
+    group.forEach((item, index) => { item.modernCompletion!.dungeonUtilityBand = bands[index] })
+  }
+
+  for (const recommendation of recommendations) {
+    const completion = recommendation.modernCompletion
+    if (!completion) continue
+    for (const vacancy of recommendation.vacancies) {
+      vacancy.offensiveBand = completion.offensiveBand
+      vacancy.defensiveBand = completion.defenseBand
+      vacancy.dungeonUtilityBand = completion.dungeonUtilityBand
+    }
+  }
+}
+
+function evaluateCandidateLoot(
+  candidate: NormalizedCandidate,
+  challengeMapId: number,
+  cache: CandidateLootCache,
+): CandidateLootEvaluation {
+  const cacheKey = `${challengeMapId}:${candidateIdentity(candidate)}`
+  const cached = cache.get(cacheKey)
+  if (cached) return cached
+  const { lootSpecId, objectives } = lootSelection(candidate, challengeMapId)
+  const tierCounts = emptyTierCounts()
+  let weightedScore = 0
+  for (const objective of objectives) {
+    weightedScore += keystoneLootTierWeight(objective.tier)
+    incrementTier(tierCounts, objective.tier)
+  }
+  const evaluation = {
+    assignment: assignmentFor(candidate, lootSpecId, objectives),
+    weightedScore,
+    hasObjectives: objectives.length > 0,
+    totalObjectives: objectives.length,
+    tierCounts,
+  }
+  cache.set(cacheKey, evaluation)
+  return evaluation
+}
+
+function buildRecommendations(
   stone: PlannerStone,
   selected: readonly NormalizedCandidate[],
   roleCounts: Readonly<RoleCounts>,
   input: KeystonePlannerInput,
-): UnrankedRecommendation {
+  modernCompletionCache: ModernCompletionCache,
+  candidateLootCache: CandidateLootCache,
+): UnrankedRecommendation[] {
   const ordered = [...selected].sort(compareCandidates)
   const tierCounts = emptyTierCounts()
   let weightedScore = 0
   let playersWithObjectives = 0
   let totalObjectives = 0
   const assignments = ordered.map(candidate => {
-    const { lootSpecId, objectives } = lootSelection(candidate, stone.challengeMapId)
-    if (objectives.length > 0) playersWithObjectives += 1
-    totalObjectives += objectives.length
-    for (const objective of objectives) {
-      weightedScore += keystoneLootTierWeight(objective.tier)
-      incrementTier(tierCounts, objective.tier)
-    }
-    return assignmentFor(candidate, lootSpecId, objectives)
+    const evaluation = evaluateCandidateLoot(candidate, stone.challengeMapId, candidateLootCache)
+    if (evaluation.hasObjectives) playersWithObjectives += 1
+    totalObjectives += evaluation.totalObjectives
+    weightedScore += evaluation.weightedScore
+    tierCounts.bestInSlot += evaluation.tierCounts.bestInSlot
+    tierCounts.mustHave += evaluation.tierCounts.mustHave
+    tierCounts.niceToHave += evaluation.tierCounts.niceToHave
+    tierCounts.catalyst += evaluation.tierCounts.catalyst
+    tierCounts.transmog += evaluation.tierCounts.transmog
+    return evaluation.assignment
   })
   const composition = compositionSummary(ordered)
-  const vacancies = vacanciesFor(roleCounts, composition, input.options)
+  const roles = vacancyRoles(roleCounts)
+  const modernOptions = isModernOptions(input.options) ? input.options : null
+  const fillComposition = shouldFillComposition(input.options)
+  const displayedRoles = modernOptions && !fillComposition ? [] : roles
+  const legacyVacancies = modernOptions ? null : vacanciesFor(roleCounts, composition, input.options, ordered)
+  const scoringOptions = modernOptions ? vacancyScoringOptions(modernOptions) : null
+  const completionCacheKey = modernOptions ? JSON.stringify([
+    stone.challengeMapId,
+    displayedRoles,
+    ordered.map(candidate => candidate.specId).sort((left, right) => left - right),
+  ]) : ''
+  let cachedCompletions = completionCacheKey ? modernCompletionCache.get(completionCacheKey) : undefined
+  if (modernOptions && !cachedCompletions) {
+    const existingSpecIds = ordered.map(candidate => candidate.specId)
+    if (!fillComposition) {
+      const offensive = scoringOptions!.offensiveSynergy
+        ? scoreAdvancedOffensive([], existingSpecIds)
+        : scoreAdvancedOffensive([], [])
+      cachedCompletions = [{
+        selections: [],
+        bloodlust: scoringOptions!.bloodlust ? AVAILABILITY_RANK[composition.bloodlust] : 0,
+        battleRez: scoringOptions!.battleRez ? AVAILABILITY_RANK[composition.battleRez] : 0,
+        offensive,
+        offensiveBand: 0,
+        defense: scoringOptions!.mode === 'advanced' && scoringOptions!.groupDefense
+          ? scoreGroupDefense([], existingSpecIds)
+          : scoreGroupDefense([], []),
+        defenseBand: 0,
+        dungeonUtility: scoringOptions!.mode === 'advanced' && scoringOptions!.dungeonUtility
+          ? scoreDungeonUtility([], existingSpecIds, stone.challengeMapId)
+          : scoreDungeonUtility([], [], stone.challengeMapId),
+        dungeonUtilityBand: 0,
+        stableKey: 'selected-party-only',
+      }]
+    } else {
+      const seenStrata = new Set<string>()
+      cachedCompletions = rankVacancyCompletions(
+        existingSpecIds, roles, stone.challengeMapId, scoringOptions!,
+      ).filter(completion => {
+        const key = completionStratumKey(completion, modernOptions)
+        if (seenStrata.has(key)) return false
+        seenStrata.add(key)
+        return true
+      }).slice(0, 5)
+    }
+    modernCompletionCache.set(completionCacheKey, cachedCompletions)
+  }
+  const modernCompletions = (cachedCompletions ?? []).map(completion => ({ ...completion }))
   const preferenceSummary = {
     preferred: ordered.filter(candidate => candidate.playPreference === 'preferred').length,
     available: ordered.filter(candidate => candidate.playPreference === 'available').length,
     emergency: ordered.filter(candidate => candidate.playPreference === 'emergency').length,
   }
   const levelDistance = Math.abs(stone.level - input.targetLevel)
-  const reasonCodes: PlannerReasonCode[] = [
-    vacancies.length === 0 ? 'PARTY_COMPLETE' : 'PARTY_INCOMPLETE',
-    totalObjectives > 0 ? 'HAS_LOOT_OBJECTIVES' : 'NO_LOOT_OBJECTIVES',
-    levelDistance === 0 ? 'TARGET_LEVEL_EXACT' : 'TARGET_LEVEL_NEARBY',
-  ]
-  if (input.options.bloodlust) {
-    reasonCodes.push(composition.bloodlust === 'guaranteed'
-      ? 'BLOODLUST_GUARANTEED'
-      : composition.bloodlust === 'conditional'
-        ? 'BLOODLUST_CONDITIONAL'
-        : 'BLOODLUST_MISSING')
-  }
-  if (input.options.battleRez) {
-    reasonCodes.push(composition.battleRez === 'none' ? 'BATTLE_REZ_MISSING' : 'BATTLE_REZ_PRESENT')
-  }
-  return {
-    fingerprint: recommendationFingerprint(stone, assignments),
-    stone: { ...stone },
-    assignments,
-    vacancies,
-    lootSummary: { weightedScore, playersWithObjectives, totalObjectives, tierCounts },
-    levelSummary: { targetLevel: input.targetLevel, stoneLevel: stone.level, levelDistance },
-    preferenceSummary,
-    compositionSummary: composition,
-    reasonCodes,
-  }
+  const completions: Array<RankedVacancyCompletion | null> = modernOptions
+    ? modernCompletions
+    : [null]
+  return completions.map(completion => {
+    const vacancies = completion
+      ? displayedRoles.map(role => ({ role, preferredCapabilities: [] as CapabilityId[] }))
+      : legacyVacancies!.vacancies
+    const reasonCodes: PlannerReasonCode[] = [
+      roles.length === 0 ? 'PARTY_COMPLETE' : 'PARTY_INCOMPLETE',
+      totalObjectives > 0 ? 'HAS_LOOT_OBJECTIVES' : 'NO_LOOT_OBJECTIVES',
+      levelDistance === 0 ? 'TARGET_LEVEL_EXACT' : 'TARGET_LEVEL_NEARBY',
+    ]
+    if (input.options.bloodlust) {
+      const availability = completion
+        ? completion.bloodlust === 2 ? 'guaranteed' : completion.bloodlust === 1 ? 'conditional' : 'none'
+        : composition.bloodlust
+      reasonCodes.push(availability === 'guaranteed'
+        ? 'BLOODLUST_GUARANTEED'
+        : availability === 'conditional'
+          ? 'BLOODLUST_CONDITIONAL'
+          : 'BLOODLUST_MISSING')
+    }
+    if (input.options.battleRez) {
+      const present = completion ? completion.battleRez > 0 : composition.battleRez !== 'none'
+      reasonCodes.push(present ? 'BATTLE_REZ_PRESENT' : 'BATTLE_REZ_MISSING')
+    }
+    return {
+      fingerprint: recommendationFingerprint(
+        stone,
+        assignments,
+        completion && modernOptions ? completionStratumKey(completion, modernOptions) : completion?.stableKey,
+      ),
+      stone: { ...stone },
+      assignments,
+      vacancies,
+      lootSummary: { weightedScore, playersWithObjectives, totalObjectives, tierCounts },
+      levelSummary: { targetLevel: input.targetLevel, stoneLevel: stone.level, levelDistance },
+      preferenceSummary,
+      compositionSummary: composition,
+      externalCompletionScore: legacyVacancies?.bestScore ?? { ...EMPTY_EXTERNAL_SCORE },
+      modernCompletion: completion,
+      reasonCodes,
+    }
+  })
 }
 
 function canFitRemaining(
@@ -646,6 +1427,8 @@ function searchStone(
   participantUserIds: readonly number[],
   candidatesByUser: ReadonlyMap<number, readonly NormalizedCandidate[]>,
   input: KeystonePlannerInput,
+  modernCompletionCache: ModernCompletionCache,
+  candidateLootCache: CandidateLootCache,
 ): UnrankedRecommendation[] {
   if (!participantUserIds.includes(stone.ownerUserId)) return []
   const holderCandidates = (candidatesByUser.get(stone.ownerUserId) ?? [])
@@ -667,7 +1450,9 @@ function searchStone(
 
   function visit(index: number): void {
     if (index === orderedUsers.length) {
-      results.push(buildRecommendation(stone, selected, roleCounts, input))
+      results.push(...buildRecommendations(
+        stone, selected, roleCounts, input, modernCompletionCache, candidateLootCache,
+      ))
       return
     }
     const userId = orderedUsers[index]
@@ -797,23 +1582,65 @@ export function solveKeystonePlanner(input: KeystonePlannerInput): KeystonePlann
     || (left.characterId - right.characterId)
     || (left.level - right.level)
     || left.dungeon.localeCompare(right.dungeon))
+  const modernCompletionCache: ModernCompletionCache = new Map()
+  const candidateLootCache: CandidateLootCache = new Map()
   const all = orderedStones.flatMap(stone => searchStone(
     stone,
     orderedParticipants,
     candidatesByUser,
     input,
+    modernCompletionCache,
+    candidateLootCache,
   ))
+  assignModernEquivalenceBands(all, input.options)
   all.sort((left, right) => compareRecommendations(left, right, input.options))
   const seen = new Set<string>()
   const seenDiversityProfiles = new Set<string>()
   const top = all.filter(recommendation => {
     if (seen.has(recommendation.fingerprint)) return false
     seen.add(recommendation.fingerprint)
-    const diversityIdentity = recommendationDiversityIdentity(recommendation)
+    const diversityIdentity = recommendationDiversityIdentity(recommendation, input.options)
     if (seenDiversityProfiles.has(diversityIdentity)) return false
     seenDiversityProfiles.add(diversityIdentity)
     return true
-  }).slice(0, 5).map((recommendation, index) => ({ ...recommendation, rank: index + 1 }))
+  }).slice(0, 5).map((recommendation, index) => {
+    const {
+      externalCompletionScore: _externalCompletionScore,
+      modernCompletion: _modernCompletion,
+      ...publicRecommendation
+    } = recommendation
+    const vacancies = _modernCompletion && isModernOptions(input.options)
+      ? modernVacancies(
+        publicRecommendation.vacancies.map(vacancy => vacancy.role),
+        _modernCompletion,
+        publicRecommendation.assignments.map(assignment => assignment.specId),
+        publicRecommendation.stone.challengeMapId,
+        input.options,
+      )
+      : publicRecommendation.vacancies
+    const modernOptions = isModernOptions(input.options) ? input.options : null
+    const finalSpecIds = [
+      ...publicRecommendation.assignments.map(assignment => assignment.specId),
+      ...(_modernCompletion?.selections.flatMap(selection => selection.specId ? [selection.specId] : []) ?? []),
+    ]
+    const groupDefensives = modernOptions?.recommendationMode === 'advanced'
+      && modernOptions.optimizeComposition && modernOptions.groupDefense
+      ? publicScoredUtilities(scoreGroupDefense([], finalSpecIds).capabilities) : undefined
+    const dungeonUtilities = modernOptions?.recommendationMode === 'advanced'
+      && modernOptions.optimizeComposition && modernOptions.dungeonUtility
+      ? publicScoredUtilities(scoreDungeonUtility([], finalSpecIds, publicRecommendation.stone.challengeMapId).capabilities)
+      : undefined
+    return {
+      ...publicRecommendation,
+      vacancies,
+      compositionSummary: {
+        ...publicRecommendation.compositionSummary,
+        ...(groupDefensives ? { groupDefensives } : {}),
+        ...(dungeonUtilities ? { dungeonUtilities } : {}),
+      },
+      rank: index + 1,
+    }
+  })
 
   if (top.length === 0) {
     diagnostics.codes.push('NO_VALID_COMPOSITION')

@@ -1,0 +1,2216 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "midnight-s2-dungeon-mechanics-v1",
+  "patch": "12.1.0",
+  "season": "MID2",
+  "researchDate": "2026-09-14",
+  "purpose": "Evidence layer for Keystone Planner dungeon-aware utility scoring.",
+  "rotation": [
+    {
+      "id": "AOF",
+      "name": "Altar of Fangs"
+    },
+    {
+      "id": "DON",
+      "name": "Den of Nalorakk"
+    },
+    {
+      "id": "MR",
+      "name": "Murder Row"
+    },
+    {
+      "id": "TBV",
+      "name": "The Blinding Vale"
+    },
+    {
+      "id": "VSA",
+      "name": "Voidscar Arena"
+    },
+    {
+      "id": "KR",
+      "name": "King's Rest"
+    },
+    {
+      "id": "RLP",
+      "name": "Ruby Life Pools"
+    },
+    {
+      "id": "TOS",
+      "name": "Temple of Sethraliss"
+    }
+  ],
+  "methodology": {
+    "basis": [
+      "Current Patch 12.1 dungeon overview interrupt/dispel/purge tables",
+      "Current Midnight Season 2 class-specific Mythic+ utility guides",
+      "Conservative research inference for control, movement and defensive categories where guides describe mechanics but do not assign a utility taxonomy"
+    ],
+    "severityValues": [
+      "low",
+      "medium",
+      "high",
+      "critical"
+    ],
+    "frequencyValues": [
+      "boss_once",
+      "boss_recurring",
+      "section",
+      "recurring",
+      "route_specific",
+      "always"
+    ],
+    "recoveryOnly": "true means the utility primarily recovers a failed/avoidable mechanic rather than being the preferred response",
+    "confidence": {
+      "high": "directly supported by a current dungeon/class guide",
+      "medium": "supported by encounter facts plus a small utility-type inference",
+      "low": "route/meta dependent or conflicting evidence; should not drive a recommendation by itself"
+    }
+  },
+  "sourceRegistry": {
+    "ROTATION_WOWHEAD": {
+      "title": "Mythic+ Season 2 Dungeon Rotation Revealed",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/news/mythic-season-2-dungeon-rotation-revealed-381893",
+      "published": "2026-06-18",
+      "use": "Season 2 rotation"
+    },
+    "AOF_WOWHEAD": {
+      "title": "Altar of Fangs Dungeon Overview - Midnight Season 2 Mythic+",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/midnight/altar-of-fangs-dungeon-overview-location-rewards",
+      "updated": "2026-08-27",
+      "use": "Priority interrupts, dispels, purge and boss/trash mechanics"
+    },
+    "DEN_WOWHEAD": {
+      "title": "Den of Nalorakk Dungeon Overview - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/midnight/den-of-nalorakk-dungeon-overview-location-rewards",
+      "updated": "2026-08-27",
+      "use": "Priority interrupts, dispels, purges and encounter mechanics"
+    },
+    "MR_WOWHEAD": {
+      "title": "Murder Row Dungeon Overview - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/midnight/murder-row-dungeon-overview-location-rewards",
+      "updated": "2026-08-27",
+      "use": "Priority interrupts, dispels, purges and encounter mechanics"
+    },
+    "BV_WOWHEAD": {
+      "title": "The Blinding Vale Dungeon Overview - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/midnight/the-blinding-vale-dungeon-overview-location-rewards",
+      "updated": "2026-08-27",
+      "use": "Priority interrupts, Bloodthorn Roots and boss mechanics"
+    },
+    "VA_WOWHEAD": {
+      "title": "Voidscar Arena Dungeon Overview - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/midnight/voidscar-arena-dungeon-overview-location-rewards",
+      "use": "Priority interrupts, dispels, purge and boss mechanics"
+    },
+    "KR_WOWHEAD": {
+      "title": "Kings' Rest Dungeon Overview - Midnight Season 2 Mythic+",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/ptr/guide/midnight/kings-rest-dungeon-overview-mythic-plus",
+      "updated": "2026-07-31",
+      "use": "Priority interrupts, dispels, purges, trash-count and boss mechanics"
+    },
+    "RLP_WOWHEAD": {
+      "title": "Ruby Life Pools Dungeon Overview - Midnight Season 2 Mythic+",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/midnight/ruby-life-pools-dungeon-overview-mythic-plus",
+      "updated": "2026-08-27",
+      "use": "Priority interrupts, dispels, purges and boss mechanics"
+    },
+    "TOS_WOWHEAD": {
+      "title": "Temple of Sethraliss Dungeon Overview - Midnight Season 2 Mythic+",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/ptr/guide/midnight/temple-of-sethraliss-dungeon-overview-mythic-plus",
+      "use": "Priority interrupts, dispels, purge and boss mechanics"
+    },
+    "ENH_SHAMAN_WOWHEAD": {
+      "title": "Enhancement Shaman Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/shaman/enhancement/mythic-plus-dungeon-tips",
+      "published": "2026-09-09",
+      "use": "Cross-dungeon poison, curse, purge, snare/root-break and group-utility use cases"
+    },
+    "DISC_PRIEST_WOWHEAD": {
+      "title": "Discipline Priest Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/priest/discipline/mythic-plus-dungeon-tips",
+      "updated": "2026-08-18",
+      "use": "Mass Dispel, Mind Soothe, disease and special-control use cases"
+    },
+    "BREW_MONK_WOWHEAD": {
+      "title": "Brewmaster Monk Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/monk/brewmaster/mythic-plus-dungeon-tips",
+      "use": "Stop/knockback, dispel, Freedom-like and King's Rest control use cases"
+    },
+    "WW_MONK_WOWHEAD": {
+      "title": "Windwalker Monk Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/monk/windwalker/mythic-plus-dungeon-tips",
+      "updated": "2026-08-18",
+      "use": "Poison dispel, soothe, slows and dungeon-specific utility"
+    },
+    "RET_PAL_WOWHEAD": {
+      "title": "Retribution Paladin Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/paladin/retribution/mythic-plus-dungeon-tips",
+      "use": "BoP, Freedom and Blinding Light use cases"
+    },
+    "HOLY_PAL_WOWHEAD": {
+      "title": "Holy Paladin Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/paladin/holy/mythic-plus-dungeon-tips",
+      "use": "Blinding Vale bleed/poison/root handling"
+    },
+    "BM_HUNTER_WOWHEAD": {
+      "title": "Beast Mastery Hunter Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/hunter/beast-mastery/mythic-plus-dungeon-tips",
+      "use": "King's Rest and Den soothe/control/Freedom-like utility"
+    },
+    "SURV_HUNTER_WOWHEAD": {
+      "title": "Survival Hunter Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/hunter/survival/mythic-plus-dungeon-tips",
+      "use": "Den soothe/control and movement-removal utility"
+    },
+    "WARLOCK_WOWHEAD": {
+      "title": "Affliction Warlock Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/warlock/affliction/mythic-plus-dungeon-tips",
+      "use": "Demonic Gateway skips, Curse of Tongues and group utility"
+    },
+    "UNHOLY_DK_WOWHEAD": {
+      "title": "Unholy Death Knight Mythic+ Guide - Midnight Season 2",
+      "publisher": "Wowhead",
+      "url": "https://www.wowhead.com/guide/classes/death-knight/unholy/mythic-plus-dungeon-tips",
+      "use": "Voidscar grips/slows/AMZ use cases"
+    }
+  },
+  "dungeons": {
+    "AOF": {
+      "name": "Altar of Fangs",
+      "mechanics": [
+        {
+          "id": "AOF_PIERCING_HISS",
+          "name": "Piercing Hiss",
+          "enemy": "Primal Serpent",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD"
+          ]
+        },
+        {
+          "id": "AOF_PARALYZING_SHOTS",
+          "name": "Paralyzing Shots",
+          "enemy": "Twinfang Harrower",
+          "section": "T1",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ],
+          "note": "Magic DoT/snare; Mass Dispel has explicit value."
+        },
+        {
+          "id": "AOF_RAVENOUS",
+          "name": "Ravenous / Ravenous Claws",
+          "enemy": "Ravenous Descendant",
+          "section": "T1",
+          "responses": [
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD",
+            "WW_MONK_WOWHEAD"
+          ],
+          "note": "Attack-speed enrage; overview lists the related effect under important purges."
+        },
+        {
+          "id": "AOF_REGURGITATE",
+          "name": "Regurgitate",
+          "enemy": "Rav'i",
+          "section": "B1",
+          "responses": [
+            "DISPEL_DISEASE"
+          ],
+          "severity": "medium",
+          "frequency": "boss_once",
+          "recoveryOnly": true,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ],
+          "note": "Disease only matters if the avoidable frontal is taken."
+        },
+        {
+          "id": "AOF_TOXIC_ATROPHY",
+          "name": "Toxic Atrophy",
+          "enemy": "The Writhing Coil",
+          "section": "B2",
+          "responses": [
+            "INTERRUPT",
+            "FREEDOM"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ],
+          "note": "Priority kick; if missed, movement-removal tools can help."
+        },
+        {
+          "id": "AOF_DEATH_RATTLE",
+          "name": "Death Rattle tether/vines",
+          "enemy": "The Writhing Coil",
+          "section": "B2",
+          "responses": [
+            "GROUP_MOBILITY"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "ENH_SHAMAN_WOWHEAD"
+          ],
+          "note": "Group speed helps players break the tether quickly."
+        },
+        {
+          "id": "AOF_ENVENOM",
+          "name": "Envenom",
+          "enemy": "High Evolutionist",
+          "section": "T2",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "AOF_EVOLVE",
+          "name": "Evolve",
+          "enemy": "High Evolutionist",
+          "section": "T2",
+          "responses": [
+            "AOE_STOP",
+            "ST_STOP",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "ENH_SHAMAN_WOWHEAD",
+            "BREW_MONK_WOWHEAD"
+          ],
+          "note": "Hard stops are specifically recommended to prevent Evolve."
+        },
+        {
+          "id": "AOF_MASS_ENVENOM",
+          "name": "Mass Envenom",
+          "enemy": "Ula'tek's Chosen",
+          "section": "T3",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "AOF_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ],
+          "note": "Poison dispel is recovery after a missed cast."
+        },
+        {
+          "id": "AOF_FIXATE_KITING",
+          "name": "Fixates / dangerous first-area kiting",
+          "enemy": "Multiple",
+          "section": "T1-T2",
+          "responses": [
+            "ROOT",
+            "ST_STOP",
+            "KNOCKBACK"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "WW_MONK_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ],
+          "note": "Slows/roots and displacement help stabilize fixates and tank kiting."
+        }
+      ]
+    },
+    "DON": {
+      "name": "Den of Nalorakk",
+      "mechanics": [
+        {
+          "id": "DON_SCAVENGE",
+          "name": "Scavenge",
+          "enemy": "Keen-Eyed Striker",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_HEALING_BREEZE",
+          "name": "Healing Breeze",
+          "enemy": "Earthwhisper Tender",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "PURGE_MAGIC"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD",
+            "WARLOCK_WOWHEAD"
+          ],
+          "note": "Kick first; purge is the fallback if the cast completes."
+        },
+        {
+          "id": "DON_INSATIABLE_HUNGER",
+          "name": "Insatiable Hunger / Starvation effect",
+          "enemy": "Spirit of Hunger",
+          "section": "T1",
+          "responses": [
+            "DISPEL_CURSE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_MOTHERS_WRATH",
+          "name": "Mother's Wrath",
+          "enemy": "Territorial Matriarch",
+          "section": "T1",
+          "responses": [
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "BM_HUNTER_WOWHEAD",
+            "SURV_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_RAZOR_DIVE",
+          "name": "Razor Dive",
+          "enemy": "Keen-Eyed Striker",
+          "section": "T1",
+          "responses": [
+            "ST_STOP",
+            "ROOT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BM_HUNTER_WOWHEAD",
+            "SURV_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_TOXIC_SPORES",
+          "name": "Toxic Spores",
+          "enemy": "The Hoardmonger / Rotten Mushroom",
+          "section": "B1",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD",
+            "BREW_MONK_WOWHEAD"
+          ],
+          "note": "Soaking mushrooms is required; poison removal is a core response."
+        },
+        {
+          "id": "DON_FRIGID_ROAR",
+          "name": "Frigid Roar",
+          "enemy": "Frigid Mauler",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT",
+            "FREEDOM"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_CRYO_SURGE",
+          "name": "Cryo Surge",
+          "enemy": "Glacial Revenant",
+          "section": "T2",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_GLACIAL_TORMENT",
+          "name": "Glacial Torment",
+          "enemy": "Sentinel of Winter",
+          "section": "B2",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_GLACIAL_TOMB",
+          "name": "Glacial Tomb",
+          "enemy": "Avatar of Determination",
+          "section": "T2",
+          "responses": [
+            "FREEDOM"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "ENH_SHAMAN_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_BESTIAL_WRATH",
+          "name": "Bestial Wrath",
+          "enemy": "Bonded Beasttamer",
+          "section": "T3",
+          "responses": [
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD",
+            "BM_HUNTER_WOWHEAD",
+            "SURV_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_ARC_LIGHTNING",
+          "name": "Arc Lightning",
+          "enemy": "Stormbound Mystic",
+          "section": "T3",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DEN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "DON_GATE_SKIP",
+          "name": "Miniboss-before-Sentinel skip",
+          "enemy": "Route",
+          "section": "T2",
+          "responses": [
+            "GATEWAY"
+          ],
+          "severity": "medium",
+          "frequency": "route_specific",
+          "recoveryOnly": false,
+          "routeDependence": "route_specific",
+          "confidence": "high",
+          "sourceIds": [
+            "WARLOCK_WOWHEAD"
+          ],
+          "note": "Warlock guides document a Demonic Gateway route skip."
+        },
+        {
+          "id": "DON_DANGEROUS_CASTERS",
+          "name": "High caster density",
+          "enemy": "Multiple",
+          "section": "T1-T3",
+          "responses": [
+            "ATTACK_CAST_SLOW"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "WARLOCK_WOWHEAD"
+          ],
+          "note": "Curse of Tongues is called exceptionally powerful here."
+        }
+      ]
+    },
+    "MR": {
+      "name": "Murder Row",
+      "mechanics": [
+        {
+          "id": "MR_FEL_MISSILES",
+          "name": "Fel Missiles",
+          "enemy": "Felonious Mage",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_SEDUCTION",
+          "name": "Seduction",
+          "enemy": "Seductive Sayaad",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_MAGIC",
+            "FEAR_BREAK_GROUP",
+            "KNOCKBACK"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ],
+          "note": "Interrupt is preferred; Tremor/dispels/displacement provide recovery or alternative control."
+        },
+        {
+          "id": "MR_CORRODING_SPITTLE",
+          "name": "Corroding Spittle",
+          "enemy": "Massive Felwyrm / Kystia Manaheart",
+          "section": "T1/B1",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_FELSTORM",
+          "name": "Felstorm",
+          "enemy": "Kystia Manaheart",
+          "section": "B1",
+          "responses": [
+            "INTERRUPT",
+            "AOE_STOP",
+            "ST_STOP"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_MIRROR_IMAGES",
+          "name": "Mirror Images",
+          "enemy": "Kystia Manaheart",
+          "section": "B1",
+          "responses": [
+            "AOE_STOP",
+            "ST_STOP",
+            "SPECIAL_CC"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ],
+          "note": "Guide explicitly calls for controlling the images."
+        },
+        {
+          "id": "MR_HEARTSTOP_POISON",
+          "name": "Heartstop Poison",
+          "enemy": "Street Sneak / Zaen Bladesorrow",
+          "section": "T2/B2",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_MURDER_IN_A_ROW",
+          "name": "Murder in a Row",
+          "enemy": "Zaen Bladesorrow",
+          "section": "B2",
+          "responses": [
+            "DISPEL_MAGIC"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_KILLING_SPREE",
+          "name": "Killing Spree",
+          "enemy": "Zaen Bladesorrow",
+          "section": "B2",
+          "responses": [
+            "GROUP_DR_AOE"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ],
+          "note": "Repeated armor-ignoring group damage."
+        },
+        {
+          "id": "MR_BACK_TO_WORK",
+          "name": "Back to Work!",
+          "enemy": "Keen Taskmaster",
+          "section": "T2",
+          "responses": [
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "MR_WOWHEAD",
+            "WW_MONK_WOWHEAD"
+          ],
+          "note": "Class guides identify soothe value for the attack-speed buff."
+        },
+        {
+          "id": "MR_FEL_RAGE",
+          "name": "Fel Rage",
+          "enemy": "Wrathguard Flayer",
+          "section": "T3",
+          "responses": [
+            "INTERRUPT",
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_HEALTH_FUNNEL",
+          "name": "Health Funnel",
+          "enemy": "Fel Invoker",
+          "section": "T3",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_CURSE_OF_DOOM",
+          "name": "Curse of Doom",
+          "enemy": "Corrupted Warlock",
+          "section": "T3",
+          "responses": [
+            "DISPEL_CURSE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_CHAOS_BOLT",
+          "name": "Chaos Bolt",
+          "enemy": "Lithiel Cinderfury",
+          "section": "B4",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_SERVING_EVENT",
+          "name": "Serving-event traversal",
+          "enemy": "Dungeon event",
+          "section": "T2",
+          "responses": [
+            "GROUP_MOBILITY"
+          ],
+          "severity": "medium",
+          "frequency": "section",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "MR_BLEED_PRESSURE",
+          "name": "Physical bleed effects / gunfire pressure",
+          "enemy": "Multiple",
+          "section": "T2-T4",
+          "responses": [
+            "DISPEL_BLEED",
+            "EXTERNAL_IMMUNITY_PHYSICAL"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "MR_WOWHEAD"
+          ]
+        }
+      ]
+    },
+    "TBV": {
+      "name": "The Blinding Vale",
+      "mechanics": [
+        {
+          "id": "TBV_LIGHT_BOLT_VOLLEY",
+          "name": "Light Bolt Volley",
+          "enemy": "Radiant Spellsower",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BV_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_LIGHT_BOLT",
+          "name": "Light Bolt",
+          "enemy": "Kezkitt",
+          "section": "B1",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BV_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_DISORIENTING_SCREECH",
+          "name": "Disorienting Screech",
+          "enemy": "Lightfeather Petalwing",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BV_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_BLOODTHORN_ROOTS",
+          "name": "Bloodthorn Roots",
+          "enemy": "Ikuzz the Light Hunter",
+          "section": "B2",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL",
+            "FREEDOM"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BV_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD",
+            "RET_PAL_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_WARDENS_WRATH",
+          "name": "Warden's Wrath",
+          "enemy": "Lightwarden Ruia",
+          "section": "B3",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BV_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_GRIEVOUS_THRASH",
+          "name": "Grievous Thrash and related bleeds",
+          "enemy": "Lightwarden Ruia / trash",
+          "section": "B3",
+          "responses": [
+            "DISPEL_BLEED",
+            "EXTERNAL_IMMUNITY_PHYSICAL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RET_PAL_WOWHEAD",
+            "HOLY_PAL_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_LIGHTSPORE_SHOT",
+          "name": "Lightspore Shot",
+          "enemy": "Ziekket",
+          "section": "B4",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BV_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_TOXIC_SPEW",
+          "name": "Toxic Spew",
+          "enemy": "Potatoad Matriarch",
+          "section": "T4",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "high",
+          "frequency": "section",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "ENH_SHAMAN_WOWHEAD",
+            "WW_MONK_WOWHEAD",
+            "HOLY_PAL_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_KITING_SPELLSOWER",
+          "name": "Call-the-Grove / caster kiting support",
+          "enemy": "Radiant Spellsower",
+          "section": "T1",
+          "responses": [
+            "ROOT",
+            "ST_STOP"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "WW_MONK_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TBV_POSITIONING",
+          "name": "Frequent boss repositioning / knockbacks",
+          "enemy": "Multiple",
+          "section": "B1-B4",
+          "responses": [
+            "GROUP_MOBILITY"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "BV_WOWHEAD"
+          ]
+        }
+      ]
+    },
+    "VSA": {
+      "name": "Voidscar Arena",
+      "mechanics": [
+        {
+          "id": "VSA_DEMORALIZING_SHOUT",
+          "name": "Demoralizing Shout",
+          "enemy": "Dominated Brawler",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_SHADOWBOLT_VOLLEY",
+          "name": "Shadowbolt Volley",
+          "enemy": "Voidtouched Magi",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_VIOLENT_SAND",
+          "name": "Violent Sand",
+          "enemy": "Angry Krolusk",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "FREEDOM"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_MELT_ARMOR",
+          "name": "Melt Armor",
+          "enemy": "Sycophantic Tarasek",
+          "section": "T1",
+          "responses": [
+            "DISPEL_MAGIC"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "VA_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_BOLSTER",
+          "name": "Bolster",
+          "enemy": "Longtooth Tuskarr",
+          "section": "T1",
+          "responses": [
+            "SOOTHE_ENRAGE",
+            "PURGE_MAGIC"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "VA_WOWHEAD"
+          ],
+          "note": "Overview classifies it as an important purge; soothe-capable effects should be treated as alternative removal where applicable."
+        },
+        {
+          "id": "VSA_MAD_SHRIEK",
+          "name": "Mad Shriek",
+          "enemy": "Killvore Screamer",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT",
+            "FEAR_BREAK_GROUP"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_CORROSIVE_ESSENCE",
+          "name": "Corrosive Essence",
+          "enemy": "Agitated Voidscythe",
+          "section": "T2",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_MIND_NUMBING",
+          "name": "Mind-Numbing Poison",
+          "enemy": "Atroxus",
+          "section": "B2",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "medium",
+          "frequency": "boss_recurring",
+          "recoveryOnly": true,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_MENDING_VOID",
+          "name": "Mending Void",
+          "enemy": "Voidminder",
+          "section": "T3",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_GRAVITIC_ORBS",
+          "name": "Gravitic Orbs",
+          "enemy": "Charonus",
+          "section": "B3",
+          "responses": [
+            "GROUP_MOBILITY"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "VA_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_GATE_SKIP",
+          "name": "Route pack skip",
+          "enemy": "Route",
+          "section": "T1-T2",
+          "responses": [
+            "GATEWAY"
+          ],
+          "severity": "medium",
+          "frequency": "route_specific",
+          "recoveryOnly": false,
+          "routeDependence": "route_specific",
+          "confidence": "high",
+          "sourceIds": [
+            "WARLOCK_WOWHEAD"
+          ],
+          "note": "Documented gateway skip; group can also walk around the pack, so this is useful rather than mandatory."
+        },
+        {
+          "id": "VSA_ABERRATION_CONTROL",
+          "name": "Aberration-heavy trash",
+          "enemy": "Multiple",
+          "section": "T1-T3",
+          "responses": [
+            "SPECIAL_CC"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DISC_PRIEST_WOWHEAD"
+          ],
+          "note": "Shackle Horror is explicitly called out as potentially useful."
+        },
+        {
+          "id": "VSA_GRIP_CONTROL",
+          "name": "Enemy grouping / caster repositioning",
+          "enemy": "Multiple",
+          "section": "T1-T3",
+          "responses": [
+            "PULL",
+            "AOE_PULL",
+            "ROOT"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "UNHOLY_DK_WOWHEAD"
+          ]
+        },
+        {
+          "id": "VSA_MAGIC_DAMAGE",
+          "name": "High magic/AoE event profile",
+          "enemy": "Multiple",
+          "section": "B1-B3",
+          "responses": [
+            "GROUP_DR_MAGIC",
+            "GROUP_MAGIC_ABSORB",
+            "GROUP_DR_AOE"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "VA_WOWHEAD",
+            "UNHOLY_DK_WOWHEAD"
+          ]
+        }
+      ]
+    },
+    "KR": {
+      "name": "King's Rest",
+      "mechanics": [
+        {
+          "id": "KR_HEX_VOLLEY",
+          "name": "Hex Volley",
+          "enemy": "Risen Hexer",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_CURSE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_PIT_DESPAIR",
+          "name": "Pit of Despair",
+          "enemy": "Minion of Zul",
+          "section": "T1",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL",
+            "FEAR_BREAK_GROUP"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": true,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_BOUND_SHADOW",
+          "name": "Bound by Shadow",
+          "enemy": "Minion of Zul",
+          "section": "T1",
+          "responses": [
+            "PURGE_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_ANCESTRAL_FURY",
+          "name": "Ancestral Fury",
+          "enemy": "Shadow-Borne Champion",
+          "section": "T1",
+          "responses": [
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_BIND_SOUL",
+          "name": "Bind Soul",
+          "enemy": "Queen Wasi",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_UNHOLY_MENDING",
+          "name": "Unholy Mending",
+          "enemy": "Seneschal M'bara",
+          "section": "T2/B3",
+          "responses": [
+            "INTERRUPT",
+            "PURGE_MAGIC"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_WRETCHED_DISCHARGE",
+          "name": "Wretched Discharge",
+          "enemy": "Half-Finished Mummy",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_DISEASE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_LINGERING_FLUID",
+          "name": "Lingering Fluid",
+          "enemy": "Embalming Fluid",
+          "section": "T2",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_PUTRID_SEEKERS",
+          "name": "Putrid Seekers",
+          "enemy": "Embalming Fluid",
+          "section": "T2",
+          "responses": [
+            "DISPEL_POISON",
+            "MASS_DISPEL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_BESTIAL_BERSERK",
+          "name": "Bestial Berserk",
+          "enemy": "Queen Patlaa",
+          "section": "T2",
+          "responses": [
+            "SOOTHE_ENRAGE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_CAPTAINS_BULWARK",
+          "name": "Captain's Bulwark",
+          "enemy": "Guard Captain Atu",
+          "section": "T2",
+          "responses": [
+            "PURGE_MAGIC"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_HEX",
+          "name": "Hex",
+          "enemy": "Phantom Hex Priest",
+          "section": "T3",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_CURSE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "BREW_MONK_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_POISON_NOVA",
+          "name": "Poison Nova",
+          "enemy": "Zanazal the Wise",
+          "section": "B3",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_DEATHLY_ROAR",
+          "name": "Deathly Roar",
+          "enemy": "Reban",
+          "section": "B4",
+          "responses": [
+            "INTERRUPT",
+            "FEAR_BREAK_GROUP"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "ENH_SHAMAN_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_SAVAGE_MAUL",
+          "name": "Savage Maul",
+          "enemy": "T'zala",
+          "section": "B4",
+          "responses": [
+            "DISPEL_BLEED",
+            "EXTERNAL_IMMUNITY_PHYSICAL"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "KR_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_FROST_SHOCK",
+          "name": "Frost Shock",
+          "enemy": "Spectral Shaman",
+          "section": "T3",
+          "responses": [
+            "FREEDOM"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BREW_MONK_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_UNDEAD_CONTROL",
+          "name": "Undead-heavy trash",
+          "enemy": "Multiple",
+          "section": "T1-T3",
+          "responses": [
+            "SPECIAL_CC"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_AOE_STOPS",
+          "name": "Embalming Fluid / mobile add control",
+          "enemy": "Multiple",
+          "section": "T2-T3",
+          "responses": [
+            "AOE_STOP",
+            "ST_STOP",
+            "ROOT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BREW_MONK_WOWHEAD",
+            "BM_HUNTER_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_TANKBUSTERS",
+          "name": "Debilitating Backhand / Blade Combo pressure",
+          "enemy": "Council / Dazar",
+          "section": "B3-B4",
+          "responses": [
+            "EXTERNAL_IMMUNITY_PHYSICAL"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "KR_WOWHEAD",
+            "BREW_MONK_WOWHEAD"
+          ]
+        },
+        {
+          "id": "KR_FULL_TRASH_COUNT",
+          "name": "Every mob required for enemy forces",
+          "enemy": "Route",
+          "section": "whole_dungeon",
+          "responses": [
+            "STEALTH_SKIP",
+            "MIND_SOOTHE",
+            "GATEWAY"
+          ],
+          "severity": "low",
+          "frequency": "always",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "KR_WOWHEAD"
+          ],
+          "note": "These route-skip utilities receive zero relevance because the guide states every mob is needed for count."
+        }
+      ]
+    },
+    "RLP": {
+      "name": "Ruby Life Pools",
+      "mechanics": [
+        {
+          "id": "RLP_ICE_SHIELD",
+          "name": "Ice Shield",
+          "enemy": "Flashfrost Chillweaver",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "PURGE_MAGIC"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "RLP_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_COLD_CLAWS",
+          "name": "Cold Claws",
+          "enemy": "Infused Whelp / Melidrussa area",
+          "section": "T1/B1",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_FRIGID_SHARD",
+          "name": "Frigid Shard",
+          "enemy": "Melidrussa Chillworn",
+          "section": "B1",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_BLAZE_OF_GLORY",
+          "name": "Blaze of Glory",
+          "enemy": "Ashseer Flamelasher",
+          "section": "T2",
+          "responses": [
+            "PURGE_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_FIERY_BLAST",
+          "name": "Fiery Blast",
+          "enemy": "Blazebound Destroyer",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_ROLLING_THUNDER",
+          "name": "Rolling Thunder",
+          "enemy": "Thunderhead",
+          "section": "T2",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_BLAZE_VOLLEY",
+          "name": "Blaze Volley",
+          "enemy": "Kokia Blazehoof",
+          "section": "B2",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_STORMCLOUD_BARRIER",
+          "name": "Stormcloud Barrier",
+          "enemy": "Primal Thundercloud",
+          "section": "T3",
+          "responses": [
+            "PURGE_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_STORMSLAM",
+          "name": "Stormslam",
+          "enemy": "Erkhart Stormvein",
+          "section": "B3",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "RLP_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_WHELP_CONTROL",
+          "name": "Infused Whelp control",
+          "enemy": "Infused Whelp",
+          "section": "T1",
+          "responses": [
+            "ROOT",
+            "AOE_STOP"
+          ],
+          "severity": "medium",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "RLP_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_MOVEMENT",
+          "name": "Frequent movement and large damage events",
+          "enemy": "Multiple",
+          "section": "B1-B3",
+          "responses": [
+            "GROUP_MOBILITY",
+            "GROUP_DR_MAGIC",
+            "GROUP_DR_AOE"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "RLP_WOWHEAD",
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "RLP_MIND_SOOTHE",
+          "name": "Arena body-pull control",
+          "enemy": "Route",
+          "section": "T2-T3",
+          "responses": [
+            "MIND_SOOTHE"
+          ],
+          "severity": "medium",
+          "frequency": "route_specific",
+          "recoveryOnly": false,
+          "routeDependence": "route_specific",
+          "confidence": "high",
+          "sourceIds": [
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        }
+      ]
+    },
+    "TOS": {
+      "name": "Temple of Sethraliss",
+      "mechanics": [
+        {
+          "id": "TOS_POISONED_CHEAP_SHOT",
+          "name": "Poisoned Cheap Shot",
+          "enemy": "Shrouded Fang",
+          "section": "T1",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_POISON"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD",
+            "BREW_MONK_WOWHEAD"
+          ],
+          "note": "Dispel is recovery if the stealth attack/cast lands."
+        },
+        {
+          "id": "TOS_ADDLE_MIND",
+          "name": "Addle Mind",
+          "enemy": "Faithless Subjugator",
+          "section": "T2",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_CURSE"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_CYTOTOXIN",
+          "name": "Cytotoxin",
+          "enemy": "Poisonous Viper",
+          "section": "T2",
+          "responses": [
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD",
+            "BREW_MONK_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_POISON_SPIT",
+          "name": "Poison Spit",
+          "enemy": "Merektha",
+          "section": "B2",
+          "responses": [
+            "INTERRUPT",
+            "DISPEL_POISON"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_KNOT_SNAKES",
+          "name": "A Knot of Snakes",
+          "enemy": "Merektha",
+          "section": "B2",
+          "responses": [
+            "AOE_STOP",
+            "ST_STOP",
+            "KNOCKBACK",
+            "SPECIAL_CC"
+          ],
+          "severity": "critical",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BREW_MONK_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_IMBUED_CONDUCTION",
+          "name": "Imbued Conduction",
+          "enemy": "Imbued Stormcaller",
+          "section": "T3",
+          "responses": [
+            "DISPEL_MAGIC",
+            "MASS_DISPEL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_ACCUMULATE_CHARGE",
+          "name": "Accumulate Charge",
+          "enemy": "Agitated Nimbus",
+          "section": "T3",
+          "responses": [
+            "PURGE_MAGIC"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_ESSENCE_DISRUPTION",
+          "name": "Essence Disruption",
+          "enemy": "Temple Disruptor",
+          "section": "T4",
+          "responses": [
+            "INTERRUPT",
+            "AOE_INTERRUPT_SILENCE"
+          ],
+          "severity": "critical",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_FLAME_SHOCK",
+          "name": "Flame Shock",
+          "enemy": "Twisted Hexxer",
+          "section": "T4/B4",
+          "responses": [
+            "INTERRUPT"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_LINGERING_STORMS",
+          "name": "Lingering Storm positioning",
+          "enemy": "Lightning Serpent",
+          "section": "T3",
+          "responses": [
+            "KNOCKBACK",
+            "PULL",
+            "AOE_PULL"
+          ],
+          "severity": "high",
+          "frequency": "recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "high",
+          "sourceIds": [
+            "BREW_MONK_WOWHEAD"
+          ],
+          "note": "Ring of Peace is explicitly recommended to move enemies out of beneficial zones."
+        },
+        {
+          "id": "TOS_ROUTE_CONTROL",
+          "name": "Humanoid snake routing",
+          "enemy": "Route",
+          "section": "T1-T4",
+          "responses": [
+            "MIND_SOOTHE"
+          ],
+          "severity": "low",
+          "frequency": "route_specific",
+          "recoveryOnly": false,
+          "routeDependence": "route_specific",
+          "confidence": "high",
+          "sourceIds": [
+            "DISC_PRIEST_WOWHEAD"
+          ]
+        },
+        {
+          "id": "TOS_MAGIC_DAMAGE",
+          "name": "Magic/AoE-heavy encounter profile",
+          "enemy": "Multiple",
+          "section": "B1-B4",
+          "responses": [
+            "GROUP_DR_MAGIC",
+            "GROUP_MAGIC_ABSORB",
+            "GROUP_DR_AOE"
+          ],
+          "severity": "high",
+          "frequency": "boss_recurring",
+          "recoveryOnly": false,
+          "routeDependence": "core",
+          "confidence": "medium",
+          "sourceIds": [
+            "TOS_WOWHEAD"
+          ]
+        }
+      ]
+    }
+  }
+}

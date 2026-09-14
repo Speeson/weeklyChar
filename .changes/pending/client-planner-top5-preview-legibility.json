@@ -1,0 +1,11 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Mejora el aprovechamiento del espacio y la legibilidad de la vista previa del Top 5.",
+  "details": [
+    "Distribuye las tarjetas de personaje existentes por todo el ancho libre de la vista previa, sin reservar columnas vacías, y mantiene márgenes simétricos respecto a Objetivos, Preferidos y Valor de botín.",
+    "Aumenta el tamaño de objetivos, preferidos, nombres y propietarios, y destaca el nombre del personaje con un tratamiento de clase más visible.",
+    "Aumenta también el tamaño de las etiquetas de Prioridades del grupo para facilitar su lectura."
+  ]
+}

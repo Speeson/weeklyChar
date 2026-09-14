@@ -1,6 +1,7 @@
 export type WowRole = 'tank' | 'healer' | 'dps'
 export type WowArmorType = 'cloth' | 'leather' | 'mail' | 'plate'
 export type WowDamageProfile = 'physical' | 'magical' | null
+export type WowPrimaryStat = 'intellect' | 'attack_power' | null
 export type WowCombatStyle = 'melee' | 'ranged' | 'hybrid'
 export type WowClassName =
   | 'Death Knight'
@@ -37,6 +38,7 @@ export type WowSpecialization = {
   wowClass: WowClassName
   role: WowRole
   damageProfile: WowDamageProfile
+  primaryStat: WowPrimaryStat
 }
 
 export type CapabilityProvider = {
@@ -112,46 +114,46 @@ export function combatStyleForSpec(specId: number): WowCombatStyle | null {
 // already transported KeystoneLoot spec IDs. Devourer (1480) is a Demon Hunter spec.
 // Damage affinity is intentionally conservative: hybrid/patch-sensitive profiles stay null.
 export const WOW_SPECIALIZATIONS: readonly WowSpecialization[] = [
-  { id: 62, name: 'Arcane', wowClass: 'Mage', role: 'dps', damageProfile: 'magical' },
-  { id: 63, name: 'Fire', wowClass: 'Mage', role: 'dps', damageProfile: 'magical' },
-  { id: 64, name: 'Frost', wowClass: 'Mage', role: 'dps', damageProfile: 'magical' },
-  { id: 65, name: 'Holy', wowClass: 'Paladin', role: 'healer', damageProfile: null },
-  { id: 66, name: 'Protection', wowClass: 'Paladin', role: 'tank', damageProfile: null },
-  { id: 70, name: 'Retribution', wowClass: 'Paladin', role: 'dps', damageProfile: null },
-  { id: 71, name: 'Arms', wowClass: 'Warrior', role: 'dps', damageProfile: 'physical' },
-  { id: 72, name: 'Fury', wowClass: 'Warrior', role: 'dps', damageProfile: 'physical' },
-  { id: 73, name: 'Protection', wowClass: 'Warrior', role: 'tank', damageProfile: null },
-  { id: 102, name: 'Balance', wowClass: 'Druid', role: 'dps', damageProfile: 'magical' },
-  { id: 103, name: 'Feral', wowClass: 'Druid', role: 'dps', damageProfile: 'physical' },
-  { id: 104, name: 'Guardian', wowClass: 'Druid', role: 'tank', damageProfile: null },
-  { id: 105, name: 'Restoration', wowClass: 'Druid', role: 'healer', damageProfile: null },
-  { id: 250, name: 'Blood', wowClass: 'Death Knight', role: 'tank', damageProfile: null },
-  { id: 251, name: 'Frost', wowClass: 'Death Knight', role: 'dps', damageProfile: null },
-  { id: 252, name: 'Unholy', wowClass: 'Death Knight', role: 'dps', damageProfile: null },
-  { id: 253, name: 'Beast Mastery', wowClass: 'Hunter', role: 'dps', damageProfile: null },
-  { id: 254, name: 'Marksmanship', wowClass: 'Hunter', role: 'dps', damageProfile: null },
-  { id: 255, name: 'Survival', wowClass: 'Hunter', role: 'dps', damageProfile: null },
-  { id: 256, name: 'Discipline', wowClass: 'Priest', role: 'healer', damageProfile: null },
-  { id: 257, name: 'Holy', wowClass: 'Priest', role: 'healer', damageProfile: null },
-  { id: 258, name: 'Shadow', wowClass: 'Priest', role: 'dps', damageProfile: 'magical' },
-  { id: 259, name: 'Assassination', wowClass: 'Rogue', role: 'dps', damageProfile: null },
-  { id: 260, name: 'Outlaw', wowClass: 'Rogue', role: 'dps', damageProfile: 'physical' },
-  { id: 261, name: 'Subtlety', wowClass: 'Rogue', role: 'dps', damageProfile: 'physical' },
-  { id: 262, name: 'Elemental', wowClass: 'Shaman', role: 'dps', damageProfile: 'magical' },
-  { id: 263, name: 'Enhancement', wowClass: 'Shaman', role: 'dps', damageProfile: null },
-  { id: 264, name: 'Restoration', wowClass: 'Shaman', role: 'healer', damageProfile: null },
-  { id: 265, name: 'Affliction', wowClass: 'Warlock', role: 'dps', damageProfile: 'magical' },
-  { id: 266, name: 'Demonology', wowClass: 'Warlock', role: 'dps', damageProfile: 'magical' },
-  { id: 267, name: 'Destruction', wowClass: 'Warlock', role: 'dps', damageProfile: 'magical' },
-  { id: 268, name: 'Brewmaster', wowClass: 'Monk', role: 'tank', damageProfile: null },
-  { id: 269, name: 'Windwalker', wowClass: 'Monk', role: 'dps', damageProfile: 'physical' },
-  { id: 270, name: 'Mistweaver', wowClass: 'Monk', role: 'healer', damageProfile: null },
-  { id: 577, name: 'Havoc', wowClass: 'Demon Hunter', role: 'dps', damageProfile: null },
-  { id: 581, name: 'Vengeance', wowClass: 'Demon Hunter', role: 'tank', damageProfile: null },
-  { id: 1467, name: 'Devastation', wowClass: 'Evoker', role: 'dps', damageProfile: 'magical' },
-  { id: 1468, name: 'Preservation', wowClass: 'Evoker', role: 'healer', damageProfile: null },
-  { id: 1473, name: 'Augmentation', wowClass: 'Evoker', role: 'dps', damageProfile: 'magical' },
-  { id: 1480, name: 'Devourer', wowClass: 'Demon Hunter', role: 'dps', damageProfile: 'magical' },
+  { id: 62, name: 'Arcane', wowClass: 'Mage', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 63, name: 'Fire', wowClass: 'Mage', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 64, name: 'Frost', wowClass: 'Mage', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 65, name: 'Holy', wowClass: 'Paladin', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 66, name: 'Protection', wowClass: 'Paladin', role: 'tank', damageProfile: null, primaryStat: null },
+  { id: 70, name: 'Retribution', wowClass: 'Paladin', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 71, name: 'Arms', wowClass: 'Warrior', role: 'dps', damageProfile: 'physical', primaryStat: 'attack_power' },
+  { id: 72, name: 'Fury', wowClass: 'Warrior', role: 'dps', damageProfile: 'physical', primaryStat: 'attack_power' },
+  { id: 73, name: 'Protection', wowClass: 'Warrior', role: 'tank', damageProfile: null, primaryStat: null },
+  { id: 102, name: 'Balance', wowClass: 'Druid', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 103, name: 'Feral', wowClass: 'Druid', role: 'dps', damageProfile: 'physical', primaryStat: 'attack_power' },
+  { id: 104, name: 'Guardian', wowClass: 'Druid', role: 'tank', damageProfile: null, primaryStat: null },
+  { id: 105, name: 'Restoration', wowClass: 'Druid', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 250, name: 'Blood', wowClass: 'Death Knight', role: 'tank', damageProfile: null, primaryStat: null },
+  { id: 251, name: 'Frost', wowClass: 'Death Knight', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 252, name: 'Unholy', wowClass: 'Death Knight', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 253, name: 'Beast Mastery', wowClass: 'Hunter', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 254, name: 'Marksmanship', wowClass: 'Hunter', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 255, name: 'Survival', wowClass: 'Hunter', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 256, name: 'Discipline', wowClass: 'Priest', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 257, name: 'Holy', wowClass: 'Priest', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 258, name: 'Shadow', wowClass: 'Priest', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 259, name: 'Assassination', wowClass: 'Rogue', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 260, name: 'Outlaw', wowClass: 'Rogue', role: 'dps', damageProfile: 'physical', primaryStat: 'attack_power' },
+  { id: 261, name: 'Subtlety', wowClass: 'Rogue', role: 'dps', damageProfile: 'physical', primaryStat: 'attack_power' },
+  { id: 262, name: 'Elemental', wowClass: 'Shaman', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 263, name: 'Enhancement', wowClass: 'Shaman', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 264, name: 'Restoration', wowClass: 'Shaman', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 265, name: 'Affliction', wowClass: 'Warlock', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 266, name: 'Demonology', wowClass: 'Warlock', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 267, name: 'Destruction', wowClass: 'Warlock', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 268, name: 'Brewmaster', wowClass: 'Monk', role: 'tank', damageProfile: null, primaryStat: null },
+  { id: 269, name: 'Windwalker', wowClass: 'Monk', role: 'dps', damageProfile: 'physical', primaryStat: 'attack_power' },
+  { id: 270, name: 'Mistweaver', wowClass: 'Monk', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 577, name: 'Havoc', wowClass: 'Demon Hunter', role: 'dps', damageProfile: null, primaryStat: 'attack_power' },
+  { id: 581, name: 'Vengeance', wowClass: 'Demon Hunter', role: 'tank', damageProfile: null, primaryStat: null },
+  { id: 1467, name: 'Devastation', wowClass: 'Evoker', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 1468, name: 'Preservation', wowClass: 'Evoker', role: 'healer', damageProfile: null, primaryStat: null },
+  { id: 1473, name: 'Augmentation', wowClass: 'Evoker', role: 'dps', damageProfile: 'magical', primaryStat: 'intellect' },
+  { id: 1480, name: 'Devourer', wowClass: 'Demon Hunter', role: 'dps', damageProfile: 'magical', primaryStat: 'attack_power' },
 ]
 
 // Current provider references checked 2026-09-10:
@@ -228,6 +230,7 @@ export const WOW_CAPABILITIES: readonly CapabilityDefinition[] = [
 
 const SPECIALIZATION_BY_ID = new Map(WOW_SPECIALIZATIONS.map(spec => [spec.id, spec]))
 const CLASS_BY_LOWER_NAME = new Map<string, WowClassName>()
+const CAPABILITIES_BY_SPEC = new Map<number, readonly ResolvedCapability[]>()
 for (const specialization of WOW_SPECIALIZATIONS) {
   CLASS_BY_LOWER_NAME.set(specialization.wowClass.toLowerCase(), specialization.wowClass)
 }
@@ -246,6 +249,8 @@ export function wowSpecializationsForClass(wowClass: WowClassName): readonly Wow
 }
 
 export function capabilitiesForSpec(specId: number): readonly ResolvedCapability[] {
+  const cached = CAPABILITIES_BY_SPEC.get(specId)
+  if (cached) return cached
   const specialization = wowSpecialization(specId)
   if (!specialization) return []
   const resolved: ResolvedCapability[] = []
@@ -260,5 +265,6 @@ export function capabilitiesForSpec(specId: number): readonly ResolvedCapability
       })
     }
   }
+  CAPABILITIES_BY_SPEC.set(specId, resolved)
   return resolved
 }

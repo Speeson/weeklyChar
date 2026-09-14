@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { useI18n } from "../core/i18n";
 import { buildWowheadTooltip, type WowheadOption, type WowheadType } from "../core/wowhead";
 
@@ -56,4 +56,35 @@ export function WowheadTooltip({ children, type, id, options, label, className }
   }, [target?.dataWowhead, target?.href]);
   if (!target) return <span className={className} title={label ?? undefined}>{children}</span>;
   return <a aria-label={label ?? undefined} className={className} data-wowhead={target.dataWowhead} href={target.href} onClick={(event) => event.preventDefault()}>{children}</a>;
+}
+
+const spellIconRequests = new Map<number, Promise<string | null>>();
+
+function wowheadSpellIcon(spellId: number): Promise<string | null> {
+  const existing = spellIconRequests.get(spellId);
+  if (existing) return existing;
+  const request = fetch(`https://nether.wowhead.com/tooltip/spell/${spellId}`)
+    .then(async response => response.ok ? response.json() as Promise<{ icon?: unknown }> : null)
+    .then(payload => {
+      const icon = payload?.icon;
+      return typeof icon === "string" && /^[a-z0-9_-]+$/i.test(icon)
+        ? `https://wow.zamimg.com/images/wow/icons/large/${icon.toLowerCase()}.jpg`
+        : null;
+    })
+    .catch(() => null);
+  spellIconRequests.set(spellId, request);
+  return request;
+}
+
+export function WowheadSpellIcon({ className, spellId }: { className?: string; spellId: number }) {
+  const [iconUrl, setIconUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    setIconUrl(null);
+    void wowheadSpellIcon(spellId).then(icon => { if (current) setIconUrl(icon); });
+    return () => { current = false; };
+  }, [spellId]);
+  return <span aria-hidden="true" className={className} data-wowhead-spell-icon={spellId}>
+    {iconUrl ? <img alt="" src={iconUrl} /> : null}
+  </span>;
 }

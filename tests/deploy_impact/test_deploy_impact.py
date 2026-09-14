@@ -199,6 +199,20 @@ class DeployImpactTests(unittest.TestCase):
     def test_deploy_impact_tooling_is_no_product_impact(self):
         self.assertImpact(["scripts/deploy_impact.py"], set())
 
+    def test_planner_data_sources_trigger_worker_and_research_tools_are_known_no_impact(self):
+        impact = self.assertImpact(
+            [
+                "tools/planner-ranking-data/source/midnight-s2-buff-impact-full.json",
+                "tools/planner-buff-sims-poc/generate.py",
+                "tools/planner-utility-data/extract.py",
+            ],
+            {"worker"},
+        )
+        self.assertEqual(impact.known_no_impact_paths, [
+            "tools/planner-buff-sims-poc/generate.py",
+            "tools/planner-utility-data/extract.py",
+        ])
+
     def test_removed_historical_addon_archive_is_known_no_impact(self):
         impact = self.assertImpact(["release-assets/KeystoneSync-v0.1.13.zip"], set())
         self.assertEqual(

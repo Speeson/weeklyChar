@@ -1,13 +1,19 @@
-import { Check, ChevronDown, Crown, Gem, Settings2, Users, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Check, ChevronDown, CircleHelp, Crown, Gem, Settings2, Users, X } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import battleRezIcon from "../assets/planner/battle-rez.jpg";
 import bloodlustIcon from "../assets/planner/bloodlust.jpg";
 import classBuffsIcon from "../assets/planner/class-buffs.jpg";
 import damageSynergyIcon from "../assets/planner/damage-synergy.jpg";
+import dungeonUtilityIcon from "../assets/planner/dungeon-utility.jpg";
+import groupDefenseIcon from "../assets/planner/group-defense.jpg";
+import lfgEyeIcon from "../assets/planner/lfg-eye.png";
+import mixedDamageIcon from "../assets/planner/mix-damage.png";
+import offensiveSynergyIcon from "../assets/planner/offensive-synergy.jpg";
 import { PlannerPreferencesModal } from "../components/PlannerPreferencesModal";
 import { TeamItemTooltip } from "../components/TeamItemTooltip";
 import { WowRoleIcon } from "../components/WowRoleIcon";
-import { WowheadTooltip } from "../components/WowheadTooltip";
+import { WowheadSpellIcon, WowheadTooltip } from "../components/WowheadTooltip";
 import { classColor } from "../core/characterDisplay";
 import { useI18n } from "../core/i18n";
 import { MIDNIGHT_SEASON_2_DUNGEONS, SEASON_2_DUNGEON_BY_ID } from "../core/season2";
@@ -19,13 +25,14 @@ import {
   getCachedSelector, getCachedTeamDetail, getTeamsSessionSnapshot, loadSelector, loadTeamDetail,
   loadTeams, removeTeamFromSessionCache, setSelectedTeamId,
 } from "../core/teamsSessionCache";
-import { specName, wowLootBagIconUrl, wowSpecializationIconUrl } from "../core/wowSpecs";
+import { specName, wowClassIconUrl, wowLootBagIconUrl, wowSpecializationIconUrl } from "../core/wowSpecs";
 import { DEFAULT_KEYSTONE_PLANNER_OPTIONS } from "../core/keystonePlanner";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import type {
   ClientTeamDetail, ClientTeamSummary, CoreError, KeystoneSelectorCharacter, KeystoneSelectorResponse,
   KeystoneSelectorStone, KeystoneSelectorTierCounts, KeystonePlannerAssignment, KeystonePlannerObjective, KeystonePlannerRecommendation,
   ClientPlannerPreferenceUpdate, ClientPlannerPreferences, KeystonePlannerResponse,
+  KeystonePlannerOptions, KeystonePlannerVacancy, KeystonePlannerVacancyCapability, KeystonePlannerVacancyRecommendation,
 } from "../core/types";
 
 type TeamsPageProps = { currentUsername?: string; dataSource?: TeamsDataSource; onOpenWeb: () => void; onSessionExpired: () => void };
@@ -57,15 +64,24 @@ const PLANNER_COPY = {
     noLoot: "Sin objetivos de botín", item: "Objeto", value: "Valor de botín", buffs: "Buffos y sinergias",
     objectives: "objetivos", players: "jugadores", preferred: "Preferidos", available: "disponibles",
     damage: "Daño", vacancies: "huecos", bloodlust: "Ansia de sangre", battleRez: "Resurrección en combate",
-    composition: "Composición", utilities: "Utilidades", objectiveSummary: "Objetivos", preferenceSummary: "Preferidos",
+    composition: "Composición", utilities: "Utilidades", partyEssentials: "Esenciales del grupo", capabilitySummary: "Buffs / Defensivos / Utilidades", externalPlayers: "Número de jugadores externos", objectiveSummary: "Objetivos", preferenceSummary: "Preferidos",
     lootBreakdown: "Desglose de objetivos", moreLoot: "Ver todos los objetivos", closeLoot: "Cerrar desglose",
     minimum: "Nivel mínimo",
     filterHelp: "La barra solo filtra las piedras disponibles.", stones: "Piedras disponibles",
     noStones: "No hay piedras visibles con este filtro.", options: "Prioridades del grupo", configure: "Configurar mis personajes",
     loadingPreferences: "Cargando configuración del Planner…",
-    classBuffs: "Buffos de clase", damageSynergy: "Sinergia de daño", calculate: "Calcular Top 5", recalculate: "Recalcular Top 5",
+    quick: "Rápido · Clases", advanced: "Avanzado · Specs", recommendationMode: "Modo de recomendación",
+    fillComposition: "Rellenar la composición", scrollToEnd: "Ir al final del panel",
+    offensiveSynergy: "Sinergia ofensiva", groupDefense: "Defensiva de grupo", dungeonUtility: "Utilidad de mazmorra",
+    calculate: "Calcular Top 5", recalculate: "Recalcular Top 5",
     calculating: "Calculando…", recalculating: "Recalculando…", results: "Top 5 de configuraciones", resultTitle: "Top 5 para la piedra seleccionada",
     playedSpec: "Especialización jugada", lootSpec: "Especialización de botín",
+    externalSlot: "Plaza externa", externalCardTitle: "Externo", recommendedClasses: "Clases recomendadas", recommendedSpecs: "Specs recomendadas", viewClasses: "Ver clases recomendadas",
+    expand: "Expandir", collapse: "Contraer",
+    closeClasses: "Cerrar recomendaciones", noExtraUtility: "Sin utilidad adicional", buffsDebuffs: "Buffs / Debuffs",
+    estimatedGain: "Ganancia ofensiva estimada para esta alternativa", selectRecommendation: "Seleccionar recomendación",
+    moreUtilities: (count: number) => `Mostrar ${count} utilidades más`,
+    noBuffsDebuffs: "Sin aportación nueva", role: { tank: "Tank", healer: "Healer", dps: "DPS" },
     selectError: "Selecciona una piedra exacta y entre 2 y 5 participantes.", requestError: "No se pudo calcular el Top 5.",
     stale: "La piedra exacta ya no está disponible. Actualiza el equipo y vuelve a seleccionarla.",
     unconfigured: "Hay participantes sin preferencias configuradas para el Planner.",
@@ -74,6 +90,7 @@ const PLANNER_COPY = {
     availability: { guaranteed: "garantizada", conditional: "condicional", none: "ausente" },
     profile: { physical: "físico", magical: "mágico", mixed: "mixto", unknown: "desconocido" },
     capabilities: { CHAOS_BRAND: "Marca del caos", MYSTIC_TOUCH: "Toque místico", MARK_OF_THE_WILD: "Marca de lo salvaje", ARCANE_INTELLECT: "Intelecto Arcano", BATTLE_SHOUT: "Grito de batalla", POWER_WORD_FORTITUDE: "Palabra de poder: entereza", SKYFURY: "Furia del cielo" },
+    capabilityHints: { CHAOS_BRAND: "Daño mágico", MYSTIC_TOUCH: "Daño físico", MARK_OF_THE_WILD: "Versatilidad", ARCANE_INTELLECT: "Intelecto", BATTLE_SHOUT: "+5% AP", POWER_WORD_FORTITUDE: "Aguante", SKYFURY: "Maestría" },
     tiers: { 3: "BiS", 2: "Must", 1: "Nice", 5: "Catalyst", 4: "Transfiguración", other: "Otros" },
   },
   en: {
@@ -81,15 +98,24 @@ const PLANNER_COPY = {
     noLoot: "No loot objectives", item: "Item", value: "Loot value", buffs: "Buffs and synergies",
     objectives: "objectives", players: "players", preferred: "Preferred", available: "available",
     damage: "Damage", vacancies: "vacancies", bloodlust: "Bloodlust", battleRez: "Battle Resurrection",
-    composition: "Composition", utilities: "Utilities", objectiveSummary: "Objectives", preferenceSummary: "Preferred",
+    composition: "Composition", utilities: "Utilities", partyEssentials: "Party Essentials", capabilitySummary: "Buffs / Defensives / Utilities", externalPlayers: "Number of external players", objectiveSummary: "Objectives", preferenceSummary: "Preferred",
     lootBreakdown: "Objective breakdown", moreLoot: "View all objectives", closeLoot: "Close breakdown",
     minimum: "Minimum level",
     filterHelp: "The slider only filters available keystones.", stones: "Available keystones",
     noStones: "No keystones are visible with this filter.", options: "Group priorities", configure: "Configure my characters",
     loadingPreferences: "Loading Planner configuration…",
-    classBuffs: "Class buffs", damageSynergy: "Damage synergy", calculate: "Calculate Top 5", recalculate: "Recalculate Top 5",
+    quick: "Quick · Classes", advanced: "Advanced · Specs", recommendationMode: "Recommendation mode",
+    fillComposition: "Fill the composition", scrollToEnd: "Go to the bottom of the panel",
+    offensiveSynergy: "Offensive synergy", groupDefense: "Group defense", dungeonUtility: "Dungeon utility",
+    calculate: "Calculate Top 5", recalculate: "Recalculate Top 5",
     calculating: "Calculating…", recalculating: "Recalculating…", results: "Top 5 configurations", resultTitle: "Top 5 for the selected keystone",
     playedSpec: "Played specialization", lootSpec: "Loot specialization",
+    externalSlot: "External slot", externalCardTitle: "External", recommendedClasses: "Recommended classes", recommendedSpecs: "Recommended specs", viewClasses: "View recommended classes",
+    expand: "Expand", collapse: "Collapse",
+    closeClasses: "Close recommendations", noExtraUtility: "No additional utility", buffsDebuffs: "Buffs / Debuffs",
+    estimatedGain: "Estimated offensive gain for this alternative", selectRecommendation: "Select recommendation",
+    moreUtilities: (count: number) => `Show ${count} more utilities`,
+    noBuffsDebuffs: "No new contribution", role: { tank: "Tank", healer: "Healer", dps: "DPS" },
     selectError: "Select one exact keystone and between 2 and 5 participants.", requestError: "The Top 5 could not be calculated.",
     stale: "The exact keystone is no longer available. Refresh the Team and select it again.",
     unconfigured: "Some participants have no Planner preferences configured.",
@@ -98,6 +124,7 @@ const PLANNER_COPY = {
     availability: { guaranteed: "guaranteed", conditional: "conditional", none: "missing" },
     profile: { physical: "physical", magical: "magical", mixed: "mixed", unknown: "unknown" },
     capabilities: { CHAOS_BRAND: "Chaos Brand", MYSTIC_TOUCH: "Mystic Touch", MARK_OF_THE_WILD: "Mark of the Wild", ARCANE_INTELLECT: "Arcane Intellect", BATTLE_SHOUT: "Battle Shout", POWER_WORD_FORTITUDE: "Power Word: Fortitude", SKYFURY: "Skyfury" },
+    capabilityHints: { CHAOS_BRAND: "Magic damage", MYSTIC_TOUCH: "Physical damage", MARK_OF_THE_WILD: "Versatility", ARCANE_INTELLECT: "Intellect", BATTLE_SHOUT: "+5% AP", POWER_WORD_FORTITUDE: "Stamina", SKYFURY: "Mastery" },
     tiers: { 3: "BiS", 2: "Must", 1: "Nice", 5: "Catalyst", 4: "Transmog", other: "Other" },
   },
 } as const;
@@ -136,9 +163,11 @@ function PlannerSpecIcon({ loot = false, specId }: { loot?: boolean; specId: num
   </span>;
 }
 
-function PlannerAssignmentPreview({ assignment, avatarUrl, owner }: { assignment: KeystonePlannerAssignment; avatarUrl: string | null; owner: boolean }) {
+type PlannerPartySlot = "tank" | "healer" | "dps-1" | "dps-2" | "dps-3";
+
+function PlannerAssignmentPreview({ assignment, avatarUrl, owner, partySlot }: { assignment: KeystonePlannerAssignment; avatarUrl: string | null; owner: boolean; partySlot: PlannerPartySlot }) {
   const copy = usePlannerCopy();
-  return <span className="planner-assignment-preview" data-role={assignment.role} style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
+  return <span className="planner-assignment-preview" data-party-slot={partySlot} data-role={assignment.role} style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
     <span className="planner-role-watermark"><WowRoleIcon role={assignment.role} /></span>
     {owner ? <span aria-label={copy.owner} className="planner-owner-crown" role="img" title={copy.ownerTitle}><Crown aria-hidden="true" /></span> : null}
     <PlannerSpecIcon specId={assignment.specId} />
@@ -146,6 +175,134 @@ function PlannerAssignmentPreview({ assignment, avatarUrl, owner }: { assignment
     <Portrait avatarUrl={avatarUrl} name={assignment.characterName} wowClass={assignment.wowClass} />
     <span className="planner-assignment-preview__identity"><strong>{assignment.characterName}</strong><small>{assignment.username}</small></span>
   </span>;
+}
+
+const FALLBACK_CAPABILITY_SPELLS: Readonly<Record<string, { name: string; spellId: number }>> = {
+  BLOODLUST: { name: "Bloodlust", spellId: 2825 }, BATTLE_REZ: { name: "Rebirth", spellId: 20484 },
+  CHAOS_BRAND: { name: "Chaos Brand", spellId: 1490 }, MYSTIC_TOUCH: { name: "Mystic Touch", spellId: 113746 },
+  MARK_OF_THE_WILD: { name: "Mark of the Wild", spellId: 1126 }, ARCANE_INTELLECT: { name: "Arcane Intellect", spellId: 1459 },
+  BATTLE_SHOUT: { name: "Battle Shout", spellId: 6673 }, POWER_WORD_FORTITUDE: { name: "Power Word: Fortitude", spellId: 21562 },
+  SKYFURY: { name: "Skyfury", spellId: 462854 },
+};
+
+function plannerVacancyRecommendations(vacancy: KeystonePlannerVacancy): KeystonePlannerVacancyRecommendation[] {
+  if (vacancy.recommendations?.length) return vacancy.recommendations;
+  return (vacancy.candidateClasses ?? []).map((candidate, index) => {
+    const capabilities = candidate.contributions.flatMap(contribution => {
+      const definition = FALLBACK_CAPABILITY_SPELLS[contribution.capabilityId.toUpperCase()];
+      return definition ? [{ capabilityId: contribution.capabilityId, ...definition, availability: contribution.availability }] : [];
+    });
+    return {
+      id: `legacy:${candidate.wowClass}:${index}`,
+      wowClass: candidate.wowClass,
+      ...(index === 0 && vacancy.recommendedSpecId ? { specId: vacancy.recommendedSpecId, specName: vacancy.recommendedSpecName } : {}),
+      offensiveGainPct: index === 0 ? vacancy.offensiveGainPct ?? 0 : 0,
+      buffsDebuffs: capabilities.filter(capability => !["BLOODLUST", "BATTLE_REZ"].includes(capability.capabilityId.toUpperCase())),
+      utilities: capabilities.filter(capability => ["BLOODLUST", "BATTLE_REZ"].includes(capability.capabilityId.toUpperCase())),
+    };
+  });
+}
+
+function recommendationLabel(recommendation: KeystonePlannerVacancyRecommendation): string {
+  return recommendation.specName ? `${recommendation.specName} ${recommendation.wowClass}` : recommendation.wowClass;
+}
+
+function recommendationIcon(recommendation: KeystonePlannerVacancyRecommendation, advanced: boolean): string | null {
+  return advanced && recommendation.specId ? wowSpecializationIconUrl(recommendation.specId) : wowClassIconUrl(recommendation.wowClass);
+}
+
+function externalRecommendationTitle(copy: (typeof PLANNER_COPY)[keyof typeof PLANNER_COPY], vacancy: KeystonePlannerVacancy): string {
+  return vacancy.recommendationMode === "advanced" ? copy.recommendedSpecs : copy.recommendedClasses;
+}
+
+function capabilityHint(copy: (typeof PLANNER_COPY)[keyof typeof PLANNER_COPY], capabilityId: string): string | null {
+  const key = capabilityId.toUpperCase() as keyof typeof copy.capabilityHints;
+  return copy.capabilityHints[key] ?? null;
+}
+
+function PlannerCapabilityChip({ capability, compact = false }: { capability: KeystonePlannerVacancyCapability; compact?: boolean }) {
+  const copy = usePlannerCopy();
+  const name = localizedCapabilityName(copy, capability.capabilityId, capability.name);
+  const hint = capabilityHint(copy, capability.capabilityId);
+  const label = `${name}${hint ? ` · ${hint}` : ""}${capability.availability === "conditional" ? ` · ${copy.availability.conditional}` : ""}`;
+  return <WowheadTooltip className="planner-capability-link" id={capability.spellId} label={label} type="spell">
+    <span className="planner-capability-chip" data-compact={compact} data-state={capability.availability}><WowheadSpellIcon className="planner-capability-chip__icon" spellId={capability.spellId} />{compact ? null : <span>{name}{hint ? <small>{hint}</small> : null}</span>}</span>
+  </WowheadTooltip>;
+}
+
+function PlannerGain({ gain }: { gain: number }) {
+  const copy = usePlannerCopy();
+  const label = `${copy.estimatedGain}: +${(gain * 100).toFixed(2)}%`;
+  return <span aria-label={label} className="planner-external-gain" role="status" title={copy.estimatedGain}>
+    <ArrowUpRight aria-hidden="true" /><b>+{(gain * 100).toFixed(2)}%</b>
+  </span>;
+}
+
+function PlannerExternalBreakdown({ onClose, onSelect, selectedId, vacancy }: {
+  onClose: () => void; onSelect?: (recommendation: KeystonePlannerVacancyRecommendation) => void;
+  selectedId?: string; vacancy: KeystonePlannerVacancy;
+}) {
+  const copy = usePlannerCopy();
+  const recommendations = plannerVacancyRecommendations(vacancy);
+  const advanced = vacancy.recommendationMode === "advanced";
+  const title = externalRecommendationTitle(copy, vacancy);
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  const modal = <div className="planner-external-popover" data-portal-layer="modal" onClick={event => event.stopPropagation()} onMouseDown={event => {
+    event.stopPropagation();
+    if (event.currentTarget === event.target) onClose();
+  }}>
+    <section aria-label={`${title} · ${copy.role[vacancy.role]}`} aria-modal="true" role="dialog">
+      <header><div><strong>{title}</strong><small>{copy.externalSlot} · {copy.role[vacancy.role]}</small></div><button aria-label={copy.closeClasses} onClick={onClose} type="button"><X aria-hidden="true" /></button></header>
+      <div className="planner-external-popover__classes">{recommendations.map(recommendation => {
+        const classIcon = wowClassIconUrl(recommendation.wowClass);
+        const specIcon = recommendation.specId ? wowSpecializationIconUrl(recommendation.specId) : null;
+        const content = <>
+          <span className="planner-external-popover__identity">
+            <span className="planner-external-popover__icons">{classIcon ? <img alt="" src={classIcon} /> : <CircleHelp aria-hidden="true" />}{advanced ? specIcon ? <img alt="" src={specIcon} /> : <CircleHelp aria-hidden="true" /> : null}</span>
+            <strong>{recommendationLabel(recommendation)}</strong>
+          </span>
+          <span className="planner-external-popover__capabilities" aria-label={`${copy.buffsDebuffs} · ${copy.utilities}`}>
+            {[...recommendation.buffsDebuffs, ...recommendation.utilities].slice(0, 7).map(capability => <PlannerCapabilityChip capability={capability} compact key={`${recommendation.id}:${capability.spellId}`} />)}
+            {recommendation.buffsDebuffs.length + recommendation.utilities.length === 0 ? <small>{copy.noExtraUtility}</small> : null}
+          </span>
+          <PlannerGain gain={recommendation.offensiveGainPct} />
+        </>;
+        return <article data-selected={recommendation.id === selectedId} key={recommendation.id} style={{ "--planner-class-color": classColor(recommendation.wowClass) } as React.CSSProperties}>
+          {onSelect
+            ? <button aria-label={`${copy.selectRecommendation}: ${recommendationLabel(recommendation)}`} className="planner-external-popover__choice" onClick={() => { onSelect(recommendation); onClose(); }} type="button">{content}</button>
+            : <div className="planner-external-popover__choice">{content}</div>}
+        </article>;
+      })}</div>
+    </section>
+  </div>;
+  return typeof document === "undefined" ? modal : createPortal(modal, document.body);
+}
+
+function PlannerExternalPreview({ partySlot, vacancy }: { partySlot: PlannerPartySlot; vacancy: KeystonePlannerVacancy }) {
+  const copy = usePlannerCopy();
+  const [open, setOpen] = useState(false);
+  const recommendations = plannerVacancyRecommendations(vacancy);
+  const visible = recommendations.slice(0, 4);
+  const advanced = vacancy.recommendationMode === "advanced";
+  const labels = visible.map(recommendationLabel).join(", ");
+  return <div aria-label={`${copy.externalSlot}: ${copy.role[vacancy.role]}${labels ? `. ${externalRecommendationTitle(copy, vacancy)}: ${labels}` : ""}`} className="planner-external-preview" data-mode={advanced ? "advanced" : "quick"} data-party-slot={partySlot} data-role={vacancy.role} role="group">
+    <span className="planner-role-watermark"><WowRoleIcon role={vacancy.role} /></span>
+    <span aria-hidden="true" className="planner-external-preview__title">{copy.externalCardTitle}</span>
+    <span aria-hidden="true" className="planner-external-preview__avatar"><CircleHelp /></span>
+    {visible.map((recommendation, index) => {
+      const icon = recommendationIcon(recommendation, advanced);
+      const label = recommendationLabel(recommendation);
+      return <span aria-label={label} className="planner-external-preview__class" data-corner={index + 1} data-icon-kind={advanced ? "spec" : "class"} key={recommendation.id} role="img" style={{ "--planner-class-color": classColor(recommendation.wowClass) } as React.CSSProperties} title={label}>
+        {icon ? <img alt="" src={icon} /> : <CircleHelp aria-hidden="true" />}
+      </span>;
+    })}
+    {recommendations.length > 4 ? <button aria-label={`${copy.viewClasses}: ${recommendations.length}`} className="planner-external-preview__more" onClick={event => { event.stopPropagation(); setOpen(true); }} type="button">+</button> : null}
+    {open ? <PlannerExternalBreakdown onClose={() => setOpen(false)} vacancy={vacancy} /> : null}
+  </div>;
 }
 
 function PlannerObjectiveIcon({ assignment, objective }: { assignment: KeystonePlannerAssignment; objective: KeystonePlannerObjective }) {
@@ -173,12 +330,12 @@ function PlannerLootBreakdown({ assignment, onClose }: { assignment: KeystonePla
   </div>;
 }
 
-function PlannerAssignmentCard({ assignment, owner }: { assignment: KeystonePlannerAssignment; owner: boolean }) {
+function PlannerAssignmentCard({ assignment, owner, partySlot }: { assignment: KeystonePlannerAssignment; owner: boolean; partySlot: PlannerPartySlot }) {
   const copy = usePlannerCopy();
   const [lootOpen, setLootOpen] = useState(false);
   const hasOverflow = assignment.objectives.length >= 6;
   const visibleObjectives = hasOverflow ? assignment.objectives.slice(0, 5) : assignment.objectives;
-  return <article className="planner-player-card" data-role={assignment.role} style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
+  return <article className="planner-player-card" data-party-slot={partySlot} data-role={assignment.role} style={{ "--planner-class-color": classColor(assignment.wowClass) } as React.CSSProperties}>
     <span className="planner-role-watermark"><WowRoleIcon role={assignment.role} /></span>
     {owner ? <span aria-label={copy.owner} className="planner-owner-crown" role="img" title={copy.ownerTitle}><Crown aria-hidden="true" /></span> : null}
     <header>
@@ -192,45 +349,302 @@ function PlannerAssignmentCard({ assignment, owner }: { assignment: KeystonePlan
   </article>;
 }
 
-function PlannerUtility({ icon, label, spellId, state }: { icon: string; label: string; spellId?: number; state?: string }) {
-  const content = <span className="planner-utility" data-state={state}><img alt="" src={icon} /><span>{label}</span></span>;
+function PlannerUtility({ className = "", compact = false, icon, label, profile, source, spellId, state }: {
+  className?: string; compact?: boolean; icon: string; label: string; profile?: string; source?: "party" | "external"; spellId?: number; state?: string;
+}) {
+  const content = <span aria-label={compact ? label : undefined} className={`planner-utility ${className}`.trim()} data-compact={compact} data-profile={profile} data-source={source} data-state={state} role={compact ? "img" : undefined} title={compact ? label : undefined}><img alt="" src={icon} />{compact ? null : <span>{label}</span>}</span>;
   return spellId ? <WowheadTooltip className="planner-utility-link" id={spellId} label={label} type="spell">{content}</WowheadTooltip> : content;
+}
+
+function PlannerCapabilityGrid({ capabilities, dynamic = false, limit }: {
+  capabilities: readonly KeystonePlannerVacancyCapability[]; dynamic?: boolean; limit: number;
+}) {
+  const copy = usePlannerCopy();
+  const [open, setOpen] = useState(false);
+  const [dynamicLimit, setDynamicLimit] = useState(limit);
+  const [popupPosition, setPopupPosition] = useState<{ bottom: number; left: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current === null) return;
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+  }, []);
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      setOpen(false);
+      closeTimerRef.current = null;
+    }, 150);
+  }, [cancelClose]);
+  useEffect(() => cancelClose, [cancelClose]);
+  useEffect(() => {
+    if (!dynamic || typeof ResizeObserver === "undefined") {
+      setDynamicLimit(limit);
+      return;
+    }
+    const grid = gridRef.current;
+    if (!grid) return;
+    const updateLimit = (width: number) => {
+      const iconWidth = 42;
+      const gap = 7;
+      const moreWidth = 22;
+      const fullCapacity = Math.max(1, Math.floor((width + gap) / (iconWidth + gap)));
+      const next = capabilities.length <= fullCapacity
+        ? capabilities.length
+        : Math.max(1, Math.floor((width - moreWidth) / (iconWidth + gap)));
+      setDynamicLimit(next);
+    };
+    updateLimit(grid.clientWidth);
+    const observer = new ResizeObserver(entries => updateLimit(entries[0]?.contentRect.width ?? grid.clientWidth));
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [capabilities.length, dynamic, limit]);
+  const updatePopupPosition = useCallback(() => {
+    const bounds = moreRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const popupHalfWidth = Math.min(180, Math.max(0, (window.innerWidth - 24) / 2));
+    const center = Math.min(window.innerWidth - 12 - popupHalfWidth, Math.max(12 + popupHalfWidth, bounds.left + bounds.width / 2));
+    setPopupPosition({ bottom: window.innerHeight - bounds.top + 7, left: center });
+  }, []);
+  useLayoutEffect(() => {
+    if (!open) {
+      setPopupPosition(null);
+      return;
+    }
+    updatePopupPosition();
+    window.addEventListener("resize", updatePopupPosition);
+    window.addEventListener("scroll", updatePopupPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePopupPosition);
+      window.removeEventListener("scroll", updatePopupPosition, true);
+    };
+  }, [open, updatePopupPosition]);
+  const visibleLimit = dynamic ? dynamicLimit : limit;
+  const overflow = capabilities.slice(visibleLimit);
+  const popup = open && popupPosition && overflow.length > 0 ? <div className="planner-capability-grid__popup" data-portal-layer="capabilities" onBlur={event => {
+    if (!event.currentTarget.contains(event.relatedTarget)) scheduleClose();
+  }} onFocusCapture={cancelClose} onKeyDown={event => { if (event.key === "Escape") setOpen(false); }} onMouseEnter={cancelClose} onMouseLeave={scheduleClose} ref={popupRef} role="tooltip" style={popupPosition}>
+    {overflow.map((capability, index) => <PlannerCapabilityChip capability={capability} key={`popup:${capability.capabilityId}:${capability.spellId}:${index}`} />)}
+  </div> : null;
+  return <><div className="planner-capability-grid" onBlur={event => {
+    if (!event.currentTarget.contains(event.relatedTarget) && !popupRef.current?.contains(event.relatedTarget as Node)) scheduleClose();
+  }} onKeyDown={event => { if (event.key === "Escape") setOpen(false); }} onMouseEnter={cancelClose} onMouseLeave={scheduleClose} ref={gridRef}>
+    <div className="planner-capability-grid__icons">
+      {capabilities.slice(0, visibleLimit).map((capability, index) => <span className="planner-capability-grid__icon" key={`${capability.capabilityId}:${capability.spellId}:${index}`}>
+        <PlannerCapabilityChip capability={capability} compact />
+      </span>)}
+      {overflow.length > 0 ? <button aria-expanded={open} aria-label={copy.moreUtilities(overflow.length)} className="planner-capability-grid__more" onFocus={() => { cancelClose(); setOpen(true); }} onMouseEnter={() => { cancelClose(); setOpen(true); }} ref={moreRef} type="button">+</button> : null}
+    </div>
+  </div>{typeof document === "undefined" || !popup ? null : createPortal(popup, document.body)}</>;
+}
+
+function uniquePlannerCapabilities(capabilities: readonly KeystonePlannerVacancyCapability[]) {
+  const seen = new Set<string>();
+  return capabilities.filter(capability => {
+    const key = `${capability.capabilityId.toUpperCase()}:${capability.spellId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function PlannerExternalCard({ onSelect, partySlot, selectedId, vacancy }: {
+  onSelect: (recommendation: KeystonePlannerVacancyRecommendation) => void;
+  partySlot: PlannerPartySlot;
+  selectedId?: string;
+  vacancy: KeystonePlannerVacancy;
+}) {
+  const copy = usePlannerCopy();
+  const recommendations = plannerVacancyRecommendations(vacancy);
+  const [open, setOpen] = useState(false);
+  const selected = recommendations.find(recommendation => recommendation.id === selectedId) ?? recommendations[0];
+  const advanced = vacancy.recommendationMode === "advanced";
+  if (!selected) return null;
+  const selectedCapabilities = uniquePlannerCapabilities([
+    ...selected.buffsDebuffs,
+    ...selected.utilities,
+    ...(selected.groupDefensives ?? []),
+    ...(selected.dungeonUtilities ?? []),
+  ]);
+  return <article className="planner-external-card" data-mode={advanced ? "advanced" : "quick"} data-party-slot={partySlot} data-role={vacancy.role} style={{ "--planner-class-color": classColor(selected.wowClass) } as React.CSSProperties}>
+    <span className="planner-role-watermark"><WowRoleIcon role={vacancy.role} /></span>
+    <header>
+      <span className="planner-external-card__selectors" role="group" aria-label={`${externalRecommendationTitle(copy, vacancy)} · ${copy.role[vacancy.role]}`}>
+        {recommendations.slice(0, 4).map(recommendation => {
+          const icon = recommendationIcon(recommendation, advanced);
+          const label = recommendationLabel(recommendation);
+          return <button aria-label={`${copy.selectRecommendation}: ${label}`} aria-pressed={recommendation.id === selected.id} data-icon-kind={advanced ? "spec" : "class"} key={recommendation.id} onClick={() => onSelect(recommendation)} title={label} type="button" style={{ "--planner-class-color": classColor(recommendation.wowClass) } as React.CSSProperties}>
+            {icon ? <img alt="" src={icon} /> : <CircleHelp aria-hidden="true" />}
+          </button>;
+        })}
+        {recommendations.length > 4 ? <button aria-label={`${copy.viewClasses}: ${recommendations.length}`} className="planner-external-card__more" onClick={() => setOpen(true)} type="button">+</button> : null}
+      </span>
+      <span className="planner-external-card__identity"><strong>{recommendationLabel(selected)}</strong><small>{copy.externalSlot} · {copy.role[vacancy.role]}</small></span>
+    </header>
+    <div className="planner-external-card__contributions">
+      <section aria-label={copy.capabilitySummary} role="group"><span className="planner-external-card__contribution-heading">
+        {vacancy.recommendationMode ? <PlannerGain gain={selected.offensiveGainPct} /> : null}
+        <strong>{copy.capabilitySummary}</strong>
+      </span>{selectedCapabilities.length > 0
+        ? <PlannerCapabilityGrid capabilities={selectedCapabilities} limit={5} />
+        : <small>{copy.noExtraUtility}</small>}</section>
+    </div>
+    {open ? <PlannerExternalBreakdown onClose={() => setOpen(false)} onSelect={onSelect} selectedId={selected.id} vacancy={vacancy} /> : null}
+  </article>;
+}
+
+type PlannerDamageProfile = NonNullable<KeystonePlannerVacancyRecommendation["damageProfile"]>;
+
+function selectedVacancyRecommendation(
+  vacancy: KeystonePlannerVacancy,
+  index: number,
+  selectedIds: Readonly<Record<number, string>>,
+) {
+  const recommendations = plannerVacancyRecommendations(vacancy);
+  return recommendations.find(item => item.id === selectedIds[index]) ?? recommendations[0];
+}
+
+function selectedExternalEssentialState(
+  recommendations: readonly KeystonePlannerVacancyRecommendation[],
+  capabilityId: "BLOODLUST" | "BATTLE_REZ",
+): "guaranteed" | "conditional" | "none" {
+  const capabilities = recommendations.flatMap(recommendation => recommendation.utilities)
+    .filter(capability => capability.capabilityId.toUpperCase() === capabilityId);
+  if (capabilities.some(capability => capability.availability === "guaranteed")) return "guaranteed";
+  return capabilities.length > 0 ? "conditional" : "none";
+}
+
+function displayedEssentialState(
+  party: "guaranteed" | "conditional" | "none",
+  external: "guaranteed" | "conditional" | "none",
+) {
+  const rank = { none: 0, conditional: 1, guaranteed: 2 } as const;
+  return rank[external] > rank[party]
+    ? { source: "external" as const, state: external }
+    : { source: "party" as const, state: party };
+}
+
+type PlannerPartyEntry =
+  | { kind: "assignment"; assignment: KeystonePlannerAssignment; partySlot: PlannerPartySlot }
+  | { kind: "vacancy"; partySlot: PlannerPartySlot; vacancy: KeystonePlannerVacancy; vacancyIndex: number };
+
+function plannerPartyEntries(recommendation: KeystonePlannerRecommendation): PlannerPartyEntry[] {
+  const entries: PlannerPartyEntry[] = [];
+  let dpsSlot = 0;
+  for (const role of ["tank", "healer", "dps"] as const) {
+    const slotForRole = (): PlannerPartySlot => {
+      if (role !== "dps") return role;
+      dpsSlot += 1;
+      return dpsSlot === 1 ? "dps-1" : dpsSlot === 2 ? "dps-2" : "dps-3";
+    };
+    for (const assignment of recommendation.assignments.filter(candidate => candidate.role === role)) {
+      entries.push({ kind: "assignment", assignment, partySlot: slotForRole() });
+    }
+    recommendation.vacancies.forEach((vacancy, vacancyIndex) => {
+      if (vacancy.role === role) entries.push({ kind: "vacancy", partySlot: slotForRole(), vacancy, vacancyIndex });
+    });
+  }
+  return entries;
+}
+
+function plannerDamageProfile(
+  recommendation: KeystonePlannerRecommendation,
+  selectedIds: Readonly<Record<number, string>>,
+): PlannerDamageProfile {
+  let magical = recommendation.compositionSummary.magicalDpsCount;
+  let physical = recommendation.compositionSummary.physicalDpsCount;
+  let mixed = false;
+  for (const [index, vacancy] of recommendation.vacancies.entries()) {
+    if (vacancy.role !== "dps") continue;
+    const profile = selectedVacancyRecommendation(vacancy, index, selectedIds)?.damageProfile ?? "unknown";
+    if (profile === "magical") magical += 1;
+    else if (profile === "physical") physical += 1;
+    else if (profile === "mixed") mixed = true;
+  }
+  if (mixed || (magical > 0 && magical === physical)) return "mixed";
+  if (magical > physical) return "magical";
+  if (physical > magical) return "physical";
+  return "unknown";
 }
 
 function PlannerRecommendationCard({ avatarUrls, expanded, onToggle, recommendation }: {
   avatarUrls: Map<number, string | null>; expanded: boolean; onToggle: () => void; recommendation: KeystonePlannerRecommendation;
 }) {
   const copy = usePlannerCopy();
-  const ordered = [
-    ...recommendation.assignments.filter(item => item.role === "tank"),
-    ...recommendation.assignments.filter(item => item.role === "healer"),
-    ...recommendation.assignments.filter(item => item.role === "dps"),
-  ];
+  const [selectedExternalIds, setSelectedExternalIds] = useState<Record<number, string>>({});
+  useEffect(() => { setSelectedExternalIds({}); }, [recommendation.fingerprint]);
+  const partyEntries = plannerPartyEntries(recommendation);
+  const topCount = recommendation.assignments.filter(assignment => assignment.role === "tank" || assignment.role === "healer").length
+    + recommendation.vacancies.filter(vacancy => vacancy.role === "tank" || vacancy.role === "healer").length;
+  const dpsCount = recommendation.assignments.filter(assignment => assignment.role === "dps").length
+    + recommendation.vacancies.filter(vacancy => vacancy.role === "dps").length;
+  const valueWords = copy.value.split(" ");
+  const valueLead = valueWords.slice(0, -1).join(" ");
+  const valueTail = valueWords[valueWords.length - 1];
+  const damageProfile = plannerDamageProfile(recommendation, selectedExternalIds);
+  const damageSpellId = damageProfile === "magical" ? 1490 : damageProfile === "physical" ? 113746 : undefined;
+  const damageIcon = damageProfile === "mixed"
+    ? mixedDamageIcon
+    : damageSpellId ? plannerCapabilityIcon(damageSpellId, "damage_debuff") : damageSynergyIcon;
+  const selectedExternalRecommendations = recommendation.vacancies.flatMap((vacancy, index) => {
+    const selected = selectedVacancyRecommendation(vacancy, index, selectedExternalIds);
+    return selected ? [selected] : [];
+  });
+  const externalBloodlust = selectedExternalEssentialState(selectedExternalRecommendations, "BLOODLUST");
+  const externalBattleRez = selectedExternalEssentialState(selectedExternalRecommendations, "BATTLE_REZ");
+  const bloodlust = displayedEssentialState(recommendation.compositionSummary.bloodlust, externalBloodlust);
+  const battleRez = displayedEssentialState(recommendation.compositionSummary.battleRez, externalBattleRez);
+  const compositionCapabilities = uniquePlannerCapabilities([
+    ...recommendation.compositionSummary.uniqueCapabilities
+    .filter(capability => !["BLOODLUST", "BATTLE_REZ"].includes(capability.capabilityId.toUpperCase()))
+    .map(capability => ({
+      capabilityId: capability.capabilityId,
+      name: localizedCapabilityName(copy, capability.capabilityId, capability.name),
+      spellId: capability.iconSpellId,
+      availability: capability.availability ?? capability.mode ?? "guaranteed",
+    })),
+    ...(recommendation.compositionSummary.groupDefensives ?? []),
+    ...(recommendation.compositionSummary.dungeonUtilities ?? []),
+    ...selectedExternalRecommendations.flatMap(selected => [
+      ...selected.buffsDebuffs,
+      ...selected.utilities.filter(capability => !["BLOODLUST", "BATTLE_REZ"].includes(capability.capabilityId.toUpperCase())),
+      ...(selected.groupDefensives ?? []),
+      ...(selected.dungeonUtilities ?? []),
+    ]),
+  ]);
   return <article className="planner-recommendation" data-expanded={expanded}>
-    <button aria-expanded={expanded} className="planner-recommendation__summary" onClick={onToggle} type="button">
+    <div className="planner-recommendation__summary" onClick={onToggle}>
       <span className="planner-rank">#{recommendation.rank}</span>
       <span className="planner-recommendation__metrics">
         <span><b>{recommendation.lootSummary.totalObjectives}</b> {copy.objectiveSummary}</span>
         <span><b>{recommendation.preferenceSummary.preferred}</b> {copy.preferenceSummary}</span>
       </span>
-      <span className="planner-recommendation__party">{ordered.map(assignment => <PlannerAssignmentPreview assignment={assignment} avatarUrl={avatarUrls.get(assignment.characterId) ?? null} key={assignment.userId} owner={assignment.characterId === recommendation.stone.characterId} />)}</span>
-      <span className="planner-score"><small>{copy.value}</small><b>{recommendation.lootSummary.weightedScore}</b></span>
-      <ChevronDown aria-hidden="true" />
-    </button>
+      <span className="planner-recommendation__party">{partyEntries.map(entry => entry.kind === "assignment"
+        ? <PlannerAssignmentPreview assignment={entry.assignment} avatarUrl={avatarUrls.get(entry.assignment.characterId) ?? null} key={`member-${entry.assignment.userId}`} owner={entry.assignment.characterId === recommendation.stone.characterId} partySlot={entry.partySlot} />
+        : <PlannerExternalPreview key={`external-${entry.vacancy.role}-${entry.vacancyIndex}`} partySlot={entry.partySlot} vacancy={entry.vacancy} />)}</span>
+      <span className="planner-score"><small><span>{valueLead}</span><span>{valueTail}</span></small><b>{recommendation.lootSummary.weightedScore}</b></span>
+      <button aria-expanded={expanded} aria-label={`${expanded ? copy.collapse : copy.expand} #${recommendation.rank}`} className="planner-recommendation__expand" onClick={event => { event.stopPropagation(); onToggle(); }} type="button"><ChevronDown aria-hidden="true" /></button>
+    </div>
     {expanded ? <div className="planner-recommendation__detail">
-      <div className="planner-party-trapezoid">{ordered.map(assignment => <PlannerAssignmentCard assignment={assignment} key={assignment.userId} owner={assignment.characterId === recommendation.stone.characterId} />)}</div>
+      <div className="planner-party-trapezoid" data-dps-count={dpsCount} data-top-count={topCount}>{partyEntries.map(entry => entry.kind === "assignment"
+        ? <PlannerAssignmentCard assignment={entry.assignment} key={entry.assignment.userId} owner={entry.assignment.characterId === recommendation.stone.characterId} partySlot={entry.partySlot} />
+        : <PlannerExternalCard key={`external-detail-${entry.vacancy.role}-${entry.vacancyIndex}`} onSelect={selected => setSelectedExternalIds(current => ({ ...current, [entry.vacancyIndex]: selected.id }))} partySlot={entry.partySlot} selectedId={selectedExternalIds[entry.vacancyIndex]} vacancy={entry.vacancy} />)}</div>
       <div className="planner-utilities">
-        <section><strong>{copy.composition}</strong>
-          <PlannerUtility icon={damageSynergyIcon} label={`${copy.damage}: ${copy.profile[recommendation.compositionSummary.damageProfile]}`} />
-          {recommendation.vacancies.length > 0 ? <PlannerUtility icon={classBuffsIcon} label={`${recommendation.vacancies.length} ${copy.vacancies}`} /> : null}
+        <section aria-label={copy.composition} role="group"><strong>{copy.composition}</strong><div className="planner-summary-icons">
+          <PlannerUtility className="planner-summary-damage" compact icon={damageIcon} label={`${copy.damage}: ${copy.profile[damageProfile]}`} profile={damageProfile} spellId={damageSpellId} />
+          <span aria-label={`${copy.externalPlayers}: ${recommendation.vacancies.length}`} className="planner-summary-external-count" title={copy.externalPlayers}><span aria-hidden="true" className="planner-summary-external-count__eye" style={{ backgroundImage: `url(${lfgEyeIcon})` }} /><b>{recommendation.vacancies.length}</b></span>
+        </div>
         </section>
-        <section><strong>{copy.utilities}</strong>
-          <PlannerUtility icon={bloodlustIcon} label={`${copy.bloodlust} · ${copy.availability[recommendation.compositionSummary.bloodlust]}`} spellId={2825} state={recommendation.compositionSummary.bloodlust} />
-          <PlannerUtility icon={battleRezIcon} label={`${copy.battleRez} · ${copy.availability[recommendation.compositionSummary.battleRez]}`} spellId={20484} state={recommendation.compositionSummary.battleRez} />
+        <section aria-label={copy.partyEssentials} role="group"><strong>{copy.partyEssentials}</strong><div className="planner-summary-icons">
+          <PlannerUtility compact icon={bloodlustIcon} label={`${copy.bloodlust} · ${copy.availability[bloodlust.state]}`} source={bloodlust.source} spellId={2825} state={bloodlust.state} />
+          <PlannerUtility compact icon={battleRezIcon} label={`${copy.battleRez} · ${copy.availability[battleRez.state]}`} source={battleRez.source} spellId={20484} state={battleRez.state} />
+        </div>
         </section>
-        <section><strong>{copy.buffs}</strong>
-          {recommendation.compositionSummary.uniqueCapabilities.filter(capability => !["BLOODLUST", "BATTLE_REZ"].includes(capability.capabilityId.toUpperCase())).map(capability =>
-            <PlannerUtility icon={plannerCapabilityIcon(capability.iconSpellId, capability.type)} key={capability.capabilityId} label={localizedCapabilityName(copy, capability.capabilityId, capability.name)} spellId={capability.iconSpellId} state={capability.availability} />)}
+        <section aria-label={copy.capabilitySummary} role="group"><strong>{copy.capabilitySummary}</strong>
+          <PlannerCapabilityGrid capabilities={compositionCapabilities} dynamic limit={5} />
         </section>
       </div>
     </div> : null}
@@ -249,7 +663,9 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [plannerError, setPlannerError] = useState<string | null>(null);
-  const [options, setOptions] = useState(() => ({ ...DEFAULT_KEYSTONE_PLANNER_OPTIONS }));
+  const [options, setOptions] = useState<KeystonePlannerOptions>(() => ({ ...DEFAULT_KEYSTONE_PLANNER_OPTIONS }));
+  const [canScrollConfigDown, setCanScrollConfigDown] = useState(false);
+  const configScrollRef = useRef<HTMLDivElement>(null);
   const generation = useRef(0);
   const previousOptions = useRef(options);
   const stones = selector?.availability.stones ?? [];
@@ -316,6 +732,31 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
     return () => window.clearTimeout(timer);
   }, [calculate, options, response]);
   const unconfiguredSelected = detail?.members.some(member => selectedUsers.has(member.userId) && !member.plannerConfigured) ?? false;
+  const updateConfigScrollState = useCallback(() => {
+    const element = configScrollRef.current;
+    setCanScrollConfigDown(Boolean(element && element.scrollTop + element.clientHeight < element.scrollHeight - 1));
+  }, []);
+  useLayoutEffect(() => {
+    const element = configScrollRef.current;
+    if (!element) return;
+    const frame = window.requestAnimationFrame(updateConfigScrollState);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateConfigScrollState);
+    observer?.observe(element);
+    if (element.firstElementChild) observer?.observe(element.firstElementChild);
+    window.addEventListener("resize", updateConfigScrollState);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", updateConfigScrollState);
+    };
+  }, [options.recommendationMode, plannerError, unconfiguredSelected, updateConfigScrollState, visibleStones.length]);
+  const scrollConfigToEnd = () => {
+    const element = configScrollRef.current;
+    if (!element) return;
+    if (typeof element.scrollTo === "function") element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+    else element.scrollTop = element.scrollHeight;
+    setCanScrollConfigDown(false);
+  };
   const avatarUrls = new Map(detail?.members.flatMap(member => member.characters.map(character => [character.characterId, character.avatarUrl] as const)) ?? []);
   const emptyResult = response
     ? response.availability.eligibleStoneCount === 0 ? copy.stale
@@ -326,7 +767,17 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
 
   return <div className="keystone-planner">
     <aside className="keystone-planner__config">
+      <div className="planner-config-scroll" onScroll={updateConfigScrollState} ref={configScrollRef}>
       <div className="planner-config-heading"><button className="planner-configure" onClick={onConfigure} type="button"><Settings2 aria-hidden="true" />{copy.configure}</button></div>
+      <label className="planner-fill-toggle"><Users aria-hidden="true" /><span>{copy.fillComposition}</span><input aria-label={copy.fillComposition} checked={options.fillComposition} onChange={event => {
+        const checked = event.currentTarget.checked;
+        setOptions(current => ({ ...current, fillComposition: checked }));
+      }} type="checkbox" /></label>
+      <div aria-label={copy.recommendationMode} className="planner-mode-selector" role="group">
+        {(["quick", "advanced"] as const).map(mode => <button aria-pressed={options.recommendationMode === mode} key={mode} onClick={() => {
+          setOptions(current => ({ ...current, recommendationMode: mode }));
+        }} type="button">{mode === "quick" ? copy.quick : copy.advanced}</button>)}
+      </div>
       <label className="planner-level-filter" htmlFor="planner-minimum-level"><span>{copy.minimum}</span><output>+{minimumLevel}</output></label>
       <input id="planner-minimum-level" max="20" min="1" onChange={event => setMinimumLevel(Number(event.currentTarget.value))} type="range" value={minimumLevel} />
       <p className="planner-filter-help">{copy.filterHelp}</p>
@@ -343,7 +794,11 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
       <div className="planner-priorities"><strong>{copy.options}</strong>
         {([
           ["bloodlust", copy.bloodlust, bloodlustIcon], ["battleRez", copy.battleRez, battleRezIcon],
-          ["classBuffs", copy.classBuffs, classBuffsIcon], ["damageSynergy", copy.damageSynergy, damageSynergyIcon],
+          ["offensiveSynergy", copy.offensiveSynergy, offensiveSynergyIcon],
+          ...(options.recommendationMode === "advanced" ? [
+            ["groupDefense", copy.groupDefense, groupDefenseIcon],
+            ["dungeonUtility", copy.dungeonUtility, dungeonUtilityIcon],
+          ] as const : []),
         ] as const).map(([key, label, icon]) => <label key={key}><img alt="" aria-hidden="true" src={icon} /><span>{label}</span><input aria-label={label} checked={options[key]} onChange={event => {
           const checked = event.currentTarget.checked;
           setOptions(current => ({ ...current, [key]: checked }));
@@ -352,6 +807,8 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
       <button className="planner-calculate" disabled={loading || !selectedStone || selectedUsers.size < 2 || selectedUsers.size > 5 || unconfiguredSelected} onClick={() => calculate(options, response !== null)} type="button">{loading ? response ? copy.recalculating : copy.calculating : response ? copy.recalculate : copy.calculate}</button>
       {unconfiguredSelected ? <p className="planner-readiness-warning">{copy.unconfigured}</p> : null}
       {plannerError ? <p className="error planner-error" role="alert">{plannerError}</p> : null}
+      </div>
+      {canScrollConfigDown ? <button aria-label={copy.scrollToEnd} className="planner-config-scroll-cue" onClick={scrollConfigToEnd} type="button"><ChevronDown aria-hidden="true" /></button> : null}
     </aside>
     <section aria-busy={loading} className="keystone-planner__results" data-recalculating={loading && response !== null} aria-label={copy.results} role="region">
       {response?.recommendations.length ? response.recommendations.map(recommendation => <PlannerRecommendationCard avatarUrls={avatarUrls} expanded={expanded === recommendation.fingerprint} key={recommendation.fingerprint} onToggle={() => setExpanded(current => current === recommendation.fingerprint ? null : recommendation.fingerprint)} recommendation={recommendation} />)

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "label": "Keystone Planner buff-impact PoC",
+  "season": "MID2",
+  "mplusWeights": {
+    "singleTarget": 0.4,
+    "aoe8": 0.6
+  },
+  "scenarios": [
+    {"id": "singleTarget", "fightStyle": "Patchwerk", "desiredTargets": 1},
+    {"id": "aoe8", "fightStyle": "Patchwerk", "desiredTargets": 8}
+  ],
+  "specs": [
+    {"specId": 269, "name": "Windwalker Monk", "profile": "MID2_Monk_Windwalker.simc"},
+    {"specId": 1480, "name": "Devourer Demon Hunter", "profile": "MID2_Demon_Hunter_Devourer.simc"},
+    {"specId": 64, "name": "Frost Mage", "profile": "MID2_Mage_Frost.simc"}
+  ],
+  "buffs": [
+    {"id": "MARK_OF_THE_WILD", "override": "mark_of_the_wild"},
+    {"id": "BATTLE_SHOUT", "override": "battle_shout"},
+    {"id": "ARCANE_INTELLECT", "override": "arcane_intellect"},
+    {"id": "SKYFURY", "override": "skyfury"},
+    {"id": "CHAOS_BRAND", "override": "chaos_brand"},
+    {"id": "MYSTIC_TOUCH", "override": "mystic_touch"},
+    {"id": "HUNTERS_MARK", "override": "hunters_mark"}
+  ]
+}

@@ -7,6 +7,7 @@ import {
   PLANNER_LIMITS,
   PlannerDataLimitError,
   assertPlannerDataLimit,
+  parseKeystonePlannerRequest,
 } from '../.tmp-test/keystonePlannerApi.js'
 import { currentEuWeeklyResetUnix } from '../.tmp-test/weeklyReset.js'
 import { FakeD1Database } from './fakeD1.js'
@@ -18,6 +19,89 @@ const options = {
   classBuffs: true,
   damageSynergy: true,
 }
+
+test('Planner options accept exact legacy and modern forms without mixing fields', () => {
+  const base = {
+    participantUserIds: [1, 2], targetLevel: 10, challengeMapId: null,
+    stoneCharacterId: null, locks: [],
+  }
+  assert.deepEqual(parseKeystonePlannerRequest({ ...base, options }).options, options)
+  const modern = {
+    optimizeComposition: true, recommendationMode: 'advanced', bloodlust: true,
+    battleRez: true, offensiveSynergy: true, groupDefense: true, dungeonUtility: true,
+  }
+  assert.deepEqual(parseKeystonePlannerRequest({ ...base, options: modern }).options, modern)
+  assert.deepEqual(parseKeystonePlannerRequest({
+    ...base, options: { ...modern, fillComposition: false },
+  }).options, { ...modern, fillComposition: false })
+  assert.throws(() => parseKeystonePlannerRequest({
+    ...base, options: { ...modern, fillComposition: 'yes' },
+  }))
+  assert.throws(() => parseKeystonePlannerRequest({
+    ...base, options: { ...modern, classBuffs: true },
+  }))
+})
+
+test('modern endpoint exposes bounded Quick classes and Advanced exact specs per vacancy', async () => {
+  const modern = mode => ({
+    optimizeComposition: true, recommendationMode: mode, bloodlust: true,
+    battleRez: true, offensiveSynergy: true, groupDefense: true, dungeonUtility: true,
+  })
+  for (const mode of ['quick', 'advanced']) {
+    const response = await plan(fixture(), body({
+      participantUserIds: [1, 2, 3], challengeMapId: 249, stoneCharacterId: 10,
+      options: modern(mode),
+    }))
+    assert.equal(response.status, 200)
+    const payload = await response.json()
+    assert.equal(payload.recommendations.length > 0 && payload.recommendations.length <= 5, true)
+    for (const recommendation of payload.recommendations) {
+      assert.equal(recommendation.vacancies.length, 2)
+      for (const vacancy of recommendation.vacancies) {
+        assert.equal(vacancy.recommendationMode, mode)
+        assert.equal(typeof vacancy.recommendedClass, 'string')
+        assert.equal(vacancy.offensiveReasons.length <= 8, true)
+        assert.equal(vacancy.offensiveProvenance.length <= 5, true)
+        assert.equal(mode === 'advanced' ? Number.isInteger(vacancy.recommendedSpecId) : !('recommendedSpecId' in vacancy), true)
+      }
+    }
+  }
+})
+
+test('modern endpoint omits external vacancies when composition fill is disabled', async () => {
+  const response = await plan(fixture(), body({
+    participantUserIds: [1, 2, 3], challengeMapId: 249, stoneCharacterId: 10,
+    options: {
+      optimizeComposition: true, fillComposition: false, recommendationMode: 'quick',
+      bloodlust: true, battleRez: true, offensiveSynergy: true,
+      groupDefense: true, dungeonUtility: true,
+    },
+  }))
+  assert.equal(response.status, 200)
+  const payload = await response.json()
+  assert.ok(payload.recommendations.length > 0)
+  assert.equal(payload.recommendations.every(recommendation => recommendation.vacancies.length === 0), true)
+  assert.equal(payload.recommendations.every(recommendation =>
+    recommendation.reasonCodes.includes('PARTY_INCOMPLETE')), true)
+})
+
+test('Quick endpoint scores external DPS when selected participants are tank and healer', async () => {
+  const response = await plan(fixture(), body({
+    participantUserIds: [1, 2], challengeMapId: 249, stoneCharacterId: 10,
+    options: {
+      optimizeComposition: true, recommendationMode: 'quick',
+      bloodlust: true, battleRez: true, offensiveSynergy: true,
+      groupDefense: false, dungeonUtility: false,
+    },
+  }))
+  assert.equal(response.status, 200)
+  const payload = await response.json()
+  assert.ok(payload.recommendations.length > 0)
+  const vacancies = payload.recommendations[0].vacancies
+  assert.equal(vacancies.length, 3)
+  assert.equal(vacancies.every(vacancy => vacancy.offensiveGainPct > 0), true)
+  assert.equal(vacancies.every(vacancy => vacancy.recommendations.length < 13), true)
+})
 
 function user(id, sharing = 1) {
   return {
@@ -472,6 +556,10 @@ test('public output enriches items and central capability metadata without expos
   assert.ok(mage.capabilities.some(capability => capability.capabilityId === 'BLOODLUST'
     && capability.name === 'Bloodlust' && capability.iconSpellId === 2825
     && capability.stacking === 'unique'))
+  for (const vacancy of result.recommendations[0].vacancies) {
+    assert.ok(vacancy.candidateClasses.length > 0)
+    assert.ok(vacancy.candidateClasses.every(candidate => !('specId' in candidate) && !('specIds' in candidate)))
+  }
   assert.deepEqual(env.DB.metadataReadItemIds, [[100]])
 
   env.DB.itemMetadata = []

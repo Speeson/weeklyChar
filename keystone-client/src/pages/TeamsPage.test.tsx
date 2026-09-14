@@ -6,7 +6,7 @@ import type { TeamsDataSource } from "../core/teams";
 import {
   clearTeamsSessionCache, loadTeamDetail, loadTeams, setSelectedTeamId,
 } from "../core/teamsSessionCache";
-import type { ClientPlannerPreference, ClientPlannerPreferenceUpdate, ClientPlannerPreferences, ClientTeamDetail, KeystonePlannerResponse, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
+import type { ClientPlannerPreference, ClientPlannerPreferenceUpdate, ClientPlannerPreferences, ClientTeamDetail, KeystonePlannerResponse, KeystonePlannerVacancyRecommendation, KeystoneSelectorObjective, KeystoneSelectorResponse } from "../core/types";
 import { renderWithTheme } from "../test/renderWithTheme";
 import { TeamsPage } from "./TeamsPage";
 
@@ -49,6 +49,13 @@ const selector: KeystoneSelectorResponse = {
 };
 
 function plannerResponse(): KeystonePlannerResponse {
+  const candidates = [
+    { wowClass: "Druid", contributions: [{ capabilityId: "BATTLE_REZ", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BATTLE_REZ" as const] },
+    { wowClass: "Evoker", contributions: [{ capabilityId: "BLOODLUST", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+    { wowClass: "Mage", contributions: [{ capabilityId: "BLOODLUST", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+    { wowClass: "Shaman", contributions: [{ capabilityId: "BLOODLUST", availability: "guaranteed" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+    { wowClass: "Hunter", contributions: [{ capabilityId: "BLOODLUST", availability: "conditional" as const }], reasonCodes: ["PROVIDES_BLOODLUST" as const] },
+  ];
   const assignments = [
     { userId: 3, username: "Ana", characterId: 12, characterName: "Spee", wowClass: "Paladin", specId: 66, role: "tank" as const, lootSpecId: 66, playPreference: "preferred" as const, objectives: [{ itemId: 8, itemName: "Escudo", iconUrl: null, tier: 3, variantKey: "planner:8", voidcoreState: "pending" as const }], capabilities: [] },
     { userId: 2, username: "Speeson", characterId: 10, characterName: "Bakuhatsu", wowClass: "Mage", specId: 62, role: "dps" as const, lootSpecId: 62, playPreference: "preferred" as const, objectives: [{ itemId: 1, itemName: "Báculo", iconUrl: null, tier: 2, variantKey: "planner:1", voidcoreState: "pending" as const }], capabilities: [] },
@@ -56,13 +63,63 @@ function plannerResponse(): KeystonePlannerResponse {
   const recommendation = (rank: number) => ({
     rank, fingerprint: `planner-${rank}`,
     stone: { characterId: 10, characterName: "Bakuhatsu", ownerUserId: 2, ownerUsername: "Speeson", challengeMapId: 399, dungeon: "Ruby Life Pools", level: 12 },
-    assignments, vacancies: [{ role: "healer" as const, preferredCapabilities: [] }],
+    assignments, vacancies: [
+      { role: "healer" as const, preferredCapabilities: ["BATTLE_REZ"], candidateClasses: candidates },
+      { role: "dps" as const, preferredCapabilities: ["BLOODLUST"], candidateClasses: candidates },
+      { role: "dps" as const, preferredCapabilities: [], candidateClasses: candidates },
+    ],
     lootSummary: { weightedScore: 100 - rank, playersWithObjectives: 2, totalObjectives: 2, tierCounts: { bestInSlot: 1, mustHave: 1, niceToHave: 0, catalyst: 0, transmog: 0 } },
     levelSummary: { targetLevel: 12, stoneLevel: 12, levelDistance: 0 }, preferenceSummary: { preferred: 2, available: 0, emergency: 0 },
     compositionSummary: { criticalRolesCovered: 1, bloodlust: "guaranteed" as const, battleRez: "none" as const, uniqueCapabilities: [], damageProfile: "magical" as const, magicalDpsCount: 1, physicalDpsCount: 0, unknownDpsCount: 0, chaosBrandBeneficiaries: 1, mysticTouchBeneficiaries: 0, uniqueClassBuffCount: 1, armorSynergy: { pairs: 0, dominantType: null, counts: { cloth: 1, leather: 0, mail: 0, plate: 1 } } },
     reasonCodes: ["PARTY_INCOMPLETE", "HAS_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT"],
   });
   return { teamId: 7, challengeMapId: 399, targetLevel: 12, availability: { eligibleStoneCount: 1 }, status: "ok", diagnostics: { codes: [], unconfiguredUserIds: [], lockIssues: [] }, recommendations: [1, 2, 3, 4, 5].map(recommendation) };
+}
+
+function modernPlannerResponse(mode: "quick" | "advanced"): KeystonePlannerResponse {
+  const response = plannerResponse();
+  const seeds = [
+    ["Warrior", 72, "Fury", 0.045, "BATTLE_SHOUT", "Battle Shout", 6673, "Pummel", 6552],
+    ["Mage", 63, "Fire", 0.031, "ARCANE_INTELLECT", "Arcane Intellect", 1459, "Counterspell", 2139],
+    ["Druid", 102, "Balance", 0.028, "MARK_OF_THE_WILD", "Mark of the Wild", 1126, "Soothe", 2908],
+    ["Monk", 269, "Windwalker", 0.026, "MYSTIC_TOUCH", "Mystic Touch", 113746, "Spear Hand Strike", 116705],
+    ["Shaman", 262, "Elemental", 0.024, "SKYFURY", "Skyfury", 462854, "Purge", 370],
+  ] as const;
+  const alternatives: KeystonePlannerVacancyRecommendation[] = seeds.map(([wowClass, specId, specName, gain, capabilityId, buffName, buffSpellId, utilityName, utilitySpellId]) => ({
+    id: `${mode}:${wowClass}:${mode === "advanced" ? specId : "dps"}`, wowClass,
+    ...(mode === "advanced" ? { specId, specName } : {}), offensiveGainPct: gain,
+    buffsDebuffs: [{ capabilityId, name: buffName, spellId: buffSpellId, availability: "guaranteed" }],
+    utilities: [{ capabilityId: "INTERRUPT", name: utilityName, spellId: utilitySpellId, availability: "guaranteed" }],
+  }));
+  const profiles = ["physical", "magical", "magical", "physical", "magical"] as const;
+  alternatives.forEach((alternative, index) => Object.assign(alternative, { damageProfile: profiles[index] }));
+  for (const recommendation of response.recommendations) {
+    if (mode === "advanced") {
+      recommendation.compositionSummary.groupDefensives = [
+        { capabilityId: "MAJOR_GROUP_DR", name: "Darkness", spellId: 196718, availability: "conditional", tier: "S", relevance: 3, score: 500 },
+        { capabilityId: "EXTERNAL", name: "Zephyr", spellId: 374227, availability: "conditional", tier: "A", relevance: 3, score: 500 },
+      ];
+      recommendation.compositionSummary.dungeonUtilities = [
+        { capabilityId: "INTERRUPT", name: "Pummel", spellId: 6552, availability: "guaranteed", tier: "S", relevance: 3, score: 1000 },
+        { capabilityId: "PURGE_MAGIC", name: "Purge", spellId: 370, availability: "guaranteed", tier: "A", relevance: 3, score: 1000 },
+        { capabilityId: "SOOTHE", name: "Soothe", spellId: 2908, availability: "guaranteed", tier: "A", relevance: 2, score: 667 },
+        { capabilityId: "AOE_STOP", name: "Chaos Nova", spellId: 179057, availability: "conditional", tier: "A", relevance: 2, score: 333 },
+        { capabilityId: "DISPEL_CURSE", name: "Remove Curse", spellId: 475, availability: "guaranteed", tier: "B", relevance: 1, score: 333 },
+        { capabilityId: "ST_STOP", name: "Imprison", spellId: 217832, availability: "conditional", tier: "B", relevance: 1, score: 167 },
+      ];
+    }
+    for (const vacancy of recommendation.vacancies) {
+      vacancy.recommendationMode = mode;
+      vacancy.recommendedClass = alternatives[0].wowClass;
+      vacancy.offensiveGainPct = alternatives[0].offensiveGainPct;
+      vacancy.recommendations = alternatives;
+      if (mode === "advanced") {
+        vacancy.recommendedSpecId = alternatives[0].specId;
+        vacancy.recommendedSpecName = alternatives[0].specName;
+      }
+    }
+  }
+  return response;
 }
 
 function source(overrides: Partial<TeamsDataSource> = {}): TeamsDataSource {
@@ -88,8 +145,21 @@ async function selectRuby(user: ReturnType<typeof userEvent.setup>) {
   return screen.findAllByTestId("selector-character");
 }
 
+async function showPlannerResults(user: ReturnType<typeof userEvent.setup>, response: KeystonePlannerResponse) {
+  renderPage(source({ getKeystonePlanner: vi.fn(async () => response) }));
+  await selectRuby(user);
+  await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+  await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+  await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+  await user.click(screen.getByRole("button", { name: "Calcular Top 5" }));
+  await waitFor(() => expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5));
+}
+
 describe("TeamsPage compact ranking", () => {
-  beforeEach(() => clearTeamsSessionCache());
+  beforeEach(() => {
+    clearTeamsSessionCache();
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ icon: "inv_misc_questionmark" }) })));
+  });
 
   it("covers the full cold Teams area until both list and initial detail are ready", async () => {
     let resolveTeams!: (value: Array<{ id: number; name: string; memberCount: number }>) => void;
@@ -500,6 +570,21 @@ describe("TeamsPage compact ranking", () => {
     })));
     expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5);
     expect(screen.getAllByLabelText("Dueño de la piedra").length).toBeGreaterThan(0);
+    const firstParty = document.querySelector(".planner-recommendation__party")!;
+    expect(firstParty.querySelectorAll(":scope > .planner-assignment-preview, :scope > .planner-external-preview")).toHaveLength(5);
+    expect(firstParty.querySelectorAll(":scope > .planner-external-preview")).toHaveLength(3);
+    const external = firstParty.querySelector<HTMLElement>(".planner-external-preview")!;
+    expect(external).toHaveAttribute("data-role", "healer");
+    expect(within(external).getByText("Externo")).toBeInTheDocument();
+    expect(external.querySelectorAll(".planner-external-preview__class")).toHaveLength(4);
+    expect(external.querySelectorAll(".planner-external-preview__class img")).toHaveLength(4);
+    await user.click(within(external).getByRole("button", { name: /Ver clases recomendadas: 5/u }));
+    const externalDialog = screen.getByRole("dialog", { name: /Clases recomendadas.*Healer/u });
+    expect(within(externalDialog).getByText("Druid")).toBeInTheDocument();
+    expect(within(externalDialog).getByText("Hunter")).toBeInTheDocument();
+    expect(within(externalDialog).queryByText("Restoration")).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: /Clases recomendadas.*Healer/u })).not.toBeInTheDocument();
     const cards = [...document.querySelectorAll<HTMLElement>(".planner-recommendation")];
     const compactLootMarker = cards[0].querySelector<HTMLElement>(".planner-spec-marker--loot");
     expect(compactLootMarker?.querySelector(":scope > .planner-loot-pouch img")).toHaveAttribute("src", expect.stringContaining("inv_misc_bag_10.jpg"));
@@ -508,10 +593,10 @@ describe("TeamsPage compact ranking", () => {
     expect(compactScore?.firstElementChild?.tagName).toBe("SMALL");
     expect(compactScore?.lastElementChild?.tagName).toBe("B");
     expect(cards[0]).toHaveAttribute("data-expanded", "false");
-    await user.click(within(cards[1]).getByRole("button"));
+    await user.click(within(cards[1]).getByRole("button", { name: "Expandir #2" }));
     expect(cards[0]).toHaveAttribute("data-expanded", "false");
     expect(cards[1]).toHaveAttribute("data-expanded", "true");
-    expect(within(cards[1]).getByText("Buffos y sinergias")).toBeInTheDocument();
+    expect(cards[1].querySelector(".planner-utilities > section:last-child > strong")).toHaveTextContent("Buffs / Defensivos / Utilidades");
     expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Objetivos");
     expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Preferidos");
     expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protection" }).length).toBeGreaterThan(0);
@@ -570,6 +655,323 @@ describe("TeamsPage compact ranking", () => {
     act(() => resolveRecalculation?.(planned));
     await waitFor(() => expect(results).toHaveAttribute("data-recalculating", "false"));
     expect(screen.getByRole("button", { name: "Recalcular Top 5" })).toBeInTheDocument();
+  });
+
+  it("defaults to Quick, places the 50/50 mode selector before level, and preserves Advanced switches in memory", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+
+    const configure = screen.getByRole("button", { name: "Configurar mis personajes" });
+    const fill = screen.getByRole("checkbox", { name: "Rellenar la composición" });
+    const mode = screen.getByRole("group", { name: "Modo de recomendación" });
+    const level = screen.getByRole("slider", { name: /Nivel mínimo/u });
+    expect(configure.compareDocumentPosition(fill) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fill.compareDocumentPosition(mode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fill).toBeChecked();
+    expect(mode.compareDocumentPosition(level) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(mode).getByRole("button", { name: "Rápido · Clases" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByRole("checkbox").map(control => control.getAttribute("aria-label"))).toEqual([
+      "Rellenar la composición",
+      "Ansia de sangre", "Resurrección en combate", "Sinergia ofensiva",
+    ]);
+    expect(screen.queryByText("Buffos de clase")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sinergia de daño")).not.toBeInTheDocument();
+
+    await user.click(within(mode).getByRole("button", { name: "Avanzado · Specs" }));
+    expect(screen.getAllByRole("checkbox").map(control => control.getAttribute("aria-label"))).toEqual([
+      "Rellenar la composición",
+      "Ansia de sangre", "Resurrección en combate", "Sinergia ofensiva", "Defensiva de grupo", "Utilidad de mazmorra",
+    ]);
+    await user.click(screen.getByRole("checkbox", { name: "Defensiva de grupo" }));
+    await user.click(within(mode).getByRole("button", { name: "Rápido · Clases" }));
+    expect(screen.queryByRole("checkbox", { name: "Defensiva de grupo" })).not.toBeInTheDocument();
+    await user.click(within(mode).getByRole("button", { name: "Avanzado · Specs" }));
+    expect(screen.getByRole("checkbox", { name: "Defensiva de grupo" })).not.toBeChecked();
+  });
+
+  it("recalculates without external fill and centers incomplete detail role rows", async () => {
+    const user = userEvent.setup();
+    const withoutFill = modernPlannerResponse("quick");
+    for (const recommendation of withoutFill.recommendations) {
+      const dps = recommendation.assignments.find(assignment => assignment.role === "dps")!;
+      recommendation.assignments = [
+        recommendation.assignments.find(assignment => assignment.role === "tank")!,
+        dps,
+        { ...dps, userId: 4, characterId: 14, characterName: "SegundoDps", username: "Otro" },
+      ];
+      recommendation.vacancies = [];
+    }
+    const getKeystonePlanner = vi.fn().mockResolvedValueOnce(modernPlannerResponse("quick")).mockResolvedValueOnce(withoutFill);
+    renderPage(source({ getKeystonePlanner }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+    await user.click(screen.getByRole("button", { name: "Calcular Top 5" }));
+    await waitFor(() => expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5));
+
+    await user.click(screen.getByRole("checkbox", { name: "Rellenar la composición" }));
+    await waitFor(() => expect(getKeystonePlanner).toHaveBeenLastCalledWith(7, expect.objectContaining({
+      options: expect.objectContaining({ fillComposition: false }),
+    })));
+    await waitFor(() => expect(document.querySelectorAll(".planner-external-preview")).toHaveLength(0));
+    await user.click(screen.getByRole("button", { name: "Expandir #1" }));
+    const party = document.querySelector<HTMLElement>(".planner-party-trapezoid")!;
+    expect(party).toHaveAttribute("data-top-count", "1");
+    expect(party).toHaveAttribute("data-dps-count", "2");
+  });
+
+  it("uses a bottom overlay cue instead of a visible sidebar scrollbar", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    const scrollArea = document.querySelector<HTMLElement>(".planner-config-scroll")!;
+    Object.defineProperties(scrollArea, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 620 },
+      scrollTop: { configurable: true, writable: true, value: 0 },
+    });
+    fireEvent.scroll(scrollArea);
+    const cue = await screen.findByRole("button", { name: "Ir al final del panel" });
+    await user.click(cue);
+    expect(scrollArea.scrollTop).toBe(620);
+    expect(screen.queryByRole("button", { name: "Ir al final del panel" })).not.toBeInTheDocument();
+  });
+
+  it("renders Quick alternatives as selectable detail data and a portaled enriched modal", async () => {
+    const user = userEvent.setup();
+    await showPlannerResults(user, modernPlannerResponse("quick"));
+
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    const preview = firstResult.querySelector<HTMLElement>(".planner-external-preview")!;
+    expect(preview).toHaveAttribute("data-mode", "quick");
+    expect(preview.querySelectorAll('[data-icon-kind="class"]')).toHaveLength(4);
+    expect(preview.querySelector(".planner-external-gain")).not.toBeInTheDocument();
+    expect(preview).not.toHaveTextContent("Warrior");
+
+    await user.click(within(preview).getByRole("button", { name: /Ver clases recomendadas: 5/u }));
+    const previewDialog = screen.getByRole("dialog", { name: /Clases recomendadas/u });
+    const modalLayer = previewDialog.closest<HTMLElement>(".planner-external-popover")!;
+    expect(modalLayer.parentElement).toBe(document.body);
+    expect(modalLayer).toHaveAttribute("data-portal-layer", "modal");
+    expect(preview.contains(modalLayer)).toBe(false);
+    const quickRows = previewDialog.querySelectorAll(".planner-external-popover__choice");
+    expect(quickRows).toHaveLength(5);
+    expect(within(previewDialog).queryByRole("button", { name: /Seleccionar recomendación/u })).not.toBeInTheDocument();
+    expect(quickRows[0].querySelectorAll(".planner-external-popover__icons img")).toHaveLength(1);
+    expect(quickRows[0].lastElementChild).toHaveClass("planner-external-gain");
+    await user.keyboard("{Escape}");
+
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+    const externalCard = firstResult.querySelector<HTMLElement>(".planner-external-card")!;
+    expect(externalCard.querySelectorAll('.planner-external-card__selectors [data-icon-kind="class"]')).toHaveLength(4);
+    expect(within(externalCard).getByRole("button", { name: /Seleccionar recomendación: Warrior/u })).toHaveAttribute("aria-pressed", "true");
+    expect(within(externalCard).getByRole("status", { name: /\+4\.50%/u })).toBeInTheDocument();
+    const contributions = within(externalCard).getByRole("group", { name: "Buffs / Defensivos / Utilidades" });
+    expect(externalCard.querySelectorAll(".planner-external-card__contributions > section")).toHaveLength(1);
+    expect(externalCard.querySelector("header .planner-external-gain")).not.toBeInTheDocument();
+    expect(contributions.querySelector(".planner-external-card__contribution-heading > .planner-external-gain")).toBeInTheDocument();
+    expect(contributions.querySelectorAll(".planner-capability-grid__icon")).toHaveLength(2);
+    expect(within(externalCard).queryByText("Grito de batalla")).not.toBeInTheDocument();
+    expect(within(externalCard).queryByText("Pummel")).not.toBeInTheDocument();
+    expect(within(externalCard).getByRole("link", { name: /Grito de batalla/u })).toHaveAttribute("data-wowhead", "domain=es");
+    await waitFor(() => expect(within(externalCard).getByRole("link", { name: /Grito de batalla/u }).querySelector(".planner-capability-chip__icon img")).toBeInTheDocument());
+
+    await user.click(within(externalCard).getByRole("button", { name: /Seleccionar recomendación: Mage/u }));
+    expect(within(externalCard).getByRole("status", { name: /\+3\.10%/u })).toBeInTheDocument();
+    expect(within(externalCard).getByRole("link", { name: /Intelecto Arcano/u })).toBeInTheDocument();
+    expect(within(externalCard).getByRole("link", { name: /Counterspell/u })).toBeInTheDocument();
+    expect(within(externalCard).queryByText("Pummel")).not.toBeInTheDocument();
+    expect(within(externalCard).getByRole("button", { name: /Ver clases recomendadas: 5/u })).toBeInTheDocument();
+  });
+
+  it("uses spec-only selectors in Advanced detail while the modal keeps class and spec identity", async () => {
+    const user = userEvent.setup();
+    await showPlannerResults(user, modernPlannerResponse("advanced"));
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    const preview = firstResult.querySelector<HTMLElement>(".planner-external-preview")!;
+    expect(preview.querySelectorAll('[data-icon-kind="spec"]')).toHaveLength(4);
+    expect(preview.querySelector('img[src*="classicon_"]')).not.toBeInTheDocument();
+
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+    const externalCard = firstResult.querySelector<HTMLElement>(".planner-external-card")!;
+    expect(externalCard.querySelectorAll('.planner-external-card__selectors [data-icon-kind="spec"]')).toHaveLength(4);
+    expect(externalCard.querySelector('.planner-external-card__selectors img[src*="classicon_"]')).not.toBeInTheDocument();
+    await user.click(within(externalCard).getByRole("button", { name: /Ver clases recomendadas: 5/u }));
+    const dialog = screen.getByRole("dialog", { name: /Specs recomendadas/u });
+    expect(dialog.querySelector(".planner-external-popover__choice")?.querySelectorAll(".planner-external-popover__icons img")).toHaveLength(2);
+    expect(within(dialog).getByText("Fury Warrior")).toBeInTheDocument();
+  });
+
+  it("combines party capabilities and reveals overflow from a body portal", async () => {
+    const user = userEvent.setup();
+    await showPlannerResults(user, modernPlannerResponse("advanced"));
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+
+    const utilityGroup = firstResult.querySelector<HTMLElement>(".planner-utilities > section:last-child")!;
+    expect(utilityGroup.querySelectorAll(".planner-capability-grid__icon")).toHaveLength(5);
+    expect(within(utilityGroup).queryByText("Remove Curse")).not.toBeInTheDocument();
+
+    const more = within(utilityGroup).getByRole("button", { name: /Mostrar \d+ utilidades más/u });
+    await user.hover(more);
+    const popup = screen.getByRole("tooltip");
+    expect(popup.parentElement).toBe(document.body);
+    expect(within(popup).getByText("Remove Curse")).toBeInTheDocument();
+    expect(within(popup).getByText("Imprison")).toBeInTheDocument();
+    await user.unhover(more);
+    fireEvent.mouseEnter(popup);
+    await new Promise(resolve => window.setTimeout(resolve, 250));
+    expect(screen.getByRole("tooltip")).toBe(popup);
+    expect(getComputedStyle(popup).pointerEvents).toBe("auto");
+    fireEvent.mouseLeave(popup);
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+
+    fireEvent.focus(more);
+    await waitFor(() => expect(within(screen.getByRole("tooltip")).getByText("Remove Curse")).toBeInTheDocument());
+    fireEvent.keyDown(more, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+  });
+
+  it("lights party essentials with a distinct source when the selected external provides them", async () => {
+    const user = userEvent.setup();
+    const response = modernPlannerResponse("advanced");
+    for (const recommendation of response.recommendations) {
+      recommendation.compositionSummary.bloodlust = "conditional";
+      recommendation.compositionSummary.battleRez = "none";
+      recommendation.vacancies = [recommendation.vacancies[0]];
+      const selected = recommendation.vacancies[0].recommendations?.[0];
+      if (selected) selected.utilities = [
+        { capabilityId: "BLOODLUST", name: "Bloodlust", spellId: 2825, availability: "guaranteed" },
+        { capabilityId: "BATTLE_REZ", name: "Battle Resurrection", spellId: 20484, availability: "guaranteed" },
+      ];
+    }
+
+    await showPlannerResults(user, response);
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+
+    const essentials = within(firstResult).getByRole("group", { name: "Esenciales del grupo" });
+    const externalEssentials = essentials.querySelectorAll('.planner-utility[data-state="guaranteed"][data-source="external"]');
+    expect(externalEssentials).toHaveLength(2);
+  });
+
+  it("uses compact icon grids and updates the dominant damage profile from external selections", async () => {
+    const user = userEvent.setup();
+    const response = modernPlannerResponse("advanced");
+    for (const recommendation of response.recommendations) {
+      recommendation.compositionSummary.magicalDpsCount = 0;
+      recommendation.compositionSummary.physicalDpsCount = 0;
+      recommendation.compositionSummary.unknownDpsCount = 0;
+      recommendation.compositionSummary.uniqueCapabilities = [
+        ["BUFF_1", "Buff 1", 1459], ["BUFF_2", "Buff 2", 6673], ["BUFF_3", "Buff 3", 1126],
+        ["BUFF_4", "Buff 4", 21562], ["BUFF_5", "Buff 5", 462854], ["BUFF_6", "Buff 6", 1490],
+        ["BUFF_7", "Buff 7", 113746],
+      ].map(([capabilityId, name, iconSpellId]) => ({
+        capabilityId: capabilityId as string, name: name as string, iconSpellId: iconSpellId as number,
+        type: "class_buff" as const, stacking: "unique" as const, availability: "guaranteed" as const,
+      }));
+      for (const vacancy of recommendation.vacancies) {
+        const warrior = vacancy.recommendations?.[0];
+        if (!warrior) continue;
+        warrior.buffsDebuffs = [
+          ["BATTLE_SHOUT", "Battle Shout", 6673], ["MARK_OF_THE_WILD", "Mark of the Wild", 1126],
+          ["ARCANE_INTELLECT", "Arcane Intellect", 1459], ["FORTITUDE", "Fortitude", 21562],
+          ["SKYFURY", "Skyfury", 462854],
+        ].map(([capabilityId, name, spellId]) => ({
+          capabilityId: capabilityId as string, name: name as string, spellId: spellId as number,
+          availability: "guaranteed" as const,
+        }));
+        warrior.utilities = [
+          ["INTERRUPT", "Pummel", 6552], ["STUN", "Storm Bolt", 107570], ["FEAR", "Intimidating Shout", 5246],
+          ["DISPEL", "Berserker Rage", 18499], ["EXTERNAL", "Rallying Cry", 97462], ["MOVE", "Heroic Leap", 6544],
+        ].map(([capabilityId, name, spellId]) => ({
+          capabilityId: capabilityId as string, name: name as string, spellId: spellId as number,
+          availability: "guaranteed" as const,
+        }));
+      }
+    }
+
+    await showPlannerResults(user, response);
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+
+    const firstDpsCard = firstResult.querySelector<HTMLElement>('.planner-external-card[data-role="dps"]')!;
+    const capabilityGroup = within(firstDpsCard).getByRole("group", { name: "Buffs / Defensivos / Utilidades" });
+    expect(firstDpsCard.querySelectorAll(".planner-external-card__contributions > section")).toHaveLength(1);
+    expect(capabilityGroup.querySelectorAll(".planner-capability-grid__icon")).toHaveLength(5);
+    expect(within(capabilityGroup).queryByText("Grito de batalla")).not.toBeInTheDocument();
+    const utilityMore = within(capabilityGroup).getByRole("button", { name: /Mostrar 6 utilidades más/u });
+    await user.hover(utilityMore);
+    expect(within(screen.getByRole("tooltip")).getByText("Rallying Cry")).toBeInTheDocument();
+    expect(within(screen.getByRole("tooltip")).getByText("Heroic Leap")).toBeInTheDocument();
+    await user.unhover(utilityMore);
+
+    const composition = within(firstResult).getByRole("group", { name: "Composición" });
+    expect(composition.querySelector('.planner-summary-damage[data-profile="physical"]')).toBeInTheDocument();
+    expect(within(composition).getByText("3")).toBeInTheDocument();
+    expect(within(composition).getByTitle("Número de jugadores externos")).toBeInTheDocument();
+    const dpsCards = firstResult.querySelectorAll<HTMLElement>('.planner-external-card[data-role="dps"]');
+    for (const card of dpsCards) {
+      await user.click(within(card).getByRole("button", { name: /Seleccionar recomendación: Fire Mage/u }));
+    }
+    expect(composition.querySelector('.planner-summary-damage[data-profile="magical"]')).toBeInTheDocument();
+
+    const footer = firstResult.querySelector<HTMLElement>(".planner-utilities")!;
+    expect(footer.querySelectorAll(":scope > section")).toHaveLength(3);
+    const utilities = within(footer).getByRole("group", { name: "Esenciales del grupo" });
+    expect(utilities.querySelectorAll('.planner-utility[data-compact="true"]')).toHaveLength(2);
+    expect(utilities.querySelector('.planner-utility[data-state="guaranteed"]')).toBeInTheDocument();
+    expect(utilities.querySelector('.planner-utility[data-state="none"]')).toBeInTheDocument();
+
+    const synergies = footer.querySelector<HTMLElement>(":scope > section:last-child")!;
+    expect(synergies.querySelectorAll(".planner-capability-grid__icon")).toHaveLength(5);
+    const synergyMore = within(synergies).getByRole("button", { name: /Mostrar \d+ utilidades más/u });
+    await user.hover(synergyMore);
+    const synergyPopup = screen.getByRole("tooltip");
+    expect(within(synergyPopup).getByRole("link", { name: /Intelecto Arcano/u })).toBeInTheDocument();
+    expect(within(synergyPopup).getByText("Buff 6")).toBeInTheDocument();
+    expect(within(synergyPopup).getByText("Buff 7")).toBeInTheDocument();
+  });
+
+  it("keeps tank, healer, and DPS cards in fixed role slots when the tank is external", async () => {
+    const user = userEvent.setup();
+    const response = modernPlannerResponse("advanced");
+    for (const recommendation of response.recommendations) {
+      recommendation.assignments[0] = { ...recommendation.assignments[0], role: "healer" };
+      recommendation.vacancies[0] = { ...recommendation.vacancies[0], role: "tank" };
+    }
+    await showPlannerResults(user, response);
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    const compactRoles = [...firstResult.querySelectorAll<HTMLElement>(".planner-recommendation__party > [data-role]")]
+      .map(card => card.dataset.role);
+    expect(compactRoles).toEqual(["tank", "healer", "dps", "dps", "dps"]);
+
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+    const detailRoles = [...firstResult.querySelectorAll<HTMLElement>(".planner-party-trapezoid > [data-role]")]
+      .map(card => card.dataset.role);
+    expect(detailRoles).toEqual(["tank", "healer", "dps", "dps", "dps"]);
+    expect(firstResult.querySelector(".planner-party-trapezoid > :first-child")).toHaveClass("planner-external-card");
+  });
+
+  it("uses the dedicated mixed-damage artwork for a mixed selected party", async () => {
+    const user = userEvent.setup();
+    const response = modernPlannerResponse("advanced");
+    for (const recommendation of response.recommendations) {
+      for (const vacancy of recommendation.vacancies) {
+        if (vacancy.role === "dps" && vacancy.recommendations?.[0]) {
+          vacancy.recommendations[0].damageProfile = "mixed";
+        }
+      }
+    }
+    await showPlannerResults(user, response);
+    const firstResult = document.querySelector<HTMLElement>(".planner-recommendation")!;
+    await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
+    const mixedDamage = within(firstResult).getByRole("img", { name: "Daño: mixto" });
+    expect(mixedDamage.querySelector("img")).toHaveAttribute("src", expect.stringMatching(/mix[-]?damage\.png/u));
   });
 
   it("ignores an older live recalculation when priorities change again", async () => {

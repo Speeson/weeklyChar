@@ -29,6 +29,18 @@ _PLANNER_PREFERENCES = {"preferred", "available", "emergency"}
 _PLANNER_SAVE_PREFERENCES = {*_PLANNER_PREFERENCES, "disabled"}
 _PLANNER_AVAILABILITY = {"guaranteed", "conditional", "none"}
 _PLANNER_CAPABILITY_TYPES = {"major_utility", "class_buff", "damage_debuff"}
+_PLANNER_CLASSES = {
+    "Death Knight", "Demon Hunter", "Druid", "Evoker", "Hunter", "Mage", "Monk",
+    "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior",
+}
+_PLANNER_CAPABILITIES = {
+    "BLOODLUST", "BATTLE_REZ", "CHAOS_BRAND", "MYSTIC_TOUCH", "MARK_OF_THE_WILD",
+    "ARCANE_INTELLECT", "BATTLE_SHOUT", "POWER_WORD_FORTITUDE", "SKYFURY",
+}
+_PLANNER_EXTERNAL_REASONS = {
+    "PROVIDES_BLOODLUST", "PROVIDES_BATTLE_REZ", "BUFFS_INTELLECT", "BUFFS_ATTACK_POWER",
+    "AMPLIFIES_MAGICAL_DAMAGE", "AMPLIFIES_PHYSICAL_DAMAGE", "ADDS_CLASS_BUFF",
+}
 _PLANNER_STATUSES = {"ok", "invalid_input", "unconfigured_participants", "no_valid_composition"}
 _PLANNER_REASONS = {
     "PARTY_COMPLETE", "PARTY_INCOMPLETE", "HAS_LOOT_OBJECTIVES", "NO_LOOT_OBJECTIVES",
@@ -384,6 +396,178 @@ def _planner_stone(value: Any) -> dict[str, Any] | None:
     )}
 
 
+def _planner_external_candidate(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict) or value.get("wowClass") not in _PLANNER_CLASSES \
+            or not isinstance(value.get("contributions"), list) or len(value["contributions"]) > 16 \
+            or not isinstance(value.get("reasonCodes"), list) or len(value["reasonCodes"]) > 16 \
+            or not all(reason in _PLANNER_EXTERNAL_REASONS for reason in value["reasonCodes"]):
+        return None
+    contributions = []
+    for contribution in value["contributions"]:
+        if not isinstance(contribution, dict) \
+                or contribution.get("capabilityId") not in _PLANNER_CAPABILITIES \
+                or contribution.get("availability") not in {"guaranteed", "conditional"}:
+            return None
+        contributions.append({
+            "capabilityId": contribution["capabilityId"],
+            "availability": contribution["availability"],
+        })
+    if len({item["capabilityId"] for item in contributions}) != len(contributions) \
+            or len(set(value["reasonCodes"])) != len(value["reasonCodes"]):
+        return None
+    return {
+        "wowClass": value["wowClass"],
+        "contributions": contributions,
+        "reasonCodes": list(value["reasonCodes"]),
+    }
+
+
+def _planner_modern_vacancy(value: dict[str, Any], vacancy: dict[str, Any]) -> bool:
+    mode = value.get("recommendationMode")
+    if mode not in {"quick", "advanced"} or value.get("recommendedClass") not in _PLANNER_CLASSES \
+            or not isinstance(value.get("offensiveGainPct"), (int, float)) \
+            or isinstance(value.get("offensiveGainPct"), bool) \
+            or not math.isfinite(value["offensiveGainPct"]) or value["offensiveGainPct"] < 0 \
+            or not all(_non_negative(value.get(key)) for key in (
+                "offensiveBand", "defensiveBand", "dungeonUtilityBand",
+            )):
+        return False
+    if mode == "advanced":
+        if not _positive(value.get("recommendedSpecId")) or not _text(value.get("recommendedSpecName"), 128):
+            return False
+    elif "recommendedSpecId" in value or "recommendedSpecName" in value:
+        return False
+    for key in ("offensiveReasons",):
+        if not isinstance(value.get(key), list) or len(value[key]) > 8 \
+                or not all(_text(reason, 256) for reason in value[key]):
+            return False
+    provenance = value.get("offensiveProvenance")
+    if not isinstance(provenance, list) or len(provenance) > 5:
+        return False
+    clean_provenance = []
+    for item in provenance:
+        if not isinstance(item, dict) or not _positive(item.get("specId")) \
+                or item.get("source") not in {"simc", "archetype_estimate"} \
+                or item.get("confidence") not in {"high", "medium", "low"} \
+                or ("method" in item and not _text(item["method"], 128)) \
+                or ("donorSpecIds" in item and (
+                    not isinstance(item["donorSpecIds"], list) or len(item["donorSpecIds"]) > 32
+                    or not all(_positive(spec_id) for spec_id in item["donorSpecIds"])
+                )):
+            return False
+        clean_provenance.append({key: item[key] for key in (
+            "specId", "source", "confidence", "method", "donorSpecIds",
+        ) if key in item})
+    clean_contributions = {}
+    for key in ("defensiveContribution", "dungeonUtilityContribution"):
+        contribution = value.get(key)
+        if not isinstance(contribution, dict) or not isinstance(contribution.get("tiers"), dict) \
+                or set(contribution["tiers"]) != {"S", "A", "B", "C"} \
+                or not all(_non_negative(contribution["tiers"][tier]) for tier in ("S", "A", "B", "C")) \
+                or not isinstance(contribution.get("reasons"), list) or len(contribution["reasons"]) > 8 \
+                or not all(_text(reason, 256) for reason in contribution["reasons"]):
+            return False
+        clean_contributions[key] = {
+            "tiers": dict(contribution["tiers"]), "reasons": list(contribution["reasons"]),
+        }
+    recommendations = value.get("recommendations")
+    clean_recommendations = []
+    if recommendations is not None:
+        if not isinstance(recommendations, list) or not recommendations or len(recommendations) > 40:
+            return False
+        for recommendation in recommendations:
+            if not isinstance(recommendation, dict) or not _text(recommendation.get("id"), 160) \
+                    or recommendation.get("wowClass") not in _PLANNER_CLASSES \
+                    or not isinstance(recommendation.get("offensiveGainPct"), (int, float)) \
+                    or isinstance(recommendation.get("offensiveGainPct"), bool) \
+                    or not math.isfinite(recommendation["offensiveGainPct"]) \
+                    or recommendation["offensiveGainPct"] < 0:
+                return False
+            if mode == "advanced":
+                if not _positive(recommendation.get("specId")) \
+                        or not _text(recommendation.get("specName"), 128):
+                    return False
+            elif "specId" in recommendation or "specName" in recommendation:
+                return False
+            damage_profile = recommendation.get("damageProfile")
+            if damage_profile is not None and damage_profile not in {
+                    "physical", "magical", "mixed", "unknown"}:
+                return False
+            clean_groups = {}
+            for group_key, limit in (("buffsDebuffs", 16), ("utilities", 16)):
+                group = recommendation.get(group_key)
+                if not isinstance(group, list) or len(group) > limit:
+                    return False
+                clean_group = []
+                for capability in group:
+                    if not isinstance(capability, dict) \
+                            or not _text(capability.get("capabilityId"), 64) \
+                            or not _text(capability.get("name"), 128) \
+                            or not _positive(capability.get("spellId")) \
+                            or capability.get("availability") not in {"guaranteed", "conditional"}:
+                        return False
+                    clean_group.append({key: capability[key] for key in (
+                        "capabilityId", "name", "spellId", "availability",
+                    )})
+                clean_groups[group_key] = clean_group
+            for group_key in ("groupDefensives", "dungeonUtilities"):
+                if group_key in recommendation:
+                    scored = _planner_scored_utilities(recommendation[group_key])
+                    if scored is None:
+                        return False
+                    clean_groups[group_key] = scored
+            clean_recommendations.append({
+                "id": recommendation["id"],
+                "wowClass": recommendation["wowClass"],
+                **({
+                    "specId": recommendation["specId"],
+                    "specName": recommendation["specName"],
+                } if mode == "advanced" else {}),
+                **({"damageProfile": damage_profile} if damage_profile is not None else {}),
+                "offensiveGainPct": recommendation["offensiveGainPct"],
+                **clean_groups,
+            })
+        if len({item["id"] for item in clean_recommendations}) != len(clean_recommendations):
+            return False
+    vacancy.update({
+        "recommendationMode": mode,
+        "recommendedClass": value["recommendedClass"],
+        **({
+            "recommendedSpecId": value["recommendedSpecId"],
+            "recommendedSpecName": value["recommendedSpecName"],
+        } if mode == "advanced" else {}),
+        "offensiveGainPct": value["offensiveGainPct"],
+        "offensiveBand": value["offensiveBand"],
+        "offensiveReasons": list(value["offensiveReasons"]),
+        "offensiveProvenance": clean_provenance,
+        "defensiveBand": value["defensiveBand"],
+        "dungeonUtilityBand": value["dungeonUtilityBand"],
+        **clean_contributions,
+        **({"recommendations": clean_recommendations} if recommendations is not None else {}),
+    })
+    return True
+
+
+def _planner_scored_utilities(value: Any) -> list[dict[str, Any]] | None:
+    if not isinstance(value, list) or len(value) > 64:
+        return None
+    clean = []
+    for capability in value:
+        if not isinstance(capability, dict) \
+                or not _text(capability.get("capabilityId"), 64) \
+                or not _text(capability.get("name"), 128) \
+                or not _positive(capability.get("spellId")) \
+                or capability.get("availability") not in {"guaranteed", "conditional"} \
+                or capability.get("tier") not in {"S", "A", "B", "C"} \
+                or not _non_negative(capability.get("relevance")) or capability["relevance"] > 3 \
+                or not _non_negative(capability.get("score")):
+            return None
+        clean.append({key: capability[key] for key in (
+            "capabilityId", "name", "spellId", "availability", "tier", "relevance", "score",
+        )})
+    return clean
+
+
 def _planner_recommendation(value: Any, challenge_map_id: int, stone_character_id: int, target_level: int) -> dict[str, Any] | None:
     if not isinstance(value, dict) or not _positive(value.get("rank")) or value["rank"] > 5 \
             or not _text(value.get("fingerprint"), 4096) or not isinstance(value.get("assignments"), list) \
@@ -399,7 +583,18 @@ def _planner_recommendation(value: Any, challenge_map_id: int, stone_character_i
                 or not isinstance(item.get("preferredCapabilities"), list) \
                 or not all(_text(capability, 64) for capability in item["preferredCapabilities"]):
             return None
-        vacancies.append({"role": item["role"], "preferredCapabilities": list(item["preferredCapabilities"])})
+        vacancy = {"role": item["role"], "preferredCapabilities": list(item["preferredCapabilities"])}
+        if "candidateClasses" in item:
+            if not isinstance(item["candidateClasses"], list) or len(item["candidateClasses"]) > 13:
+                return None
+            candidates = [_planner_external_candidate(candidate) for candidate in item["candidateClasses"]]
+            if any(candidate is None for candidate in candidates) \
+                    or len({candidate["wowClass"] for candidate in candidates}) != len(candidates):
+                return None
+            vacancy["candidateClasses"] = candidates
+        if "recommendationMode" in item and not _planner_modern_vacancy(item, vacancy):
+            return None
+        vacancies.append(vacancy)
     loot = value.get("lootSummary")
     levels = value.get("levelSummary")
     preferences = value.get("preferenceSummary")
@@ -419,6 +614,13 @@ def _planner_recommendation(value: Any, challenge_map_id: int, stone_character_i
             or not isinstance(composition.get("uniqueCapabilities"), list):
         return None
     capability_list = [_planner_capability(item, True) for item in composition["uniqueCapabilities"]]
+    advanced_utilities = {}
+    for key in ("groupDefensives", "dungeonUtilities"):
+        if key in composition:
+            parsed = _planner_scored_utilities(composition[key])
+            if parsed is None:
+                return None
+            advanced_utilities[key] = parsed
     composition_counts = (
         "magicalDpsCount", "physicalDpsCount", "unknownDpsCount", "chaosBrandBeneficiaries",
         "mysticTouchBeneficiaries", "uniqueClassBuffCount",
@@ -457,6 +659,7 @@ def _planner_recommendation(value: Any, challenge_map_id: int, stone_character_i
                 "pairs": armor["pairs"], "dominantType": armor["dominantType"],
                 "counts": {key: armor["counts"][key] for key in armor_types},
             },
+            **advanced_utilities,
         },
         "reasonCodes": list(value["reasonCodes"]),
     }
@@ -507,10 +710,23 @@ def _planner_request_valid(value: Any) -> bool:
             or not all(_positive(item) for item in participants) or len(set(participants)) != len(participants) \
             or not _positive(value["targetLevel"]) or value["targetLevel"] > 20 \
             or not _positive(value["challengeMapId"]) or not _positive(value["stoneCharacterId"]) \
-            or not isinstance(options, dict) or set(options) != {
-                "optimizeComposition", "bloodlust", "battleRez", "classBuffs", "damageSynergy",
-            } or not all(isinstance(item, bool) for item in options.values()) \
+            or not isinstance(options, dict) \
             or not isinstance(value["locks"], list) or len(value["locks"]) > 15:
+        return False
+    legacy_keys = {"optimizeComposition", "bloodlust", "battleRez", "classBuffs", "damageSynergy"}
+    modern_keys = {
+        "optimizeComposition", "recommendationMode", "bloodlust", "battleRez", "offensiveSynergy",
+        "groupDefense", "dungeonUtility",
+    }
+    if set(options) == legacy_keys:
+        if not all(isinstance(item, bool) for item in options.values()):
+            return False
+    elif set(options) in (modern_keys, modern_keys | {"fillComposition"}):
+        if options["recommendationMode"] not in {"quick", "advanced"} \
+                or not all(isinstance(options[key], bool) for key in modern_keys - {"recommendationMode"}) \
+                or ("fillComposition" in options and not isinstance(options["fillComposition"], bool)):
+            return False
+    else:
         return False
     for lock in value["locks"]:
         if not isinstance(lock, dict) or lock.get("userId") not in participants:

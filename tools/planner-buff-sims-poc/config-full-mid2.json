@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "label": "Keystone Planner buff-impact full MID2 DPS dataset",
+  "season": "MID2",
+  "mplusWeights": {
+    "singleTarget": 0.4,
+    "aoe8": 0.6
+  },
+  "scenarios": [
+    {
+      "id": "singleTarget",
+      "fightStyle": "Patchwerk",
+      "desiredTargets": 1
+    },
+    {
+      "id": "aoe8",
+      "fightStyle": "Patchwerk",
+      "desiredTargets": 8
+    }
+  ],
+  "specs": [
+    {
+      "specId": 251,
+      "name": "Frost Death Knight",
+      "profile": "MID2_Death_Knight_Frost.simc"
+    },
+    {
+      "specId": 252,
+      "name": "Unholy Death Knight",
+      "profile": "MID2_Death_Knight_Unholy.simc"
+    },
+    {
+      "specId": 577,
+      "name": "Havoc Demon Hunter",
+      "profile": "MID2_Demon_Hunter_Havoc.simc"
+    },
+    {
+      "specId": 1480,
+      "name": "Devourer Demon Hunter",
+      "profile": "MID2_Demon_Hunter_Devourer.simc"
+    },
+    {
+      "specId": 103,
+      "name": "Feral Druid",
+      "profile": "MID2_Druid_Feral.simc"
+    },
+    {
+      "specId": 253,
+      "name": "Beast Mastery Hunter",
+      "profile": "MID2_Hunter_Beast_Mastery.simc"
+    },
+    {
+      "specId": 254,
+      "name": "Marksmanship Hunter",
+      "profile": "MID2_Hunter_Marksmanship.simc"
+    },
+    {
+      "specId": 255,
+      "name": "Survival Hunter",
+      "profile": "MID2_Hunter_Survival.simc"
+    },
+    {
+      "specId": 62,
+      "name": "Arcane Mage",
+      "profile": "MID2_Mage_Arcane.simc"
+    },
+    {
+      "specId": 63,
+      "name": "Fire Mage",
+      "profile": "MID2_Mage_Fire.simc"
+    },
+    {
+      "specId": 64,
+      "name": "Frost Mage",
+      "profile": "MID2_Mage_Frost.simc"
+    },
+    {
+      "specId": 269,
+      "name": "Windwalker Monk",
+      "profile": "MID2_Monk_Windwalker.simc"
+    },
+    {
+      "specId": 70,
+      "name": "Retribution Paladin",
+      "profile": "MID2_Paladin_Retribution.simc"
+    },
+    {
+      "specId": 258,
+      "name": "Shadow Priest",
+      "profile": "MID2_Priest_Shadow.simc"
+    },
+    {
+      "specId": 259,
+      "name": "Assassination Rogue",
+      "profile": "MID2_Rogue_Assassination.simc"
+    },
+    {
+      "specId": 260,
+      "name": "Outlaw Rogue",
+      "profile": "MID2_Rogue_Outlaw.simc"
+    },
+    {
+      "specId": 261,
+      "name": "Subtlety Rogue",
+      "profile": "MID2_Rogue_Subtlety.simc"
+    },
+    {
+      "specId": 262,
+      "name": "Elemental Shaman",
+      "profile": "MID2_Shaman_Elemental.simc"
+    },
+    {
+      "specId": 263,
+      "name": "Enhancement Shaman",
+      "profile": "MID2_Shaman_Enhancement.simc"
+    },
+    {
+      "specId": 265,
+      "name": "Affliction Warlock",
+      "profile": "MID2_Warlock_Affliction.simc"
+    },
+    {
+      "specId": 266,
+      "name": "Demonology Warlock",
+      "profile": "MID2_Warlock_Demonology.simc"
+    },
+    {
+      "specId": 267,
+      "name": "Destruction Warlock",
+      "profile": "MID2_Warlock_Destruction.simc"
+    },
+    {
+      "specId": 71,
+      "name": "Arms Warrior",
+      "profile": "MID2_Warrior_Arms.simc"
+    },
+    {
+      "specId": 72,
+      "name": "Fury Warrior",
+      "profile": "MID2_Warrior_Fury.simc"
+    }
+  ],
+  "buffs": [
+    {
+      "id": "MARK_OF_THE_WILD",
+      "override": "mark_of_the_wild"
+    },
+    {
+      "id": "BATTLE_SHOUT",
+      "override": "battle_shout"
+    },
+    {
+      "id": "ARCANE_INTELLECT",
+      "override": "arcane_intellect"
+    },
+    {
+      "id": "SKYFURY",
+      "override": "skyfury"
+    },
+    {
+      "id": "CHAOS_BRAND",
+      "override": "chaos_brand"
+    },
+    {
+      "id": "MYSTIC_TOUCH",
+      "override": "mystic_touch"
+    },
+    {
+      "id": "HUNTERS_MARK",
+      "override": "hunters_mark"
+    }
+  ]
+}

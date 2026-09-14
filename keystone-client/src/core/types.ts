@@ -473,10 +473,13 @@ export type KeystonePlannerAvailability = "guaranteed" | "conditional" | "none";
 
 export type KeystonePlannerOptions = {
   optimizeComposition: boolean;
+  fillComposition: boolean;
+  recommendationMode: "quick" | "advanced";
   bloodlust: boolean;
   battleRez: boolean;
-  classBuffs: boolean;
-  damageSynergy: boolean;
+  offensiveSynergy: boolean;
+  groupDefense: boolean;
+  dungeonUtility: boolean;
 };
 
 export type KeystonePlannerLock =
@@ -527,6 +530,75 @@ export type KeystonePlannerAssignment = {
   capabilities: KeystonePlannerCapability[];
 };
 
+export type KeystonePlannerExternalClassReason =
+  | "PROVIDES_BLOODLUST"
+  | "PROVIDES_BATTLE_REZ"
+  | "BUFFS_INTELLECT"
+  | "BUFFS_ATTACK_POWER"
+  | "AMPLIFIES_MAGICAL_DAMAGE"
+  | "AMPLIFIES_PHYSICAL_DAMAGE"
+  | "ADDS_CLASS_BUFF";
+
+export type KeystonePlannerExternalClassCandidate = {
+  wowClass: string;
+  contributions: Array<{
+    capabilityId: string;
+    availability: "guaranteed" | "conditional";
+  }>;
+  reasonCodes: KeystonePlannerExternalClassReason[];
+};
+
+export type KeystonePlannerVacancy = {
+  role: KeystonePlannerRole;
+  preferredCapabilities: string[];
+  candidateClasses?: KeystonePlannerExternalClassCandidate[];
+  recommendationMode?: "quick" | "advanced";
+  recommendedClass?: string;
+  recommendedSpecId?: number;
+  recommendedSpecName?: string;
+  offensiveGainPct?: number;
+  offensiveBand?: number;
+  offensiveReasons?: string[];
+  offensiveProvenance?: Array<{
+    specId: number;
+    source: "simc" | "archetype_estimate";
+    confidence: "high" | "medium" | "low";
+    method?: string;
+    donorSpecIds?: number[];
+  }>;
+  defensiveContribution?: { tiers: Record<"S" | "A" | "B" | "C", number>; reasons: string[] };
+  defensiveBand?: number;
+  dungeonUtilityContribution?: { tiers: Record<"S" | "A" | "B" | "C", number>; reasons: string[] };
+  dungeonUtilityBand?: number;
+  recommendations?: KeystonePlannerVacancyRecommendation[];
+};
+
+export type KeystonePlannerVacancyCapability = {
+  capabilityId: string;
+  name: string;
+  spellId: number;
+  availability: "guaranteed" | "conditional";
+};
+
+export type KeystonePlannerAdvancedUtilityCapability = KeystonePlannerVacancyCapability & {
+  tier: "S" | "A" | "B" | "C";
+  relevance: number;
+  score: number;
+};
+
+export type KeystonePlannerVacancyRecommendation = {
+  id: string;
+  wowClass: string;
+  specId?: number;
+  specName?: string;
+  damageProfile?: "physical" | "magical" | "mixed" | "unknown";
+  offensiveGainPct: number;
+  buffsDebuffs: KeystonePlannerVacancyCapability[];
+  utilities: KeystonePlannerVacancyCapability[];
+  groupDefensives?: KeystonePlannerAdvancedUtilityCapability[];
+  dungeonUtilities?: KeystonePlannerAdvancedUtilityCapability[];
+};
+
 export type KeystonePlannerRecommendation = {
   rank: number;
   fingerprint: string;
@@ -540,7 +612,7 @@ export type KeystonePlannerRecommendation = {
     level: number;
   };
   assignments: KeystonePlannerAssignment[];
-  vacancies: Array<{ role: KeystonePlannerRole; preferredCapabilities: string[] }>;
+  vacancies: KeystonePlannerVacancy[];
   lootSummary: {
     weightedScore: number;
     playersWithObjectives: number;
@@ -566,6 +638,8 @@ export type KeystonePlannerRecommendation = {
       dominantType: "cloth" | "leather" | "mail" | "plate" | null;
       counts: { cloth: number; leather: number; mail: number; plate: number };
     };
+    groupDefensives?: KeystonePlannerAdvancedUtilityCapability[];
+    dungeonUtilities?: KeystonePlannerAdvancedUtilityCapability[];
   };
   reasonCodes: string[];
 };

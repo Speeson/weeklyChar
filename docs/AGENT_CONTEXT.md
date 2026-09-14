@@ -91,19 +91,23 @@ Main implementation points:
 Verified from checked-out files:
 
 - Canonical addon repo `Speeson/KeystoneSync`: released `v0.2.8`, `Version: 0.2.8`, `Interface: 120100`.
-- Canonical Windows client `keystone-client/VERSION`: `0.10.1`
+- Canonical Windows client `keystone-client/VERSION`: `0.10.3`
 - Current public Tauri release: `0.10.1`, tag `client-v0.10.1`.
 - Web package `keystone-web/package.json`: package version `0.1.0`, Next.js `16.2.6`
 - Worker package `keystone-worker/package.json`: package version `0.1.0`
 - Worker compatibility date `keystone-worker/wrangler.jsonc`: `2026-07-25`
 - Keystone Planner production D1 migration `0010_keystone_planner.sql` was applied on 2026-09-10.
-  Production Worker version `2ec220c6-ee31-411f-a110-f3f44b804d0c` includes the Planner API,
-  exact-stone selection through the additive `stoneCharacterId` field, and the required CORS `PUT`
-  allowlist hardening. The Planner Web remains undeployed pending a separately authorized Web rollout.
+  Production Worker version `bb88b8ff-44b0-49f6-8da3-4f80ed725d1f`, deployed on 2026-09-14,
+  includes the Planner API, exact-stone selection through the additive `stoneCharacterId` field,
+  modern Quick/Advanced vacancy alternatives, optional `fillComposition`, class-level Quick scoring
+  for external DPS recipients, their presentation-safe `damageProfile`, and the dense-recalculation
+  CPU caches. Health
+  and unauthenticated Selector/Planner boundary smoke passed after deployment. The Planner Web
+  remains undeployed pending a separately authorized Web rollout.
 - Planner play/loot separation migration `0011_planner_play_loot_separation.sql` has passed local
   application tests and deliberately leaves legacy loot interests unselected; it has not been
-  applied remotely. Its Worker and Client changes
-  are likewise local only until a separately authorized backend-first rollout.
+  applied remotely. Its Client changes remain local only; the current Worker source is deployed,
+  but no remote migration was run as part of that deployment.
 
 ## Deployment and release model
 
@@ -163,8 +167,10 @@ Verified from checked-out files:
 - The root `KeystoneSync/` duplicate was removed in Phase 5. Phase 11 removed the remaining embedded Client addon bundle; do not recreate it without an explicit architecture change.
 - Deployment/release impact must be determined by `scripts/deploy_impact.py`, not by memory. Reporting remote impact does not authorize deployment, remote D1 migration, tag, release, or push.
 - Planner composition facts live in `keystone-worker/src/wowComposition.ts`: 40 current Retail
-  specs, class/role, conservative DPS physical/magical affinity, and unique capability providers.
-  Ambiguous hybrid affinity remains `null` until verified rather than being guessed.
+  specs, class/role, conservative DPS physical/magical affinity, DPS primary-stat family, and unique
+  capability providers. Ambiguous damage affinity remains `null` until verified rather than being
+  guessed; primary-stat family is tracked independently because attack-power specs can deal magical
+  damage.
 - Planner solving lives in the pure `keystone-worker/src/keystonePlanner.ts` domain boundary. It
   consumes normalized privacy-filtered inputs, enforces holder and 1/1/3 constraints, and ranks a
   deterministic Top 5 without D1, Hono, authorization, or presentation copy. Ranking covers tank
@@ -172,6 +178,23 @@ Verified from checked-out files:
   enabled utilities, same-armor sharing synergy, personal loot and stable identity. Loot choice
   never selects the played spec; primary loot wins when actionable, otherwise the strongest
   actionable secondary is used.
+- Incomplete Planner recommendations are completed conceptually to 1 Tank / 1 Healer / 3 DPS by a
+  Worker-owned resolver. Legacy requests keep the historical class-only behavior and comparator.
+  Modern Quick jointly ranks class combinations; Advanced jointly ranks exact specs. Both use BL,
+  BRez and offensive equivalence bands; Advanced adds group-defense and selected-dungeon utility
+  bands. Quick includes external DPS as class-level offensive recipients using the mean profile of
+  their role-compatible DPS specs, preventing support-only selected groups from degenerating into
+  zero-gain all-class ties. Loot score/tiers regain priority inside the same composition bands, followed by exact
+  offensive gain. Same-armor sharing remains a modern post-tier loot tie-break and stays in its
+  historical position for legacy. Vacancy alternatives are limited to the selected completion's
+  active composition stratum and keep their true rank; the Client preserves this additive list
+  instead of reconstructing it from the selected class. Each alternative also carries an additive,
+  presentation-safe damage profile. The Client recomputes the displayed physical/magical/mixed
+  party profile when an external DPS alternative is selected; this is display-only and does not
+  rerank or change loot. Derived explanations/spec identities are additive and non-persistent.
+  Per-solve caches reuse each candidate's dungeon-loot evaluation and canonicalized completion
+  scoring; immutable specialization capability and ranking profiles are memoized at module scope to
+  keep dense recalculations within the Worker's CPU allowance without changing comparator semantics.
 - Planner API adaptation lives in `keystone-worker/src/keystonePlannerApi.ts`; the authenticated
   Team route derives selected members, preferences, current stones, shareable objectives, item
   metadata, and capability metadata server-side before exposing the solver result.
@@ -258,10 +281,36 @@ shows a persisted two-step loot-then-play guide whose completion is owner data r
 state. Team detail exposes only the
 privacy-safe aggregate `plannerConfigured`; explicitly unconfigured teammates and their stones are
 unavailable, while a missing field from an older Worker stays provisionally selectable until the
-Planner endpoint validates it. Five equal full-width recommendation cards form an exclusive accordion; the
+Planner endpoint validates it. Up to five equal full-width recommendation cards form an exclusive accordion; the
 expanded composition lays Tank/Healer above three DPS cards and then shows loot and utilities. A
 gold `Crown` group-leader marker identifies the exact stone owner in compact and expanded views,
-and role markers use Blizzard's LFG role artwork.
+and role markers use Blizzard's LFG role artwork. The Planner sidebar defaults to Quick with an
+accessible `Rellenar la composición` switch followed by a 50/50 Quick/Advanced selector between
+character configuration and minimum level. The switch defaults on; turning it off sends the modern
+additive `fillComposition: false`, suppresses external vacancies, and centers the remaining detail
+cards within their Tank/Healer and DPS role rows. The sidebar owns an inner scroll area with hidden
+scrollbars and shows a bottom overlay cue only while more content remains; the cue scrolls directly
+to the end. Quick
+shows BL/BRez/Offensive Synergy; Advanced additionally shows Group Defense and Dungeon Utility while
+preserving hidden Advanced switch state in memory. External compact cards stay icon-only: up to four
+class alternatives in Quick or exact-spec alternatives in Advanced, plus a plain gold overflow `+`.
+Expanded party cards keep fixed role slots (Tank upper-left, Healer upper-right, then three DPS), so
+an external vacancy occupies its role's position instead of moving the other cards. Expanded external
+cards default to the selected completion and expose an in-place four-choice selector, the alternative's
+estimated offensive gain at the left edge just below the shared separator, and one Buffs / Defensives / Utilities row
+with five capability icons before a plain gold overflow `+`. The complete
+comparison dialog is rendered through a body portal so isolated previews cannot overlap its backdrop;
+its capability links use the existing official Wowhead tooltip integration with per-link iconization.
+Capability artwork is requested from Wowhead's large icon source and reduced to the 42 px display box
+instead of enlarging the small thumbnails.
+Capability overflow popups are also rendered through a body portal and open on hover or focus. The
+expanded composition footer keeps three icon-only sections: Composition uses physical, magical, or
+the dedicated mixed-damage asset plus the official green LFG eye and external-player count; Party
+Essentials shows lit/dimmed Bloodlust and battle resurrection; and Buffs / Defensives / Utilities uses
+the remaining flexible width and calculates how many same-sized icons fit before its plain gold `+`.
+That last section combines distinct party capabilities with those of the currently selected external
+alternative. External slots never affect visible
+loot/objective/preference totals.
 The private flow is React → typed core → Tauri JSONL → Python sidecar → Worker, with no access token
 in React and no Client-side scoring. The Worker field is additive, so existing Web behavior remains
 compatible when `stoneCharacterId` is omitted.

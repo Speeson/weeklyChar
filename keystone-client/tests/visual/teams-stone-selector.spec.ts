@@ -173,6 +173,24 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
     return { backgroundImage: style.backgroundImage, borderColor: style.borderColor, color: style.color };
   });
   expect(await ctaStyles(configureButton)).toEqual(await ctaStyles(calculateButton));
+  const modeSelector = page.getByRole("group", { name: "Modo de recomendación" });
+  const fillComposition = page.getByRole("checkbox", { name: "Rellenar la composición" });
+  await expect(fillComposition).toBeChecked();
+  const configAside = page.locator(".keystone-planner__config");
+  const quickConfigWidth = await configAside.evaluate(element => element.getBoundingClientRect().width);
+  await expect(page.locator(".planner-config-scroll")).toHaveCSS("scrollbar-width", "none");
+  const fillBottom = await page.locator(".planner-fill-toggle").evaluate(element => element.getBoundingClientRect().bottom);
+  const modeTop = await modeSelector.evaluate(element => element.getBoundingClientRect().top);
+  expect(fillBottom).toBeLessThanOrEqual(modeTop);
+  await expect(modeSelector.getByRole("button", { name: "Rápido · Clases" })).toHaveAttribute("aria-pressed", "true");
+  const modeBounds = await modeSelector.evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
+  });
+  const configureBounds = await configureButton.evaluate(element => {
+    const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
+  });
+  expect(modeBounds.width).toBeCloseTo(configureBounds.width, 0);
+  expect(modeBounds.height).toBeCloseTo(configureBounds.height, 0);
   const prioritySwitches = page.locator('.planner-priorities input[type="checkbox"]');
   for (const dimensions of await prioritySwitches.evaluateAll(elements => elements.map(element => {
     const bounds = element.getBoundingClientRect();
@@ -181,6 +199,27 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
     expect(dimensions.width).toBe(30);
     expect(dimensions.height).toBe(17);
   }
+  const priorityLabels = page.locator(".planner-priorities label");
+  await expect(priorityLabels).toHaveCount(3);
+  for (const fontSize of await priorityLabels.evaluateAll(elements => elements.map(element => getComputedStyle(element).fontSize))) {
+    expect(fontSize).toBe("12px");
+  }
+  await expect(page.getByText("Buffos de clase")).toHaveCount(0);
+  await expect(page.getByText("Sinergia de daño")).toHaveCount(0);
+  await capture(page, "15a-planner-quick.png");
+  await modeSelector.getByRole("button", { name: "Avanzado · Specs" }).click();
+  expect(await configAside.evaluate(element => element.getBoundingClientRect().width)).toBeCloseTo(quickConfigWidth, 0);
+  await expect(priorityLabels).toHaveCount(5);
+  await expect(page.getByRole("checkbox", { name: "Defensiva de grupo" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Utilidad de mazmorra" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Sinergia ofensiva" }).locator("xpath=preceding-sibling::img"))
+    .toHaveAttribute("src", /offensive-synergy\.jpg$/u);
+  await expect(page.getByRole("checkbox", { name: "Defensiva de grupo" }).locator("xpath=preceding-sibling::span/preceding-sibling::img"))
+    .toHaveAttribute("src", /group-defense\.jpg$/u);
+  await expect(page.getByRole("checkbox", { name: "Utilidad de mazmorra" }).locator("xpath=preceding-sibling::span/preceding-sibling::img"))
+    .toHaveAttribute("src", /dungeon-utility\.jpg$/u);
+  await capture(page, "15b-planner-advanced.png");
+  await modeSelector.getByRole("button", { name: "Rápido · Clases" }).click();
   await page.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }).click();
   for (const member of ["Guardiana", "Voidwalker", "Nightshift", "Ironforge"]) {
     await page.getByRole("button", { name: new RegExp(`Filtrar por ${member}`, "u") }).click();
@@ -250,21 +289,89 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   });
   expect(compactScoreOrder.labelRight).toBeLessThanOrEqual(compactScoreOrder.valueLeft);
   expect(compactScoreOrder.centerDelta).toBeLessThan(4);
+  await expect(recommendations.first().locator(".planner-score small span")).toHaveText(["Valor de", "botín"]);
+  const compactLayout = await recommendations.first().evaluate(element => {
+    const metrics = element.querySelector(".planner-recommendation__metrics")!.getBoundingClientRect();
+    const party = element.querySelector(".planner-recommendation__party")!.getBoundingClientRect();
+    const score = element.querySelector(".planner-score")!.getBoundingClientRect();
+    const previews = [...element.querySelectorAll(".planner-assignment-preview, .planner-external-preview")].map(item => item.getBoundingClientRect());
+    const metricLabel = getComputedStyle(element.querySelector(".planner-recommendation__metrics")!);
+    const metricValue = getComputedStyle(element.querySelector(".planner-recommendation__metrics b")!);
+    const characterName = getComputedStyle(element.querySelector(".planner-assignment-preview__identity strong")!);
+    const username = getComputedStyle(element.querySelector(".planner-assignment-preview__identity small")!);
+    return {
+      leftGap: party.left - metrics.right,
+      rightGap: score.left - party.right,
+      partyLeft: party.left,
+      partyRight: party.right,
+      firstCardLeft: previews[0].left,
+      lastCardRight: previews.at(-1)!.right,
+      previewCount: previews.length,
+      narrowestCardWidth: Math.min(...previews.map(preview => preview.width)),
+      metricLabelSize: metricLabel.fontSize,
+      metricValueSize: metricValue.fontSize,
+      characterNameSize: characterName.fontSize,
+      characterNameWeight: characterName.fontWeight,
+      characterNameBorder: characterName.borderTopStyle,
+      usernameSize: username.fontSize,
+    };
+  });
+  expect(compactLayout.leftGap).toBeCloseTo(12, 0);
+  expect(compactLayout.rightGap).toBeCloseTo(12, 0);
+  expect(compactLayout.firstCardLeft).toBeCloseTo(compactLayout.partyLeft, 0);
+  expect(compactLayout.lastCardRight).toBeCloseTo(compactLayout.partyRight, 0);
+  expect(compactLayout.previewCount).toBe(5);
+  expect(compactLayout.narrowestCardWidth).toBeGreaterThanOrEqual(135);
+  expect(compactLayout.metricLabelSize).toBe("11px");
+  expect(compactLayout.metricValueSize).toBe("14px");
+  expect(compactLayout.characterNameSize).toBe("15px");
+  expect(Number(compactLayout.characterNameWeight)).toBeGreaterThanOrEqual(900);
+  expect(compactLayout.characterNameBorder).toBe("solid");
+  expect(compactLayout.usernameSize).toBe("11px");
+  const externalGeometry = await recommendations.first().locator(".planner-external-preview").evaluate(element => {
+    const card = element.getBoundingClientRect();
+    const avatar = element.querySelector(".planner-external-preview__avatar")!.getBoundingClientRect();
+    const icons = [...element.querySelectorAll(".planner-external-preview__class")].map(icon => icon.getBoundingClientRect());
+    return {
+      centerDeltaX: Math.abs((avatar.left + avatar.right) / 2 - (card.left + card.right) / 2),
+      centerDeltaY: Math.abs((avatar.top + avatar.bottom) / 2 - (card.top + card.bottom) / 2),
+      iconSizes: icons.map(icon => [icon.width, icon.height]),
+    };
+  });
+  expect(externalGeometry.centerDeltaX).toBeLessThan(2);
+  expect(externalGeometry.centerDeltaY).toBeLessThan(2);
+  expect(externalGeometry.iconSizes).toEqual([[31, 31], [31, 31], [31, 31], [31, 31]]);
+  await expect.poll(() => recommendations.first().locator(".planner-external-preview img").evaluateAll(images =>
+    images.length === 4 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
   await capture(page, "15-planner-compact.png");
 
   await prioritySwitches.first().click();
   await expect(page.getByRole("button", { name: "Recalcular Top 5" })).toBeVisible();
   await expect(recommendations).toHaveCount(5);
 
-  await recommendations.first().getByRole("button").click();
+  await recommendations.first().getByRole("button", { name: "Expandir #1" }).click();
   await expect(recommendations.first()).toHaveAttribute("data-expanded", "true");
   await expect(recommendations.nth(1)).toHaveAttribute("data-expanded", "false");
   await expect(recommendations.nth(1)).toHaveCSS("display", "none");
+  const expandedHeaderGeometry = await recommendations.first().locator(".planner-recommendation__summary").evaluate(element => {
+    const header = element.getBoundingClientRect();
+    const metrics = element.querySelector(".planner-recommendation__metrics")!.getBoundingClientRect();
+    const toggle = element.querySelector(".planner-recommendation__expand")!.getBoundingClientRect();
+    return {
+      metricsBottomGap: header.bottom - metrics.bottom,
+      toggleHeight: toggle.height,
+      toggleTopGap: toggle.top - header.top,
+      toggleBottomGap: header.bottom - toggle.bottom,
+    };
+  });
+  expect(expandedHeaderGeometry.metricsBottomGap).toBeGreaterThanOrEqual(6);
+  expect(expandedHeaderGeometry.toggleHeight).toBeLessThanOrEqual(24);
+  expect(Math.abs(expandedHeaderGeometry.toggleTopGap - expandedHeaderGeometry.toggleBottomGap)).toBeLessThan(1);
   const expandedOwnerCard = recommendations.first().locator(".planner-player-card").filter({ has: page.getByLabel("Dueño de la piedra") });
   const expandedCrown = expandedOwnerCard.getByLabel("Dueño de la piedra");
   await expect(expandedCrown).toBeVisible();
   await expect(page.getByLabel("Dueño de la piedra +12")).toHaveCount(0);
-  await expect(page.getByText("Buffos y sinergias")).toBeVisible();
+  await expect(page.getByText("Buffs / Defensivos / Utilidades").last()).toBeVisible();
   await expect(recommendations.first().locator('.planner-player-card img[src*="classicon_"]')).toHaveCount(0);
   await expect(recommendations.first().locator('.planner-player-role')).toHaveCount(0);
   await expect(expandedOwnerCard.locator(":scope > .planner-role-watermark")).toBeVisible();
@@ -352,6 +459,117 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   expect(expandedObjectiveAlignment.largestGap - expandedObjectiveAlignment.smallestGap).toBeLessThan(2);
   await expect(recommendations.first().getByText("Sin objetivos de botín")).toHaveCSS("font-size", "13px");
   await expect(recommendations.first().locator(".planner-recommendation__detail")).toHaveCSS("overflow-y", "auto");
+  const compactExternalMoreStyle = await recommendations.nth(1).locator(".planner-external-preview__more").evaluate(element => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundImage, backgroundColor: style.backgroundColor, border: style.borderStyle, boxShadow: style.boxShadow };
+  });
+  expect(compactExternalMoreStyle.border).toBe("none");
+  expect(compactExternalMoreStyle.background).toBe("none");
+  expect(compactExternalMoreStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(compactExternalMoreStyle.boxShadow).toBe("none");
+  const externalCard = recommendations.first().locator(".planner-external-card");
+  await expect(externalCard).toBeVisible();
+  await expect(externalCard.locator('.planner-external-card__selectors [data-icon-kind="class"]')).toHaveCount(4);
+  const externalSelectorSizes = await externalCard.locator('.planner-external-card__selectors [data-icon-kind="class"]').evaluateAll(elements => elements.map(element => {
+    const bounds = element.getBoundingClientRect(); return [bounds.width, bounds.height];
+  }));
+  expect(externalSelectorSizes).toEqual([[43, 43], [43, 43], [43, 43], [43, 43]]);
+  const externalMoreStyle = await externalCard.locator(".planner-external-card__more").evaluate(element => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundImage, backgroundColor: style.backgroundColor, border: style.borderStyle, boxShadow: style.boxShadow };
+  });
+  expect(externalMoreStyle.border).toBe("none");
+  expect(externalMoreStyle.background).toBe("none");
+  expect(externalMoreStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(externalMoreStyle.boxShadow).toBe("none");
+  await externalCard.locator(".planner-external-card__more").focus();
+  await expect(externalCard.locator(".planner-external-card__more")).toHaveCSS("outline-style", "none");
+  await externalCard.locator(".planner-external-card__more").evaluate(element => (element as HTMLElement).blur());
+  await expect(externalCard.locator(".planner-external-card__contributions > section")).toHaveCount(1);
+  await expect(externalCard.getByText("Buffs / Defensivos / Utilidades")).toBeVisible();
+  const externalCardGeometry = await externalCard.evaluate(element => {
+    const card = element.getBoundingClientRect();
+    const separator = element.querySelector(".planner-external-card__contributions")!.getBoundingClientRect();
+    const gain = element.querySelector(".planner-external-gain")!.getBoundingClientRect();
+    const heading = element.querySelector(".planner-external-card__contribution-heading > strong")!.getBoundingClientRect();
+    const capability = element.querySelector(".planner-capability-grid__icon")!.getBoundingClientRect();
+    const capabilityImages = [...element.querySelectorAll<HTMLImageElement>(".planner-capability-grid__icon img")];
+    const memberSeparator = document.querySelector('.planner-player-card[data-role="dps"] .planner-objective-icons')!.getBoundingClientRect();
+    return {
+      capabilitySize: [capability.width, capability.height],
+      capabilityNaturalWidths: capabilityImages.map(image => image.naturalWidth),
+      gainLeft: gain.left - card.left,
+      gainSeparatorGap: gain.top - separator.top,
+      gainTitleGap: heading.left - gain.right,
+      separatorDelta: Math.abs(separator.top - memberSeparator.top),
+    };
+  });
+  expect(externalCardGeometry.capabilitySize).toEqual([42, 42]);
+  expect(externalCardGeometry.capabilityNaturalWidths.every(width => width >= 42)).toBe(true);
+  expect(externalCardGeometry.gainLeft).toBeCloseTo(7, 0);
+  expect(externalCardGeometry.gainSeparatorGap).toBeGreaterThanOrEqual(3);
+  expect(externalCardGeometry.gainSeparatorGap).toBeLessThanOrEqual(6);
+  expect(externalCardGeometry.gainTitleGap).toBeGreaterThanOrEqual(4);
+  expect(externalCardGeometry.separatorDelta).toBeLessThan(1);
+  await expect(externalCard.getByRole("button", { name: /Seleccionar recomendación: Evoker/u })).toHaveAttribute("aria-pressed", "true");
+  await externalCard.getByRole("button", { name: /Seleccionar recomendación: Mage/u }).click();
+  await expect(externalCard.getByText("Intelecto Arcano")).toHaveCount(0);
+  await expect(externalCard.getByText("Counterspell")).toHaveCount(0);
+  await expect(externalCard.getByRole("link", { name: /Intelecto Arcano/u })).toHaveAttribute("data-wowhead", /domain=es/u);
+  await externalCard.getByRole("button", { name: /Ver clases recomendadas: 5/u }).click();
+  const externalDialog = page.getByRole("dialog", { name: /Clases recomendadas/u });
+  await expect(externalDialog).toBeVisible();
+  expect(await externalDialog.evaluate(element => element.closest(".planner-external-popover")?.parentElement === document.body)).toBe(true);
+  await expect(externalDialog.locator(".planner-external-popover__choice")).toHaveCount(5);
+  await expect(externalDialog.locator(".planner-external-popover__choice").first().locator(".planner-external-gain")).toBeVisible();
+  await expect.poll(() => externalDialog.locator(".planner-capability-chip__icon").evaluateAll(wrappers => wrappers.length > 0 && wrappers.every(wrapper => {
+    const image = wrapper.querySelector("img") as HTMLImageElement | null;
+    return Boolean(image?.complete && image.naturalWidth > 0);
+  })), { timeout: 15_000 }).toBe(true);
+  await expect.poll(() => externalDialog.locator(".planner-external-popover__icons img").evaluateAll(images =>
+    images.length === 5 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+  const dialogAndPreviewLayers = await page.evaluate(() => ({
+    dialog: Number.parseInt(getComputedStyle(document.querySelector(".planner-external-popover")!).zIndex, 10),
+    preview: Number.parseInt(getComputedStyle(document.querySelector(".planner-external-preview")!).zIndex || "0", 10) || 0,
+  }));
+  expect(dialogAndPreviewLayers.dialog).toBeGreaterThan(dialogAndPreviewLayers.preview);
+  await capture(page, "16b-planner-external-modal-quick.png");
+  await page.keyboard.press("Escape");
+  await expect(externalCard.locator(".planner-external-card__more")).toHaveCSS("outline-style", "none");
+  const footerGeometry = await recommendations.first().locator(".planner-utilities").evaluate(element => {
+    const footer = element.getBoundingClientRect();
+    const sections = [...element.querySelectorAll(":scope > section")].map(section => section.getBoundingClientRect());
+    const titles = [...element.querySelectorAll(":scope > section > strong")].map(title => title.getBoundingClientRect());
+    const summaryIcons = [...element.querySelectorAll('.planner-summary-icons .planner-utility[data-compact="true"], .planner-summary-external-count__eye')]
+      .map(icon => icon.getBoundingClientRect());
+    const damageWrapper = element.querySelector(".planner-summary-damage")!.getBoundingClientRect();
+    const damageImage = element.querySelector(".planner-summary-damage img")!.getBoundingClientRect();
+    const essentials = [...element.querySelectorAll(":scope > section:nth-child(2) .planner-summary-icons > .planner-utility-link")]
+      .map(icon => icon.getBoundingClientRect());
+    const essentialsCenter = (Math.min(...essentials.map(icon => icon.left))
+      + Math.max(...essentials.map(icon => icon.right))) / 2;
+    const capabilityImages = [...element.querySelectorAll<HTMLImageElement>(":scope > section:nth-child(3) .planner-capability-grid__icon img")];
+    return {
+      firstWidth: sections[0].width,
+      secondWidth: sections[1].width,
+      thirdWidth: sections[2].width,
+      titleTopGap: Math.max(...titles.map(title => title.top - footer.top)),
+      summaryIconSizes: summaryIcons.map(icon => [icon.width, icon.height]),
+      damageImageSize: [damageImage.width, damageImage.height],
+      damageCenterDelta: Math.abs((damageWrapper.left + damageWrapper.width / 2)
+        - (damageImage.left + damageImage.width / 2)),
+      essentialsCenterDelta: Math.abs(essentialsCenter - (sections[1].left + sections[1].width / 2)),
+      capabilityNaturalWidths: capabilityImages.map(image => image.naturalWidth),
+    };
+  });
+  expect(footerGeometry.firstWidth).toBeCloseTo(footerGeometry.secondWidth, 0);
+  expect(footerGeometry.thirdWidth).toBeGreaterThan(footerGeometry.firstWidth * 2);
+  expect(footerGeometry.titleTopGap).toBeLessThanOrEqual(8);
+  expect(footerGeometry.summaryIconSizes.every(size => size[0] === 42 && size[1] === 42)).toBe(true);
+  expect(footerGeometry.damageImageSize).toEqual([42, 42]);
+  expect(footerGeometry.damageCenterDelta).toBeLessThan(0.5);
+  expect(footerGeometry.essentialsCenterDelta).toBeLessThanOrEqual(0.5);
+  expect(footerGeometry.capabilityNaturalWidths.every(width => width >= 42)).toBe(true);
   await recommendations.first().getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 7/u }).click();
   const lootBreakdown = page.getByRole("dialog", { name: /Desglose de objetivos · Bakuhatsu/u });
   await expect(lootBreakdown).toBeVisible();
@@ -371,6 +589,54 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   expect(await page.evaluate(() => document.body.scrollWidth)).toBe(940);
   expect(await page.evaluate(() => document.body.scrollHeight)).toBe(529);
   await capture(page, "17-planner-minimum-viewport.png");
+});
+
+test("reviews Advanced exact-spec vacancy recommendations", async ({ page }) => {
+  await openTeams(page, "teams-planner");
+  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: "Planificar piedra" }).click();
+  await page.getByRole("group", { name: "Modo de recomendación" })
+    .getByRole("button", { name: "Avanzado · Specs" }).click();
+  await page.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }).click();
+  for (const member of ["Guardiana", "Voidwalker", "Nightshift", "Ironforge"]) {
+    await page.getByRole("button", { name: new RegExp(`Filtrar por ${member}`, "u") }).click();
+  }
+  await page.getByRole("button", { name: "Calcular Top 5" }).click();
+  const recommendations = page.locator(".planner-recommendation");
+  await expect(recommendations).toHaveCount(5);
+  const preview = recommendations.first().locator(".planner-external-preview");
+  await expect(preview.locator('[data-icon-kind="spec"]')).toHaveCount(4);
+  await expect(preview.locator('img[src*="classicon_"]')).toHaveCount(0);
+  await recommendations.first().getByRole("button", { name: "Expandir #1" }).click();
+  const externalCard = recommendations.first().locator(".planner-external-card");
+  await expect(externalCard.getByText("Fury Warrior")).toBeVisible();
+  await expect(recommendations.first().getByRole("img", { name: "Daño: mixto" }).locator("img")).toHaveAttribute("src", /mix-damage/u);
+  await expect(externalCard.locator('.planner-external-card__selectors [data-icon-kind="spec"]')).toHaveCount(4);
+  await expect(externalCard.locator('.planner-external-card__selectors img[src*="classicon_"]')).toHaveCount(0);
+  await expect(externalCard.locator(".planner-capability-grid__icon")).toHaveCount(5);
+  const capabilityMore = externalCard.locator(".planner-capability-grid__more");
+  await capabilityMore.hover();
+  const capabilityPopup = page.getByRole("tooltip");
+  await expect(capabilityPopup).toBeVisible();
+  expect(await capabilityPopup.evaluate(element => element.parentElement === document.body)).toBe(true);
+  const overflowLayers = await capabilityPopup.evaluate(element => ({
+    popup: Number.parseInt(getComputedStyle(element).zIndex, 10),
+    card: Number.parseInt(getComputedStyle(document.querySelector(".planner-external-card")!).zIndex || "0", 10) || 0,
+  }));
+  expect(overflowLayers.popup).toBeGreaterThan(overflowLayers.card);
+  await capabilityMore.evaluate(element => (element as HTMLElement).blur());
+  await externalCard.getByRole("button", { name: /Ver clases recomendadas: 5/u }).click();
+  const dialog = page.getByRole("dialog", { name: /Specs recomendadas/u });
+  await expect(dialog.locator(".planner-external-popover__choice").first().locator(".planner-external-popover__icons img")).toHaveCount(2);
+  await expect.poll(() => dialog.locator(".planner-external-popover__icons img").evaluateAll(images =>
+    images.length === 10 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+  await expect.poll(() => dialog.locator(".planner-capability-chip__icon").evaluateAll(wrappers => wrappers.length > 0 && wrappers.every(wrapper => {
+    const image = wrapper.querySelector("img") as HTMLImageElement | null;
+    return Boolean(image?.complete && image.naturalWidth > 0);
+  })), { timeout: 15_000 }).toBe(true);
+  await capture(page, "17a-planner-advanced-modal.png");
+  await page.keyboard.press("Escape");
+  await capture(page, "17a-planner-advanced-results.png");
 });
 
 test("reviews the blocking Planner character configuration", async ({ page }) => {

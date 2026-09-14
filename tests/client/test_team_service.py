@@ -10,7 +10,9 @@ import requests
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "keystone-client" / "sidecar"))
 
-from team_service import TeamService, TeamServiceError, _objective  # noqa: E402
+from team_service import (  # noqa: E402
+    TeamService, TeamServiceError, _objective, _planner_request_valid, sanitize_planner,
+)
 
 
 class FakeResponse:
@@ -241,6 +243,89 @@ class TeamServiceTests(unittest.TestCase):
         self.assertEqual(session.calls[0][1]["json"], request)
         self.assertEqual(session.calls[0][1]["timeout"], 15)
 
+    def test_planner_preserves_bounded_external_classes_and_accepts_legacy_vacancies(self):
+        candidate = {
+            "wowClass": "Mage",
+            "contributions": [{"capabilityId": "BLOODLUST", "availability": "guaranteed"}],
+            "reasonCodes": ["PROVIDES_BLOODLUST"],
+            "specIds": [62, 63, 64],
+        }
+        recommendation = {
+            "rank": 1, "fingerprint": "external-party", "assignments": [],
+            "stone": {"characterId": 30, "characterName": "Stone", "ownerUserId": 1,
+                      "ownerUsername": "owner", "challengeMapId": 588, "dungeon": "Dungeon", "level": 12},
+            "vacancies": [{"role": "dps", "preferredCapabilities": ["BLOODLUST"],
+                           "candidateClasses": [candidate], "recommendationMode": "quick",
+                           "recommendedClass": "Mage", "offensiveGainPct": 0.031,
+                           "offensiveBand": 0, "defensiveBand": 0, "dungeonUtilityBand": 0,
+                           "offensiveReasons": ["ARCANE_INTELLECT: +3.10%"],
+                           "offensiveProvenance": [{"specId": 251, "source": "simc",
+                                                      "confidence": "high", "method": "exact_profile"}],
+                           "recommendations": [{
+                               "id": "quick:Mage:dps", "wowClass": "Mage", "offensiveGainPct": 0.031,
+                               "damageProfile": "magical",
+                               "buffsDebuffs": [{"capabilityId": "ARCANE_INTELLECT",
+                                                  "name": "Arcane Intellect", "spellId": 1459,
+                                                  "availability": "guaranteed"}],
+                               "utilities": [{"capabilityId": "INTERRUPT", "name": "Counterspell",
+                                              "spellId": 2139, "availability": "guaranteed"}],
+                           }],
+                           "defensiveContribution": {"tiers": {"S": 0, "A": 0, "B": 0, "C": 0},
+                                                       "reasons": []},
+                           "dungeonUtilityContribution": {"tiers": {"S": 0, "A": 0, "B": 0, "C": 0},
+                                                           "reasons": []}}],
+            "lootSummary": {"weightedScore": 0, "playersWithObjectives": 0, "totalObjectives": 0,
+                            "tierCounts": {"bestInSlot": 0, "mustHave": 0, "niceToHave": 0,
+                                           "catalyst": 0, "transmog": 0}},
+            "levelSummary": {"targetLevel": 12, "stoneLevel": 12, "levelDistance": 0},
+            "preferenceSummary": {"preferred": 0, "available": 0, "emergency": 0},
+            "compositionSummary": {"bloodlust": "none", "battleRez": "none", "damageProfile": "unknown",
+                                   "magicalDpsCount": 0, "physicalDpsCount": 0, "unknownDpsCount": 0,
+                                   "chaosBrandBeneficiaries": 0, "mysticTouchBeneficiaries": 0,
+                                   "uniqueClassBuffCount": 0, "criticalRolesCovered": 0,
+                                   "uniqueCapabilities": [],
+                                   "armorSynergy": {"pairs": 0, "dominantType": None,
+                                                    "counts": {"cloth": 0, "leather": 0, "mail": 0, "plate": 0}}},
+            "reasonCodes": ["PARTY_INCOMPLETE", "NO_LOOT_OBJECTIVES", "TARGET_LEVEL_EXACT"],
+        }
+        payload = {"teamId": 7, "challengeMapId": 588, "targetLevel": 12,
+                   "availability": {"eligibleStoneCount": 1}, "status": "ok",
+                   "diagnostics": {"codes": [], "unconfiguredUserIds": [], "lockIssues": []},
+                   "recommendations": [recommendation]}
+        recommendation["compositionSummary"]["groupDefensives"] = [{
+            "capabilityId": "MAJOR_GROUP_DR", "name": "Darkness", "spellId": 196718,
+            "availability": "conditional", "tier": "S", "relevance": 3, "score": 500,
+        }]
+        recommendation["compositionSummary"]["dungeonUtilities"] = [{
+            "capabilityId": "INTERRUPT", "name": "Pummel", "spellId": 6552,
+            "availability": "guaranteed", "tier": "S", "relevance": 3, "score": 1000,
+        }]
+
+        sanitized = sanitize_planner(payload, 7, 588, 30, 12)
+
+        self.assertEqual(sanitized["recommendations"][0]["vacancies"][0]["candidateClasses"], [{
+            "wowClass": "Mage",
+            "contributions": [{"capabilityId": "BLOODLUST", "availability": "guaranteed"}],
+            "reasonCodes": ["PROVIDES_BLOODLUST"],
+        }])
+        self.assertEqual(sanitized["recommendations"][0]["vacancies"][0]["recommendedClass"], "Mage")
+        self.assertEqual(sanitized["recommendations"][0]["vacancies"][0]["offensiveBand"], 0)
+        self.assertEqual(sanitized["recommendations"][0]["compositionSummary"]["groupDefensives"][0]["name"],
+                         "Darkness")
+        self.assertEqual(sanitized["recommendations"][0]["compositionSummary"]["dungeonUtilities"][0]["score"],
+                         1000)
+        self.assertEqual(sanitized["recommendations"][0]["vacancies"][0]["recommendations"][0], {
+            "id": "quick:Mage:dps", "wowClass": "Mage", "offensiveGainPct": 0.031,
+            "damageProfile": "magical",
+            "buffsDebuffs": [{"capabilityId": "ARCANE_INTELLECT", "name": "Arcane Intellect",
+                               "spellId": 1459, "availability": "guaranteed"}],
+            "utilities": [{"capabilityId": "INTERRUPT", "name": "Counterspell", "spellId": 2139,
+                           "availability": "guaranteed"}],
+        })
+        recommendation["vacancies"][0].pop("candidateClasses")
+        legacy = sanitize_planner(payload, 7, 588, 30, 12)
+        self.assertNotIn("candidateClasses", legacy["recommendations"][0]["vacancies"][0])
+
     def test_exact_stone_planner_rejects_invalid_request_before_network(self):
         session = FakeSession([])
         request = {
@@ -254,6 +339,24 @@ class TeamServiceTests(unittest.TestCase):
             TeamService(session=session).plan_keystone(self.cfg, 7, request)
         self.assertEqual(caught.exception.code, "INVALID_TEAM_REQUEST")
         self.assertEqual(session.calls, [])
+
+    def test_exact_stone_planner_accepts_modern_options_without_legacy_mix(self):
+        request = {
+            "participantUserIds": [1, 2], "targetLevel": 12, "challengeMapId": 588,
+            "stoneCharacterId": 30,
+            "options": {"optimizeComposition": True, "recommendationMode": "advanced",
+                        "bloodlust": True, "battleRez": True, "offensiveSynergy": True,
+                        "groupDefense": True, "dungeonUtility": True},
+            "locks": [],
+        }
+        self.assertTrue(_planner_request_valid(request))
+        request["options"]["fillComposition"] = False
+        self.assertTrue(_planner_request_valid(request))
+        request["options"]["fillComposition"] = "yes"
+        self.assertFalse(_planner_request_valid(request))
+        request["options"]["fillComposition"] = False
+        request["options"]["classBuffs"] = True
+        self.assertFalse(_planner_request_valid(request))
 
     def test_malformed_success_payloads_are_rejected(self):
         with self.assertRaises(TeamServiceError) as caught:

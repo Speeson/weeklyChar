@@ -109,6 +109,10 @@ def classify_path(path: str, impact: Impact, *, repo_root: Path | None = None) -
     if classify_pending_changeset(path, impact, repo_root=repo_root or Path.cwd()):
         return
 
+    if path.startswith("tools/planner-ranking-data/"):
+        impact.add(("worker",), path)
+        return
+
     if is_known_no_impact(path):
         impact.no_impact(path)
         return
@@ -230,6 +234,8 @@ def is_known_no_impact(path: str) -> bool:
         "keystone-client/src/generated/",
         "keystone-client/src-tauri/binaries/",
         "keystone-client/src-tauri/target/",
+        "tools/planner-buff-sims-poc/",
+        "tools/planner-utility-data/",
         "KeystoneSync/",
         "keystone-api/",
         "keystone-sync-client/",

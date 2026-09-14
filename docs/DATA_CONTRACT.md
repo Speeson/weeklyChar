@@ -851,6 +851,47 @@ aggregation is unique while member providers remain visible. Availability suppor
 Block B adds no HTTP route, D1 read adapter, authorization logic, or schema change; those remain for
 Block C.
 
+Each incomplete recommendation completes its 1/1/3 shape conceptually with external options. Legacy
+requests retain the class-only `candidateClasses` behavior and exact historical comparator. Modern
+`quick` requests rank joint role-compatible class combinations; `advanced` ranks joint exact-spec
+combinations. Both place Bloodlust and battle resurrection before an offensive equivalence band.
+Advanced then applies semantic S/A/B/C equivalence bands for marginal group defense and selected-
+dungeon utility. Inside the same active composition bands, weighted loot and known tier counts decide
+before exact offensive gain and the stable identity. Same-armor pairs are a loot-sharing heuristic:
+on the modern path they are retained only as a post-tier loot tie-break, while legacy keeps their old
+position. External options never contribute objectives or play-preference counters.
+
+Modern vacancies add `recommendationMode`, `recommendedClass`, optional exact
+`recommendedSpecId`/`recommendedSpecName`, offensive gain/band/reasons/provenance, and bounded
+defense/dungeon tier vectors, bands, and reasons. They may also expose a bounded additive
+`recommendations` array for presentation. Each entry has a stable response identity, class, optional
+exact Advanced spec, a presentation-safe `damageProfile` (`physical`, `magical`, `mixed`, or
+`unknown`), its own offensive estimate, and separate `buffsDebuffs`/`utilities` arrays with ability
+name, spell ID, and guaranteed/conditional availability. Quick derives a class profile only when its
+role-compatible DPS specs agree, reports `mixed` when known specs span both profiles, and otherwise
+reports `unknown`; Advanced uses the exact spec profile. Only alternatives in the selected
+completion's best active composition stratum are exposed, and they retain their real ranking instead
+of forcing the selected completion into first place. These per-slot alternatives are explanatory
+output only and never enter the Top 5 comparator.
+The `utilities` array includes Bloodlust and battle resurrection when that specific external
+alternative supplies them, allowing the Client to distinguish essentials provided by selected
+members from those that depend on an external slot.
+Quick alternatives expose only abilities shared by every role-compatible spec of their class;
+Advanced alternatives use the exact spec. Quick never emits a spec and ignores defensive and
+dungeon scoring even if those option values remain true in Client memory. For offensive scoring,
+each external Quick DPS class is a recipient represented by the mean of its role-compatible DPS
+spec profiles, so parties whose selected members contain only supports do not collapse every class
+to zero gain. Advanced utility is
+spec-exact, excludes personal defensives, discounts conditional availability, and scores only
+marginal coverage. Multiple buffs combine multiplicatively per normalized recipient; negative SimC
+noise is clamped to zero and Hunter's Mark is excluded from the production provider set.
+
+Advanced responses may additionally expose ranked `groupDefensives` and `dungeonUtilities` on the
+composition summary and on each vacancy alternative. Every entry includes capability ID, display
+name, spell ID, availability, S/A/B/C tier, relevance, and score. These arrays are response-only;
+KeystoneClient renders the first four entries of each composition group and uses an accessible hover/
+focus overflow popup for the complete bounded list.
+
 Block C exposes `POST /api/teams/:teamId/keystone-planner`. The caller must have a valid access JWT
 and current Team membership. The strict request contains only:
 
@@ -867,9 +908,25 @@ and current Team membership. The strict request contains only:
     classBuffs: boolean
     damageSynergy: boolean
   }
+  // OR the exact modern shape:
+  // options: {
+  //   optimizeComposition: boolean
+  //   fillComposition?: boolean // defaults to true when omitted
+  //   recommendationMode: "quick" | "advanced"
+  //   bloodlust: boolean
+  //   battleRez: boolean
+  //   offensiveSynergy: boolean
+  //   groupDefense: boolean
+  //   dungeonUtility: boolean
+  // }
   locks?: PlannerLock[]          // at most 15
 }
 ```
+
+`fillComposition` is additive and belongs only to the modern Quick/Advanced shape. `true` (and
+omission for compatibility with already-built modern clients) completes empty roles with external
+recommendations. `false` ranks only the selected members and returns no vacancy cards, even when the
+selected party is incomplete. It does not alter the exact legacy option shape or comparator.
 
 Unknown fields and client-supplied candidates, objectives, stones, roles, capabilities, preferences,
 snapshots, or scores are rejected. A non-null challenge map must belong to the current Worker pool.
@@ -894,6 +951,11 @@ Public responses contain `teamId`, the requested `challengeMapId`, `targetLevel`
 Recommendation objectives expose only item ID, nullable cached/enriched name/icon, tier, variant
 key, and Voidcore state. Capability names/types/icon spell IDs/stacking come from the central Worker
 catalog. Metadata misses do not change scoring or fail the Planner.
+
+All external recommendation fields are response-only and are not stored in D1. Older Web parsers
+project known vacancy properties and therefore ignore the additive modern fields. The updated Client
+and sidecar accept legacy and modern responses defensively; a missing `candidateClasses` still renders
+a generic external slot. No D1 migration is involved.
 
 HTTP mapping is 200 for `ok`, `unconfigured_participants`, `no_valid_composition`, and zero eligible
 stones; 400 for invalid requests, non-Team participants, or solver `invalid_input`; 401 for invalid

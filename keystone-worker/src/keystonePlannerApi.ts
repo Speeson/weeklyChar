@@ -87,7 +87,12 @@ export function assertPlannerDataLimit(
 const REQUEST_KEYS = new Set([
   'participantUserIds', 'targetLevel', 'challengeMapId', 'stoneCharacterId', 'options', 'locks',
 ])
-const OPTION_KEYS = new Set(['optimizeComposition', 'bloodlust', 'battleRez', 'classBuffs', 'damageSynergy'])
+const LEGACY_OPTION_KEYS = new Set(['optimizeComposition', 'bloodlust', 'battleRez', 'classBuffs', 'damageSynergy'])
+const MODERN_OPTION_KEYS = new Set([
+  'optimizeComposition', 'recommendationMode', 'bloodlust', 'battleRez', 'offensiveSynergy',
+  'groupDefense', 'dungeonUtility',
+])
+const MODERN_FILL_OPTION_KEYS = new Set([...MODERN_OPTION_KEYS, 'fillComposition'])
 const ROLE_SET = new Set<WowRole>(['tank', 'healer', 'dps'])
 const CAPABILITY_BY_ID = new Map(WOW_CAPABILITIES.map(capability => [capability.id, capability]))
 
@@ -105,7 +110,27 @@ function exactKeys(value: Record<string, unknown>, expected: ReadonlySet<string>
 }
 
 function parseOptions(value: unknown): PlannerOptions {
-  if (!isRecord(value) || !exactKeys(value, OPTION_KEYS)
+  if (isRecord(value) && (exactKeys(value, MODERN_OPTION_KEYS) || exactKeys(value, MODERN_FILL_OPTION_KEYS))
+    && typeof value.optimizeComposition === 'boolean'
+    && (value.recommendationMode === 'quick' || value.recommendationMode === 'advanced')
+    && typeof value.bloodlust === 'boolean'
+    && typeof value.battleRez === 'boolean'
+    && typeof value.offensiveSynergy === 'boolean'
+    && typeof value.groupDefense === 'boolean'
+    && typeof value.dungeonUtility === 'boolean'
+    && (value.fillComposition === undefined || typeof value.fillComposition === 'boolean')) {
+    return {
+      optimizeComposition: value.optimizeComposition,
+      recommendationMode: value.recommendationMode,
+      bloodlust: value.bloodlust,
+      battleRez: value.battleRez,
+      offensiveSynergy: value.offensiveSynergy,
+      groupDefense: value.groupDefense,
+      dungeonUtility: value.dungeonUtility,
+      ...(value.fillComposition === undefined ? {} : { fillComposition: value.fillComposition }),
+    }
+  }
+  if (!isRecord(value) || !exactKeys(value, LEGACY_OPTION_KEYS)
     || typeof value.optimizeComposition !== 'boolean'
     || typeof value.bloodlust !== 'boolean'
     || typeof value.battleRez !== 'boolean'

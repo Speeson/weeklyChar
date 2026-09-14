@@ -1,16 +1,20 @@
 import { coreRequest } from "./client";
 import type {
-  CoreError, KeystonePlannerAssignment, KeystonePlannerCapability, KeystonePlannerLock,
-  KeystonePlannerObjective, KeystonePlannerRecommendation, KeystonePlannerRequest,
+  CoreError, KeystonePlannerAdvancedUtilityCapability, KeystonePlannerAssignment, KeystonePlannerCapability, KeystonePlannerLock,
+  KeystonePlannerExternalClassCandidate, KeystonePlannerObjective, KeystonePlannerRecommendation, KeystonePlannerRequest,
   KeystonePlannerResponse, KeystonePlannerRole,
+  KeystonePlannerVacancy, KeystonePlannerVacancyRecommendation,
 } from "./types";
 
 export const DEFAULT_KEYSTONE_PLANNER_OPTIONS = {
   optimizeComposition: true,
+  fillComposition: true,
+  recommendationMode: "quick",
   bloodlust: true,
   battleRez: true,
-  classBuffs: true,
-  damageSynergy: true,
+  offensiveSynergy: true,
+  groupDefense: true,
+  dungeonUtility: true,
 } as const;
 
 const ROLES = new Set(["tank", "healer", "dps"]);
@@ -27,6 +31,14 @@ const REASONS = new Set([
 const DIAGNOSTICS = new Set([
   "INVALID_PARTICIPANT_COUNT", "DUPLICATE_PARTICIPANT", "INVALID_TARGET_LEVEL",
   "DUPLICATE_CANDIDATE", "INVALID_LOCK", "UNCONFIGURED_PARTICIPANT", "NO_VALID_COMPOSITION",
+]);
+const WOW_CLASSES = new Set([
+  "Death Knight", "Demon Hunter", "Druid", "Evoker", "Hunter", "Mage", "Monk", "Paladin", "Priest",
+  "Rogue", "Shaman", "Warlock", "Warrior",
+]);
+const EXTERNAL_REASONS = new Set([
+  "PROVIDES_BLOODLUST", "PROVIDES_BATTLE_REZ", "BUFFS_INTELLECT", "BUFFS_ATTACK_POWER",
+  "AMPLIFIES_MAGICAL_DAMAGE", "AMPLIFIES_PHYSICAL_DAMAGE", "ADDS_CLASS_BUFF",
 ]);
 
 function error(code: string, message: string): CoreError {
@@ -102,6 +114,149 @@ function parseAssignment(value: unknown): KeystonePlannerAssignment | null {
   };
 }
 
+function parseExternalClassCandidate(value: unknown): KeystonePlannerExternalClassCandidate | null {
+  if (!record(value) || typeof value.wowClass !== "string" || !WOW_CLASSES.has(value.wowClass)
+    || !Array.isArray(value.contributions) || value.contributions.length > 16
+    || !Array.isArray(value.reasonCodes) || value.reasonCodes.length > 16
+    || !value.reasonCodes.every(reason => typeof reason === "string" && EXTERNAL_REASONS.has(reason))) return null;
+  const contributions = value.contributions.map(contribution => record(contribution)
+    && string(contribution.capabilityId, 64)
+    && (contribution.availability === "guaranteed" || contribution.availability === "conditional")
+    ? { capabilityId: contribution.capabilityId, availability: contribution.availability }
+    : null);
+  if (contributions.some(contribution => contribution === null)
+    || new Set(contributions.map(contribution => contribution?.capabilityId)).size !== contributions.length
+    || new Set(value.reasonCodes).size !== value.reasonCodes.length) return null;
+  return {
+    wowClass: value.wowClass,
+    contributions: contributions as KeystonePlannerExternalClassCandidate["contributions"],
+    reasonCodes: value.reasonCodes as KeystonePlannerExternalClassCandidate["reasonCodes"],
+  };
+}
+
+function parseTierContribution(value: unknown): KeystonePlannerVacancy["defensiveContribution"] | null {
+  const tiers = ["S", "A", "B", "C"] as const;
+  if (!record(value) || !record(value.tiers)) return null;
+  const tierValues = value.tiers;
+  if (Object.keys(tierValues).length !== tiers.length
+    || !tiers.every(tier => integer(tierValues[tier])) || !Array.isArray(value.reasons)
+    || value.reasons.length > 8 || !value.reasons.every(reason => string(reason, 256))) return null;
+  return {
+    tiers: Object.fromEntries(tiers.map(tier => [tier, tierValues[tier]])) as Record<typeof tiers[number], number>,
+    reasons: value.reasons as string[],
+  };
+}
+
+function parseVacancyCapability(value: unknown) {
+  if (!record(value) || !string(value.capabilityId, 64) || !string(value.name, 128)
+    || !integer(value.spellId, 1)
+    || (value.availability !== "guaranteed" && value.availability !== "conditional")) return null;
+  return {
+    capabilityId: value.capabilityId,
+    name: value.name,
+    spellId: value.spellId,
+    availability: value.availability,
+  } as const;
+}
+
+function parseAdvancedUtilities(value: unknown): KeystonePlannerAdvancedUtilityCapability[] | null {
+  if (!Array.isArray(value) || value.length > 64) return null;
+  const parsed = value.map(item => {
+    const capability = parseVacancyCapability(item);
+    if (!capability || !record(item) || !["S", "A", "B", "C"].includes(String(item.tier))
+      || !integer(item.relevance) || item.relevance > 3 || !integer(item.score)) return null;
+    return { ...capability, tier: item.tier as "S" | "A" | "B" | "C", relevance: item.relevance, score: item.score };
+  });
+  return parsed.some(item => item === null) ? null : parsed as KeystonePlannerAdvancedUtilityCapability[];
+}
+
+function parseVacancyRecommendations(value: unknown, mode: "quick" | "advanced") {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 40) return null;
+  const parsed = value.map(item => {
+    if (!record(item) || !string(item.id, 160) || typeof item.wowClass !== "string"
+      || !WOW_CLASSES.has(item.wowClass) || typeof item.offensiveGainPct !== "number"
+      || !Number.isFinite(item.offensiveGainPct) || item.offensiveGainPct < 0
+      || !Array.isArray(item.buffsDebuffs) || item.buffsDebuffs.length > 16
+      || !Array.isArray(item.utilities) || item.utilities.length > 16) return null;
+    if (mode === "advanced"
+      ? !integer(item.specId, 1) || !string(item.specName, 128)
+      : item.specId !== undefined || item.specName !== undefined) return null;
+    if (item.damageProfile !== undefined
+      && !["physical", "magical", "mixed", "unknown"].includes(String(item.damageProfile))) return null;
+    const buffsDebuffs = item.buffsDebuffs.map(parseVacancyCapability);
+    const utilities = item.utilities.map(parseVacancyCapability);
+    const groupDefensives = item.groupDefensives === undefined ? undefined : parseAdvancedUtilities(item.groupDefensives);
+    const dungeonUtilities = item.dungeonUtilities === undefined ? undefined : parseAdvancedUtilities(item.dungeonUtilities);
+    if (buffsDebuffs.some(capability => capability === null) || utilities.some(capability => capability === null)
+      || groupDefensives === null || dungeonUtilities === null) return null;
+    return {
+      id: item.id, wowClass: item.wowClass,
+      ...(mode === "advanced" ? { specId: item.specId as number, specName: item.specName as string } : {}),
+      ...(item.damageProfile !== undefined ? { damageProfile: item.damageProfile as KeystonePlannerVacancyRecommendation["damageProfile"] } : {}),
+      offensiveGainPct: item.offensiveGainPct,
+      buffsDebuffs,
+      utilities,
+      ...(groupDefensives ? { groupDefensives } : {}),
+      ...(dungeonUtilities ? { dungeonUtilities } : {}),
+    } as KeystonePlannerVacancyRecommendation;
+  });
+  if (parsed.some(item => item === null)) return null;
+  const recommendations = parsed as KeystonePlannerVacancyRecommendation[];
+  return new Set(recommendations.map(item => item.id)).size === recommendations.length ? recommendations : null;
+}
+
+function parseModernVacancy(value: Record<string, unknown>): Partial<KeystonePlannerVacancy> | null {
+  if (value.recommendationMode !== "quick" && value.recommendationMode !== "advanced") return null;
+  if (typeof value.recommendedClass !== "string" || !WOW_CLASSES.has(value.recommendedClass)
+    || typeof value.offensiveGainPct !== "number" || !Number.isFinite(value.offensiveGainPct)
+    || value.offensiveGainPct < 0 || !integer(value.offensiveBand)
+    || !integer(value.defensiveBand) || !integer(value.dungeonUtilityBand)
+    || !Array.isArray(value.offensiveReasons) || value.offensiveReasons.length > 8
+    || !value.offensiveReasons.every(reason => string(reason, 256))
+    || !Array.isArray(value.offensiveProvenance) || value.offensiveProvenance.length > 5) return null;
+  if (value.recommendationMode === "advanced"
+    ? !integer(value.recommendedSpecId, 1) || !string(value.recommendedSpecName, 128)
+    : value.recommendedSpecId !== undefined || value.recommendedSpecName !== undefined) return null;
+  const provenance = value.offensiveProvenance.map(item => {
+    if (!record(item) || !integer(item.specId, 1)
+      || !["simc", "archetype_estimate"].includes(String(item.source))
+      || !["high", "medium", "low"].includes(String(item.confidence))
+      || (item.method !== undefined && !string(item.method, 128))
+      || (item.donorSpecIds !== undefined && (!Array.isArray(item.donorSpecIds)
+        || item.donorSpecIds.length > 32 || !item.donorSpecIds.every(id => integer(id, 1))))) return null;
+    return {
+      specId: item.specId,
+      source: item.source as "simc" | "archetype_estimate",
+      confidence: item.confidence as "high" | "medium" | "low",
+      ...(item.method === undefined ? {} : { method: item.method as string }),
+      ...(item.donorSpecIds === undefined ? {} : { donorSpecIds: item.donorSpecIds as number[] }),
+    };
+  });
+  const defensiveContribution = parseTierContribution(value.defensiveContribution);
+  const dungeonUtilityContribution = parseTierContribution(value.dungeonUtilityContribution);
+  const recommendations = value.recommendations === undefined
+    ? undefined : parseVacancyRecommendations(value.recommendations, value.recommendationMode);
+  if (provenance.some(item => item === null) || !defensiveContribution || !dungeonUtilityContribution
+    || recommendations === null) return null;
+  return {
+    recommendationMode: value.recommendationMode,
+    recommendedClass: value.recommendedClass,
+    ...(value.recommendationMode === "advanced" ? {
+      recommendedSpecId: value.recommendedSpecId as number,
+      recommendedSpecName: value.recommendedSpecName as string,
+    } : {}),
+    offensiveGainPct: value.offensiveGainPct,
+    offensiveBand: value.offensiveBand,
+    offensiveReasons: value.offensiveReasons as string[],
+    offensiveProvenance: provenance as NonNullable<KeystonePlannerVacancy["offensiveProvenance"]>,
+    defensiveContribution,
+    defensiveBand: value.defensiveBand,
+    dungeonUtilityContribution,
+    dungeonUtilityBand: value.dungeonUtilityBand,
+    ...(recommendations ? { recommendations } : {}),
+  };
+}
+
 function parseRecommendation(
   value: unknown, request: KeystonePlannerRequest,
 ): KeystonePlannerRecommendation | null {
@@ -116,11 +271,32 @@ function parseRecommendation(
     || !record(value.levelSummary) || !record(value.preferenceSummary) || !record(value.compositionSummary)
     || !Array.isArray(value.compositionSummary.uniqueCapabilities)) return null;
   const assignments = value.assignments.map(parseAssignment);
-  const vacancies = value.vacancies.map(item => record(item) && typeof item.role === "string" && ROLES.has(item.role)
-    && Array.isArray(item.preferredCapabilities) && item.preferredCapabilities.every(cap => string(cap, 64))
-    ? { role: item.role as KeystonePlannerRole, preferredCapabilities: item.preferredCapabilities as string[] }
-    : null);
+  const vacancies = value.vacancies.map(item => {
+    if (!record(item) || typeof item.role !== "string" || !ROLES.has(item.role)
+      || !Array.isArray(item.preferredCapabilities)
+      || !item.preferredCapabilities.every(cap => string(cap, 64))) return null;
+    let candidateClasses: KeystonePlannerExternalClassCandidate[] | undefined;
+    if (item.candidateClasses !== undefined) {
+      if (!Array.isArray(item.candidateClasses) || item.candidateClasses.length > 13) return null;
+      const parsedCandidates = item.candidateClasses.map(parseExternalClassCandidate);
+      if (parsedCandidates.some(candidate => candidate === null)
+        || new Set(parsedCandidates.map(candidate => candidate?.wowClass)).size !== parsedCandidates.length) return null;
+      candidateClasses = parsedCandidates as KeystonePlannerExternalClassCandidate[];
+    }
+    const modern = item.recommendationMode === undefined ? {} : parseModernVacancy(item);
+    if (modern === null) return null;
+    return {
+      role: item.role as KeystonePlannerRole,
+      preferredCapabilities: item.preferredCapabilities as string[],
+      ...(candidateClasses ? { candidateClasses } : {}),
+      ...modern,
+    };
+  });
   const capabilities = value.compositionSummary.uniqueCapabilities.map(item => parseCapability(item, true));
+  const groupDefensives = value.compositionSummary.groupDefensives === undefined
+    ? undefined : parseAdvancedUtilities(value.compositionSummary.groupDefensives);
+  const dungeonUtilities = value.compositionSummary.dungeonUtilities === undefined
+    ? undefined : parseAdvancedUtilities(value.compositionSummary.dungeonUtilities);
   const rawArmor = value.compositionSummary.armorSynergy;
   const armorTypes = ["cloth", "leather", "mail", "plate"] as const;
   const armor = rawArmor === undefined
@@ -140,6 +316,7 @@ function parseRecommendation(
   ];
   if (assignments.some(item => item === null) || vacancies.some(item => item === null)
     || capabilities.some(item => item === null) || !value.reasonCodes.every(reason => typeof reason === "string" && REASONS.has(reason))
+    || groupDefensives === null || dungeonUtilities === null
     || counts.some(count => !integer(count))
     || typeof value.compositionSummary.bloodlust !== "string" || !AVAILABILITY.has(value.compositionSummary.bloodlust)
     || typeof value.compositionSummary.battleRez !== "string" || !AVAILABILITY.has(value.compositionSummary.battleRez)
@@ -196,6 +373,8 @@ function parseRecommendation(
           mail: armorCounts.mail as number, plate: armorCounts.plate as number,
         },
       },
+      ...(groupDefensives ? { groupDefensives } : {}),
+      ...(dungeonUtilities ? { dungeonUtilities } : {}),
     },
     reasonCodes: value.reasonCodes as string[],
   };
@@ -229,10 +408,19 @@ export function parseKeystonePlannerResponse(
 
 function validRequest(request: KeystonePlannerRequest): boolean {
   const participants = request.participantUserIds;
+  const optionKeys = new Set(Object.keys(request.options));
+  const requiredOptionKeys = [
+    "optimizeComposition", "fillComposition", "recommendationMode", "bloodlust", "battleRez", "offensiveSynergy",
+    "groupDefense", "dungeonUtility",
+  ];
   return participants.length >= 2 && participants.length <= 5 && participants.every(id => integer(id, 1))
     && new Set(participants).size === participants.length && integer(request.targetLevel, 1) && request.targetLevel <= 20
     && integer(request.challengeMapId, 1) && integer(request.stoneCharacterId, 1)
-    && Object.values(request.options).every(value => typeof value === "boolean") && request.locks.length <= 15;
+    && optionKeys.size === requiredOptionKeys.length && requiredOptionKeys.every(key => optionKeys.has(key))
+    && ["quick", "advanced"].includes(request.options.recommendationMode)
+    && Object.entries(request.options).every(([key, value]) => key === "recommendationMode"
+      ? typeof value === "string" : typeof value === "boolean")
+    && request.locks.length <= 15;
 }
 
 export async function getKeystonePlanner(

@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 1,
+  "label": "Keystone Planner utility extraction - Midnight S2",
+  "gameLevel": 90,
+  "classes": [
+    {
+      "id": "DEATH_KNIGHT",
+      "simc": "DeathKnight",
+      "name": "Death Knight"
+    },
+    {
+      "id": "DEMON_HUNTER",
+      "simc": "DemonHunter",
+      "name": "Demon Hunter"
+    },
+    {
+      "id": "DRUID",
+      "simc": "druid",
+      "name": "Druid"
+    },
+    {
+      "id": "EVOKER",
+      "simc": "evoker",
+      "name": "Evoker"
+    },
+    {
+      "id": "HUNTER",
+      "simc": "hunter",
+      "name": "Hunter"
+    },
+    {
+      "id": "MAGE",
+      "simc": "mage",
+      "name": "Mage"
+    },
+    {
+      "id": "MONK",
+      "simc": "monk",
+      "name": "Monk"
+    },
+    {
+      "id": "PALADIN",
+      "simc": "paladin",
+      "name": "Paladin"
+    },
+    {
+      "id": "PRIEST",
+      "simc": "priest",
+      "name": "Priest"
+    },
+    {
+      "id": "ROGUE",
+      "simc": "rogue",
+      "name": "Rogue"
+    },
+    {
+      "id": "SHAMAN",
+      "simc": "shaman",
+      "name": "Shaman"
+    },
+    {
+      "id": "WARLOCK",
+      "simc": "warlock",
+      "name": "Warlock"
+    },
+    {
+      "id": "WARRIOR",
+      "simc": "warrior",
+      "name": "Warrior"
+    }
+  ],
+  "sources": [
+    "class_spell",
+    "spec_spell",
+    "talent_spell"
+  ],
+  "candidateRules": [
+    {
+      "category": "group_defensive",
+      "terms": [
+        "damage taken",
+        "damage you take",
+        "damage received",
+        "reduces all damage",
+        "reduce damage",
+        "reduces damage",
+        "maximum health",
+        "max health",
+        "health increased",
+        "increase their health",
+        "increases health",
+        "absorb",
+        "damage reduction",
+        "redirect",
+        "transferred",
+        "immunity",
+        "immune",
+        "avoidance"
+      ]
+    },
+    {
+      "category": "external_defensive",
+      "terms": [
+        "friendly target",
+        "ally",
+        "party member",
+        "protect",
+        "sacrifice",
+        "redirect",
+        "transfer",
+        "damage taken by the target",
+        "target takes"
+      ]
+    },
+    {
+      "category": "interrupt_or_silence",
+      "terms": [
+        "interrupt",
+        "silence",
+        "spellcasting"
+      ]
+    },
+    {
+      "category": "crowd_control",
+      "terms": [
+        "stun",
+        "incapacitate",
+        "disorient",
+        "fear",
+        "root",
+        "immobilize",
+        "sleep",
+        "banish",
+        "polymorph",
+        "crowd control",
+        "pacify"
+      ]
+    },
+    {
+      "category": "displacement",
+      "terms": [
+        "knock",
+        "knocks",
+        "pull",
+        "pulled",
+        "grip",
+        "draws enemies",
+        "push"
+      ]
+    },
+    {
+      "category": "offensive_dispel",
+      "terms": [
+        "purge",
+        "remove a beneficial magic",
+        "remove beneficial magic",
+        "removes a beneficial magic",
+        "enrage effect",
+        "soothe"
+      ]
+    },
+    {
+      "category": "friendly_dispel",
+      "terms": [
+        "remove a harmful magic",
+        "remove harmful magic",
+        "poison",
+        "disease",
+        "curse",
+        "dispel",
+        "cauterizing"
+      ]
+    },
+    {
+      "category": "group_mobility",
+      "terms": [
+        "movement speed",
+        "speed of all",
+        "party and raid members",
+        "nearby allies",
+        "allies' movement",
+        "allies movement"
+      ]
+    },
+    {
+      "category": "special_mplus",
+      "terms": [
+        "stealth",
+        "invisibility",
+        "gateway",
+        "teleport",
+        "control undead",
+        "mind soothe",
+        "shroud",
+        "water walking"
+      ]
+    },
+    {
+      "category": "already_primary_priority",
+      "terms": [
+        "bloodlust",
+        "heroism",
+        "time warp",
+        "primal rage",
+        "revive a dead",
+        "return a dead",
+        "resurrect",
+        "combat resurrection",
+        "rebirth",
+        "raise ally",
+        "soulstone"
+      ]
+    }
+  ],
+  "seedNames": [
+    "Anti-Magic Zone",
+    "Rallying Cry",
+    "Darkness",
+    "Zephyr",
+    "Blessing of Sacrifice",
+    "Blessing of Protection",
+    "Blessing of Spellwarding",
+    "Aura Mastery",
+    "Power Word: Barrier",
+    "Spirit Link Totem",
+    "Ancestral Protection Totem",
+    "Mass Dispel",
+    "Ring of Peace",
+    "Leg Sweep",
+    "Capacitor Totem",
+    "Thunderstorm",
+    "Typhoon",
+    "Death Grip",
+    "Gorefiend's Grasp",
+    "Sigil of Silence",
+    "Sigil of Misery",
+    "Chaos Nova",
+    "Imprison",
+    "Solar Beam",
+    "Ursol's Vortex",
+    "Soothe",
+    "Nature's Cure",
+    "Remove Corruption",
+    "Detox",
+    "Purify",
+    "Purify Spirit",
+    "Cleanse",
+    "Cleanse Toxins",
+    "Expunge",
+    "Cauterizing Flame",
+    "Tranquilizing Shot",
+    "Counter Shot",
+    "Kick",
+    "Pummel",
+    "Rebuke",
+    "Spear Hand Strike",
+    "Wind Shear",
+    "Counterspell",
+    "Spell Lock",
+    "Skull Bash",
+    "Consume Magic",
+    "Disrupt",
+    "Mind Freeze",
+    "Stampeding Roar",
+    "Wind Rush Totem",
+    "Tiger's Lust",
+    "Blessing of Freedom",
+    "Death's Advance",
+    "Shroud of Concealment",
+    "Mind Soothe",
+    "Demonic Gateway",
+    "Bloodlust",
+    "Heroism",
+    "Time Warp",
+    "Primal Rage",
+    "Harrier's Cry",
+    "Rebirth",
+    "Raise Ally",
+    "Soulstone",
+    "Intercession"
+  ]
+}

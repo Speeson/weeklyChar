@@ -1,0 +1,11 @@
+{
+  "components": ["client", "worker"],
+  "type": "patch",
+  "category": "added",
+  "summary": "Completa las previews del Planner con recomendaciones de clases externas para las plazas vacantes.",
+  "details": [
+    "Mantiene cinco tarjetas en cada recomendación y representa los huecos con el fondo del rol, un avatar interrogante y hasta cuatro clases sugeridas.",
+    "Ordena las clases en el Worker por Ansia de sangre, resurrección en combate y el nivel compartido de buffos de clase y sinergia de daño.",
+    "Agrega las especializaciones internamente por clase, no altera el valor de botín y conserva compatibilidad con respuestas antiguas."
+  ]
+}

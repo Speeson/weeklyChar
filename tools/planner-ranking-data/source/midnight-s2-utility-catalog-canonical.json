@@ -1,0 +1,4932 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "keystone-planner-midnight-s2-utility-v1",
+  "patch": "12.1.0",
+  "season": "MID2",
+  "generatedAtUtc": "2026-09-14",
+  "simulationCraft": {
+    "version": "SimulationCraft 1210-01 for World of Warcraft 12.1.0.69587 Live (hotfix 2026-09-04/69587, git build midnight c1935b9)"
+  },
+  "sourceBasis": {
+    "simcRawSpellCount": 4069,
+    "simcBuild": "c1935b9",
+    "currentGuideVerification": "Icy Veins / Wowhead Patch 12.1 Mythic+ guides checked 2026-09-14",
+    "policy": "SimulationCraft is authoritative for spell identity/mechanics where present. Current 12.1 guides are used to repair spec-availability gaps caused by spellId deduplication and to include utility not emitted by the selected spell_query sources."
+  },
+  "scoringPolicy": {
+    "order": [
+      "role_feasibility",
+      "bloodlust_coverage",
+      "battle_rez_coverage",
+      "simc_offensive_band",
+      "defensive_utility",
+      "secondary_utility",
+      "exact_simc_gain",
+      "stable_tie_break"
+    ],
+    "personalDefensivesExcluded": true,
+    "healingThroughputCooldownsExcluded": true,
+    "offensiveRaidBuffsHandledElsewhere": [
+      "MARK_OF_THE_WILD",
+      "BATTLE_SHOUT",
+      "ARCANE_INTELLECT",
+      "SKYFURY",
+      "CHAOS_BRAND",
+      "MYSTIC_TOUCH",
+      "HUNTERS_MARK"
+    ],
+    "notYetModeledOffensiveSupport": [
+      "POWER_INFUSION",
+      "AUGMENTATION_SUPPORT_BUFFS"
+    ],
+    "duplicateRule": "Use capability.stacking. Persistent unique effects never double count; rotational defensives/control generally diminish rather than become zero.",
+    "talentRule": "Optional/choice/hero/pet capabilities should receive an availability discount at scoring time rather than being treated as guaranteed.",
+    "dungeonRule": "Context-sensitive capability value must later be multiplied by the selected dungeon's relevance matrix."
+  },
+  "specsByClass": {
+    "DEATH_KNIGHT": [
+      "BLOOD",
+      "FROST",
+      "UNHOLY"
+    ],
+    "DEMON_HUNTER": [
+      "HAVOC",
+      "VENGEANCE",
+      "DEVOURER"
+    ],
+    "DRUID": [
+      "BALANCE",
+      "FERAL",
+      "GUARDIAN",
+      "RESTORATION"
+    ],
+    "EVOKER": [
+      "DEVASTATION",
+      "PRESERVATION",
+      "AUGMENTATION"
+    ],
+    "HUNTER": [
+      "BEAST_MASTERY",
+      "MARKSMANSHIP",
+      "SURVIVAL"
+    ],
+    "MAGE": [
+      "ARCANE",
+      "FIRE",
+      "FROST"
+    ],
+    "MONK": [
+      "BREWMASTER",
+      "MISTWEAVER",
+      "WINDWALKER"
+    ],
+    "PALADIN": [
+      "HOLY",
+      "PROTECTION",
+      "RETRIBUTION"
+    ],
+    "PRIEST": [
+      "DISCIPLINE",
+      "HOLY",
+      "SHADOW"
+    ],
+    "ROGUE": [
+      "ASSASSINATION",
+      "OUTLAW",
+      "SUBTLETY"
+    ],
+    "SHAMAN": [
+      "ELEMENTAL",
+      "ENHANCEMENT",
+      "RESTORATION"
+    ],
+    "WARLOCK": [
+      "AFFLICTION",
+      "DEMONOLOGY",
+      "DESTRUCTION"
+    ],
+    "WARRIOR": [
+      "ARMS",
+      "FURY",
+      "PROTECTION"
+    ]
+  },
+  "capabilities": {
+    "BLOODLUST": {
+      "layer": "primary",
+      "tier": "HARD",
+      "stacking": "coverage_once",
+      "contextSensitive": false
+    },
+    "BATTLE_REZ": {
+      "layer": "primary",
+      "tier": "HARD",
+      "stacking": "coverage_once",
+      "contextSensitive": false
+    },
+    "PERSISTENT_GROUP_DR": {
+      "layer": "defensive",
+      "tier": "S",
+      "stacking": "best_only",
+      "contextSensitive": false
+    },
+    "PERSISTENT_GROUP_HEALTH": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "best_only",
+      "contextSensitive": false
+    },
+    "MAJOR_GROUP_DR": {
+      "layer": "defensive",
+      "tier": "S",
+      "stacking": "diminishing",
+      "contextSensitive": false
+    },
+    "GROUP_DR_MAGIC": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "GROUP_DR_AOE": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "GROUP_HEALTH_CD": {
+      "layer": "defensive",
+      "tier": "S",
+      "stacking": "diminishing",
+      "contextSensitive": false
+    },
+    "GROUP_MAGIC_ABSORB": {
+      "layer": "defensive",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "EXTERNAL_DR": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": false
+    },
+    "EXTERNAL_IMMUNITY_PHYSICAL": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "EXTERNAL_IMMUNITY_MAGIC": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "EXTERNAL_ABSORB": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": false
+    },
+    "EMERGENCY_SAVE": {
+      "layer": "defensive",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": false
+    },
+    "ENEMY_DAMAGE_REDUCTION": {
+      "layer": "defensive",
+      "tier": "A",
+      "stacking": "best_only",
+      "contextSensitive": false
+    },
+    "ATTACK_CAST_SLOW": {
+      "layer": "defensive",
+      "tier": "B",
+      "stacking": "best_only",
+      "contextSensitive": true
+    },
+    "HEALER_MANA_SUPPORT": {
+      "layer": "defensive",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "SURVIVAL_CONSUMABLE": {
+      "layer": "defensive",
+      "tier": "B",
+      "stacking": "coverage_once",
+      "contextSensitive": false
+    },
+    "INTERRUPT": {
+      "layer": "secondary",
+      "tier": "S",
+      "stacking": "diminishing",
+      "contextSensitive": false
+    },
+    "AOE_INTERRUPT_SILENCE": {
+      "layer": "secondary",
+      "tier": "S",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "AOE_STOP": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "ST_STOP": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "AOE_PULL": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "PULL": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "KNOCKBACK": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "ROOT": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "PURGE_MAGIC": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "SOOTHE_ENRAGE": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "DISPEL_MAGIC": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "DISPEL_CURSE": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "DISPEL_POISON": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "DISPEL_DISEASE": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "DISPEL_BLEED": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "MASS_DISPEL": {
+      "layer": "secondary",
+      "tier": "S",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "GROUP_MOBILITY": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "FREEDOM": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "STEALTH_SKIP": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "coverage_once",
+      "contextSensitive": true
+    },
+    "GATEWAY": {
+      "layer": "secondary",
+      "tier": "A",
+      "stacking": "coverage_once",
+      "contextSensitive": true
+    },
+    "MIND_SOOTHE": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "coverage_once",
+      "contextSensitive": true
+    },
+    "SPECIAL_CC": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "THREAT_TRANSFER": {
+      "layer": "secondary",
+      "tier": "C",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "HEALER_RANGE_MOBILITY": {
+      "layer": "secondary",
+      "tier": "C",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "CC_AMPLIFIER": {
+      "layer": "secondary",
+      "tier": "C",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    },
+    "FEAR_BREAK_GROUP": {
+      "layer": "secondary",
+      "tier": "B",
+      "stacking": "diminishing",
+      "contextSensitive": true
+    }
+  },
+  "abilities": [
+    {
+      "key": "DK_RAISE_ALLY",
+      "name": "Raise Ally",
+      "spellId": 61999,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "BATTLE_REZ"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 600.0,
+        "durationSeconds": null,
+        "description": "Pours dark energy into a dead target, reuniting spirit and body to allow the target to reenter battle with $s2% health and at least $s1% mana.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DRUID_REBIRTH",
+      "name": "Rebirth",
+      "spellId": 20484,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "BATTLE_REZ"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 600.0,
+        "durationSeconds": null,
+        "description": "Returns the spirit to the body, restoring a dead target to life with $s2% health and at least $s1% mana. Castable in combat.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PALADIN_INTERCESSION",
+      "name": "Intercession",
+      "spellId": 391054,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "BATTLE_REZ"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 600.0,
+        "durationSeconds": null,
+        "description": "Petition the Light on the behalf of a fallen ally, restoring spirit to body and allowing them to reenter battle with $s2% health and at least $s1% mana.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_SOULSTONE",
+      "name": "Soulstone",
+      "spellId": 20707,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "BATTLE_REZ"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 600.0,
+        "durationSeconds": 900.0,
+        "description": "Stores the soul of the target party or raid member, allowing resurrection upon death.$?a231811[ Also castable to resurrect a dead target.][] Targets resurrect with $3026s2% health and at least $3026s1% mana.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "MAGE_TIME_WARP",
+      "name": "Time Warp",
+      "spellId": 80353,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "BLOODLUST"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 300.0,
+        "durationSeconds": 40.0,
+        "description": "Warp the flow of time, increasing haste by $s1% $?a320919[and time rate by $s4% ][]for all party and raid members for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "EVOKER_FURY_OF_THE_ASPECTS",
+      "name": "Fury of the Aspects",
+      "spellId": 390386,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "BLOODLUST"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 300.0,
+        "durationSeconds": 40.0,
+        "description": "Increases haste by $s1% for all party and raid members for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "HUNTER_HARRIERS_CRY",
+      "name": "Harrier's Cry",
+      "spellId": 466904,
+      "class": "HUNTER",
+      "specs": [
+        "MARKSMANSHIP"
+      ],
+      "capabilities": [
+        "BLOODLUST"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Guaranteed Marksmanship lust-equivalent in the current Midnight kit.",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 360.0,
+        "durationSeconds": 40.0,
+        "description": "Your Eagle descends from the skies with a screech, giving the signal to attack.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "HUNTER_PRIMAL_RAGE",
+      "name": "Primal Rage",
+      "spellId": 264667,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "BLOODLUST"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Requires a Ferocity pet.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Conditional coverage; score below guaranteed Bloodlust providers.",
+      "simc": {
+        "sources": [
+          "spec_spell"
+        ],
+        "cooldownSeconds": 360.0,
+        "durationSeconds": 40.0,
+        "description": "Increases haste by $s1% for all party and raid members for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "SHAMAN_BLOODLUST",
+      "name": "Bloodlust / Heroism",
+      "spellId": null,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "BLOODLUST"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "current_guide",
+      "notes": "Not emitted by the selected SimC spell-query sources; retained as canonical class capability."
+    },
+    {
+      "key": "DK_ANTI_MAGIC_ZONE",
+      "name": "Anti-Magic Zone",
+      "spellId": 51052,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "GROUP_DR_MAGIC"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 240.0,
+        "durationSeconds": 6.0,
+        "description": "Places an Anti-Magic Zone for $d, reducing the magic damage taken by party or raid members by $145629m1%.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=4, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "DK_VESTIGIAL_SHELL",
+      "name": "Vestigial Shell",
+      "spellId": 454851,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "GROUP_MAGIC_ABSORB"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Casting Anti-Magic Shell grants $454863i nearby allies a Lesser Anti-Magic Shell that Absorbs up to $454863s1 magic damage and reduces the duration of harmful Magic effects against them by $454863s2%.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=7, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "DK_MIND_FREEZE",
+      "name": "Mind Freeze",
+      "spellId": 47528,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 5.0,
+        "description": "Smash the target's mind with cold, interrupting spellcasting and preventing any spell in that school from being cast for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=1, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DK_DEATH_GRIP",
+      "name": "Death Grip",
+      "spellId": 49576,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "PULL"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 1.0,
+        "durationSeconds": null,
+        "description": "Harnesses the energy that surrounds and binds all matter, drawing the target toward you$?a389679[ and slowing their movement speed by $389681s1% for $389681d][]$?s137008[ and forcing the enemy to attack you][].$?a134735&!c1[",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DK_GOREFIENDS_GRASP",
+      "name": "Gorefiend's Grasp",
+      "spellId": 108199,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD"
+      ],
+      "capabilities": [
+        "AOE_PULL"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": 10.0,
+        "description": "Shadowy tendrils coil around all enemies within $A2 yards of a hostile or friendly target, pulling them to the target's location and Silencing them for $374776d.",
+        "talentEntryObserved": "Blood [tree=spec, row=6, col=2, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "DK_ASPHYXIATE",
+      "name": "Asphyxiate",
+      "spellId": 221562,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 5.0,
+        "description": "Lifts the enemy target off the ground, crushing their throat with dark energy and stunning them for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=3, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "DK_BLINDING_SLEET",
+      "name": "Blinding Sleet",
+      "spellId": 207167,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 5.0,
+        "description": "Targets in a cone in front of you are blinded, causing them to wander disoriented for $d. Damage may cancel the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=2, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DK_CONTROL_UNDEAD",
+      "name": "Control Undead",
+      "spellId": 111673,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "BLOOD",
+        "FROST",
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Only Undead targets; may conflict with permanent pet use.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 300.0,
+        "description": "Dominates the target undead creature up to level $s1, forcing it to do your bidding for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DK_FROSTWYRMS_FURY",
+      "name": "Frostwyrm's Fury",
+      "spellId": 279302,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "FROST"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Rotational damage cooldown that also stuns; do not value like an on-demand dedicated stop.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": 10.0,
+        "description": "Summons a frostwyrm who breathes on all enemies within $s1 yd in front of you, dealing $279303s1 Frost damage, stunning enemies for $377048d, and slowing movement speed by $279303s2% for $279303d.",
+        "talentEntryObserved": "Frost [tree=spec, row=7, col=4, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "DK_GNAW",
+      "name": "Gnaw",
+      "spellId": 47481,
+      "class": "DEATH_KNIGHT",
+      "specs": [
+        "UNHOLY"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Ghoul pet required.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": null,
+        "description": "Bite and tear at a target's limbs, dealing light damage and stunning for $91800d.$?s1233448[",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DH_DARKNESS",
+      "name": "Darkness",
+      "spellId": 196718,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "MAJOR_GROUP_DR"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 300.0,
+        "durationSeconds": 8.0,
+        "description": "Summons darkness around you in a$?a357419[ 12 yd][n 8 yd] radius, granting friendly targets a $209426s2% chance to avoid all damage from an attack. Lasts $d.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=4, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "DH_DISRUPT",
+      "name": "Disrupt",
+      "spellId": 183752,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 5.0,
+        "description": "Interrupts the enemy's spellcasting and locks them from that school of magic for $d.|cFFFFFFFF$?s183782[",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DH_CHAOS_NOVA",
+      "name": "Chaos Nova",
+      "spellId": 179057,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 3.0,
+        "description": "Unleash an eruption of fel energy, dealing $s2 Chaos damage and stunning all nearby enemies for $d.$?s320412[",
+        "talentEntryObserved": "Havoc [tree=class, row=4, col=1, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DH_VOID_NOVA",
+      "name": "Void Nova",
+      "spellId": 1234195,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 2.0,
+        "description": "Unleash an eruption of void energy, dealing $s2 Cosmic damage and stunning your target and all nearby enemies for $d.",
+        "talentEntryObserved": "Devourer [tree=class, row=4, col=1, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DH_IMPRISON",
+      "name": "Imprison",
+      "spellId": 217832,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 60.0,
+        "description": "Imprisons a demon, beast, or humanoid, incapacitating them for $d. Damage may cancel the effect. Limit 1.",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DH_CONSUME_MAGIC",
+      "name": "Consume Magic",
+      "spellId": 278326,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "PURGE_MAGIC"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 10.0,
+        "durationSeconds": null,
+        "description": "Consume $m1 beneficial Magic effect removing it from the target$?s320313[ and granting you $1277738s1 Fury][].",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=5, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DH_SIGIL_MISERY",
+      "name": "Sigil of Misery",
+      "spellId": 207684,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 2.0,
+        "description": "Place a Sigil of Misery at the target location that activates after $d.",
+        "talentEntryObserved": "Generic [free=(Vengeance), tree=class, row=1, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DH_SIGIL_SILENCE",
+      "name": "Sigil of Silence",
+      "spellId": 202137,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "VENGEANCE"
+      ],
+      "capabilities": [
+        "AOE_INTERRUPT_SILENCE"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 2.0,
+        "description": "Place a Sigil of Silence at the target location that activates after $d.",
+        "talentEntryObserved": "Vengeance [tree=spec, row=5, col=5, max_rank=1, req_points=8, replace=\"Sigil of Misery\" (id=207684)]"
+      }
+    },
+    {
+      "key": "DH_SIGIL_CHAINS",
+      "name": "Sigil of Chains",
+      "spellId": 202138,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "VENGEANCE"
+      ],
+      "capabilities": [
+        "AOE_PULL"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 2.0,
+        "description": "Place a Sigil of Chains at the target location that activates after $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DH_BURN_IT_OUT",
+      "name": "Burn It Out",
+      "spellId": 1266316,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "DISPEL_DISEASE"
+      ],
+      "availability": "choice_talent",
+      "condition": "Choice node with Soul Cleanse; tied to Immolation Aura/Soul Immolation.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "$?c3[Soul Immolation][Immolation Aura] removes $s1 Disease $Leffect:effects;.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=6, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "DH_SOUL_CLEANSE",
+      "name": "Soul Cleanse",
+      "spellId": 1266496,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "VENGEANCE",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "DISPEL_CURSE"
+      ],
+      "availability": "choice_talent",
+      "condition": "Choice node with Burn It Out; tied to Immolation Aura/Soul Immolation.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "$?c3[Soul Immolation][Immolation Aura] removes $s1 Curse $Leffect:effects;.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=6, max_rank=1, req_points=8, select_idx=200]"
+      }
+    },
+    {
+      "key": "DH_WAVE_DEBILITATION",
+      "name": "Wave of Debilitation",
+      "spellId": 452403,
+      "class": "DEMON_HUNTER",
+      "specs": [
+        "HAVOC",
+        "DEVOURER"
+      ],
+      "capabilities": [
+        "ATTACK_CAST_SLOW"
+      ],
+      "availability": "hero_talent",
+      "condition": "Fel-Scarred hero talent; follows Chaos/Void Nova.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "$?c1[Chaos][Void] Nova slows enemies by $453263s1% and reduces attack and cast speed by $453263s2% for $453263d after its stun fades.",
+        "talentEntryObserved": "Fel-Scarred (Havoc, Devourer) [tree=hero, row=2, col=1, max_rank=1, req_points=1, select_idx=100]"
+      }
+    },
+    {
+      "key": "DRUID_INNERVATE",
+      "name": "Innervate",
+      "spellId": 29166,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "HEALER_MANA_SUPPORT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": 8.0,
+        "description": "Infuse a friendly healer with energy, causing them to regenerate $o1% of their maximum mana over $d.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=8, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "DRUID_SKULL_BASH",
+      "name": "Skull Bash",
+      "spellId": 106839,
+      "class": "DRUID",
+      "specs": [
+        "FERAL",
+        "GUARDIAN"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": null,
+        "description": "You charge and bash the target's skull, interrupting spellcasting and preventing any spell in that school from being cast for $93985d.",
+        "talentEntryObserved": "Feral, Guardian [tree=class, row=5, col=5, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "DRUID_SOLAR_BEAM",
+      "name": "Solar Beam",
+      "spellId": 78675,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE"
+      ],
+      "capabilities": [
+        "AOE_INTERRUPT_SILENCE"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 8.0,
+        "description": "Summons a beam of solar light over an enemy target's location, interrupting the target and silencing all enemies within the beam. Lasts $d.",
+        "talentEntryObserved": "Balance [tree=spec, row=2, col=5, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DRUID_SOOTHE",
+      "name": "Soothe",
+      "spellId": 2908,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "SOOTHE_ENRAGE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 10.0,
+        "durationSeconds": null,
+        "description": "Soothes the target, dispelling all enrage effects.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=5, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "DRUID_REMOVE_CORRUPTION",
+      "name": "Remove Corruption",
+      "spellId": 440015,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "DISPEL_CURSE",
+        "DISPEL_POISON"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "$@spelldesc2782",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DRUID_NATURES_CURE",
+      "name": "Nature's Cure",
+      "spellId": 88423,
+      "class": "DRUID",
+      "specs": [
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC",
+        "DISPEL_CURSE",
+        "DISPEL_POISON"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Cures harmful effects on the friendly target, removing all Magic$?s392378[, Curse, and Poison][] effects.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "DRUID_STAMPEDING_ROAR",
+      "name": "Stampeding Roar",
+      "spellId": 106898,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "GROUP_MOBILITY"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 8.0,
+        "description": "Shift into Bear Form and let loose a wild roar, increasing the movement speed of all friendly players within $A1 yards by $s1% for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=7, col=5, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "DRUID_TYPHOON",
+      "name": "Typhoon",
+      "spellId": 132469,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "KNOCKBACK"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": null,
+        "description": "Blasts targets within ${$61391r1} yards in front of you with a violent Typhoon, knocking them back and reducing their movement speed by $61391s3% for $61391d. Usable in all shapeshift forms.",
+        "talentEntryObserved": "Generic [tree=class, row=7, col=7, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "DRUID_URSOLS_VORTEX",
+      "name": "Ursol's Vortex",
+      "spellId": 102793,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "ROOT",
+        "PULL"
+      ],
+      "availability": "choice_talent",
+      "condition": "Choice node with Mass Entanglement.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 10.0,
+        "description": "Conjures a vortex of wind for $d at the destination, reducing the movement speed of all enemies within $A1 yards by $s1%. The first time an enemy attempts to leave the vortex, winds will pull that enemy back to its center. Usable in all shapeshift forms.",
+        "talentEntryObserved": "Generic [tree=class, row=7, col=8, max_rank=1, req_points=8, select_idx=200]"
+      }
+    },
+    {
+      "key": "DRUID_MASS_ENTANGLEMENT",
+      "name": "Mass Entanglement",
+      "spellId": 102359,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "ROOT"
+      ],
+      "availability": "choice_talent",
+      "condition": "Choice node with Ursol's Vortex.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 10.0,
+        "description": "Roots the target and all enemies within $A1 yards in place for $d. Damage may interrupt the effect. Usable in all shapeshift forms.",
+        "talentEntryObserved": "Generic [tree=class, row=7, col=8, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "DRUID_INCAP_ROAR",
+      "name": "Incapacitating Roar",
+      "spellId": 99,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": "Choice node with Mighty Bash.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 3.0,
+        "description": "Shift into Bear Form and invoke the spirit of Ursol to let loose a deafening roar, incapacitating all enemies within $A1 yards for $d. Damage may cancel the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=1, max_rank=1, req_points=23, select_idx=100]"
+      }
+    },
+    {
+      "key": "DRUID_MIGHTY_BASH",
+      "name": "Mighty Bash",
+      "spellId": 5211,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": "Choice node with Incapacitating Roar.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 4.0,
+        "description": "Invokes the spirit of Ursoc to stun the target for $d. Usable in all shapeshift forms.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=1, max_rank=1, req_points=23, select_idx=200]"
+      }
+    },
+    {
+      "key": "DRUID_HIBERNATE",
+      "name": "Hibernate",
+      "spellId": 2637,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Beasts and Dragonkin only.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 40.0,
+        "description": "Forces the enemy target to sleep for up to $d. Any damage will awaken the target. Only one target can be forced to hibernate at a time. Only works on Beasts and Dragonkin.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "DRUID_CYCLONE",
+      "name": "Cyclone",
+      "spellId": 33786,
+      "class": "DRUID",
+      "specs": [
+        "BALANCE",
+        "FERAL",
+        "GUARDIAN",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 5.0,
+        "description": "Tosses the enemy target into the air, disorienting them but making them invulnerable for up to $d. Only one target can be affected by your Cyclone at a time.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=5, max_rank=1, req_points=8, select_idx=200]"
+      }
+    },
+    {
+      "key": "DRUID_IRONBARK",
+      "name": "Ironbark",
+      "spellId": 102342,
+      "class": "DRUID",
+      "specs": [
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "EXTERNAL_DR"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": 12.0,
+        "description": "The target's skin becomes as tough as Ironwood, reducing damage taken by $s1%$?a197061[ and increasing healing from your heal over time effects by $s2%][] for $d.$?a392116[",
+        "talentEntryObserved": "Restoration [tree=spec, row=5, col=7, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "EVOKER_QUELL",
+      "name": "Quell",
+      "spellId": 351338,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "spec_access",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Preservation is intentionally excluded: Midnight removed interrupts from healers except Restoration Shaman.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 20.0,
+        "durationSeconds": 6.0,
+        "description": "Interrupt an enemy's spellcasting and prevent any spell from that school of magic from being cast for $d.",
+        "talentEntryObserved": "Augmentation [tree=spec, row=3, col=2, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "EVOKER_WING_BUFFET",
+      "name": "Wing Buffet",
+      "spellId": null,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "KNOCKBACK"
+      ],
+      "availability": "racial",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "current_guide",
+      "notes": "Dracthyr racial; not emitted by the selected SimC query sources."
+    },
+    {
+      "key": "EVOKER_TAIL_SWIPE",
+      "name": "Tail Swipe",
+      "spellId": 368970,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "racial",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": 4.0,
+        "description": "Lash out with your tail, knocking enemies within $A1 yds into the air.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "EVOKER_CAUTERIZING_FLAME",
+      "name": "Cauterizing Flame",
+      "spellId": 374251,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "DISPEL_BLEED",
+        "DISPEL_POISON",
+        "DISPEL_CURSE",
+        "DISPEL_DISEASE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": null,
+        "description": "Cauterize an ally's wounds, removing all Bleed, Poison, Curse, and Disease effects. Heals for $s2 upon removing any effect.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "EVOKER_EXPUNGE",
+      "name": "Expunge",
+      "spellId": 365585,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "DISPEL_POISON"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "Expunge toxins affecting an ally, removing all Poison effects.",
+        "talentEntryObserved": "Generic [free=(Preservation), tree=class, row=1, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "EVOKER_NATURALIZE",
+      "name": "Naturalize",
+      "spellId": 360823,
+      "class": "EVOKER",
+      "specs": [
+        "PRESERVATION"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC",
+        "DISPEL_POISON"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "Cleanses harmful effects from the target, removing all Magic and Poison effects.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "EVOKER_ZEPHYR",
+      "name": "Zephyr",
+      "spellId": 374227,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "GROUP_DR_AOE",
+        "GROUP_MOBILITY"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 8.0,
+        "description": "Conjure an updraft to lift you and your $s3 nearest allies within $A1 yds into the air, reducing damage taken from area-of-effect attacks by $s1% and increasing movement speed by $s2% for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=6, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "EVOKER_OPPRESSING_ROAR",
+      "name": "Oppressing Roar",
+      "spellId": 372048,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "CC_AMPLIFIER"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 10.0,
+        "description": "Let out a bone-shaking roar at enemies in a cone in front of you, increasing the duration of crowd controls that affect them by $s2% in the next $d.$?s374346[",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=3, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "EVOKER_OVERAWE",
+      "name": "Overawe",
+      "spellId": 374346,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "SOOTHE_ENRAGE"
+      ],
+      "availability": "class_talent",
+      "condition": "Requires Oppressing Roar.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Oppressing Roar removes $372048s1 Enrage effect from each enemy, and its cooldown is reduced by ${$s3/-1000} sec.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=3, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "EVOKER_LANDSLIDE",
+      "name": "Landslide",
+      "spellId": 358385,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "ROOT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": null,
+        "description": "Conjure a path of shifting stone towards the target location, rooting enemies for $355689d. Damage may cancel the effect.",
+        "talentEntryObserved": "Generic [free=(Devastation, Augmentation), tree=class, row=1, col=2, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "EVOKER_SLEEP_WALK",
+      "name": "Sleep Walk",
+      "spellId": 360806,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 20.0,
+        "description": "Disorient an enemy for $d, causing them to sleep walk towards you. Damage has a chance to awaken them.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=7, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "EVOKER_RESCUE",
+      "name": "Rescue",
+      "spellId": 370665,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "FREEDOM"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Repositioning utility; clears movement impairing effects from caster and ally.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 1.0,
+        "description": "Swoop to an ally and fly with them to the target location. Clears movement impairing effects from you and your ally.",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=5, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "EVOKER_TIME_SPIRAL",
+      "name": "Time Spiral",
+      "spellId": 374968,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "GROUP_MOBILITY"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": null,
+        "description": "Bend time, allowing you and your allies within $A1 yds to cast their major movement ability once in the next $375234d, even if it is on cooldown.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=4, max_rank=1, req_points=23, select_idx=100]"
+      }
+    },
+    {
+      "key": "EVOKER_BLESSING_BRONZE",
+      "name": "Blessing of the Bronze",
+      "spellId": 364342,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "GROUP_MOBILITY"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": null,
+        "description": "Weave the threads of time, reducing the cooldown of a major movement ability for all party and raid members by $381732s1% for $381732d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "EVOKER_SOURCE_MAGIC",
+      "name": "Source of Magic",
+      "spellId": 369459,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "HEALER_MANA_SUPPORT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 3600.0,
+        "description": "Redirect your excess magic to a friendly healer for $d. When you cast an empowered spell, you restore ${$372571s1/100}.2% of their maximum mana per empower level. Limit 1.",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=7, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "EVOKER_SPATIAL_PARADOX",
+      "name": "Spatial Paradox",
+      "spellId": 406732,
+      "class": "EVOKER",
+      "specs": [
+        "DEVASTATION",
+        "PRESERVATION",
+        "AUGMENTATION"
+      ],
+      "capabilities": [
+        "HEALER_RANGE_MOBILITY"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": 10.0,
+        "description": "Evoke a paradox for you and a friendly healer, allowing casting while moving and increasing the range of most spells by $s4% for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=4, max_rank=1, req_points=23, select_idx=100]"
+      }
+    },
+    {
+      "key": "EVOKER_TIME_DILATION",
+      "name": "Time Dilation",
+      "spellId": 357170,
+      "class": "EVOKER",
+      "specs": [
+        "PRESERVATION"
+      ],
+      "capabilities": [
+        "EXTERNAL_DR"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.0,
+        "durationSeconds": 8.0,
+        "description": "Stretch time around an ally for the next $d, causing $s1% of damage they would take to instead be dealt over $d.$?s363899[",
+        "talentEntryObserved": "Preservation [tree=spec, row=4, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "HUNTER_COUNTER_SHOT",
+      "name": "Counter Shot",
+      "spellId": 147362,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 24.0,
+        "durationSeconds": 5.0,
+        "description": "Interrupts spellcasting, preventing any spell in that school from being cast for $d.",
+        "talentEntryObserved": "Beast Mastery [tree=class, row=4, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "HUNTER_MUZZLE",
+      "name": "Muzzle",
+      "spellId": 187707,
+      "class": "HUNTER",
+      "specs": [
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 5.0,
+        "description": "Interrupts spellcasting, preventing any spell in that school from being cast for $d.",
+        "talentEntryObserved": "Survival [tree=class, row=4, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "HUNTER_BINDING_SHOT",
+      "name": "Binding Shot",
+      "spellId": 109248,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 10.0,
+        "description": "Fires a magical projectile, tethering the enemy and any other enemies within $s2 yds for $d, stunning them for $117526d if they move more than $s2 yds from the arrow.$?s321468[",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=6, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "HUNTER_FREEZING_TRAP",
+      "name": "Freezing Trap",
+      "spellId": 187650,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": null,
+        "description": "Hurls a frost trap to the target location that incapacitates the first enemy that approaches for $3355d. Damage may break the effect. Limit 1. Trap will exist for $3355d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "HUNTER_INTIMIDATION",
+      "name": "Intimidation",
+      "spellId": 19577,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": "Implementation differs by spec/pet/eagle setup.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": null,
+        "description": "Commands your pet to intimidate the target stunning your target for $24394d$?a1258509[ and nearby enemies for ${$1258508d}.1 sec][].",
+        "talentEntryObserved": "Beast Mastery [tree=class, row=8, col=2, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "HUNTER_TRANQ_SHOT",
+      "name": "Tranquilizing Shot",
+      "spellId": 19801,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "SOOTHE_ENRAGE",
+        "PURGE_MAGIC"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 10.0,
+        "durationSeconds": null,
+        "description": "Removes $s1 Enrage and $s2 Magic effect from an enemy target.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=1, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "HUNTER_MISDIRECTION",
+      "name": "Misdirection",
+      "spellId": 34477,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "THREAT_TRANSFER"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 30.0,
+        "description": "Misdirects all threat you cause to the targeted party or raid member, beginning with your next attack within $d and lasting for $35079d.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=7, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "HUNTER_ROAR_SACRIFICE",
+      "name": "Roar of Sacrifice",
+      "spellId": 53480,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "EXTERNAL_DR"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Requires suitable pet access.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 10.0,
+        "description": "Instructs your pet to protect a friendly target, reducing their damage taken by $s1%, but $s2% of all damage taken by that target is transferred to your pet.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=4, max_rank=1, req_points=23, select_idx=100]"
+      }
+    },
+    {
+      "key": "HUNTER_MASTERS_CALL",
+      "name": "Master's Call",
+      "spellId": 53271,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "FREEDOM"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Requires a Cunning pet.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "spec_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": null,
+        "description": "Your pet removes all root and movement impairing effects from itself and a friendly target, and grants immunity to all such effects for $54216d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "HUNTER_SCARE_BEAST",
+      "name": "Scare Beast",
+      "spellId": 1513,
+      "class": "HUNTER",
+      "specs": [
+        "BEAST_MASTERY",
+        "MARKSMANSHIP",
+        "SURVIVAL"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Beasts only.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 20.0,
+        "description": "Scares a beast, causing it to run in fear for up to $d.  Damage caused may interrupt the effect.  Only one beast can be feared at a time.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=4, max_rank=1, req_points=8, select_idx=200]"
+      }
+    },
+    {
+      "key": "MAGE_COUNTERSPELL",
+      "name": "Counterspell",
+      "spellId": 2139,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 25.0,
+        "durationSeconds": 7.0,
+        "description": "Counters the enemy's spellcast, preventing any spell from that school of magic from being cast for $d$?s12598[ and silencing the target for $55021d][].",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "MAGE_REMOVE_CURSE",
+      "name": "Remove Curse",
+      "spellId": 475,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "DISPEL_CURSE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "Removes all Curses from a friendly target. $?s115700[If any Curses are successfully removed, you deal $115701s1% additional damage for $115701d.][]",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=5, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "MAGE_SPELLSTEAL",
+      "name": "Spellsteal",
+      "spellId": 30449,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "PURGE_MAGIC"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Steals $?s198100[all beneficial magic effects from the target. These effects lasts a maximum of 2 min][a beneficial magic effect from the target. This effect lasts a maximum of 2 min].",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=1, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "MAGE_MASS_INVIS",
+      "name": "Mass Invisibility",
+      "spellId": 414664,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "STEALTH_SKIP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 300.0,
+        "durationSeconds": 12.0,
+        "description": "You and your allies within $A1 yards instantly become invisible for $d. Taking any action will cancel the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=6, max_rank=1, req_points=20]"
+      }
+    },
+    {
+      "key": "MAGE_DRAGONS_BREATH",
+      "name": "Dragon's Breath",
+      "spellId": 31661,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 4.0,
+        "description": "Enemies in a $s3 yd cone in front of you take $s2 Fire damage and are disoriented for $d. Damage will cancel the effect.$?a235870[",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=4, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "MAGE_SUPERNOVA",
+      "name": "Supernova",
+      "spellId": 157980,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "AOE_STOP",
+        "KNOCKBACK"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": null,
+        "description": "Pulses arcane energy around the target enemy or ally, dealing $s2 Arcane damage to all enemies within $A2 yds, and knocking them upward. A primary enemy target will take $s1% increased damage.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=4, max_rank=1, req_points=8, select_idx=200]"
+      }
+    },
+    {
+      "key": "MAGE_RING_OF_FROST",
+      "name": "Ring of Frost",
+      "spellId": 113724,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 10.0,
+        "description": "Summons a Ring of Frost for $d at the target location. Enemies entering the ring are incapacitated for $82691d. Limit 10 targets.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=4, max_rank=1, req_points=20, select_idx=100]"
+      }
+    },
+    {
+      "key": "MAGE_FROST_NOVA",
+      "name": "Frost Nova",
+      "spellId": 122,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "ROOT"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 6.0,
+        "description": "Blasts enemies within $A2 yds of you for $s2 Frost damage and freezes them in place for $d. Damage may interrupt the freeze effect.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "MAGE_POLYMORPH",
+      "name": "Polymorph",
+      "spellId": null,
+      "class": "MAGE",
+      "specs": [
+        "ARCANE",
+        "FIRE",
+        "FROST"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "current_guide",
+      "notes": "Long-duration single-target CC; exact spell record not emitted by selected query sources."
+    },
+    {
+      "key": "MONK_SPEAR_HAND",
+      "name": "Spear Hand Strike",
+      "spellId": 116705,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Mistweaver excluded: Midnight removed its interrupt.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 5.0,
+        "description": "Jabs the target in the throat, interrupting spellcasting and preventing any spell from that school of magic from being cast for $d.",
+        "talentEntryObserved": "Brewmaster [tree=class, row=4, col=5, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "MONK_LEG_SWEEP",
+      "name": "Leg Sweep",
+      "spellId": 119381,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "MISTWEAVER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 3.0,
+        "description": "Knocks down all enemies within $A1 yards, stunning them for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "MONK_RING_PEACE",
+      "name": "Ring of Peace",
+      "spellId": 116844,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "MISTWEAVER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "AOE_STOP",
+        "KNOCKBACK"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 5.0,
+        "description": "Form a Ring of Peace at the target location for $d. Enemies that enter will be ejected from the Ring.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=4, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "MONK_PARALYSIS",
+      "name": "Paralysis",
+      "spellId": 115078,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "MISTWEAVER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 60.0,
+        "description": "Incapacitates the target for $d. Limit 1. Damage may cancel the effect.",
+        "talentEntryObserved": "Generic [free=(Brewmaster, Windwalker, Mistweaver), tree=class, row=1, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "MONK_PRESSURE_POINTS",
+      "name": "Pressure Points",
+      "spellId": 450432,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "MISTWEAVER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "SOOTHE_ENRAGE"
+      ],
+      "availability": "class_talent",
+      "condition": "Enhances Paralysis to remove Enrage.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Paralysis now removes all Enrage effects from its target.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "MONK_DETOX_BREW_WW",
+      "name": "Detox",
+      "spellId": 115450,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "DISPEL_POISON",
+        "DISPEL_DISEASE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Removes all Magic$?a388874[, Poison, and Disease][] effects from the target.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "MONK_DETOX_MW",
+      "name": "Detox",
+      "spellId": 115450,
+      "class": "MONK",
+      "specs": [
+        "MISTWEAVER"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC",
+        "DISPEL_POISON",
+        "DISPEL_DISEASE"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Removes all Magic$?a388874[, Poison, and Disease][] effects from the target.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "MONK_TIGERS_LUST",
+      "name": "Tiger's Lust",
+      "spellId": 116841,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "MISTWEAVER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "FREEDOM"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 6.0,
+        "description": "Increases a friendly target's movement speed by $s1% for $d and removes all roots and snares.",
+        "talentEntryObserved": "Generic [tree=class, row=2, col=3, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "MONK_WINDWALKING",
+      "name": "Windwalking",
+      "spellId": 157411,
+      "class": "MONK",
+      "specs": [
+        "BREWMASTER",
+        "MISTWEAVER",
+        "WINDWALKER"
+      ],
+      "capabilities": [
+        "GROUP_MOBILITY"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "You and your allies within $m2 yards have $s1% increased movement speed. Stacks with other similar effects.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=4, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "MONK_LIFE_COCOON",
+      "name": "Life Cocoon",
+      "spellId": 116849,
+      "class": "MONK",
+      "specs": [
+        "MISTWEAVER"
+      ],
+      "capabilities": [
+        "EXTERNAL_ABSORB"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 0.75,
+        "durationSeconds": 12.0,
+        "description": "Encases the target in a cocoon of Chi energy for $d, absorbing $<newshield> damage and increasing all healing over time received by $m2%.$?a388548[",
+        "talentEntryObserved": "Mistweaver [tree=spec, row=3, col=2, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "MONK_REVIVAL",
+      "name": "Revival",
+      "spellId": 115310,
+      "class": "MONK",
+      "specs": [
+        "MISTWEAVER"
+      ],
+      "capabilities": [
+        "MASS_DISPEL"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Mass friendly Magic/Poison/Disease removal plus healing.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.0,
+        "durationSeconds": null,
+        "description": "Heals all party and raid members within $A1 yds for $s1 and clears them of $s4 harmful Magic, all Poison, and all Disease effects.",
+        "talentEntryObserved": "Mistweaver [tree=spec, row=4, col=4, max_rank=1, req_points=0, select_idx=100]"
+      }
+    },
+    {
+      "key": "MONK_RESTORAL",
+      "name": "Restoral",
+      "spellId": 388615,
+      "class": "MONK",
+      "specs": [
+        "MISTWEAVER"
+      ],
+      "capabilities": [
+        "MASS_DISPEL"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Mass friendly Poison/Disease removal; no Magic dispel.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.0,
+        "durationSeconds": null,
+        "description": "Heals all party and raid members within $A1 yds for $s1 and clears them of all harmful Poison and Disease effects.",
+        "talentEntryObserved": "Mistweaver [tree=spec, row=4, col=4, max_rank=1, req_points=0, select_idx=200]"
+      }
+    },
+    {
+      "key": "PALADIN_DEVOTION_AURA",
+      "name": "Devotion Aura",
+      "spellId": null,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "PERSISTENT_GROUP_DR"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "current_guide",
+      "notes": "Permanent 3% group damage reduction aura in Midnight 12.1."
+    },
+    {
+      "key": "PALADIN_REBUKE",
+      "name": "Rebuke",
+      "spellId": 96231,
+      "class": "PALADIN",
+      "specs": [
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Holy excluded: Midnight removed Rebuke from Holy.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 5.0,
+        "description": "Interrupts spellcasting and prevents any spell in that school from being cast for $d.",
+        "talentEntryObserved": "Protection [tree=class, row=4, col=7, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PALADIN_AVENGERS_SHIELD",
+      "name": "Avenger's Shield",
+      "spellId": 31935,
+      "class": "PALADIN",
+      "specs": [
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "AOE_INTERRUPT_SILENCE"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "current_guide",
+      "notes": "Protection-specific extra interrupt/silence tool.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 3.0,
+        "description": "Hurls your shield at an enemy target, dealing $s1 Holy damage, interrupting and silencing the non-Player target for $d, and then jumping to ${$x1-1} additional nearby enemies. $?a209389[",
+        "talentEntryObserved": "Protection [tree=spec, row=1, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PALADIN_BLINDING_LIGHT",
+      "name": "Blinding Light",
+      "spellId": 115750,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": null,
+        "description": "Emits dazzling light in all directions, blinding enemies within $105421A1 yds, causing them to wander disoriented for $105421d. Damage may cancel the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=2, col=5, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PALADIN_HOJ",
+      "name": "Hammer of Justice",
+      "spellId": 853,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 6.0,
+        "description": "Stuns the target for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PALADIN_CLEANSE_TOXINS",
+      "name": "Cleanse Toxins",
+      "spellId": 440013,
+      "class": "PALADIN",
+      "specs": [
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "DISPEL_POISON",
+        "DISPEL_DISEASE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "$@spelldesc213644.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PALADIN_CLEANSE",
+      "name": "Cleanse",
+      "spellId": 4987,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC",
+        "DISPEL_POISON",
+        "DISPEL_DISEASE"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "Cleanses a friendly target, removing all $?s393024[Poison, Disease, and ][]Magic effects.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PALADIN_FREEDOM",
+      "name": "Blessing of Freedom",
+      "spellId": 1044,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "FREEDOM"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.5,
+        "durationSeconds": 8.0,
+        "description": "Blesses a party or raid member, granting immunity to movement impairing effects $?s199325[and increasing movement speed by $199325m1% ][]for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=5, max_rank=1, req_points=0, select_idx=300]"
+      }
+    },
+    {
+      "key": "PALADIN_BOP",
+      "name": "Blessing of Protection",
+      "spellId": 1022,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "EXTERNAL_IMMUNITY_PHYSICAL"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Also removes many Physical/bleed effects.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.5,
+        "durationSeconds": 10.0,
+        "description": "Blesses a party or raid member, granting immunity to Physical damage and harmful effects for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=5, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "PALADIN_SAC",
+      "name": "Blessing of Sacrifice",
+      "spellId": 6940,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "EXTERNAL_DR"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 12.0,
+        "description": "Blesses a party or raid member, reducing their damage taken by $s1%, but you suffer ${100*$e1}% of damage prevented.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=3, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "PALADIN_SPELLWARDING",
+      "name": "Blessing of Spellwarding",
+      "spellId": 204018,
+      "class": "PALADIN",
+      "specs": [
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "EXTERNAL_IMMUNITY_MAGIC"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.5,
+        "durationSeconds": 10.0,
+        "description": "Blesses a party or raid member, granting immunity to magical damage and harmful effects for $d.",
+        "talentEntryObserved": "Protection [tree=spec, row=4, col=3, max_rank=1, req_points=0, select_idx=100]"
+      }
+    },
+    {
+      "key": "PALADIN_LAY_ON_HANDS",
+      "name": "Lay on Hands",
+      "spellId": 633,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "EMERGENCY_SAVE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 600.0,
+        "durationSeconds": null,
+        "description": "Heals a friendly target for an amount equal to $s2% your maximum health.$?a387791[",
+        "talentEntryObserved": "Generic [free=(Holy, Protection), tree=class, row=1, col=2, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PALADIN_AURA_MASTERY",
+      "name": "Aura Mastery",
+      "spellId": 31821,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY"
+      ],
+      "capabilities": [
+        "MAJOR_GROUP_DR"
+      ],
+      "availability": "spec_talent",
+      "condition": "Scored as defensive when used to empower Devotion Aura.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": 8.0,
+        "description": "Empowers your chosen aura for $d.",
+        "talentEntryObserved": "Holy [tree=spec, row=3, col=5, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PALADIN_TURN_EVIL",
+      "name": "Turn Evil",
+      "spellId": 10326,
+      "class": "PALADIN",
+      "specs": [
+        "HOLY",
+        "PROTECTION",
+        "RETRIBUTION"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Undead, Aberration, or Demon only.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 40.0,
+        "description": "The power of the Light compels an Undead, Aberration, or Demon target to flee for up to $d. Damage may break the effect. Lesser creatures have a chance to be destroyed. Only one target can be turned at a time.",
+        "talentEntryObserved": "Generic [tree=class, row=2, col=7, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_FORTITUDE",
+      "name": "Power Word: Fortitude",
+      "spellId": 21562,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "PERSISTENT_GROUP_HEALTH"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 3600.0,
+        "description": "Infuses the target with vitality, increasing their Stamina by $s1% for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PRIEST_SILENCE",
+      "name": "Silence",
+      "spellId": 15487,
+      "class": "PRIEST",
+      "specs": [
+        "SHADOW"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 5.0,
+        "description": "Silences the target, preventing them from casting spells for $d. Against non-players, also interrupts spellcasting and prevents any spell in that school from being cast for $263715d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PRIEST_PSYCHIC_SCREAM",
+      "name": "Psychic Scream",
+      "spellId": 8122,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 40.0,
+        "durationSeconds": 8.0,
+        "description": "Lets out a psychic scream, causing all enemies within $A1 yards to flee, disorienting them for $d. Damage may interrupt the effect.",
+        "talentEntryObserved": "Generic [free=(Shadow), tree=class, row=2, col=8, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_DISPEL_MAGIC",
+      "name": "Dispel Magic",
+      "spellId": 528,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "PURGE_MAGIC"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Dispels Magic on the enemy target, removing $m1 beneficial Magic $leffect:effects;.",
+        "talentEntryObserved": "Generic [tree=class, row=2, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_MASS_DISPEL",
+      "name": "Mass Dispel",
+      "spellId": 32375,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "MASS_DISPEL"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": null,
+        "description": "Dispels magic in a $32375a1 yard radius, removing all harmful Magic from $s4 friendly targets and $32592m1 beneficial Magic $leffect:effects; from $s4 enemy targets. Potent enough to remove Magic that is normally undispellable.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_PURIFY",
+      "name": "Purify",
+      "spellId": 527,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC",
+        "DISPEL_DISEASE"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "Dispels harmful effects on the target, removing all Magic$?s390632[ and Disease][] effects.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PRIEST_PURIFY_DISEASE",
+      "name": "Purify Disease",
+      "spellId": 440006,
+      "class": "PRIEST",
+      "specs": [
+        "SHADOW"
+      ],
+      "capabilities": [
+        "DISPEL_DISEASE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "$@spelldesc213634",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PRIEST_MIND_SOOTHE",
+      "name": "Mind Soothe",
+      "spellId": 453,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "MIND_SOOTHE"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 5.0,
+        "durationSeconds": 20.0,
+        "description": "Soothes enemies in the target area, reducing the range at which they will detect you by $s1 yards. Only affects Humanoid and Dragonkin targets. Does not cause threat. Lasts $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "PRIEST_DOMINATE_MIND",
+      "name": "Dominate Mind",
+      "spellId": 205364,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 30.0,
+        "description": "Controls a mind up to 1 level above yours for $d while still controlling your own mind. Does not work versus Demonic, Mechanical, or Undead beings$?a205477[][ or players]. This spell shares diminishing returns with other disorienting effects.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=8, max_rank=1, req_points=0, select_idx=200]"
+      }
+    },
+    {
+      "key": "PRIEST_SHACKLE_HORROR",
+      "name": "Shackle Horror",
+      "spellId": 9484,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Aberration or Undead only.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 50.0,
+        "description": "Shackles an aberration or undead enemy for $d, preventing all actions and movement. Damage will cancel the effect. Limit 1.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=9, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "PRIEST_LEAP_FAITH",
+      "name": "Leap of Faith",
+      "spellId": 73325,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE",
+        "HOLY",
+        "SHADOW"
+      ],
+      "capabilities": [
+        "FREEDOM"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Ally repositioning rather than true movement-impair removal.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.0,
+        "durationSeconds": 4.0,
+        "description": "Pulls the spirit of a party or raid member, instantly moving them directly in front of you.",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=3, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_BARRIER",
+      "name": "Power Word: Barrier",
+      "spellId": 62618,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE"
+      ],
+      "capabilities": [
+        "MAJOR_GROUP_DR"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": 10.0,
+        "description": "Summons a holy barrier to protect all allies at the target location for $d, reducing all damage taken by $81782s2% and preventing damage from delaying spellcasting.",
+        "talentEntryObserved": "Discipline [tree=spec, row=4, col=4, max_rank=1, req_points=0, select_idx=200]"
+      }
+    },
+    {
+      "key": "PRIEST_PAIN_SUPP",
+      "name": "Pain Suppression",
+      "spellId": 33206,
+      "class": "PRIEST",
+      "specs": [
+        "DISCIPLINE"
+      ],
+      "capabilities": [
+        "EXTERNAL_DR"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.5,
+        "durationSeconds": 8.0,
+        "description": "Reduces all damage taken by a friendly target by $s1% for $d. Castable while stunned.",
+        "talentEntryObserved": "Discipline [tree=spec, row=2, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_GUARDIAN_SPIRIT",
+      "name": "Guardian Spirit",
+      "spellId": 47788,
+      "class": "PRIEST",
+      "specs": [
+        "HOLY"
+      ],
+      "capabilities": [
+        "EMERGENCY_SAVE"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": 10.0,
+        "description": "Calls upon a guardian spirit to watch over the friendly target for $d, increasing healing received by $s1%. If the target would die, the Spirit sacrifices itself and restores the target to $s2% health.",
+        "talentEntryObserved": "Holy [tree=spec, row=2, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "PRIEST_VAMPIRIC_EMBRACE",
+      "name": "Vampiric Embrace",
+      "spellId": 15286,
+      "class": "PRIEST",
+      "specs": [
+        "SHADOW"
+      ],
+      "capabilities": [
+        "EMERGENCY_SAVE"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Group sustain/off-healing; intentionally lower than true mitigation cooldowns.",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 12.0,
+        "description": "Fills you with the embrace of Shadow energy for $d, causing you to heal a nearby ally for $s1% of any single-target Shadow spell damage you deal.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "ROGUE_KICK",
+      "name": "Kick",
+      "spellId": 1766,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 6.0,
+        "description": "A quick kick that interrupts spellcasting and prevents any spell in that school from being cast for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "ROGUE_GOUGE",
+      "name": "Gouge",
+      "spellId": 1776,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 25.0,
+        "durationSeconds": 4.0,
+        "description": "Gouges the eyes of an enemy target, incapacitating for $d. Damage may interrupt the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=2, col=4, max_rank=1, req_points=0, select_idx=100]"
+      }
+    },
+    {
+      "key": "ROGUE_KIDNEY",
+      "name": "Kidney Shot",
+      "spellId": 408,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 3.0,
+        "description": "Finishing move that stuns the target$?a426588[ and creates shadow clones to stun all other nearby enemies][]. Lasts longer per combo point, up to $s2 sec:",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "ROGUE_BLIND",
+      "name": "Blind",
+      "spellId": 2094,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 60.0,
+        "description": "Blinds the target, causing it to wander disoriented for $d. Damage may interrupt the effect. Limit 1.",
+        "talentEntryObserved": "Generic [free=(Outlaw), tree=class, row=1, col=4, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "ROGUE_SAP",
+      "name": "Sap",
+      "spellId": 6770,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 60.0,
+        "description": "Incapacitates a target not in combat for $d. Only works on Humanoids, Beasts, Demons, and Dragonkin. Damage will revive the target. Limit 1.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "ROGUE_SHIV",
+      "name": "Shiv",
+      "spellId": 5938,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "SOOTHE_ENRAGE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Attack with your $?s319032[poisoned blades][off-hand], dealing $sw1 Physical damage, dispelling all enrage effects and applying a concentrated form of your $?a3408[Crippling Poison, reducing movement speed by $115196s1% for $115196d.]?a5761[Numbing Poison, reducing casting speed by $359078s1% for $359078d.][]$?(!a3408&!a5761)[active Non-Lethal poison.][]$?(a319032&a400783)[",
+        "talentEntryObserved": "Generic [free=(Assassination), tree=class, row=1, col=2, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "ROGUE_SHROUD",
+      "name": "Shroud of Concealment",
+      "spellId": 114018,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "STEALTH_SKIP"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 360.0,
+        "durationSeconds": 15.0,
+        "description": "Extend a cloak that shrouds party and raid members within $115834A1 yards in shadows, providing stealth for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "ROGUE_TRICKS",
+      "name": "Tricks of the Trade",
+      "spellId": 57934,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "THREAT_TRANSFER"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 30.0,
+        "description": "$?s221622[Increases the target's damage by $221622m1%, and redirects][Redirects] all threat you cause to the targeted party or raid member, beginning with your next damaging attack within the next $d and lasting $59628d.",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=6, max_rank=1, req_points=0, select_idx=100]"
+      }
+    },
+    {
+      "key": "ROGUE_ATROPHIC",
+      "name": "Atrophic Poison",
+      "spellId": 381637,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "ENEMY_DAMAGE_REDUCTION"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Current 12.1 value verified externally as 4% reduced damage dealt.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 3600.0,
+        "description": "Coats your weapons with a Non-Lethal Poison that lasts for $d. Each strike has a $h% chance of poisoning the enemy, reducing their damage by ${$392388s1*-1}.1% for $392388d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=2, max_rank=1, req_points=8, select_idx=200]"
+      }
+    },
+    {
+      "key": "ROGUE_NUMBING",
+      "name": "Numbing Poison",
+      "spellId": 5761,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "ATTACK_CAST_SLOW"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 3600.0,
+        "description": "Coats your weapons with a Non-Lethal Poison that lasts for $d. Each strike has a $5761h% chance of poisoning the enemy, clouding their mind and slowing their attack and casting speed by $5760s1% for $5760d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=2, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "ROGUE_DISTRACT",
+      "name": "Distract",
+      "spellId": 1725,
+      "class": "ROGUE",
+      "specs": [
+        "ASSASSINATION",
+        "OUTLAW",
+        "SUBTLETY"
+      ],
+      "capabilities": [
+        "STEALTH_SKIP"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Supports patrol control and Shroud routes.",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": null,
+        "description": "Throws a distraction, attracting the attention of all nearby monsters for $s1 seconds. Usable while stealthed.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "SHAMAN_WIND_SHEAR_DPS",
+      "name": "Wind Shear",
+      "spellId": 57994,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "12-second cooldown in DPS specs.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 12.0,
+        "durationSeconds": 4.0,
+        "description": "Disrupts the target's concentration with a burst of wind, interrupting spellcasting and preventing any spell in that school from being cast for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=7, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "SHAMAN_WIND_SHEAR_RESTO",
+      "name": "Wind Shear",
+      "spellId": 57994,
+      "class": "SHAMAN",
+      "specs": [
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "30-second cooldown for Restoration; only healer retaining a true interrupt in Midnight.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 12.0,
+        "durationSeconds": 4.0,
+        "description": "Disrupts the target's concentration with a burst of wind, interrupting spellcasting and preventing any spell in that school from being cast for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=7, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "SHAMAN_CAP_TOTEM",
+      "name": "Capacitor Totem",
+      "spellId": 192058,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 3.0,
+        "description": "Summons a totem at the target location that gathers electrical energy from the surrounding air and explodes after $s2 sec, stunning all enemies within $118905A1 yards for $118905d.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=4, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "SHAMAN_EARTHGRAB",
+      "name": "Earthgrab Totem",
+      "spellId": 51485,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "ROOT"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 20.0,
+        "description": "Summons a totem at the target location for $d. The totem pulses every $116943t1 sec, rooting all enemies within $64695A1 yards for $64695d. Enemies previously rooted by the totem instead suffer $116947s1% movement speed reduction.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=2, max_rank=1, req_points=8, replace=\"Earthbind Totem\" (id=2484)]"
+      }
+    },
+    {
+      "key": "SHAMAN_HEX",
+      "name": "Hex",
+      "spellId": 51514,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Humanoids and Beasts.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 60.0,
+        "description": "Transforms the enemy into a frog for $d. While hexed, the victim is incapacitated, and cannot attack or cast spells. Damage may cancel the effect. Limit 1. Only works on Humanoids and Beasts.",
+        "talentEntryObserved": "Generic [tree=class, row=7, col=7, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "SHAMAN_PURGE",
+      "name": "Purge",
+      "spellId": 370,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "PURGE_MAGIC"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Purges the enemy target, removing $m1 beneficial Magic $leffect:effects;.$?(s147762&s51530)",
+        "talentEntryObserved": "Generic [tree=class, row=7, col=2, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "SHAMAN_CLEANSE_SPIRIT",
+      "name": "Cleanse Spirit",
+      "spellId": 440012,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT"
+      ],
+      "capabilities": [
+        "DISPEL_CURSE"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 8.0,
+        "durationSeconds": null,
+        "description": "$@spelldesc51886",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "SHAMAN_PURIFY_SPIRIT",
+      "name": "Purify Spirit",
+      "spellId": 77130,
+      "class": "SHAMAN",
+      "specs": [
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC",
+        "DISPEL_CURSE"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Curse component requires Improved Purify Spirit.",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Removes all Magic$?s383016[ and Curse][] effects from a friendly target.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "SHAMAN_POISON_TOTEM",
+      "name": "Poison Cleansing Totem",
+      "spellId": 383013,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "DISPEL_POISON"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Repeated party-wide poison removal during the totem duration.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 6.0,
+        "description": "Summons a totem at your feet that removes all Poison effects from a nearby party or raid member within $403922a yards every $383014t1 sec for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=4, max_rank=1, req_points=23, select_idx=200]"
+      }
+    },
+    {
+      "key": "SHAMAN_TREMOR",
+      "name": "Tremor Totem",
+      "spellId": 8143,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "FEAR_BREAK_GROUP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Removes Fear, Charm and Sleep.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 10.0,
+        "description": "Summons a totem at your feet that shakes the ground around it for $d, removing Fear, Charm and Sleep effects from party and raid members within $8146a1 yards.",
+        "talentEntryObserved": "Generic [tree=class, row=9, col=4, max_rank=1, req_points=23, select_idx=100]"
+      }
+    },
+    {
+      "key": "SHAMAN_WIND_RUSH",
+      "name": "Wind Rush Totem",
+      "spellId": 192077,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL",
+        "ENHANCEMENT",
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "GROUP_MOBILITY"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 120.0,
+        "durationSeconds": 15.0,
+        "description": "Summons a totem at the target location for $d, continually granting all allies who pass within $a1 yards $192082s1% increased movement speed for $192082d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=5, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "SHAMAN_SPIRIT_LINK",
+      "name": "Spirit Link Totem",
+      "spellId": 98008,
+      "class": "SHAMAN",
+      "specs": [
+        "RESTORATION"
+      ],
+      "capabilities": [
+        "MAJOR_GROUP_DR"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Damage reduction plus party health redistribution.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 6.0,
+        "description": "Summons a totem at the target location for $d, which reduces damage taken by all party and raid members within $98007a1 yards by $98007s1%. Immediately and every $98017t1 sec, the health of all affected players is redistributed evenly.",
+        "talentEntryObserved": "Restoration [tree=spec, row=8, col=5, max_rank=1, req_points=20]"
+      }
+    },
+    {
+      "key": "SHAMAN_THUNDERSTORM",
+      "name": "Thunderstorm",
+      "spellId": 51490,
+      "class": "SHAMAN",
+      "specs": [
+        "ELEMENTAL"
+      ],
+      "capabilities": [
+        "KNOCKBACK"
+      ],
+      "availability": "spec_only",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell",
+          "spec_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 5.0,
+        "description": "Calls down a bolt of lightning, dealing $s1 Nature damage to all enemies within $A1 yards, reducing their movement speed by $s3% for $d, and knocking them $?s378779[upward][away from the Shaman]. Usable while stunned.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "SHAMAN_SUNDERING",
+      "name": "Sundering",
+      "spellId": 197214,
+      "class": "SHAMAN",
+      "specs": [
+        "ENHANCEMENT"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Rotational damage ability with stop value; score lower than dedicated on-demand stops.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": null,
+        "description": "Shatters a line of earth in front of you with your main hand weapon, causing $s1 Flamestrike damage to any enemy hit.",
+        "talentEntryObserved": "Enhancement [tree=spec, row=8, col=6, max_rank=1, req_points=20]"
+      }
+    },
+    {
+      "key": "WARLOCK_HEALTHSTONE",
+      "name": "Create Healthstone",
+      "spellId": 6201,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "SURVIVAL_CONSUMABLE"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Canonical party value includes Soulwell/Healthstone access.",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": null,
+        "description": "Creates a Healthstone that can be consumed to restore $6262s1% health.$?a386646[",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_SPELL_LOCK",
+      "name": "Spell Lock",
+      "spellId": 19647,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Requires the relevant demon/pet setup; Demonology may use Felguard Axe Toss instead.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 24.0,
+        "durationSeconds": 7.0,
+        "description": "Counters the enemy's spellcast, preventing any spell from that school of magic from being cast for $19647d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_AXE_TOSS",
+      "name": "Axe Toss",
+      "spellId": 89766,
+      "class": "WARLOCK",
+      "specs": [
+        "DEMONOLOGY"
+      ],
+      "capabilities": [
+        "INTERRUPT",
+        "ST_STOP"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Felguard/Wrathguard.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": 4.0,
+        "description": "The $?s108499[Wrathguard][Felguard] hurls its weapon, stunning and interrupting the target for $89766d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_DEVOUR_MAGIC",
+      "name": "Devour Magic",
+      "spellId": 19505,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "PURGE_MAGIC"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Felhunter/Observer utility.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": null,
+        "description": "Purges $19505s1 beneficial magic $19505leffect:effects; from an enemy. If an effect is devoured, the $?s219450[Observer][Felhunter]$?s56249[ and Warlock][] will be healed for $19658m1 and gain 60 Fel Energy.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_SINGE_MAGIC",
+      "name": "Singe Magic",
+      "spellId": 89808,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "DISPEL_MAGIC"
+      ],
+      "availability": "pet_conditional",
+      "condition": "Imp utility; requires pet choice.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": null,
+        "description": "Burns harmful spells, removing $89808s1 harmful Magic effect from an ally.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_SHADOWFURY",
+      "name": "Shadowfury",
+      "spellId": 30283,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 3.0,
+        "description": "Stuns all enemies within $a1 yds for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=6, max_rank=1, req_points=23, select_idx=200]"
+      }
+    },
+    {
+      "key": "WARLOCK_HOWL_TERROR",
+      "name": "Howl of Terror",
+      "spellId": 5484,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 40.0,
+        "durationSeconds": 20.0,
+        "description": "Let loose a terrifying howl, causing $?a1270255[${$i+$1270255s4}][$i] enemies within $A1 yds to flee in fear, disorienting them for $d. Damage may cancel the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=6, max_rank=1, req_points=23, select_idx=100]"
+      }
+    },
+    {
+      "key": "WARLOCK_MORTAL_COIL",
+      "name": "Mortal Coil",
+      "spellId": 6789,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 45.0,
+        "durationSeconds": 3.0,
+        "description": "Horrifies an enemy target into fleeing, incapacitating for $6789d and healing you for $108396m1% of maximum health.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=7, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "WARLOCK_BANISH",
+      "name": "Banish",
+      "spellId": 710,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "SPECIAL_CC"
+      ],
+      "availability": "class_talent",
+      "condition": "Demon, Aberration, Elemental; talent may extend to Undead depending on build.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 30.0,
+        "description": "Banishes an enemy Demon, Aberration$?s386651[, Undead][], or Elemental, preventing any action for $d. Limit 1. Casting Banish again on the target will cancel the effect.",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=1, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "WARLOCK_CURSE_TONGUES",
+      "name": "Curse of Tongues",
+      "spellId": 1714,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "ATTACK_CAST_SLOW"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Casting-time slow, valuable against selected casters.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 60.0,
+        "description": "Forces the target to speak in Demonic, increasing the casting time of all spells by $s1% for $d.$?s103112[",
+        "talentEntryObserved": "Generic [tree=class, row=4, col=5, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "WARLOCK_CURSE_WEAKNESS",
+      "name": "Curse of Weakness",
+      "spellId": 702,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "ATTACK_CAST_SLOW"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Reduces enemy attack frequency; primarily tank-damage utility.",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": null,
+        "durationSeconds": 120.0,
+        "description": "Increases the time between an enemy's attacks by $s1% for $d.$?s103112[",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARLOCK_GATEWAY",
+      "name": "Demonic Gateway",
+      "spellId": 111771,
+      "class": "WARLOCK",
+      "specs": [
+        "AFFLICTION",
+        "DEMONOLOGY",
+        "DESTRUCTION"
+      ],
+      "capabilities": [
+        "GATEWAY"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 10.0,
+        "durationSeconds": 0.001,
+        "description": "Creates a demonic gateway between two locations. Activating the gateway transports the user to the other gateway. Each player can use a Demonic Gateway only once per $<GatewayCooldown> sec.",
+        "talentEntryObserved": "Generic [tree=class, row=8, col=4, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "WARRIOR_RALLY",
+      "name": "Rallying Cry",
+      "spellId": 97462,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "GROUP_HEALTH_CD"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 180.0,
+        "durationSeconds": null,
+        "description": "Lets loose a rallying cry, granting all party or raid members within $a1 yards $s1% temporary and maximum health for $97463d.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=4, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "WARRIOR_PUMMEL",
+      "name": "Pummel",
+      "spellId": 6552,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "INTERRUPT"
+      ],
+      "availability": "baseline",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "class_spell"
+        ],
+        "cooldownSeconds": 15.0,
+        "durationSeconds": 5.0,
+        "description": "Pummels the target, interrupting spellcasting and preventing any spell in that school from being cast for $d.",
+        "talentEntryObserved": null
+      }
+    },
+    {
+      "key": "WARRIOR_SHOCKWAVE",
+      "name": "Shockwave",
+      "spellId": 46968,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 40.0,
+        "durationSeconds": null,
+        "description": "Sends a wave of force in a frontal cone, causing $s1 damage and stunning all enemies within $a1 yards for $132168d.",
+        "talentEntryObserved": "Generic [tree=class, row=5, col=2, max_rank=1, req_points=8]"
+      }
+    },
+    {
+      "key": "WARRIOR_STORM_BOLT",
+      "name": "Storm Bolt",
+      "spellId": 107570,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "ST_STOP"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 30.0,
+        "durationSeconds": null,
+        "description": "Hurls your weapon at an enemy, causing $s1 Physical damage and stunning for $132169d.$?s436162[ Also hits 2 additional nearby targets, stunning for 2 sec.][]",
+        "talentEntryObserved": "Generic [tree=class, row=3, col=6, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "WARRIOR_INTIMIDATING_SHOUT",
+      "name": "Intimidating Shout",
+      "spellId": 5246,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "AOE_STOP"
+      ],
+      "availability": "choice_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": 8.0,
+        "description": "Causes the targeted enemy to cower in fear while all enemies within $a5 yards flee from you and their movement speed is reduced by $s3% for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=5, max_rank=1, req_points=8, select_idx=100]"
+      }
+    },
+    {
+      "key": "WARRIOR_DISRUPTING_SHOUT",
+      "name": "Disrupting Shout",
+      "spellId": 386071,
+      "class": "WARRIOR",
+      "specs": [
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "AOE_INTERRUPT_SILENCE"
+      ],
+      "availability": "spec_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": 6.0,
+        "description": "Taunts all enemies within $A1 yds to attack you for $d, interrupts all spellcasting within $A1 yds and prevents any spell in that school from being cast for $d. Increases the threat you generate against the target by $s2%.",
+        "talentEntryObserved": "Protection [tree=spec, row=4, col=3, max_rank=1, req_points=0, replace=\"Challenging Shout\" (id=1161)]"
+      }
+    },
+    {
+      "key": "WARRIOR_INTERVENE",
+      "name": "Intervene",
+      "spellId": 3411,
+      "class": "WARRIOR",
+      "specs": [
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "EXTERNAL_DR"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "notes": "Intercepts melee/ranged attacks rather than generic %DR.",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 1.5,
+        "durationSeconds": null,
+        "description": "Run at high speed toward an ally, intercepting all melee and ranged attacks against them for $147833d while they remain within $147833A1 yds.",
+        "talentEntryObserved": "Protection [tree=class, row=4, col=7, max_rank=1, req_points=0]"
+      }
+    },
+    {
+      "key": "WARRIOR_CHAMPIONS_SPEAR",
+      "name": "Champion's Spear",
+      "spellId": 376079,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "AOE_PULL"
+      ],
+      "availability": "class_talent",
+      "condition": null,
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": null,
+        "description": "Throw a spear at the target location, chaining all enemies in the area to the spear's location and dealing $376080s1 Physical damage instantly and an additional $376080o4 Physical damage over $376081d.",
+        "talentEntryObserved": "Generic [tree=class, row=10, col=3, max_rank=1, req_points=23]"
+      }
+    },
+    {
+      "key": "WARRIOR_BERSERKER_SHOUT",
+      "name": "Berserker Shout",
+      "spellId": 384100,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "FEAR_BREAK_GROUP"
+      ],
+      "availability": "choice_talent",
+      "condition": "Group cleanse component requires Battlefield Commander.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 60.0,
+        "durationSeconds": 6.0,
+        "description": "Go berserk, removing and granting immunity to Fear, Sap, and Incapacitate effects for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=3, max_rank=1, req_points=8, select_idx=100, replace=\"Berserker Rage\" (id=18499)]"
+      }
+    },
+    {
+      "key": "WARRIOR_PIERCING_HOWL",
+      "name": "Piercing Howl",
+      "spellId": 12323,
+      "class": "WARRIOR",
+      "specs": [
+        "ARMS",
+        "FURY",
+        "PROTECTION"
+      ],
+      "capabilities": [
+        "GROUP_MOBILITY"
+      ],
+      "availability": "choice_talent",
+      "condition": "Ally speed component requires Battlefield Commander.",
+      "scoringEligible": true,
+      "evidence": "simc+current_guide",
+      "simc": {
+        "sources": [
+          "talent_spell"
+        ],
+        "cooldownSeconds": 90.0,
+        "durationSeconds": 8.0,
+        "description": "Snares all enemies within $A1 yards, reducing their movement speed by $s1% for $d.",
+        "talentEntryObserved": "Generic [tree=class, row=6, col=5, max_rank=1, req_points=8, select_idx=200]"
+      }
+    }
+  ]
+}
