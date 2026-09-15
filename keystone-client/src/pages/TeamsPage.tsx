@@ -11,6 +11,7 @@ import lfgEyeIcon from "../assets/planner/lfg-eye.png";
 import mixedDamageIcon from "../assets/planner/mix-damage.png";
 import offensiveSynergyIcon from "../assets/planner/offensive-synergy.jpg";
 import { PlannerPreferencesModal } from "../components/PlannerPreferencesModal";
+import { RemoteAvatar } from "../components/RemoteAvatar";
 import { TeamItemTooltip } from "../components/TeamItemTooltip";
 import { WowRoleIcon } from "../components/WowRoleIcon";
 import { WowheadSpellIcon, WowheadTooltip } from "../components/WowheadTooltip";
@@ -44,10 +45,9 @@ function errorInfo(error: unknown, fallback: string): CoreError {
 }
 
 function Portrait({ avatarUrl, name, wowClass }: { avatarUrl: string | null; name: string; wowClass: string | null }) {
-  const [failed, setFailed] = useState(false);
   return <span className="teams-portrait" style={{ backgroundColor: classColor(wowClass) }}>
     <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
-    {avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={avatarUrl} /> : null}
+    <RemoteAvatar url={avatarUrl} />
   </span>;
 }
 

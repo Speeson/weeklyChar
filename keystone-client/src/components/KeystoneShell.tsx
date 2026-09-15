@@ -10,6 +10,7 @@ import type { AuthState } from "../core/types";
 import { useI18n } from "../core/i18n";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import { ThemedIcon } from "./ThemedIcon";
+import { RemoteAvatar } from "./RemoteAvatar";
 
 const CLIENT_WIDTH = 1672;
 const CLIENT_HEIGHT = 941;
@@ -257,7 +258,7 @@ function KeystoneHeader({
           >
             <img alt="" className="ks-user-menu__shell" src={userPanelFrame} />
             <span className="ks-user-menu__avatar">
-              {auth.avatarUrl ? <img alt="" className="ks-user-menu__avatar-image" src={auth.avatarUrl} /> : null}
+              <RemoteAvatar className="ks-user-menu__avatar-image" url={auth.avatarUrl} />
               <img alt="" className="ks-user-menu__avatar-frame" src={avatarFrame} />
             </span>
             <span className="ks-user-menu__name">{username}</span>

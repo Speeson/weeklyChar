@@ -5,6 +5,7 @@ import medal2 from "../assets/medals/tier2.avif";
 import medal3 from "../assets/medals/tier3.avif";
 import { TalentModal } from "../components/TalentModal";
 import { FloatingTooltip } from "../components/FloatingTooltip";
+import { RemoteAvatar } from "../components/RemoteAvatar";
 import { WowheadTooltip } from "../components/WowheadTooltip";
 import { classColor } from "../core/characterDisplay";
 import { loadInactiveCharacterIds, saveInactiveCharacterIds } from "../core/characterTracking";
@@ -49,8 +50,7 @@ function treeIdentity(tree: TalentTreeSnapshot | undefined, region: string) {
 }
 
 function Portrait({ character }: { character: Character }) {
-  const [failed, setFailed] = useState(false);
-  return <span className="characters-portrait" style={{ "--class-color": classColor(character.wowClass) } as CSSProperties}>{character.avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={character.avatarUrl} /> : character.name[0]}</span>;
+  return <span className="characters-portrait" style={{ "--class-color": classColor(character.wowClass) } as CSSProperties}><span aria-hidden="true">{character.name[0]}</span><RemoteAvatar url={character.avatarUrl} /></span>;
 }
 
 type AccountRealmOption = { account: string; realms: string[] };

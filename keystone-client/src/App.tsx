@@ -6,8 +6,10 @@ import { ThemedIcon } from "./components/ThemedIcon";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
 import { ChangelogModal } from "./components/ChangelogModal";
 import { ClientContextMenu } from "./components/ClientContextMenu";
+import { RemoteAvatar } from "./components/RemoteAvatar";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
+import { clearAvatarCache } from "./core/avatarCache";
 import { findPostUpdateChangelog, markChangelogSeen, type PostUpdateChangelog } from "./core/changelog";
 import { coreRequest } from "./core/client";
 import { classColor } from "./core/characterDisplay";
@@ -77,11 +79,10 @@ function AvatarChoice({
   name: string;
   wowClass: string | null;
 }) {
-  const [failed, setFailed] = useState(false);
   return (
     <span className="ks-avatar-choice__portrait" style={{ backgroundColor: classColor(wowClass) }}>
       <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
-      {avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={avatarUrl} /> : null}
+      <RemoteAvatar url={avatarUrl} />
     </span>
   );
 }
@@ -323,6 +324,7 @@ function App() {
 
   const handleSessionExpired = useCallback(() => {
     clearTeamsSessionCache();
+    void clearAvatarCache();
     setAuth({ authenticated: false, username: null, avatarUrl: null });
     setCharacters(current => current ? { ...current, characters: [], source: "none", lastRefreshAt: null, lastError: null } : current);
     setCurrentView("sync");
@@ -345,6 +347,7 @@ function App() {
     setOnboardingSkipped(false);
     try {
       const nextAuth = await logout();
+      await clearAvatarCache();
       setAuth((current) => current?.authenticated ? current : nextAuth);
     } catch (caught) {
       setAuth((current) => current?.authenticated ? current : previousAuth);

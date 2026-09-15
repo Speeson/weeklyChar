@@ -9,6 +9,7 @@ import type {
 import { specializationsForClass, wowLootBagIconUrl, wowSpecializationIconUrl, type ClientWowSpecialization } from "../core/wowSpecs";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import { WowRoleIcon } from "./WowRoleIcon";
+import { RemoteAvatar } from "./RemoteAvatar";
 
 type PlannerPreferencesModalProps = {
   characters: ClientTeamCharacter[];
@@ -32,10 +33,8 @@ type GuideStep = "loot" | "availability" | "done";
 const STATES: readonly KeystonePlannerPreferenceState[] = ["preferred", "available", "emergency", "disabled"];
 
 function CharacterAvatar({ character }: { character: ClientTeamCharacter }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [character.avatarUrl]);
   return <span className="planner-preference-character__avatar">
-    {character.avatarUrl && !failed ? <img alt="" onError={() => setFailed(true)} src={character.avatarUrl} /> : character.name.slice(0, 1)}
+    <span aria-hidden="true">{character.name.slice(0, 1)}</span><RemoteAvatar url={character.avatarUrl} />
   </span>;
 }
 

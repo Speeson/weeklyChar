@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
+import { RemoteAvatar } from "../components/RemoteAvatar";
 import {
   MISSING_CHARACTER_VALUE,
   MISSING_VALUE_COLOR,
@@ -410,21 +411,12 @@ function CharactersTable({ characters, error, loading, onOpenError }: Characters
 }
 
 function CharacterAvatar({ character }: { character: Character }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [character.avatarUrl]);
   const color = classColor(character.wowClass);
-  const showImage = Boolean(character.avatarUrl) && !failed;
 
   return (
     <span aria-hidden="true" className="sync-avatar" style={{ backgroundColor: color }}>
       <span>{character.name.slice(0, 1).toUpperCase()}</span>
-      {showImage ? (
-        <img
-          alt=""
-          onError={() => setFailed(true)}
-          src={character.avatarUrl ?? undefined}
-        />
-      ) : null}
+      <RemoteAvatar url={character.avatarUrl} />
     </span>
   );
 }
