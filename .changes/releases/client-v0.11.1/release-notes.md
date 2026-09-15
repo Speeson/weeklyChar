@@ -1,0 +1,8 @@
+# KeystoneClient 0.11.1
+
+## Correcciones
+
+- Mantiene los avatares disponibles sin conexión y los recupera al volver internet.
+  - Guarda localmente copias validadas y limitadas de los retratos de personajes usados por el Cliente.
+  - Reintenta automáticamente una imagen fallida cuando cambia el avatar o el sistema recupera conectividad.
+  - Aplica el mismo fallback seguro en el perfil, Sincronización, Personajes, Equipos y preferencias del Planner.
