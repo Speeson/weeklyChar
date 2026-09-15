@@ -691,7 +691,7 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByRole("checkbox", { name: "Defensiva de grupo" })).not.toBeChecked();
   });
 
-  it("recalculates without external fill and centers incomplete detail role rows", async () => {
+  it("recalculates without external fill, centers the compact party, and preserves mixed detail rows", async () => {
     const user = userEvent.setup();
     const withoutFill = modernPlannerResponse("quick");
     for (const recommendation of withoutFill.recommendations) {
@@ -717,10 +717,49 @@ describe("TeamsPage compact ranking", () => {
       options: expect.objectContaining({ fillComposition: false }),
     })));
     await waitFor(() => expect(document.querySelectorAll(".planner-external-preview")).toHaveLength(0));
+    expect(document.querySelector(".planner-recommendation__party")).toHaveAttribute("data-centered", "true");
     await user.click(screen.getByRole("button", { name: "Expandir #1" }));
     const party = document.querySelector<HTMLElement>(".planner-party-trapezoid")!;
     expect(party).toHaveAttribute("data-top-count", "1");
     expect(party).toHaveAttribute("data-dps-count", "2");
+    expect(party).toHaveAttribute("data-single-row-pair", "false");
+  });
+
+  it("vertically centers only two-card Tank/Healer and DPS detail rows", async () => {
+    const user = userEvent.setup();
+    const withoutFill = modernPlannerResponse("quick");
+    for (const [index, recommendation] of withoutFill.recommendations.entries()) {
+      const tank = recommendation.assignments.find(assignment => assignment.role === "tank")!;
+      const dps = recommendation.assignments.find(assignment => assignment.role === "dps")!;
+      recommendation.assignments = index === 1
+        ? [dps, { ...dps, userId: 4, characterId: 14, characterName: "SegundoDps", username: "Otro" }]
+        : [tank, { ...dps, role: "healer", specId: 65 }];
+      recommendation.vacancies = [];
+    }
+    const getKeystonePlanner = vi.fn().mockResolvedValueOnce(modernPlannerResponse("quick")).mockResolvedValueOnce(withoutFill);
+    renderPage(source({ getKeystonePlanner }));
+    await selectRuby(user);
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+    await user.click(screen.getByRole("button", { name: "Calcular Top 5" }));
+    await waitFor(() => expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5));
+
+    await user.click(screen.getByRole("checkbox", { name: /Rellenar la composici/u }));
+    await waitFor(() => expect(document.querySelectorAll(".planner-external-preview")).toHaveLength(0));
+
+    await user.click(screen.getByRole("button", { name: "Expandir #1" }));
+    let party = document.querySelector<HTMLElement>(".planner-party-trapezoid")!;
+    expect(party).toHaveAttribute("data-top-count", "2");
+    expect(party).toHaveAttribute("data-dps-count", "0");
+    expect(party).toHaveAttribute("data-single-row-pair", "true");
+
+    await user.click(screen.getByRole("button", { name: "Contraer #1" }));
+    await user.click(screen.getByRole("button", { name: "Expandir #2" }));
+    party = document.querySelector<HTMLElement>(".planner-party-trapezoid")!;
+    expect(party).toHaveAttribute("data-top-count", "0");
+    expect(party).toHaveAttribute("data-dps-count", "2");
+    expect(party).toHaveAttribute("data-single-row-pair", "true");
   });
 
   it("uses a bottom overlay cue instead of a visible sidebar scrollbar", async () => {

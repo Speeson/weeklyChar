@@ -591,6 +591,56 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   await capture(page, "17-planner-minimum-viewport.png");
 });
 
+test("centers incomplete Planner previews and same-row detail pairs", async ({ page }) => {
+  const openIncompletePair = async (stoneName: RegExp, teammateName: string) => {
+    await openTeams(page, "teams-planner");
+    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    await page.getByRole("button", { name: "Planificar piedra" }).click();
+    await page.getByRole("button", { name: stoneName }).click();
+    await page.getByRole("button", { name: new RegExp(`Filtrar por ${teammateName}`, "u") }).click();
+    await page.getByRole("checkbox", { name: /Rellenar la composici/u }).click();
+    await page.getByRole("button", { name: "Calcular Top 5" }).click();
+    await expect(page.locator(".planner-recommendation")).toHaveCount(5);
+  };
+  const expectCenteredGeometry = async () => {
+    const recommendation = page.locator(".planner-recommendation").first();
+    const compact = recommendation.locator(".planner-recommendation__party");
+    await expect(compact).toHaveAttribute("data-centered", "true");
+    const compactGeometry = await compact.evaluate(element => {
+      const party = element.getBoundingClientRect();
+      const cards = [...element.children].map(card => card.getBoundingClientRect());
+      return {
+        cardCount: cards.length,
+        centerDelta: Math.abs((cards[0].left + cards.at(-1)!.right) / 2 - (party.left + party.right) / 2),
+      };
+    });
+    expect(compactGeometry.cardCount).toBe(2);
+    expect(compactGeometry.centerDelta).toBeLessThan(1);
+
+    await recommendation.getByRole("button", { name: "Expandir #1" }).click();
+    const detail = recommendation.locator(".planner-party-trapezoid");
+    await expect(detail).toHaveAttribute("data-single-row-pair", "true");
+    const detailGeometry = await detail.evaluate(element => {
+      const party = element.getBoundingClientRect();
+      const cards = [...element.children].map(card => card.getBoundingClientRect());
+      return {
+        horizontalDelta: Math.abs((cards[0].left + cards.at(-1)!.right) / 2 - (party.left + party.right) / 2),
+        verticalDelta: Math.abs((cards[0].top + cards[0].bottom) / 2 - (party.top + party.bottom) / 2),
+      };
+    });
+    expect(detailGeometry.horizontalDelta).toBeLessThan(1);
+    expect(detailGeometry.verticalDelta).toBeLessThan(1);
+  };
+
+  await openIncompletePair(/\+9.*Auralisdelaluzeterna.*Guardiana/u, "Nightshift");
+  await expectCenteredGeometry();
+  await capture(page, "16c-planner-centered-tank-healer.png");
+
+  await openIncompletePair(/\+12.*Bakuhatsu.*Speeson/u, "Ironforge");
+  await expectCenteredGeometry();
+  await capture(page, "16d-planner-centered-dps.png");
+});
+
 test("reviews Advanced exact-spec vacancy recommendations", async ({ page }) => {
   await openTeams(page, "teams-planner");
   await page.getByRole("button", { name: /Ruby Life Pools/u }).click();

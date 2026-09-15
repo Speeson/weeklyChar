@@ -13,11 +13,15 @@ Advanced modes.
 - When disabled, the Worker ranks only the selected Team members and returns no vacancies or
   external recommendations. Internal role, composition, loot, tier and stable priorities still
   apply; Quick/Advanced priorities score the selected party itself.
+- When disabled, compact recommendation cards keep their normal five-member width but center the
+  visible incomplete party as one horizontal group instead of leaving all missing slots at the end.
 - Extend only the modern request with additive `fillComposition`. The Worker also accepts the
   previous seven-key modern shape and treats a missing value as `true`, preserving deployed Client
   compatibility. The exact legacy request and comparator remain unchanged.
 - Detail cards retain role grouping but center incomplete rows: one tank/healer card is centered,
-  two remain symmetric; one DPS is centered, two form a centered pair, and three fill the row.
+  two remain symmetric; one DPS is centered, two form a centered pair, and three fill the row. When
+  exactly two cards occupy the same role row (Tank + Healer or two DPS), that row is also centered
+  vertically; mixed upper/lower pairs and all default role positions remain unchanged.
 - The sidebar remains internally scrollable without a visible scrollbar. A bottom overlay arrow is
   shown only while more content exists below; activating it scrolls to the bottom and it disappears
   there. Keyboard and wheel scrolling remain available.

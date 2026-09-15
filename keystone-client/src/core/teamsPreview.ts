@@ -198,11 +198,14 @@ function previewPlannerRecommendation(rank: number, request: KeystonePlannerRequ
     dungeonUtilityBand: 0,
     recommendations,
   };
+  const assignments = request.options.fillComposition
+    ? previewPlannerParty
+    : previewPlannerParty.filter(assignment => request.participantUserIds.includes(assignment.userId));
   return {
-    rank, fingerprint: `preview-${rank}-${stone.characterId}`,
+    rank, fingerprint: `preview-${rank}-${stone.characterId}-${request.options.fillComposition ? "filled" : "selected"}`,
     stone: { ...stone, challengeMapId: request.challengeMapId, dungeon: "Ruby Life Pools" },
-    assignments: previewPlannerParty, vacancies: [vacancy],
-    lootSummary: { weightedScore: 128 - rank * 7, playersWithObjectives: 4, totalObjectives: previewPlannerParty.reduce((total, assignment) => total + assignment.objectives.length, 0), tierCounts: { bestInSlot: 2, mustHave: 3, niceToHave: 1, catalyst: 1, transmog: 1 } },
+    assignments, vacancies: request.options.fillComposition ? [vacancy] : [],
+    lootSummary: { weightedScore: 128 - rank * 7, playersWithObjectives: assignments.length, totalObjectives: assignments.reduce((total, assignment) => total + assignment.objectives.length, 0), tierCounts: { bestInSlot: 2, mustHave: 3, niceToHave: 1, catalyst: 1, transmog: 1 } },
     levelSummary: { targetLevel: request.targetLevel, stoneLevel: stone.level, levelDistance: Math.abs(request.targetLevel - stone.level) },
     preferenceSummary: { preferred: 4, available: 0, emergency: 0 },
     compositionSummary: {

@@ -570,8 +570,8 @@ function plannerDamageProfile(
   return "unknown";
 }
 
-function PlannerRecommendationCard({ avatarUrls, expanded, onToggle, recommendation }: {
-  avatarUrls: Map<number, string | null>; expanded: boolean; onToggle: () => void; recommendation: KeystonePlannerRecommendation;
+function PlannerRecommendationCard({ avatarUrls, centerIncompletePreview, expanded, onToggle, recommendation }: {
+  avatarUrls: Map<number, string | null>; centerIncompletePreview: boolean; expanded: boolean; onToggle: () => void; recommendation: KeystonePlannerRecommendation;
 }) {
   const copy = usePlannerCopy();
   const [selectedExternalIds, setSelectedExternalIds] = useState<Record<number, string>>({});
@@ -581,6 +581,8 @@ function PlannerRecommendationCard({ avatarUrls, expanded, onToggle, recommendat
     + recommendation.vacancies.filter(vacancy => vacancy.role === "tank" || vacancy.role === "healer").length;
   const dpsCount = recommendation.assignments.filter(assignment => assignment.role === "dps").length
     + recommendation.vacancies.filter(vacancy => vacancy.role === "dps").length;
+  const centerSingleRowPair = partyEntries.length === 2
+    && ((topCount === 2 && dpsCount === 0) || (topCount === 0 && dpsCount === 2));
   const valueWords = copy.value.split(" ");
   const valueLead = valueWords.slice(0, -1).join(" ");
   const valueTail = valueWords[valueWords.length - 1];
@@ -622,14 +624,14 @@ function PlannerRecommendationCard({ avatarUrls, expanded, onToggle, recommendat
         <span><b>{recommendation.lootSummary.totalObjectives}</b> {copy.objectiveSummary}</span>
         <span><b>{recommendation.preferenceSummary.preferred}</b> {copy.preferenceSummary}</span>
       </span>
-      <span className="planner-recommendation__party">{partyEntries.map(entry => entry.kind === "assignment"
+      <span className="planner-recommendation__party" data-centered={centerIncompletePreview && partyEntries.length < 5}>{partyEntries.map(entry => entry.kind === "assignment"
         ? <PlannerAssignmentPreview assignment={entry.assignment} avatarUrl={avatarUrls.get(entry.assignment.characterId) ?? null} key={`member-${entry.assignment.userId}`} owner={entry.assignment.characterId === recommendation.stone.characterId} partySlot={entry.partySlot} />
         : <PlannerExternalPreview key={`external-${entry.vacancy.role}-${entry.vacancyIndex}`} partySlot={entry.partySlot} vacancy={entry.vacancy} />)}</span>
       <span className="planner-score"><small><span>{valueLead}</span><span>{valueTail}</span></small><b>{recommendation.lootSummary.weightedScore}</b></span>
       <button aria-expanded={expanded} aria-label={`${expanded ? copy.collapse : copy.expand} #${recommendation.rank}`} className="planner-recommendation__expand" onClick={event => { event.stopPropagation(); onToggle(); }} type="button"><ChevronDown aria-hidden="true" /></button>
     </div>
     {expanded ? <div className="planner-recommendation__detail">
-      <div className="planner-party-trapezoid" data-dps-count={dpsCount} data-top-count={topCount}>{partyEntries.map(entry => entry.kind === "assignment"
+      <div className="planner-party-trapezoid" data-dps-count={dpsCount} data-single-row-pair={centerSingleRowPair} data-top-count={topCount}>{partyEntries.map(entry => entry.kind === "assignment"
         ? <PlannerAssignmentCard assignment={entry.assignment} key={entry.assignment.userId} owner={entry.assignment.characterId === recommendation.stone.characterId} partySlot={entry.partySlot} />
         : <PlannerExternalCard key={`external-detail-${entry.vacancy.role}-${entry.vacancyIndex}`} onSelect={selected => setSelectedExternalIds(current => ({ ...current, [entry.vacancyIndex]: selected.id }))} partySlot={entry.partySlot} selectedId={selectedExternalIds[entry.vacancyIndex]} vacancy={entry.vacancy} />)}</div>
       <div className="planner-utilities">
@@ -811,7 +813,7 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
       {canScrollConfigDown ? <button aria-label={copy.scrollToEnd} className="planner-config-scroll-cue" onClick={scrollConfigToEnd} type="button"><ChevronDown aria-hidden="true" /></button> : null}
     </aside>
     <section aria-busy={loading} className="keystone-planner__results" data-recalculating={loading && response !== null} aria-label={copy.results} role="region">
-      {response?.recommendations.length ? response.recommendations.map(recommendation => <PlannerRecommendationCard avatarUrls={avatarUrls} expanded={expanded === recommendation.fingerprint} key={recommendation.fingerprint} onToggle={() => setExpanded(current => current === recommendation.fingerprint ? null : recommendation.fingerprint)} recommendation={recommendation} />)
+      {response?.recommendations.length ? response.recommendations.map(recommendation => <PlannerRecommendationCard avatarUrls={avatarUrls} centerIncompletePreview={!options.fillComposition} expanded={expanded === recommendation.fingerprint} key={recommendation.fingerprint} onToggle={() => setExpanded(current => current === recommendation.fingerprint ? null : recommendation.fingerprint)} recommendation={recommendation} />)
         : <div className="planner-results-empty"><Crown aria-hidden="true" /><strong>{copy.resultTitle}</strong><span>{emptyResult}</span></div>}
       {loading && response ? <span className="planner-recalculating-status" role="status">{copy.recalculating}</span> : null}
     </section>

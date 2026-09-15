@@ -3572,6 +3572,8 @@ select {
 .planner-recommendation__metrics span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .planner-recommendation__metrics b { color: var(--theme-text); font-size: 14px; font-weight: 900; }
 .planner-recommendation__party { display: grid; width: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); align-self: stretch; align-items: stretch; gap: 7px; height: 100%; }
+.planner-recommendation__party[data-centered="true"] { display: flex; justify-content: center; }
+.planner-recommendation__party[data-centered="true"] > * { flex: 0 0 calc((100% - 28px) / 5); }
 .planner-assignment-preview { --planner-role-color: #ef4b56; position: relative; isolation: isolate; min-width: 0; min-height: 0; height: 100%; display: grid; grid-template-rows: minmax(33px, 42px) auto; justify-items: center; align-content: center; gap: 3px; overflow: visible; padding: 5px; border: 1px solid color-mix(in srgb, var(--planner-class-color) 68%, var(--theme-border)); border-radius: 8px; color: var(--theme-text); background: linear-gradient(160deg, color-mix(in srgb, var(--planner-role-color) 12%, color-mix(in srgb, var(--planner-class-color) 10%, var(--theme-surface-2))), color-mix(in srgb, var(--theme-surface-1) 95%, transparent)); box-shadow: inset 0 0 16px color-mix(in srgb, var(--planner-role-color) 13%, transparent), 0 0 9px color-mix(in srgb, var(--planner-role-color) 16%, transparent); }
 .planner-assignment-preview[data-role="tank"], .planner-player-card[data-role="tank"] { --planner-role-color: #3f8cff; }
 .planner-assignment-preview[data-role="healer"], .planner-player-card[data-role="healer"] { --planner-role-color: #42d67a; }
@@ -3633,6 +3635,8 @@ select {
 .planner-party-trapezoid[data-dps-count="1"] > [data-party-slot="dps-1"] { grid-column: 3 / span 2; }
 .planner-party-trapezoid[data-dps-count="2"] > [data-party-slot="dps-1"] { grid-column: 2 / span 2; }
 .planner-party-trapezoid[data-dps-count="2"] > [data-party-slot="dps-2"] { grid-column: 4 / span 2; }
+.planner-party-trapezoid[data-single-row-pair="true"] { grid-template-rows: calc((100% - 10px) / 2); align-content: center; }
+.planner-party-trapezoid[data-single-row-pair="true"] > [data-party-slot] { grid-row: 1; }
 .planner-player-card { --planner-role-color: #ef4b56; position: relative; isolation: isolate; overflow: visible; display: grid; grid-template-rows: auto minmax(54px, 1fr); align-content: stretch; gap: 6px; padding: 9px 14px 12px; border-color: color-mix(in srgb, var(--planner-class-color) 68%, var(--theme-border)); background: linear-gradient(150deg, color-mix(in srgb, var(--planner-role-color) 9%, color-mix(in srgb, var(--planner-class-color) 11%, var(--theme-surface-2))), var(--theme-surface-1)); box-shadow: inset 0 0 18px color-mix(in srgb, var(--planner-role-color) 10%, transparent), 0 0 8px color-mix(in srgb, var(--planner-role-color) 10%, transparent); }
 .planner-player-card > .planner-role-watermark { inset: 7px; opacity: 0.3; }
 .planner-player-card > .planner-role-watermark .wow-role-icon { --wow-role-icon-size: 142px; --wow-role-sheet-size: 542.57px; transform: scale(1.08); }

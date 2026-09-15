@@ -288,7 +288,10 @@ and role markers use Blizzard's LFG role artwork. The Planner sidebar defaults t
 accessible `Rellenar la composición` switch followed by a 50/50 Quick/Advanced selector between
 character configuration and minimum level. The switch defaults on; turning it off sends the modern
 additive `fillComposition: false`, suppresses external vacancies, and centers the remaining detail
-cards within their Tank/Healer and DPS role rows. The sidebar owns an inner scroll area with hidden
+cards within their Tank/Healer and DPS role rows. Compact incomplete parties are centered
+horizontally while retaining the normal five-slot card width. In expanded detail, exactly two cards
+sharing the upper Tank/Healer row or lower DPS row are centered vertically as a pair; mixed-row
+combinations and the default role coordinates are unchanged. The sidebar owns an inner scroll area with hidden
 scrollbars and shows a bottom overlay cue only while more content remains; the cue scrolls directly
 to the end. Quick
 shows BL/BRez/Offensive Synergy; Advanced additionally shows Group Defense and Dungeon Utility while
