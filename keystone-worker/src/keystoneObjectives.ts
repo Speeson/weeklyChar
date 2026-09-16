@@ -35,6 +35,7 @@ export type KeystoneLootObjectiveDTO = {
   itemLevel: number | null
   variantKey: string
   voidcoreState: KeystoneLootVoidcoreState
+  owned?: true
 }
 
 export type KeystoneLootObjectiveFilters = {
@@ -128,8 +129,9 @@ function compareFavorites(left: KeystoneLootFavorite, right: KeystoneLootFavorit
 function objectiveFromFavorite(
   favorite: KeystoneLootFavorite,
   usedItems: ReadonlySet<number> | null,
+  ownedItems: ReadonlySet<number>,
 ): KeystoneLootObjectiveDTO {
-  return {
+  const objective: KeystoneLootObjectiveDTO = {
     itemId: favorite.itemId,
     itemName: null,
     iconUrl: null,
@@ -152,6 +154,8 @@ function objectiveFromFavorite(
       ? 'voidcore_not_checked'
       : usedItems.has(favorite.itemId) ? 'completed_with_voidcore' : 'pending',
   }
+  if (ownedItems.has(favorite.itemId)) objective.owned = true
+  return objective
 }
 
 export function buildKeystoneLootPlannerObjectives(
@@ -176,10 +180,11 @@ export function buildKeystoneLootPlannerObjectives(
     }
   }
   const usedItems = snapshot.voidcore.checked ? new Set(snapshot.voidcore.usedItems) : null
+  const ownedItems = new Set(snapshot.favorites.filter(favorite => favorite.owned === true).map(favorite => favorite.itemId))
   return [...selected.values()]
     .sort(compareFavorites)
-    .map(favorite => objectiveFromFavorite(favorite, usedItems))
-    .filter(objective => objective.voidcoreState !== 'completed_with_voidcore')
+    .map(favorite => objectiveFromFavorite(favorite, usedItems, ownedItems))
+    .filter(objective => objective.voidcoreState !== 'completed_with_voidcore' && objective.owned !== true)
 }
 
 function filterFingerprint(filters: KeystoneLootObjectiveFilters): string {
@@ -258,7 +263,8 @@ export function buildKeystoneLootObjectivePage(
   const page = ordered.slice(offset, offset + filters.limit)
   const nextOffset = offset + page.length
   const usedItems = snapshot.voidcore.checked ? new Set(snapshot.voidcore.usedItems) : null
-  const objectives = page.map(favorite => objectiveFromFavorite(favorite, usedItems))
+  const ownedItems = new Set(snapshot.favorites.filter(favorite => favorite.owned === true).map(favorite => favorite.itemId))
+  const objectives = page.map(favorite => objectiveFromFavorite(favorite, usedItems, ownedItems))
 
   return {
     status: ordered.length === 0 ? 'empty' : 'available',

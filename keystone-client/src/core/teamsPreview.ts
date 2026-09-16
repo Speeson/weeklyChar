@@ -64,6 +64,7 @@ const characterObjectives = [
   objective(231007, 4, { specIds: [62, 64] }), objective(231008, 99, { specIds: [62] }),
   objective(231009, 3, { specIds: [62, 64], voidcoreState: "completed_with_voidcore" }),
   objective(231010, 2, { specIds: [64], voidcoreState: "voidcore_not_checked", slotName: null, itemClassName: null, itemSubClassName: null, statNames: [], primaryStatNames: [], secondaryStatNames: [], otherStatNames: [], qualityType: null }),
+  objective(231011, 3, { specIds: [62], itemName: "Objeto ya obtenido", owned: true }),
 ];
 
 const fullSelector: KeystoneSelectorResponse = {

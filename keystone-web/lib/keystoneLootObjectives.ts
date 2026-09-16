@@ -17,6 +17,7 @@ export type KeystoneLootObjective = {
   itemSubClassName: string | null
   statNames: string[]
   voidcoreState: KeystoneLootVoidcoreState
+  owned?: boolean
 }
 
 export type OwnerObjectivesStatus =
@@ -137,6 +138,7 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
     || !nullableString(value.itemClassName, 128)
     || !nullableString(value.itemSubClassName, 128)
     || !statNames(value.statNames)
+    || !(value.owned === undefined || typeof value.owned === 'boolean')
     || typeof value.voidcoreState !== 'string'
     || !VOIDCORE_STATES.includes(value.voidcoreState as KeystoneLootVoidcoreState)) return null
 
@@ -148,7 +150,7 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
     }
   }
 
-  return {
+  const objective: KeystoneLootObjective = {
     itemId: value.itemId,
     itemName: value.itemName,
     iconUrl: value.iconUrl,
@@ -163,6 +165,8 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
     statNames: [...value.statNames],
     voidcoreState: value.voidcoreState as KeystoneLootVoidcoreState,
   }
+  if (value.owned === true) objective.owned = true
+  return objective
 }
 
 export function parseOwnerObjectivesResponse(value: unknown): OwnerObjectivesResponse | null {
@@ -228,6 +232,54 @@ export function objectiveItemName(objective: Pick<KeystoneLootObjective, 'itemId
   return objective.itemName ?? `Objeto #${objective.itemId}`
 }
 
+function normalizedMetadata(value: string | null): string {
+  return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+function includesMetadata(value: string, terms: string[]): boolean {
+  return terms.some(term => value.includes(term))
+}
+
+export function compactItemSlotLabel(objective: Pick<KeystoneLootObjective, 'slotId' | 'slotName' | 'itemClassName' | 'itemSubClassName'>): string | null {
+  const itemClass = normalizedMetadata(objective.itemClassName)
+  const subClass = normalizedMetadata(objective.itemSubClassName)
+  const oneHand = includesMetadata(subClass, ['one-handed', 'one handed', 'una mano'])
+  const twoHand = includesMetadata(subClass, ['two-handed', 'two handed', 'dos manos'])
+  const hand = oneHand ? '1M ' : twoHand ? '2M ' : ''
+  let weapon: string | null = null
+  if (includesMetadata(subClass, ['sword', 'espada'])) weapon = `${hand}Esp.`
+  else if (includesMetadata(subClass, ['mace', 'maza'])) weapon = `${hand}Maza`
+  else if (includesMetadata(subClass, ['axe', 'hacha'])) weapon = `${hand}Hacha`
+  else if (includesMetadata(subClass, ['polearm', 'arma de asta', 'armas de asta'])) weapon = 'Arm. Asta'
+  else if (includesMetadata(subClass, ['staff', 'staves', 'baculo', 'baston'])) weapon = 'Bastón'
+  else if (includesMetadata(subClass, ['dagger', 'daga'])) weapon = 'Daga'
+  else if (includesMetadata(subClass, ['fist weapon', 'arma de puno', 'armas de puno'])) weapon = 'Puño'
+  else if (includesMetadata(subClass, ['crossbow', 'ballesta'])) weapon = 'Ballesta'
+  else if (includesMetadata(subClass, ['bow', 'arco'])) weapon = 'Arco'
+  else if (includesMetadata(subClass, ['gun', 'arma de fuego', 'armas de fuego'])) weapon = 'Fusil'
+  else if (includesMetadata(subClass, ['wand', 'varita'])) weapon = 'Varita'
+  else if (includesMetadata(subClass, ['shield', 'escudo'])) weapon = 'Escudo'
+  if (weapon && (itemClass === 'arma' || includesMetadata(itemClass, ['weapon']) || objective.slotId === 16 || objective.slotId === 17)) return weapon
+
+  const slot = normalizedMetadata(objective.slotName)
+  const slots: Array<[string[], string]> = [
+    [['head', 'cabeza'], 'Cabeza'], [['neck', 'cuello'], 'Cuello'], [['shoulder', 'hombro'], 'Hombros'],
+    [['back', 'cloak', 'cape', 'espalda', 'capa'], 'Espalda'], [['chest', 'robe', 'pecho', 'torso'], 'Pecho'],
+    [['wrist', 'muneca'], 'Muñec.'], [['main hand', 'mano principal'], 'Mano ppal.'], [['off hand', 'mano secundaria'], 'Mano sec.'],
+    [['hands', 'gloves', 'manos'], 'Manos'], [['waist', 'cintura'], 'Cintura'],
+    [['legs', 'piernas'], 'Piernas'], [['feet', 'pies'], 'Pies'], [['finger', 'ring', 'dedo', 'anillo'], 'Anillo'],
+    [['trinket', 'abalorio'], 'Abal.'],
+  ]
+  const matched = slots.find(([terms]) => includesMetadata(slot, terms))
+  if (matched) return matched[1]
+  const fallback: Record<number, string> = {
+    1: 'Cabeza', 2: 'Cuello', 3: 'Hombros', 5: 'Pecho', 6: 'Cintura', 7: 'Piernas', 8: 'Pies',
+    9: 'Muñec.', 10: 'Manos', 11: 'Anillo', 12: 'Anillo', 13: 'Abal.', 14: 'Abal.', 15: 'Espalda',
+    16: 'Mano ppal.', 17: 'Mano sec.',
+  }
+  return objective.slotId === null ? null : fallback[objective.slotId] ?? null
+}
+
 export function objectiveSourceLabel(
   objective: Pick<KeystoneLootObjective, 'sourceType' | 'sourceId'>,
   dungeonNames: ReadonlyMap<number, string> = new Map(),
@@ -249,6 +301,11 @@ export function voidcorePresentation(state: KeystoneLootVoidcoreState): { label:
     return { label: 'Estado de Voidcore sin verificar', tone: 'text-gray-400' }
   }
   return { label: 'Pendiente', tone: 'text-yellow-300' }
+}
+
+export function objectiveStatePresentation(objective: Pick<KeystoneLootObjective, 'owned' | 'voidcoreState'>): { label: string, tone: string } {
+  if (objective.owned) return { label: 'Ya lo tienes', tone: 'text-emerald-300' }
+  return voidcorePresentation(objective.voidcoreState)
 }
 
 export function ownerObjectiveStatusMessage(status: OwnerObjectivesStatus): string | null {

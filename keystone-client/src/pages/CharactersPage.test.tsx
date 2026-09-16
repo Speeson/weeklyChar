@@ -315,6 +315,10 @@ describe("CharactersPage", () => {
     const tooltips = container.querySelectorAll(".vault-slot__tooltip");
     expect(tooltips).toHaveLength(9);
     expect(Array.from(tooltips).some(tooltip => tooltip.textContent?.includes("+12 Altar de los Colmillos"))).toBe(true);
+    expect(tooltips[0]).toHaveTextContent("ilvl 316 (Héroe)");
+    expect(tooltips[3]).toHaveTextContent("ilvl 318 (Mito)");
+    expect(tooltips[6]).toHaveTextContent("ilvl 315 (Héroe)");
+    expect(Array.from(tooltips[3].querySelectorAll("em")).some(line => line.textContent?.includes("ilvl"))).toBe(false);
     expect(Array.from(tooltips).some(tooltip => tooltip.textContent?.includes("Reina Ansurek"))).toBe(true);
     expect(Array.from(tooltips).some(tooltip => tooltip.textContent?.includes("Nivel 8 × 2"))).toBe(true);
     expect(Array.from(container.querySelectorAll(".vault-slot__tooltip > em.is-completed"))

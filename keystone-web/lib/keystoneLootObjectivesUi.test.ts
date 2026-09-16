@@ -47,6 +47,11 @@ test('drawer renders loading, objective, icon fallback and every recoverable act
   assert.match(drawer, /loadObjectives\(character, dungeonId, specId, response\.nextCursor, true\)/u)
 })
 
+test('owned objectives mute their direct item and tier presentation', () => {
+  assert.match(sharedList, /objective\.owned \? 'text-gray-400' : 'text-gray-100'/u)
+  assert.match(sharedList, /objective\.owned \? 'border-gray-700 bg-gray-900 text-gray-500' : tier\.tone/u)
+})
+
 test('dungeon and specialization filters reset pagination and remain server-authoritative', () => {
   assert.match(drawer, /MIDNIGHT_SEASON_2_DUNGEONS\.map/u)
   assert.match(drawer, /specOptionsForClass/u)

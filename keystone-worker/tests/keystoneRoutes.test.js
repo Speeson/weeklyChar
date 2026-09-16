@@ -360,6 +360,7 @@ test('KeystoneLoot rejects invalid optional favorite and Voidcore fields', async
     payload => { payload.keystoneLoot.favorites[0].itemLevel = 0 },
     payload => { payload.keystoneLoot.favorites[0].itemLevel = 402.5 },
     payload => { payload.keystoneLoot.favorites[0].qualityType = 'MYTHIC' },
+    payload => { payload.keystoneLoot.favorites[0].owned = 'true' },
     payload => { payload.keystoneLoot.favorites[0].variantKey = 'bonus:wrong' },
     payload => { payload.keystoneLoot.voidcore.checked = 'true' },
     payload => { payload.keystoneLoot.voidcore.usedItems = [249343, 0] },
@@ -392,6 +393,7 @@ test('KeystoneLoot accepts exact variant metadata and legacy favorites', async (
 
   assert.equal(response.status, 200)
   const stored = JSON.parse(env.DB.characters[0].keystone_loot_json)
+  assert.equal(stored.favorites[0].owned, true)
   assert.equal(stored.favorites[0].itemLevel, undefined)
   assert.equal(stored.favorites.at(-1).itemLevel, 402)
   assert.equal(stored.favorites.at(-1).qualityType, 'EPIC')

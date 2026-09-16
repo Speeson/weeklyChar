@@ -150,6 +150,39 @@ test('selector dedupes top-level objectives across specs while preserving action
   assert.equal(result.characters[1].objectives[0].voidcoreState, 'voidcore_not_checked')
 })
 
+test('owned favorites are returned for display without contributing to selector counts', () => {
+  const result = buildKeystoneLootDungeonSummary(1, 249, { stoneCount: 0, stones: [] }, [
+    character(1, 'OwnedOnly', supported([favorite(10, 3, { owned: true })])),
+    character(2, 'Pending', supported([favorite(11, 2)])),
+  ])
+
+  assert.deepEqual(result.summary, {
+    charactersWithObjectives: 1,
+    totalObjectives: 1,
+    tiers: {
+      bestInSlot: 0, mustHave: 1, niceToHave: 0,
+      catalyst: 0, transmog: 0, other: 0,
+    },
+  })
+  assert.equal(result.characters.find(character => character.characterName === 'OwnedOnly').totalObjectives, 0)
+  assert.equal(result.characters.find(character => character.characterName === 'OwnedOnly').objectives[0].owned, true)
+})
+
+test('item-wide ownership keeps cross-spec selector counts internally consistent', () => {
+  const result = buildKeystoneLootDungeonSummary(1, 249, { stoneCount: 0, stones: [] }, [
+    character(1, 'MixedOwnership', supported([
+      favorite(10, 3, { specId: 102 }),
+      favorite(10, 1, { specId: 103, owned: true }),
+    ])),
+  ])
+
+  assert.equal(result.summary.charactersWithObjectives, 0)
+  assert.equal(result.summary.totalObjectives, 0)
+  assert.equal(result.characters[0].totalObjectives, 0)
+  assert.deepEqual(result.characters[0].specs, [])
+  assert.equal(result.characters[0].objectives[0].owned, true)
+})
+
 test('selector character ordering follows total, BiS, Must, name, realm and stable ID', () => {
   const sources = [
     character(9, 'Zulu', supported([favorite(1, 2)])),

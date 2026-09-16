@@ -219,7 +219,7 @@ class SyncWorkerContractTests(unittest.TestCase):
                   character = "Auralis", realm = "Everlight", region = "eu",
                   vault = {
                     raid = { slots = { { encounters = {} } } },
-                    dungeons = { topRuns = { { level = 12, mapChallengeModeID = 501 } } },
+                    dungeons = { slots = { { unlocked = true, rewardItemLevel = 318, rewardUpgradeTrack = "Myth" } }, topRuns = { { level = 12, mapChallengeModeID = 501 } } },
                     world = { tierProgress = { { difficulty = 8, numPoints = 2 } } },
                   },
                 } }''',
@@ -235,6 +235,8 @@ class SyncWorkerContractTests(unittest.TestCase):
         vault = posts[0]["vault"]
         self.assertEqual(vault["raid"]["slots"][0]["encounters"], [])
         self.assertEqual(vault["dungeons"]["topRuns"], [{"level": 12, "mapChallengeModeID": 501}])
+        self.assertEqual(vault["dungeons"]["slots"][0]["rewardItemLevel"], 318)
+        self.assertEqual(vault["dungeons"]["slots"][0]["rewardUpgradeTrack"], "Myth")
         self.assertEqual(vault["world"]["tierProgress"], [{"difficulty": 8, "numPoints": 2}])
 
     def test_season2_currency_contract_survives_savedvariables_payload(self):
@@ -301,6 +303,11 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(snapshot["favorites"][0]["itemLevel"], 402)
         self.assertEqual(snapshot["favorites"][0]["qualityType"], "EPIC")
         self.assertEqual(snapshot["favorites"][0]["variantKey"], "bonus:1498,6652")
+
+    def test_owned_favorite_flag_survives_json_normalization(self):
+        snapshot = _keystone_loot_for_json({"favorites": {1: {"itemId": 251119, "owned": True}}})
+
+        self.assertTrue(snapshot["favorites"][0]["owned"])
 
     def test_keystoneloot_unavailable_state_survives_transport(self):
         [post] = self.capture_sync_payloads("keystoneloot-unavailable.lua")

@@ -11,6 +11,7 @@ import { keystoneColor } from '@/lib/colors'
 import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
 import { currencyCapState, formatTrovehunterStatus, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, wowheadHref } from '@/lib/season2Currencies'
 import { formatSparkQuantity } from '@/lib/sparkQuantity'
+import { formatVaultReward } from '@/lib/vaultRewards'
 
 interface Keystone {
   level: number | null
@@ -23,11 +24,14 @@ interface VaultSlot {
   progress?: number | null
   threshold?: number | null
   unlocked?: boolean
+  rewardItemLevel?: number | null
+  rewardUpgradeTrack?: string | null
 }
 
 interface VaultBucket {
   unlocked?: number
   slots?: VaultSlot[]
+  topRuns?: Array<{ level?: number | null; mapChallengeModeID?: number | null; name?: string | null }>
 }
 
 interface PreyBucket {
@@ -236,12 +240,20 @@ function vaultProgress(bucket: VaultBucket | undefined, maxProgress: number) {
   return `(${current}/${maxProgress})`
 }
 
-function VaultProgress({ bucket, maxProgress }: { bucket?: VaultBucket; maxProgress: number }) {
+function VaultProgress({ bucket, dungeon = false, maxProgress }: { bucket?: VaultBucket; dungeon?: boolean; maxProgress: number }) {
   const progress = vaultProgress(bucket, maxProgress)
+  const topRuns = dungeon ? (bucket?.topRuns ?? []).slice(0, 8) : []
+  const slots = [...(bucket?.slots ?? [])].sort((a, b) => (a.threshold ?? 0) - (b.threshold ?? 0)).slice(0, 3)
+  const hasRewards = slots.some(slot => slot.unlocked && slot.rewardItemLevel)
+  const hasDetails = hasRewards || topRuns.length > 0
   return (
-    <span className="whitespace-pre">
+    <span className="group relative inline-flex whitespace-pre" tabIndex={hasDetails ? 0 : -1}>
       {vaultSlots(bucket)}
       {progress && <span className="ml-2 text-xs text-gray-400">{progress}</span>}
+      {hasDetails && <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-56 -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-950 p-2 text-left shadow-xl group-hover:grid group-focus:grid">
+        {slots.map((slot, index) => { const reward = slot.unlocked ? formatVaultReward(slot.rewardItemLevel, slot.rewardUpgradeTrack, 'es') : null; return <span key={`${slot.threshold ?? index}`} className="flex items-center justify-between gap-4 py-0.5 text-xs"><span className="text-gray-400">Cofre {index + 1}: {slot.progress ?? 0}/{slot.threshold ?? 0}</span>{reward ? <b className="text-emerald-300">{reward}</b> : null}</span> })}
+        {topRuns.map((run, index) => { const level = run.level ?? 0; return <span key={`${run.mapChallengeModeID ?? run.name}-${level}-${index}`} className="py-0.5 text-xs"><span className="truncate text-gray-300">{(run.mapChallengeModeID && DUNGEON_ABBR_BY_ID.get(run.mapChallengeModeID)) ?? run.name ?? 'Mythic+'} +{level}</span></span> })}
+      </span>}
     </span>
   )
 }
@@ -630,7 +642,7 @@ export default function SummaryPage() {
                   {!collapsedSections.greatVault && (
                     <>
                       <InfoRow label="Raids">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
-                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} maxProgress={8} /></Cell>)}</InfoRow>
+                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} dungeon maxProgress={8} /></Cell>)}</InfoRow>
                       <InfoRow label="World">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
                     </>
                   )}

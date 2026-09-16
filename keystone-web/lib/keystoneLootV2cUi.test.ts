@@ -56,7 +56,7 @@ test('Owner, Team and Selector surfaces reuse one safe tooltip presentation comp
   assert.match(selector, /KeystoneLootItemTooltip/u)
   assert.match(sharedList, /objectiveItemName/u)
   assert.match(sharedList, /tierPresentation/u)
-  assert.match(sharedList, /voidcorePresentation/u)
+  assert.match(sharedList, /objectiveStatePresentation/u)
   assert.match(sharedList, /objective\.iconUrl/u)
   assert.match(sharedList, /<svg/u)
   assert.match(sharedList, /break-words/u)

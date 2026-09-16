@@ -108,6 +108,7 @@ function summary(challengeMapId = 399) {
           { ...baseObjective, itemId: 12348, itemName: 'Catalizador latente', tier: 5, specIds: [64] },
           { ...baseObjective, itemId: 12349, itemName: 'Reliquia futura', tier: 99, specIds: [62] },
           { ...baseObjective, itemId: 12350, itemName: 'Recuerdo completado', tier: 3, specIds: [62, 64], voidcoreState: 'completed_with_voidcore' },
+          { ...baseObjective, itemId: 12351, itemName: 'Brazales ya obtenidos', tier: 3, specIds: [62], owned: true },
         ],
       },
       {
@@ -209,7 +210,7 @@ test('switching dungeons aborts stale results, keeps zero-count selectable and s
   await screenshot(page, testInfo, 'desktop-selector-empty')
 })
 
-test('summary preserves character order and expanded multi-spec grids expose completed items and keyboard tooltip', async ({ page }, testInfo) => {
+test('summary preserves character order and expanded multi-spec grids keep obtained items inline with keyboard tooltips', async ({ page }, testInfo) => {
   await setup(page)
   await page.getByRole('button', { name: /Ruby Life Pools.*2 piedras/u }).click()
   await expect(page.getByText('2 personajes · 6 objetivos')).toBeVisible()
@@ -222,8 +223,10 @@ test('summary preserves character order and expanded multi-spec grids expose com
   await cards.nth(0).getByRole('button', { name: 'Ver objetos' }).click()
   await expect(cards.nth(0).getByRole('button', { name: /Arcane · 3/u })).toBeVisible()
   await expect(cards.nth(0).getByRole('button', { name: /Frost · 4/u })).toBeVisible()
-  await expect(cards.nth(0).getByText('BEST IN SLOT · 1')).toBeVisible()
-  await expect(cards.nth(0).getByText('Completados con Voidcore')).toBeVisible()
+  await expect(cards.nth(0).getByText('BEST IN SLOT · 3')).toBeVisible()
+  await expect(cards.nth(0).getByText('Completados / obtenidos')).toHaveCount(0)
+  await expect(cards.nth(0).getByLabel('Ya lo tienes')).toBeVisible()
+  await expect(cards.nth(0).getByText('Muñec.', { exact: true }).first()).toBeVisible()
 
   await cards.nth(1).getByRole('button', { name: 'Ver objetos' }).click()
   await expect(cards.nth(1).getByRole('button', { name: /Todas · 1/u })).toHaveCount(0)

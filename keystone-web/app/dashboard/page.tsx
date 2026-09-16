@@ -2,13 +2,14 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { type CSSProperties, type DragEvent, useEffect, useMemo, useState } from 'react'
+import { type CSSProperties, type DragEvent, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { apiFetch, getToken, getUsername, hydrateProfile } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
 import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 import WeeklyReset from '@/app/components/WeeklyReset'
+import { formatVaultReward } from '@/lib/vaultRewards'
 import {
   compactKeystoneLabel,
   DUNGEON_ABBR_BY_ID,
@@ -34,7 +35,9 @@ interface Character {
   wowClass?: string | null
   currentKeystone: Keystone | null
   vault?: {
+    raid?: VaultBucket
     dungeons?: VaultBucket
+    world?: VaultBucket
   } | null
   currencies?: Record<string, CurrencyInfo> | null
 }
@@ -44,11 +47,18 @@ interface VaultSlot {
   progress?: number | null
   threshold?: number | null
   unlocked?: boolean
+  rewardItemLevel?: number | null
+  rewardUpgradeTrack?: string | null
 }
 
 interface VaultBucket {
   unlocked?: number
   slots?: VaultSlot[]
+  topRuns?: Array<{
+    level?: number | null
+    mapChallengeModeID?: number | null
+    name?: string | null
+  }>
 }
 
 interface CurrencyInfo {
@@ -167,11 +177,19 @@ function vaultSlots(bucket?: VaultBucket) {
   }).join('  ')
 }
 
-function vaultProgress(bucket?: VaultBucket) {
+function vaultProgress(bucket: VaultBucket | undefined, maxProgress: number) {
   const slots = bucket?.slots ?? []
-  if (!slots.length) return '(0/8)'
-  const current = Math.min(8, Math.max(...slots.map(slot => slot.progress ?? 0)))
-  return `(${current}/8)`
+  if (!slots.length) return `(0/${maxProgress})`
+  const current = Math.min(maxProgress, Math.max(...slots.map(slot => slot.progress ?? 0)))
+  return `(${current}/${maxProgress})`
+}
+
+function vaultRewardLevels(bucket?: VaultBucket) {
+  return [...(bucket?.slots ?? [])]
+    .sort((a, b) => (a.threshold ?? 0) - (b.threshold ?? 0))
+    .slice(0, 3)
+    .map(slot => slot.unlocked ? formatVaultReward(slot.rewardItemLevel, slot.rewardUpgradeTrack, 'es') ?? '—' : '—')
+    .join('  ')
 }
 
 function nebulousVoidcore(char: Character) {
@@ -180,19 +198,36 @@ function nebulousVoidcore(char: Character) {
   return info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0
 }
 
-function CharacterInfoTooltip({ char }: { char: Character }) {
+function CharacterInfoTooltip({ char, id }: { char: Character; id: string }) {
   const dungeons = char.vault?.dungeons
   const voidcore = nebulousVoidcore(char)
+  const topRuns = (dungeons?.topRuns ?? []).slice(0, 8)
+  const vaultCategories = [
+    ['Raids', char.vault?.raid, 6],
+    ['Dungeons', dungeons, 8],
+    ['World', char.vault?.world, 8],
+  ] as const
 
   return (
-    <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-3 w-max -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-950/95 p-3 text-left opacity-0 shadow-2xl shadow-black/60 backdrop-blur transition group-hover:opacity-100">
+    <div id={id} role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-3 w-max -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-950/95 p-3 text-left opacity-0 shadow-2xl shadow-black/60 backdrop-blur transition group-hover:opacity-100 group-focus-within:opacity-100">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-500">Great Vault - Dungeons</p>
-          <div className="mt-1 flex min-w-full items-center justify-between gap-3 rounded-lg bg-gray-900/80 px-3 py-2">
-          <span className="whitespace-pre text-sm font-semibold text-green-400">{vaultSlots(dungeons)}</span>
-          <span className="text-xs font-bold text-gray-400">{vaultProgress(dungeons)}</span>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-500">Great Vault</p>
+          <div className="mt-1 grid gap-1">
+            {vaultCategories.map(([label, bucket, maxProgress]) => <div key={label} className="rounded-lg bg-gray-900/80 px-3 py-2">
+              <div className="flex min-w-full items-center justify-between gap-3"><span className="text-[10px] font-bold uppercase text-gray-500">{label}</span><span className="text-xs font-bold text-gray-400">{vaultProgress(bucket, maxProgress)}</span></div>
+              <div className="mt-1 flex items-center justify-between gap-5"><span className="whitespace-pre text-sm font-semibold text-green-400">{vaultSlots(bucket)}</span><strong className="whitespace-pre text-xs text-emerald-300">{vaultRewardLevels(bucket)}</strong></div>
+            </div>)}
           </div>
+          {topRuns.length > 0 && (
+            <div className="mt-1 grid gap-1 rounded-lg border border-gray-800 bg-gray-950/80 px-3 py-2 text-xs">
+              {topRuns.map((run, index) => {
+                const level = run.level ?? 0
+                const dungeon = (run.mapChallengeModeID && DUNGEON_ABBR_BY_ID.get(run.mapChallengeModeID)) ?? run.name ?? 'Mythic+'
+                return <div key={`${run.mapChallengeModeID ?? run.name}-${level}-${index}`}><span className="text-gray-300">{dungeon} <b className="text-white">+{level}</b></span></div>
+              })}
+            </div>
+          )}
         </div>
         <div className="mt-4 flex flex-shrink-0 items-center gap-2 rounded-lg bg-gray-900/80 px-3 py-2">
           <img
@@ -250,6 +285,7 @@ function saveTeamOrder(value: number[]) {
 }
 
 function CharacterPill({ char, compact = false, showTooltip = false }: { char: Character; compact?: boolean; showTooltip?: boolean }) {
+  const tooltipId = useId()
   const noKey = !char.currentKeystone?.level
   const stale = isStale(char)
   const avatarSize = compact ? 'h-6 w-6' : 'h-9 w-9'
@@ -265,6 +301,8 @@ function CharacterPill({ char, compact = false, showTooltip = false }: { char: C
         className={`group relative min-w-0 rounded-xl border px-2.5 py-1.5 shadow-[inset_0_1px_0_var(--class-soft)] transition-shadow duration-200 hover:shadow-[0_0_24px_var(--class-glow),inset_0_1px_0_var(--class-soft)] ${stateClass}`}
         style={classCardStyle(char.wowClass)}
         title={`${char.name} · ${fullKeystoneLabel(char.currentKeystone)} · ${relativeTime(char.currentKeystone?.updatedAt)}`}
+        tabIndex={showTooltip ? 0 : undefined}
+        aria-describedby={showTooltip ? tooltipId : undefined}
       >
         <div className="flex items-center gap-2">
           {char.avatarUrl ? (
@@ -282,7 +320,7 @@ function CharacterPill({ char, compact = false, showTooltip = false }: { char: C
         <div className={`mt-1.5 rounded-lg px-2 py-1 text-center text-[11px] font-black ${noKey ? 'bg-gray-900 text-gray-600' : 'bg-gray-950 text-yellow-300'}`}>
           {keystoneLabel(char)}
         </div>
-        {showTooltip && <CharacterInfoTooltip char={char} />}
+        {showTooltip && <CharacterInfoTooltip char={char} id={tooltipId} />}
       </div>
     )
   }
@@ -292,6 +330,8 @@ function CharacterPill({ char, compact = false, showTooltip = false }: { char: C
       className={`group relative flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2 shadow-[inset_0_1px_0_var(--class-soft)] transition-shadow duration-200 hover:shadow-[0_0_24px_var(--class-glow),inset_0_1px_0_var(--class-soft)] ${stateClass}`}
       style={classCardStyle(char.wowClass)}
       title={`${char.name} · ${fullKeystoneLabel(char.currentKeystone)} · ${relativeTime(char.currentKeystone?.updatedAt)}`}
+      tabIndex={showTooltip ? 0 : undefined}
+      aria-describedby={showTooltip ? tooltipId : undefined}
     >
       {char.avatarUrl ? (
         <img src={char.avatarUrl} alt="" className={`${avatarSize} flex-shrink-0 rounded-full border border-gray-700 object-cover`} />
@@ -307,7 +347,7 @@ function CharacterPill({ char, compact = false, showTooltip = false }: { char: C
       <span className={`flex-shrink-0 rounded-lg px-2 py-1 text-xs font-black ${noKey ? 'bg-gray-900 text-gray-600' : 'bg-gray-950 text-yellow-300'}`}>
         {keystoneLabel(char)}
       </span>
-      {showTooltip && <CharacterInfoTooltip char={char} />}
+      {showTooltip && <CharacterInfoTooltip char={char} id={tooltipId} />}
     </div>
   )
 }

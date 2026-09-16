@@ -12,6 +12,7 @@ sys.path.insert(0, str(REPO_ROOT / "keystone-client" / "sidecar"))
 
 from team_service import (  # noqa: E402
     TeamService, TeamServiceError, _objective, _planner_request_valid, sanitize_planner,
+    sanitize_selector,
 )
 
 
@@ -166,6 +167,9 @@ class TeamServiceTests(unittest.TestCase):
         self.assertEqual(projected["secondaryStatNames"], ["Celeridad"])
         self.assertEqual(projected["otherStatNames"], ["Evitación"])
         self.assertNotIn("numericStats", projected)
+        owned = _objective({**objective, "owned": True})
+        self.assertTrue(owned["owned"])
+        self.assertNotIn("owned", projected)
         for malformed in (
             {**objective, "qualityType": "MYTHIC"},
             {**objective, "itemLevel": 0},
@@ -174,9 +178,40 @@ class TeamServiceTests(unittest.TestCase):
             {**objective, "primaryStatNames": [42]},
             {**objective, "secondaryStatNames": ["Intelecto"]},
             {**objective, "otherStatNames": [], "statNames": ["Intelecto", "Celeridad", "Evitación"]},
+            {**objective, "owned": "yes"},
+            {**objective, "owned": None},
         ):
             with self.subTest(malformed=malformed):
                 self.assertIsNone(_objective(malformed))
+
+    def test_selector_accepts_owned_only_character_without_counting_it_as_pending(self):
+        objective = {
+            "itemId": 10, "itemName": "Báculo", "iconUrl": None, "tier": 3,
+            "specIds": [62], "sourceType": "dungeon", "sourceId": 588, "slotId": 16,
+            "slotName": "Mano principal", "itemClassName": "Arma", "itemSubClassName": "Báculo",
+            "statNames": [], "primaryStatNames": [], "secondaryStatNames": [], "otherStatNames": [],
+            "qualityType": "EPIC", "itemLevel": 402, "variantKey": "base",
+            "voidcoreState": "pending", "owned": True,
+        }
+        zero_tiers = {"bestInSlot": 0, "mustHave": 0, "niceToHave": 0,
+                      "catalyst": 0, "transmog": 0, "other": 0}
+        payload = {
+            "teamId": 7, "challengeMapId": 588,
+            "availability": {"stoneCount": 0, "stones": []},
+            "summary": {"charactersWithObjectives": 0, "totalObjectives": 0, "tiers": zero_tiers},
+            "characters": [{
+                "userId": 1, "username": "owner", "characterId": 10, "characterName": "OwnedOnly",
+                "realm": "Zul'jin", "region": "eu", "wowClass": "Mage", "avatarUrl": None,
+                "ilvl": 318, "rioScore": 3000, "totalObjectives": 0, "tierCounts": zero_tiers,
+                "specs": [], "objectives": [objective],
+            }],
+        }
+
+        sanitized = sanitize_selector(payload, 7, 588)
+
+        self.assertIsNotNone(sanitized)
+        self.assertEqual(sanitized["summary"]["charactersWithObjectives"], 0)
+        self.assertTrue(sanitized["characters"][0]["objectives"][0]["owned"])
 
     def test_status_codes_map_to_stable_safe_errors(self):
         expected = {400: "INVALID_TEAM_REQUEST", 401: "SESSION_EXPIRED", 403: "TEAM_ACCESS_DENIED", 404: "TEAM_NOT_FOUND", 429: "API_THROTTLED", 503: "API_UNAVAILABLE"}

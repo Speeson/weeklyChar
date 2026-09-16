@@ -99,12 +99,58 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await firstCard.getByRole("button", { name: "Ver objetos" }).click();
   await expect(firstCard.getByRole("button", { name: /Todos.*10/u })).toBeVisible();
   await expect(firstCard.getByText(/BEST IN SLOT/u)).toBeVisible();
-  await expect(firstCard.getByText(/Completados con Voidcore/u)).toBeVisible();
+  await expect(firstCard.getByText(/Completados \/ obtenidos/u)).toHaveCount(0);
+  const firstSlotLabel = firstCard.locator(".teams-item__slot").first();
+  await expect(firstSlotLabel).toHaveText("Bastón");
+  const slotPlacement = await firstSlotLabel.evaluate(element => {
+    const label = element.getBoundingClientRect();
+    const icon = element.parentElement!.getBoundingClientRect();
+    return { bottomInset: icon.bottom - label.bottom, labelHeight: label.height };
+  });
+  expect(slotPlacement).toEqual({ bottomInset: 1, labelHeight: 15 });
+  const ownedCheck = firstCard.getByLabel("Ya lo tienes");
+  await expect(ownedCheck).toBeVisible();
+  const compactItemGeometry = await firstCard.locator(".teams-item-grid").first().evaluate(grid => {
+    const tiles = [...grid.querySelectorAll<HTMLElement>(".teams-item")];
+    const first = tiles[0].getBoundingClientRect();
+    const second = tiles[1].getBoundingClientRect();
+    const icon = tiles[0].querySelector<HTMLElement>(".teams-item__icon")!.getBoundingClientRect();
+    return {
+      horizontalGap: second.left - first.right,
+      tileWidth: first.width,
+      tileHeight: first.height,
+      iconWidth: icon.width,
+      iconHeight: icon.height,
+    };
+  });
+  expect(compactItemGeometry).toEqual({ horizontalGap: 2, tileWidth: 54, tileHeight: 54, iconWidth: 50, iconHeight: 50 });
+  const fittedGroups = await firstCard.locator(".teams-objective-group").evaluateAll(groups => groups.map(group => {
+    const groupBox = group.getBoundingClientRect();
+    const style = getComputedStyle(group);
+    const horizontalChrome = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight)
+      + Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.borderRightWidth);
+    const title = group.querySelector("h4")!;
+    const titleRange = document.createRange();
+    titleRange.selectNodeContents(title);
+    const titleWidth = titleRange.getBoundingClientRect().width;
+    const tiles = [...group.querySelectorAll<HTMLElement>(".teams-item")].map(item => item.getBoundingClientRect());
+    const itemSpan = tiles.at(-1)!.right - tiles[0].left;
+    const itemsCenter = (tiles[0].left + tiles.at(-1)!.right) / 2;
+    return {
+      extraWidth: groupBox.width - horizontalChrome - Math.max(titleWidth, itemSpan),
+      centerDelta: Math.abs(itemsCenter - (groupBox.left + groupBox.right) / 2),
+    };
+  }));
+  expect(fittedGroups.every(group => group.extraWidth < 2 && group.centerDelta < 1)).toBe(true);
+  const ownedCheckStyles = await ownedCheck.evaluate(element => {
+    const style = getComputedStyle(element);
+    const svg = element.querySelector("svg")!;
+    return { color: style.color, background: style.backgroundColor, size: style.width, strokeWidth: getComputedStyle(svg).strokeWidth };
+  });
+  expect(ownedCheckStyles).toEqual({ color: "rgb(255, 255, 255)", background: "rgb(22, 199, 101)", size: "19px", strokeWidth: "4px" });
   await capture(page, "07-expanded-multispec-groups.png");
 
-  await firstCard.locator(".teams-completed summary").click();
-  await expect(firstCard.locator(".teams-completed")).toHaveAttribute("open", "");
-  await capture(page, "08-completed-voidcore-open.png");
+  await capture(page, "08-obtained-items-inline.png");
 
   await firstCard.getByRole("button", { name: /Arcane.*7/u }).click();
   await expect(firstCard.getByRole("button", { name: /Arcane.*7/u })).toHaveAttribute("aria-pressed", "true");

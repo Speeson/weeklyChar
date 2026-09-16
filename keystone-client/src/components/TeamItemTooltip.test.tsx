@@ -35,4 +35,20 @@ describe("TeamItemTooltip exact variant metadata", () => {
     expect(target.getAttribute("data-wowhead")).not.toContain("ilvl=");
     expect(target.getAttribute("data-wowhead")).not.toContain("bonus=");
   });
+
+  it("marks owned items with the completed visual and accessible green check", () => {
+    renderWithTheme(<I18nProvider language="es"><TeamItemTooltip objective={objective({ owned: true })} /></I18nProvider>);
+    const link = screen.getByRole("link", { name: "Exact item" });
+    const check = screen.getByLabelText("Ya lo tienes");
+    expect(link).toHaveClass("is-owned");
+    expect(link).not.toHaveTextContent("Exact item");
+    expect(check.parentElement).toHaveClass("teams-item__icon");
+  });
+
+  it("renders a compact equipment label inside the bottom of the icon", () => {
+    renderWithTheme(<I18nProvider language="es"><TeamItemTooltip objective={objective({ slotId: 16, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Espadas de una mano" })} /></I18nProvider>);
+    const label = screen.getByText("1M Esp.");
+    expect(label).toHaveClass("teams-item__slot");
+    expect(label.parentElement).toHaveClass("teams-item__icon");
+  });
 });

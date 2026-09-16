@@ -31,6 +31,7 @@ export type KeystoneLootSelectorObjectiveDTO = {
   itemLevel: number | null
   variantKey: string
   voidcoreState: KeystoneLootVoidcoreState
+  owned?: true
 }
 
 export type KeystoneLootSelectorCharacterSource = {
@@ -138,7 +139,7 @@ function selectorObjective(
   selected: KeystoneLootObjectiveDTO,
   specIds: Set<number>,
 ): KeystoneLootSelectorObjectiveDTO {
-  return {
+  const objective: KeystoneLootSelectorObjectiveDTO = {
     itemId: selected.itemId,
     itemName: selected.itemName,
     iconUrl: selected.iconUrl,
@@ -159,6 +160,8 @@ function selectorObjective(
     variantKey: selected.variantKey,
     voidcoreState: selected.voidcoreState,
   }
+  if (selected.owned === true) objective.owned = true
+  return objective
 }
 
 function buildCharacter(
@@ -183,7 +186,7 @@ function buildCharacter(
       if (strongerObjective(objective, existing.objective)) existing.objective = objective
     }
 
-    if (objective.voidcoreState === 'completed_with_voidcore') continue
+    if (objective.voidcoreState === 'completed_with_voidcore' || objective.owned === true) continue
     const spec = specs.get(objective.specId) ?? { objectiveCount: 0, tierCounts: emptyTierCounts() }
     spec.objectiveCount += 1
     incrementTier(spec.tierCounts, objective.tier)
@@ -196,8 +199,9 @@ function buildCharacter(
       || left.sourceType.localeCompare(right.sourceType)
       || sourceKey(left.sourceId).localeCompare(sourceKey(right.sourceId))
       || left.variantKey.localeCompare(right.variantKey))
-  const actionable = objectives.filter(objective => objective.voidcoreState !== 'completed_with_voidcore')
-  if (actionable.length === 0) return null
+  const actionable = objectives.filter(objective => objective.voidcoreState !== 'completed_with_voidcore'
+    && objective.owned !== true)
+  if (actionable.length === 0 && !objectives.some(objective => objective.owned === true)) return null
 
   const tierCounts = emptyTierCounts()
   for (const objective of actionable) incrementTier(tierCounts, objective.tier)
@@ -246,7 +250,11 @@ export function buildKeystoneLootDungeonSummary(
     .sort(compareCharacters)
   const tiers = emptyTierCounts()
   let totalObjectives = 0
+  let charactersWithObjectives = 0
   for (const character of characters) {
+    if (character.totalObjectives > 0) {
+      charactersWithObjectives += 1
+    }
     totalObjectives += character.totalObjectives
     addTierCounts(tiers, character.tierCounts)
   }
@@ -256,7 +264,7 @@ export function buildKeystoneLootDungeonSummary(
     challengeMapId,
     availability,
     summary: {
-      charactersWithObjectives: characters.length,
+      charactersWithObjectives,
       totalObjectives,
       tiers,
     },

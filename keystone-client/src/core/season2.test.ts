@@ -16,4 +16,5 @@ describe("Client Season 2 display pool", () => {
     expect(compactTeamKeystone(9, 999, "Future Dungeon")).toBe("+9 Future Dungeon");
     expect(compactTeamKeystone(8, 999, null)).toBe("+8 ID 999");
   });
+
 });

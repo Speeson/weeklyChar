@@ -210,6 +210,17 @@ Verified from checked-out files:
 
 The application layers use the verified Midnight Season 2 pool (challenge map IDs 588, 587, 586, 584, 585, 249, 250, and 399) and canonical Season 2 currency keys. The standalone addon release `v0.2.3` implements Interface 120100, Season 2 currencies, Prey quest IDs, Trovehunter's Bounty, and the compatible KeystoneLoot V1 snapshot contract.
 
+The KeystoneLoot snapshot now supports optional per-favorite `owned=true`, derived from current
+equipment, bags, and personal-bank possession. Worker, Client, and Web keep owned objectives visible
+but exclude them from pending Selector counts and Planner inputs; Client and Web render them muted
+with a green check. The addon preserves the last valid ownership snapshot during `PLAYER_LOGOUT`
+instead of recalculating against WoW APIs that may already be empty. Legacy snapshots that omit the
+field stay actionable, and no D1 migration is required. Unlocked Great Vault raid, dungeon, and
+world slots can include `rewardItemLevel` and
+`rewardUpgradeTrack`, captured by the addon from Blizzard's current reward item link. Client and Web
+show the exact track once beside the matching chest progress while retaining the existing activity
+lists without per-activity item levels; they do not infer a track from overlapping item-level ranges.
+
 ## Next planned milestone
 
 Keystone Planner V1 Blocks A through E are implemented. Production QA acceptance passed on

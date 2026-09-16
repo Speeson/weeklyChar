@@ -270,6 +270,7 @@ def _objective(value: Any) -> dict[str, Any] | None:
             or not (quality_type is None or (isinstance(quality_type, str) and quality_type in _QUALITY_TYPES)) \
             or not (item_level is None or _positive(item_level)) \
             or not _text(variant_key, 1024) \
+            or not ("owned" not in value or isinstance(value["owned"], bool)) \
             or value.get("voidcoreState") not in _VOIDCORE_STATES:
         return None
     result = {key: value[key] for key in (
@@ -277,7 +278,10 @@ def _objective(value: Any) -> dict[str, Any] | None:
         "slotName", "itemClassName", "itemSubClassName", "statNames", "primaryStatNames",
         "secondaryStatNames", "otherStatNames", "qualityType", "voidcoreState",
     )}
-    return {**result, "itemLevel": item_level, "variantKey": variant_key}
+    projected = {**result, "itemLevel": item_level, "variantKey": variant_key}
+    if value.get("owned") is True:
+        projected["owned"] = True
+    return projected
 
 
 def _stone(value: Any) -> dict[str, Any] | None:
@@ -329,11 +333,13 @@ def sanitize_selector(value: Any, team_id: int, challenge_map_id: int) -> dict[s
     characters = [_selector_character(item) for item in value["characters"]]
     if tiers is None or any(item is None for item in stones) or any(item is None for item in characters) \
             or value["availability"]["stoneCount"] != len(stones) \
-            or value["summary"]["charactersWithObjectives"] != len(characters):
+            or value["summary"]["charactersWithObjectives"] != sum(
+                1 for character in characters if character is not None and character["totalObjectives"] > 0
+            ):
         return None
     return {"teamId": team_id, "challengeMapId": challenge_map_id,
             "availability": {"stoneCount": len(stones), "stones": stones},
-            "summary": {"charactersWithObjectives": len(characters), "totalObjectives": value["summary"]["totalObjectives"], "tiers": tiers},
+            "summary": {"charactersWithObjectives": value["summary"]["charactersWithObjectives"], "totalObjectives": value["summary"]["totalObjectives"], "tiers": tiers},
             "characters": characters}
 
 

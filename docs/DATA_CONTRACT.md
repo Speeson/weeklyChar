@@ -97,9 +97,9 @@ Shape:
 - `hasAvailableRewards`
 - `raid`, `dungeons`, `world`
 - each bucket has `unlocked` and `slots`
-- slot fields include `id`, `index`, `type`, `level`, `progress`, `threshold`, `activityTierID`, `unlocked`
+- slot fields include `id`, `index`, `type`, `level`, `progress`, `threshold`, `activityTierID`, `unlocked`, optional `rewardItemLevel`, and optional `rewardUpgradeTrack`; for unlocked slots the addon derives the latter two from Blizzard's current example reward item link, detailed item level, and upgrade information
 - raid slots can include `encounters` with Blizzard encounter/instance IDs, localized names, UI order, and best completed difficulty
-- `dungeons.completedRuns` includes `heroic`, `mythic`, and `mythicPlus`; `dungeons.topRuns` contains the sorted current-week Mythic+ level, challenge map ID, and localized dungeon name used by Great Vault tooltips
+- `dungeons.completedRuns` includes `heroic`, `mythic`, and `mythicPlus`; `dungeons.topRuns` contains the sorted current-week Mythic+ level, challenge map ID, and localized dungeon name used by Great Vault tooltips, independently of each slot's `rewardItemLevel`
 - `world.tierProgress` contains Blizzard's sorted activity tier, difficulty, and completion count used by Great Vault tooltips
 
 ### `preyHunts`
@@ -194,11 +194,15 @@ A supported snapshot also includes `addonVersion`, KeystoneLoot `characterKey`,
 `updatedAt`, and `voidcore` with boolean `checked` plus positive integer `usedItems`.
 Favorites use `sourceId`, `specId`, `itemId`, and generic positive integer `tier` as
 identity. Optional known fields are `sourceType`, `slotId`, `icon`, `bonusIds`, `gems`,
-and `enchant`. Numeric tiers are not capped at 5. Localized names are not identity.
+`enchant`, and boolean `owned`. The addon writes `owned=true` while that item ID is
+equipped or present in bags or the personal bank; omission means it is not known to be
+owned. Numeric tiers are not capped at 5. Localized names are not identity.
 
 The addon writes only the currently processed character and does not backfill historical
 records. A present supported block with `favorites = {}` is a real empty wishlist and
-replaces older favorites.
+replaces older favorites. Ownership is refreshed while the character inventory APIs are
+available and the last valid snapshot is preserved during `PLAYER_LOGOUT`, when WoW can
+already report equipment and bags as empty.
 
 ## Client Parsing And Payload Contract
 
@@ -346,7 +350,7 @@ string source identity. Known optional item fields are type-checked.
 Exact Favorite variants add optional positive-safe-integer `itemLevel`, allowlisted
 `qualityType`, and a deterministic `variantKey`. The key is `base` when `bonusIds` are absent or
 empty and otherwise encodes the sorted numeric bonus IDs; a supplied key must match those IDs.
-Legacy Favorites remain valid. Objective and Selector identity includes this key, so equal
+Legacy Favorites without `owned` remain valid and actionable. Objective and Selector identity includes this key, so equal
 item/source/spec Favorites with different saved bonus variants remain separate before asynchronous
 item metadata is available.
 
@@ -573,7 +577,7 @@ Stone Selector aggregate endpoint:
 - Current Team membership and `shareKeystoneLootWithTeams` are read from D1 on every request.
   Members with sharing disabled are excluded before their character snapshots are loaded or
   parsed and receive no placeholder or objective-derived count. Team isolation is exact.
-- The response contains all eligible characters with at least one actionable objective, their
+- The response contains all eligible characters with at least one actionable or owned objective, their
   tier/spec counts, exact allowlisted objectives, and current Team stone availability. It does
   not select one character per member, score candidates, use Raider.IO for ordering, or build a
   party composition.
@@ -583,8 +587,10 @@ Stone Selector aggregate endpoint:
   character total.
 - `totalObjectives` and all tier counts mean actionable objectives. Checked Voidcore completions
   may remain in an included character's `objectives` array as `completed_with_voidcore`, but do
-  not increment character, spec, or global counters. Unchecked Voidcore remains actionable.
-  Characters with only completed objectives are omitted.
+  not increment character, spec, or global counters. Objectives with `owned=true` likewise remain
+  visible but do not increment counts or reach Planner inputs. Unchecked Voidcore remains actionable.
+  Characters with owned objectives remain present even when their actionable count is zero so clients
+  can show those items. Characters with only Voidcore-completed objectives remain omitted.
 - `characters` order is total objectives, BiS, and Must descending, then character name, realm,
   and character ID ascending. Unknown positive tiers increment `other`.
 - Availability is independent of KeystoneLoot sharing. It contains only each current Team
@@ -622,6 +628,7 @@ The Selector objective allowlist is:
   secondaryStatNames: string[]
   otherStatNames: string[]
   qualityType: 'POOR' | 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'ARTIFACT' | 'HEIRLOOM' | null
+  owned?: true
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
 ```
@@ -649,7 +656,8 @@ states are rejected. Access and sync tokens, invite codes, WoW account names, va
 KeystoneLoot, `bonusIds`, gems, enchants, and raw error payloads remain below or outside the React
 boundary.
 
-The safe Client objective projection includes `variantKey` and nullable `itemLevel`. React uses the
+The safe Client objective projection includes `variantKey`, nullable `itemLevel`, and optional
+`owned: true`. React uses the
 key only for stable identity and shows the item level only when present; it does not receive the raw
 `bonusIds` array.
 
@@ -661,18 +669,18 @@ older callers default to `es_ES`. The eight
 pre-selection availability counts are a local projection of `teams.get` current keystones keyed by
 `challengeMapId`, so selecting one dungeon produces exactly one aggregate request. Server summary
 values and character order remain authoritative. Local spec filtering deduplicates nothing and
-does not alter top-level totals; completed Voidcore items are only separated for presentation.
+does not alter top-level totals; completed Voidcore and owned items are separated for presentation.
 Preview fixtures implement the same safe interface and remain development-only.
 
 The Client tooltip renders only `itemName`, `iconUrl`, slot/class/subclass names, bounded and
-classified stat names, Blizzard item quality, source, spec IDs, tier, and Voidcore state. It
+classified stat names, Blizzard item quality, source, spec IDs, tier, ownership, and Voidcore state. It
 omits absent rows, falls back to
 `Objeto #<itemId>` and a generic icon, and never displays numeric stat quantities. Client-local
 Season 2 IDs duplicate the verified Web/Worker display allowlists intentionally; shared-package
 consolidation remains deferred.
 
 The reusable Web item tooltip consumes only the public objective allowlist (`itemName`, `iconUrl`,
-slot/class/subclass names, bounded `statNames`, source, spec IDs, tier, and Voidcore state). Missing
+slot/class/subclass names, bounded `statNames`, source, spec IDs, tier, ownership, and Voidcore state). Missing
 metadata degrades to `Objeto #<itemId>`, a generic icon, and an explicit unavailable-metadata hint;
 it never turns an otherwise valid objective into a response failure.
 
@@ -692,9 +700,15 @@ The public objective allowlist is:
   itemClassName: string | null
   itemSubClassName: string | null
   statNames: string[]
+  owned?: true
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
 ```
+
+Owned objectives stay in owner, Team, and Selector presentation responses but are desaturated with
+a green check and excluded from pending counts and Planner scoring. Ownership is current possession,
+not permanent loot history; selling, trading, deleting, or disenchanting the item can make it
+actionable again after the next addon snapshot.
 
 The team route never exposes `keystoneLoot`, `favorites`, `characterKey`, `usedItems`,
 modifiers, unknown additive fields, raw JSON, or recommendation weights. Team statuses are

@@ -516,7 +516,7 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.queryByRole("button", { name: /Filtrar por Speeson/u })).not.toBeInTheDocument();
   });
 
-  it("renders compact dungeon/owner summary, Worker order, Planner, expansion, multispec, item groups and completed Voidcore", async () => {
+  it("renders compact dungeon/owner summary, Worker order, Planner, expansion, multispec and unified item groups", async () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
@@ -534,10 +534,10 @@ describe("TeamsPage compact ranking", () => {
     expect(within(rows[0]).getByText("Bakuhatsu")).toBeInTheDocument();
     expect(within(rows[0]).getByRole("button", { name: "Todos · 6" })).toBeInTheDocument();
     await user.click(within(rows[0]).getByRole("button", { name: "Arcane · 4" }));
-    expect(within(rows[0]).getByText("BEST IN SLOT · 1")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("BEST IN SLOT · 2")).toBeInTheDocument();
     expect(within(rows[0]).getByText("OTHER · 1")).toBeInTheDocument();
-    expect(within(rows[0]).getByText("Completados con Voidcore · 1")).toBeInTheDocument();
-    expect(within(rows[0]).getByText("BEST IN SLOT · 1").closest(".teams-objective-group")).toHaveAttribute("data-category", "bestInSlot");
+    expect(within(rows[0]).queryByText(/Completados \/ obtenidos/u)).not.toBeInTheDocument();
+    expect(within(rows[0]).getByText("BEST IN SLOT · 2").closest(".teams-objective-group")).toHaveAttribute("data-category", "bestInSlot");
     expand.focus();
     await user.keyboard("{Enter}");
     expect(rows[0]).toHaveAttribute("data-expanded", "false");

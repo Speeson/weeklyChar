@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   buildKeystoneLootObjectivePage,
+  buildKeystoneLootPlannerObjectives,
   classifyKeystoneLootSnapshot,
 } from '../.tmp-test/keystoneObjectives.js'
 
@@ -96,6 +97,35 @@ test('unchecked Voidcore is never presented as pending', () => {
     voidcore: { checked: false, usedItems: [10] },
   }), { limit: 50 })
   assert.equal(page.objectives[0].voidcoreState, 'voidcore_not_checked')
+})
+
+test('owned favorites stay visible in presentation but are excluded from planner objectives', () => {
+  const snapshot = supported([
+    favorite(10, 3, { owned: true }),
+    favorite(11, 2),
+  ])
+  const page = buildKeystoneLootObjectivePage(snapshot, { limit: 50 })
+
+  assert.equal(page.objectives[0].owned, true)
+  assert.equal(page.objectives[1].owned, undefined)
+  assert.deepEqual(
+    buildKeystoneLootPlannerObjectives(snapshot, [249], [102]).map(objective => objective.itemId),
+    [11],
+  )
+})
+
+test('ownership is item-wide and survives stronger duplicate selection', () => {
+  const snapshot = supported([
+    favorite(10, 3),
+    favorite(10, 1, { owned: true }),
+  ])
+
+  const page = buildKeystoneLootObjectivePage(snapshot, { limit: 50 })
+
+  assert.equal(page.objectives.length, 1)
+  assert.equal(page.objectives[0].tier, 3)
+  assert.equal(page.objectives[0].owned, true)
+  assert.deepEqual(buildKeystoneLootPlannerObjectives(snapshot, [249], [102]), [])
 })
 
 test('filters preserve the dungeon namespace guard and cursors are filter-bound', () => {

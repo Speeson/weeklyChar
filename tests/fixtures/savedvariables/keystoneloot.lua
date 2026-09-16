@@ -22,6 +22,7 @@ KeystoneSyncDB = {
           ["specId"] = 255,
           ["itemId"] = 251119,
           ["tier"] = 3,
+          ["owned"] = true,
           ["slotId"] = 10,
           ["icon"] = 7259236,
           ["bonusIds"] = { [1] = 6652, [2] = 1498 },

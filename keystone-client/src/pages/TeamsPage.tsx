@@ -826,17 +826,12 @@ const GROUP_LABELS: Record<SelectorObjectiveGroup["key"], string> = {
 };
 
 function ObjectiveGroups({ character, specId }: { character: KeystoneSelectorCharacter; specId: number | null }) {
-  const { t } = useI18n();
-  const { groups, completed } = groupSelectorObjectives(selectorObjectivesForSpec(character.objectives, specId));
+  const { groups } = groupSelectorObjectives(selectorObjectivesForSpec(character.objectives, specId));
   return <div className="teams-objectives">
     {groups.map(group => <section className="teams-objective-group" data-category={group.key} key={group.key}>
       <h4>{GROUP_LABELS[group.key]} · {group.objectives.length}</h4>
       <div className="teams-item-grid">{group.objectives.map(objective => <TeamItemTooltip key={`${objective.itemId}:${objective.sourceType}:${objective.sourceId}:${objective.variantKey}`} objective={objective} />)}</div>
     </section>)}
-    {completed.length > 0 ? <details className="teams-completed">
-      <summary>{t("teams.completedVoidcore")} · {completed.length}</summary>
-      <div className="teams-item-grid">{completed.map(objective => <TeamItemTooltip key={`${objective.itemId}:${objective.sourceType}:${objective.sourceId}:${objective.variantKey}`} objective={objective} />)}</div>
-    </details> : null}
   </div>;
 }
 

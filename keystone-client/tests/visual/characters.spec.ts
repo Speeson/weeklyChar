@@ -84,6 +84,14 @@ test("matches the approved Characters composition at 1672 x 941", async ({ page 
   await dungeonVaultSlot.hover();
   await expect(dungeonVaultSlot.getByRole("tooltip")).toBeVisible();
   await expect(dungeonVaultSlot.getByRole("tooltip")).toContainText("+12 Altar de los Colmillos");
+  await expect(dungeonVaultSlot.getByRole("tooltip")).toContainText("ilvl 318");
+  await expect(dungeonVaultSlot.getByRole("tooltip").locator("em")).not.toContainText("ilvl");
+  const raidVaultSlot = page.locator(".vault-panel > div").nth(0).locator(".vault-slot").first();
+  await raidVaultSlot.hover();
+  await expect(raidVaultSlot.getByRole("tooltip")).toContainText("ilvl 316");
+  const worldVaultSlot = page.locator(".vault-panel > div").nth(2).locator(".vault-slot").first();
+  await worldVaultSlot.hover();
+  await expect(worldVaultSlot.getByRole("tooltip")).toContainText("ilvl 315");
   await page.screenshot({ path: "test-results/characters/characters-1672x941.png" });
 });
 

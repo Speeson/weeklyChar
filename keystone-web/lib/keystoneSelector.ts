@@ -24,6 +24,7 @@ export type KeystoneSelectorObjective = {
   itemSubClassName: string | null
   statNames: string[]
   voidcoreState: KeystoneLootVoidcoreState
+  owned?: boolean
 }
 
 export type KeystoneSelectorStone = {
@@ -173,11 +174,12 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     || !nullableSafeString(value.slotName, 128)
     || !nullableSafeString(value.itemClassName, 128)
     || !nullableSafeString(value.itemSubClassName, 128)
+    || !(value.owned === undefined || typeof value.owned === 'boolean')
     || typeof value.voidcoreState !== 'string'
     || !VOIDCORE_STATES.includes(value.voidcoreState as KeystoneLootVoidcoreState)) return null
   const statNames = parseStatNames(value.statNames)
   if (!statNames) return null
-  return {
+  const objective: KeystoneSelectorObjective = {
     itemId: value.itemId,
     itemName: value.itemName,
     iconUrl: value.iconUrl,
@@ -192,6 +194,8 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     statNames,
     voidcoreState: value.voidcoreState as KeystoneLootVoidcoreState,
   }
+  if (value.owned === true) objective.owned = true
+  return objective
 }
 
 function parseStone(value: unknown): KeystoneSelectorStone | null {
@@ -261,7 +265,7 @@ export function parseKeystoneSelectorResponse(
   const characters = value.characters.map(parseCharacter)
   if (!tiers || stones.some(stone => stone === null) || characters.some(character => character === null)
     || value.availability.stoneCount !== stones.length
-    || value.summary.charactersWithObjectives !== characters.length) return null
+    || value.summary.charactersWithObjectives !== characters.filter(character => character?.totalObjectives && character.totalObjectives > 0).length) return null
   return {
     teamId: value.teamId,
     challengeMapId: value.challengeMapId,
@@ -325,18 +329,13 @@ export function selectorObjectivesForSpec(
 
 export function groupSelectorObjectives(objectives: readonly KeystoneSelectorObjective[]): {
   groups: SelectorObjectiveGroup[]
-  completed: KeystoneSelectorObjective[]
 } {
-  const actionable = objectives.filter(objective => objective.voidcoreState !== 'completed_with_voidcore')
   const groups = GROUPS.map(group => ({
     key: group.key,
     label: group.label,
-    objectives: actionable.filter(objective => group.tier === null
+    objectives: objectives.filter(objective => group.tier === null
       ? ![1, 2, 3, 4, 5].includes(objective.tier)
       : objective.tier === group.tier),
   })).filter(group => group.objectives.length > 0)
-  return {
-    groups,
-    completed: objectives.filter(objective => objective.voidcoreState === 'completed_with_voidcore'),
-  }
+  return { groups }
 }

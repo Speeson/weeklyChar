@@ -53,7 +53,21 @@ test('Character details and item groups are inline, semantic and multi-spec awar
   assert.match(selector, /Ocultar objetos/u)
   assert.match(selector, /selectorObjectivesForSpec/u)
   assert.match(selector, /groupSelectorObjectives/u)
-  assert.match(selector, /Completados con Voidcore/u)
+  assert.doesNotMatch(selector, /Completados \/ obtenidos/u)
+})
+
+test('owned Selector tiles are icon-only with their green check inside the lower-left of the icon', () => {
+  assert.match(selector, /objective\.owned \? 'border-gray-700 bg-gray-950\/60 text-gray-500' : tier\.tone/u)
+  assert.doesNotMatch(selector, />\{name\}<\/span>/u)
+  assert.match(selector, /bottom-0 left-0/u)
+  assert.match(selector, /h-14 w-14 rounded-md border p-px/u)
+  assert.match(selector, /flex flex-wrap items-start gap-4/u)
+  assert.match(selector, /inline-flex w-fit max-w-full flex-col items-center/u)
+  assert.match(selector, /flex max-w-full flex-wrap justify-center gap-0\.5/u)
+  assert.match(selector, /compactItemSlotLabel\(objective\)/u)
+  assert.match(selector, /absolute inset-x-px bottom-px h-4/u)
+  assert.match(selector, /h-4 w-4[^"]*stroke-current[^"]*drop-shadow/u)
+  assert.match(selector, /strokeWidth="4"/u)
 })
 
 test('one shared portal tooltip supports keyboard, pointer, touch and existing objective lists', () => {

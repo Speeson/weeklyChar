@@ -101,6 +101,7 @@ test('Selector parser accepts and projects the strict aggregate contract in serv
   assert.equal(parsed.teamId, 7)
   assert.deepEqual(parsed.characters.map(character => character.characterId), [10, 20])
   assert.deepEqual(parsed.characters[0].objectives[0].statNames, ['Haste', 'Intellect'])
+  assert.equal(parsed.characters[0].objectives[0].owned, undefined)
   assert.equal('future' in parsed, false)
   assert.equal(JSON.stringify(parsed).includes('keystoneLoot'), false)
   assert.equal(JSON.stringify(parsed).includes('favorites'), false)
@@ -122,6 +123,7 @@ test('Selector parser rejects malformed identities, counts, metadata and privacy
     { ...valid, characters: [{ ...valid.characters[0], objectives: [{ ...objective, slotName: 5 }] }] },
     { ...valid, characters: [{ ...valid.characters[0], objectives: [{ ...objective, statNames: ['x'.repeat(129)] }] }] },
     { ...valid, characters: [{ ...valid.characters[0], objectives: [{ ...objective, value: 2732, statNames: [2732] }] }] },
+    { ...valid, characters: [{ ...valid.characters[0], objectives: [{ ...objective, owned: 'yes' }] }] },
   ]
   for (const value of invalid) assert.equal(parseKeystoneSelectorResponse(value, 7, 399), null)
 })
@@ -154,7 +156,7 @@ test('Selector requests are exact and stale dungeon identities cannot become cur
   assert.equal(isKeystoneSelectorRequestCurrent(second, second), true)
 })
 
-test('Selector objective grouping preserves semantic order, maps unknown tiers to Other and separates completed items', () => {
+test('Selector objective grouping preserves semantic order and keeps completed or owned items in their original tiers', () => {
   const grouped = groupSelectorObjectives([
     { ...objective, itemId: 1, tier: 99 },
     { ...objective, itemId: 2, tier: 5 },
@@ -163,12 +165,14 @@ test('Selector objective grouping preserves semantic order, maps unknown tiers t
     { ...objective, itemId: 5, tier: 1 },
     { ...objective, itemId: 6, tier: 4 },
     { ...objective, itemId: 7, tier: 3, voidcoreState: 'completed_with_voidcore' },
+    { ...objective, itemId: 8, tier: 2, owned: true },
   ])
   assert.deepEqual(grouped.groups.map(group => group.label), [
     'Best in Slot', 'Must have', 'Nice to have', 'Catalyst', 'Transmog', 'Other',
   ])
-  assert.deepEqual(grouped.groups.map(group => group.objectives[0].itemId), [3, 4, 5, 2, 6, 1])
-  assert.deepEqual(grouped.completed.map(item => item.itemId), [7])
+  assert.deepEqual(grouped.groups.map(group => group.objectives.map(item => item.itemId)), [
+    [3, 7], [4, 8], [5], [2], [6], [1],
+  ])
 })
 
 test('Selector spec filtering uses aggregate specIds without changing shared objectives', () => {

@@ -395,6 +395,7 @@ export type KeystoneSelectorObjective = {
   itemLevel: number | null;
   variantKey: string;
   voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
+  owned?: boolean;
 };
 
 export type KeystoneSelectorStone = {

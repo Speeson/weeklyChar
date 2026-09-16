@@ -32,6 +32,7 @@ export type KeystoneLootFavorite = {
   variantKey?: string
   itemLevel?: number | null
   qualityType?: KeystoneLootQualityType | null
+  owned?: boolean
   [key: string]: unknown
 }
 
@@ -100,6 +101,9 @@ function validateFavorite(value: unknown, index: number): string | null {
   if (!isPositiveInteger(value.specId)) return `favorites[${index}].specId no es válido`
   if (!isPositiveInteger(value.itemId)) return `favorites[${index}].itemId no es válido`
   if (!isPositiveInteger(value.tier)) return `favorites[${index}].tier no es válido`
+  if (value.owned !== undefined && typeof value.owned !== 'boolean') {
+    return `favorites[${index}].owned debe ser booleano`
+  }
 
   if (value.sourceType !== undefined
     && !boundedString(value.sourceType, KEYSTONE_LOOT_LIMITS.sourceTypeLength)) {

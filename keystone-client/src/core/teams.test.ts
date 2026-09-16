@@ -128,6 +128,7 @@ describe("Teams core bridge", () => {
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, itemLevel: 402.5 }] }] }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, variantKey: "" }] }] }, 7, 588)).toBeNull();
     expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, primaryStatNames: ["Celeridad"] }] }] }, 7, 588)).toBeNull();
+    expect(parseKeystoneSelector({ ...selector, characters: [{ ...selector.characters[0], objectives: [{ ...objective, owned: "yes" }] }] }, 7, 588)).toBeNull();
   });
 
   it("keeps two exact variants of the same item as distinct selector objects", () => {
@@ -162,15 +163,16 @@ describe("Teams core bridge", () => {
     expect(counts.get(585)).toBeUndefined();
   });
 
-  it("filters specs and separates future tiers from completed Voidcore", () => {
+  it("filters specs and keeps completed or owned objectives in their original tier groups", () => {
     const items: KeystoneSelectorObjective[] = [
       { ...objective, itemId: 1, tier: 3, specIds: [62, 64] },
       { ...objective, itemId: 2, tier: 99, specIds: [64] },
       { ...objective, itemId: 3, tier: 2, specIds: [62], voidcoreState: "completed_with_voidcore" },
+      { ...objective, itemId: 4, tier: 3, specIds: [62], owned: true },
     ];
-    expect(selectorObjectivesForSpec(items, 62).map(item => item.itemId)).toEqual([1, 3]);
+    expect(selectorObjectivesForSpec(items, 62).map(item => item.itemId)).toEqual([1, 3, 4]);
     const grouped = groupSelectorObjectives(items);
-    expect(grouped.groups.map(group => group.key)).toEqual(["bestInSlot", "other"]);
-    expect(grouped.completed.map(item => item.itemId)).toEqual([3]);
+    expect(grouped.groups.map(group => group.key)).toEqual(["bestInSlot", "mustHave", "other"]);
+    expect(grouped.groups.flatMap(group => group.objectives.map(item => item.itemId))).toEqual([1, 4, 3, 2]);
   });
 });

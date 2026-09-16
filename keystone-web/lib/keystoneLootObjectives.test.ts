@@ -4,11 +4,13 @@ import test from 'node:test'
 import {
   buildOwnerObjectivesPath,
   characterObjectiveTitle,
+  compactItemSlotLabel,
   createObjectiveRequestIdentity,
   formatObjectiveFreshness,
   isObjectiveRequestCurrent,
   mergeObjectivePages,
   objectiveItemName,
+  objectiveStatePresentation,
   objectiveSourceLabel,
   ownerObjectiveStatusMessage,
   parseOwnerObjectivesResponse,
@@ -70,6 +72,7 @@ test('runtime parser fails closed for malformed DTOs and responses', () => {
     { ...available(), objectives: [{ ...objective, tier: 0 }] },
     { ...available(), objectives: [{ ...objective, specId: -1 }] },
     { ...available(), objectives: [{ ...objective, voidcoreState: 'maybe' }] },
+    { ...available(), objectives: [{ ...objective, owned: 'yes' }] },
     { ...available(), objectives: [{ ...objective, sourceType: '' }] },
     { ...available(), objectives: [{ ...objective, itemName: 123 }] },
     { ...available(), objectives: [{ ...objective, slotId: '13' }] },
@@ -102,6 +105,21 @@ test('presentation helpers cover tier, source, item and Voidcore fallbacks', () 
   assert.equal(voidcorePresentation('pending').label, 'Pendiente')
   assert.equal(voidcorePresentation('completed_with_voidcore').label, 'Completado con Voidcore')
   assert.equal(voidcorePresentation('voidcore_not_checked').label, 'Estado de Voidcore sin verificar')
+  assert.equal(objectiveStatePresentation({ ...objective, owned: true }).label, 'Ya lo tienes')
+})
+
+test('compact item labels use armor slots and abbreviated weapon subtypes', () => {
+  assert.equal(compactItemSlotLabel({ ...objective, slotId: 5, slotName: 'Pecho' }), 'Pecho')
+  assert.equal(compactItemSlotLabel({ ...objective, slotId: 16, slotName: 'Mano principal', itemClassName: 'Arma', itemSubClassName: 'Espadas de una mano' }), '1M Esp.')
+  assert.equal(compactItemSlotLabel({ ...objective, slotId: 16, slotName: 'Main Hand', itemClassName: 'Weapon', itemSubClassName: 'Two-Handed Maces' }), '2M Maza')
+  assert.equal(compactItemSlotLabel({ ...objective, slotId: 8, slotName: null, itemClassName: null, itemSubClassName: null }), 'Pies')
+  assert.equal(compactItemSlotLabel({ ...objective, slotId: null, slotName: null, itemClassName: null, itemSubClassName: null }), null)
+})
+
+test('owned state is projected only when true and remains additive for legacy DTOs', () => {
+  const parsed = parseOwnerObjectivesResponse(available({ objectives: [{ ...objective, owned: true }] }))
+  assert.equal(parsed?.objectives[0].owned, true)
+  assert.equal(parseOwnerObjectivesResponse(available())?.objectives[0].owned, undefined)
 })
 
 test('freshness is relative, exact and warns only beyond 24 hours', () => {

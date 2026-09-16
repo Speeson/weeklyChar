@@ -18,7 +18,7 @@ import {
   type KeystoneSelectorResponse,
   type KeystoneSelectorTierCounts,
 } from '@/lib/keystoneSelector'
-import { objectiveItemName, tierPresentation, voidcorePresentation } from '@/lib/keystoneLootObjectives'
+import { compactItemSlotLabel, objectiveItemName, tierPresentation } from '@/lib/keystoneLootObjectives'
 import { specName } from '@/lib/wowSpecs'
 import KeystoneLootItemTooltip from '@/app/components/KeystoneLootItemTooltip'
 import KeystonePlannerPanel from './KeystonePlannerPanel'
@@ -71,25 +71,22 @@ function TierChips({ counts }: { counts: KeystoneSelectorTierCounts }) {
 
 function SelectorItemTile({ objective }: { objective: KeystoneSelectorObjective }) {
   const tier = tierPresentation(objective.tier)
-  const voidcore = voidcorePresentation(objective.voidcoreState)
   const name = objectiveItemName(objective)
+  const slotLabel = compactItemSlotLabel(objective)
   return (
     <KeystoneLootItemTooltip
       objective={objective}
-      triggerClassName={`group w-[76px] rounded-lg border p-1.5 text-center transition hover:-translate-y-0.5 motion-reduce:transform-none ${tier.tone}`}
+      triggerClassName={`group relative h-14 w-14 rounded-md border p-px text-center transition hover:-translate-y-0.5 motion-reduce:transform-none ${objective.owned ? 'border-gray-700 bg-gray-950/60 text-gray-500' : tier.tone}`}
     >
-      {objective.iconUrl ? (
-        <span
-          role="img"
-          aria-label={`Icono de ${name}`}
-          className="mx-auto block h-13 w-13 rounded-md border border-current/30 bg-cover bg-center"
-          style={{ backgroundImage: `url(${objective.iconUrl})` }}
-        />
-      ) : (
-        <span aria-hidden="true" className="mx-auto flex h-13 w-13 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-lg text-gray-500">?</span>
-      )}
-      <span className="mt-1.5 block truncate text-[10px] font-semibold text-gray-100">{name}</span>
-      <span className={`mt-0.5 block truncate text-[9px] ${voidcore.tone}`}>{voidcore.label}</span>
+      <span className="relative mx-auto block h-13 w-13">
+        {objective.iconUrl ? (
+          <span role="img" aria-label={`Icono de ${name}`} className={`block h-13 w-13 rounded-md border border-current/30 bg-cover bg-center ${objective.owned ? 'grayscale opacity-40' : ''}`} style={{ backgroundImage: `url(${objective.iconUrl})` }} />
+        ) : (
+          <span aria-hidden="true" className={`flex h-13 w-13 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-lg text-gray-500 ${objective.owned ? 'grayscale opacity-40' : ''}`}>?</span>
+        )}
+        {slotLabel && <span aria-hidden="true" className={`absolute inset-x-px bottom-px h-4 overflow-hidden rounded-sm bg-gray-950/95 px-0.5 font-black leading-4 tracking-[-0.02em] text-white [text-shadow:0_1px_2px_#000] ${objective.owned ? 'pl-[17px] text-right text-[9px]' : 'text-center text-[10px]'}`}>{slotLabel}</span>}
+        {objective.owned && <span aria-label="Ya lo tienes" className="absolute bottom-0 left-0 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_2px_rgba(3,10,6,0.9),0_0_8px_rgba(49,233,129,0.75)]"><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4L19 6" /></svg></span>}
+      </span>
     </KeystoneLootItemTooltip>
   )
 }
@@ -97,27 +94,17 @@ function SelectorItemTile({ objective }: { objective: KeystoneSelectorObjective 
 function ObjectiveGroups({ objectives }: { objectives: KeystoneSelectorObjective[] }) {
   const grouped = groupSelectorObjectives(objectives)
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="flex flex-wrap items-start gap-4">
       {grouped.groups.map(group => (
-        <section key={group.key} aria-label={group.label}>
-          <p className="mb-2 text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">
+        <section key={group.key} aria-label={group.label} className="inline-flex w-fit max-w-full flex-col items-center">
+          <p className="mb-2 w-full whitespace-nowrap text-center text-[11px] font-black uppercase tracking-[0.15em] text-gray-400">
             {group.label} · {group.objectives.length}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex max-w-full flex-wrap justify-center gap-0.5">
             {group.objectives.map(objective => <SelectorItemTile key={`${objective.sourceType}:${objective.sourceId}:${objective.itemId}`} objective={objective} />)}
           </div>
         </section>
       ))}
-      {grouped.completed.length > 0 && (
-        <details className="rounded-lg border border-emerald-900/50 bg-emerald-950/10 p-3 sm:col-span-2 xl:col-span-3">
-          <summary className="cursor-pointer text-xs font-bold text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
-            Completados con Voidcore · {grouped.completed.length}
-          </summary>
-          <div className="mt-3 flex flex-wrap gap-2 opacity-75">
-            {grouped.completed.map(objective => <SelectorItemTile key={`${objective.sourceType}:${objective.sourceId}:${objective.itemId}`} objective={objective} />)}
-          </div>
-        </details>
-      )}
     </div>
   )
 }

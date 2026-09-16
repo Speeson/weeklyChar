@@ -8,7 +8,7 @@ import {
   objectiveItemName,
   objectiveSourceLabel,
   tierPresentation,
-  voidcorePresentation,
+  objectiveStatePresentation,
   type KeystoneLootVoidcoreState,
 } from '@/lib/keystoneLootObjectives'
 
@@ -24,6 +24,7 @@ export type KeystoneLootTooltipItem = {
   itemSubClassName: string | null
   statNames: readonly string[]
   voidcoreState: KeystoneLootVoidcoreState
+  owned?: boolean
   specId?: number
   specIds?: readonly number[]
 }
@@ -105,7 +106,7 @@ export default function KeystoneLootItemTooltip({
 
   const itemName = objectiveItemName(objective)
   const tier = tierPresentation(objective.tier)
-  const voidcore = voidcorePresentation(objective.voidcoreState)
+  const state = objectiveStatePresentation(objective)
   const source = objectiveSourceLabel(objective, DUNGEON_NAME_BY_ID)
   const specs = objective.specIds ?? (objective.specId ? [objective.specId] : [])
   const armorLine = [objective.slotName, objective.itemSubClassName].filter(Boolean).join(' · ')
@@ -176,7 +177,7 @@ export default function KeystoneLootItemTooltip({
             <p className="text-gray-300">{source}</p>
             {specs.length > 0 && <p className="text-gray-400">{specs.map(specName).join(' · ')}</p>}
             <p><span className={`inline-flex rounded border px-2 py-0.5 ${tier.tone}`}>{tier.label}</span></p>
-            <p className={voidcore.tone}>{voidcore.label}</p>
+            <p className={state.tone}>{state.label}</p>
           </div>
         </div>,
         document.body,

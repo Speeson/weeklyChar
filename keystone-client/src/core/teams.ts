@@ -48,14 +48,12 @@ export function selectorObjectivesForSpec(
 }
 
 export function groupSelectorObjectives(objectives: readonly KeystoneSelectorObjective[]): {
-  groups: SelectorObjectiveGroup[]; completed: KeystoneSelectorObjective[];
+  groups: SelectorObjectiveGroup[];
 } {
-  const actionable = objectives.filter(objective => objective.voidcoreState !== "completed_with_voidcore");
   return {
-    groups: OBJECTIVE_GROUPS.map(group => ({ ...group, objectives: actionable.filter(objective =>
+    groups: OBJECTIVE_GROUPS.map(group => ({ ...group, objectives: objectives.filter(objective =>
       group.tier === null ? ![1, 2, 3, 4, 5].includes(objective.tier) : objective.tier === group.tier,
     ) })).filter(group => group.objectives.length > 0),
-    completed: objectives.filter(objective => objective.voidcoreState === "completed_with_voidcore"),
   };
 }
 
@@ -175,9 +173,10 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     || !(value.qualityType === null || (typeof value.qualityType === "string"
       && ITEM_QUALITY_TYPES.includes(value.qualityType as typeof ITEM_QUALITY_TYPES[number])))
     || !(itemLevel === null || positive(itemLevel)) || !text(variantKey, 1024)
+    || !(value.owned === undefined || typeof value.owned === "boolean")
     || typeof value.voidcoreState !== "string"
     || !VOIDCORE_STATES.includes(value.voidcoreState as typeof VOIDCORE_STATES[number])) return null;
-  return { itemId: value.itemId, itemName: value.itemName, iconUrl: value.iconUrl, tier: value.tier,
+  const objective: KeystoneSelectorObjective = { itemId: value.itemId, itemName: value.itemName, iconUrl: value.iconUrl, tier: value.tier,
     specIds: [...value.specIds] as number[], sourceType: value.sourceType, sourceId: value.sourceId,
     slotId: value.slotId as number | null, slotName: value.slotName, itemClassName: value.itemClassName,
     itemSubClassName: value.itemSubClassName, statNames: [...value.statNames] as string[],
@@ -187,6 +186,8 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     qualityType: value.qualityType as KeystoneSelectorObjective["qualityType"],
     itemLevel: itemLevel as number | null, variantKey: variantKey as string,
     voidcoreState: value.voidcoreState as KeystoneSelectorObjective["voidcoreState"] };
+  if (value.owned === true) objective.owned = true;
+  return objective;
 }
 
 function parseStone(value: unknown): KeystoneSelectorStone | null {
@@ -228,7 +229,7 @@ export function parseKeystoneSelector(value: unknown, teamId: number, challengeM
   const characters = value.characters.map(parseSelectorCharacter);
   if (!tiers || stones.some(item => item === null) || characters.some(item => item === null)
     || value.availability.stoneCount !== stones.length
-    || value.summary.charactersWithObjectives !== characters.length) return null;
+    || value.summary.charactersWithObjectives !== characters.filter(character => character?.totalObjectives && character.totalObjectives > 0).length) return null;
   return { teamId, challengeMapId, availability: { stoneCount: value.availability.stoneCount,
     stones: stones as KeystoneSelectorStone[] }, summary: { charactersWithObjectives: value.summary.charactersWithObjectives,
     totalObjectives: value.summary.totalObjectives, tiers }, characters: characters as KeystoneSelectorCharacter[] };
