@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.11.2",
+  "version": "0.12.0",
+  "bump": "minor",
+  "tag": "client-v0.12.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "owned-loot-and-vault-ilvl.json"
+  ]
+}

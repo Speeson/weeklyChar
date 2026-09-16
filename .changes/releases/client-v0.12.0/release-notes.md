@@ -1,0 +1,8 @@
+# KeystoneClient 0.12.0
+
+## Novedades
+
+- Distingue el botín ya obtenido y muestra el nivel de objeto de la Gran Cámara.
+  - Mantiene los favoritos obtenidos en su categoría original, solo con el icono desaturado y un check verde superpuesto, pero deja de contarlos como objetivos pendientes.
+  - Muestra en raid, mazmorras y mundo el nivel de objeto y la categoría exacta de mejora de la recompensa actual de cada cofre desbloqueado, conservando las listas de actividades sin añadirles niveles de objeto.
+  - Añade una etiqueta compacta de ranura o tipo de arma en la parte inferior de cada icono de objetivo.
