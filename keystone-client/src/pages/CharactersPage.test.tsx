@@ -74,6 +74,22 @@ describe("CharactersPage", () => {
     expect(item.dataset.wowhead).toContain("spec=102");
   });
 
+  it("shows the real Trovehunter state with descriptive icons instead of always marking it completed", () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.trovehuntersBounty = { questCompleted: false, bagCount: 0, hasBuff: false };
+    const { container, rerender } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="trovehuntersBounty"]')!;
+    expect(within(card as HTMLElement).getByText("No obtenido")).toBeVisible();
+    expect(card.querySelector('.currency-card__bounty[data-obtained="false"] svg')).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Completado")).not.toBeInTheDocument();
+
+    characters[0].currencies!.trovehuntersBounty = { questCompleted: true, bagCount: 0, hasBuff: true };
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(within(card as HTMLElement).getByText("Obtenido")).toBeVisible();
+    expect(within(card as HTMLElement).getByText("Activo actualmente")).toBeVisible();
+    expect(card.querySelectorAll('.currency-card__bounty svg')).toHaveLength(2);
+  });
+
   it("shows upgrade-track icons on equipment and before raid, dungeon, and world Vault levels", () => {
     const characters = charactersPreview();
     characters[0].equipment!.items[0].upgrade = { track: "Hero", currentLevel: 2, maxLevel: 6 };

@@ -159,6 +159,20 @@ known positive bank amount, for example `6 (3 en el banco)`.
 
 `trovehuntersBounty` includes `itemID`, `bagCount`, `hasBuff`, `questCompleted`, `iconFileID`, `iconPath`, and `weekKey`; same-week completed quest state is preserved across transient incomplete reads.
 
+Client Characters and Web Summary derive the presentation from those existing fields. A map is
+`Obtenido` when quest `86371` is complete, it is present in bags, or aura `1293799` is active;
+otherwise it is `No obtenido`. Obtained maps show `Activo actualmente` while the aura is active,
+`En bolsas sin usar` while `bagCount` is positive, and `Reclamado` when a complete snapshot
+has neither signal. `Reclamado` is an inference, not a confirmed quest flag: a map moved outside
+the tracked character bags can produce the same snapshot. Older partial snapshots omit the
+substatus rather than claiming the reward without both bag and aura readings.
+The derived order is aura, bags, then claimed so transient or overlapping flags cannot hide a map
+that is still usable. Quest `92887` is deliberately excluded: [AllTheThings](https://github.com/ATTWoWAddon/AllTheThings/blob/master/db/Standard/Categories/Delves.lua)
+associates it with the weekly object opened using Scalebound Herald's Flute, and
+[EverythingDelves](https://github.com/wheelbarrel00/EverythingDelves/blob/main/UI/TabTierGuide.lua)
+notes that the flag can be complete while a map remains in bags. It is not a reliable
+claimed-trove signal.
+
 ### `money`
 
 Shape:

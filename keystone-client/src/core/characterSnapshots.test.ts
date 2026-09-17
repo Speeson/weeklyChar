@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHARACTER_CURRENCIES, currencyCapState } from "./characterSnapshots";
+import { CHARACTER_CURRENCIES, currencyCapState, trovehunterStatus } from "./characterSnapshots";
 
 describe("character currency semantics", () => {
   it("contains exactly the approved ten cards and only Hero/Myth Mistcrests", () => {
@@ -21,5 +21,26 @@ describe("character currency semantics", () => {
   it("separates seasonal total-earned caps from owned-total caps", () => {
     expect(currencyCapState({ quantity: 2, totalEarned: 450, maxQuantity: 450, useTotalEarnedForMaxQty: true }).isSeasonMaxed).toBe(true);
     expect(currencyCapState({ quantity: 8, maxQuantity: 8, useTotalEarnedForMaxQty: false }).isTotalMaxed).toBe(true);
+  });
+
+  it("derives every Trovehunter state from the weekly flag, bags, and active aura", () => {
+    expect(trovehunterStatus(undefined)).toEqual({ obtained: false, detail: null, known: false });
+    expect(trovehunterStatus({ questCompleted: false, bagCount: 0, hasBuff: false }))
+      .toEqual({ obtained: false, detail: null, known: true });
+    expect(trovehunterStatus({ questCompleted: true, bagCount: 1, hasBuff: false }))
+      .toEqual({ obtained: true, detail: "inBags", known: true });
+    expect(trovehunterStatus({ questCompleted: true, bagCount: 0, hasBuff: true }))
+      .toEqual({ obtained: true, detail: "active", known: true });
+    expect(trovehunterStatus({ questCompleted: true, bagCount: 0, hasBuff: false }))
+      .toEqual({ obtained: true, detail: "claimed", known: true });
+    expect(trovehunterStatus({ questCompleted: true }))
+      .toEqual({ obtained: true, detail: null, known: true });
+    expect(trovehunterStatus({}))
+      .toEqual({ obtained: false, detail: null, known: false });
+  });
+
+  it("treats a held map or active aura as obtained when the weekly flag is transiently false", () => {
+    expect(trovehunterStatus({ questCompleted: false, bagCount: 1, hasBuff: false }).obtained).toBe(true);
+    expect(trovehunterStatus({ questCompleted: false, bagCount: 0, hasBuff: true }).obtained).toBe(true);
   });
 });

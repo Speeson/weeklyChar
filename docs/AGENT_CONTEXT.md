@@ -365,6 +365,14 @@ Champion, Hero, and Myth from the verified Midnight Season 2 exact-variant bonus
 `variantKey`; base and unknown variants show no icon. Client and Web render icons on owned UI,
 without modifying Wowhead tooltip HTML or inferring tracks from item level.
 
+Trovehunter's Bounty presentation in Client Characters and Web Summary uses the existing additive
+currency snapshot (`questCompleted`, `bagCount`, and `hasBuff`). It displays obtained/not obtained
+plus active, unused in bags, or claimed with separate status icons. Quest `92887` is not used for
+the claimed state because current addon data ties it to a weekly Scalebound Herald's Flute object and it may
+already be complete while the map remains held. Claimed is inferred from a complete post-obtained
+snapshot with neither a held map nor the active bounty aura; it cannot distinguish a genuinely
+claimed trove from a map moved outside the tracked character bags.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

@@ -69,7 +69,7 @@ export function charactersPreview(): Character[] {
       preyHunts: { normal: { count: 4 }, hard: { count: 2 }, nightmare: {} },
       currencies: {
         heroMistcrest: { ...currency(25, 450, 450), isMaxed: true }, mythMistcrest: currency(20, 450, 315), venomblightManaflux: currency(1, 8), tidalSparkDust: { ...currency(4, 4), isMaxed: true }, sparksOfTides: { itemQuantity: 6 },
-        cofferKeyShards: { quantity: 0, quantityEarnedThisWeek: 600, maxWeeklyQuantity: 600 }, restoredCofferKey: currency(2), untaintedManaCrystals: { quantity: 143, quantityEarnedThisWeek: 250, maxWeeklyQuantity: 250, maxQuantity: 1000 }, nebulousVoidcore: currency(1, 3, 1), trovehuntersBounty: { questCompleted: true },
+        cofferKeyShards: { quantity: 0, quantityEarnedThisWeek: 600, maxWeeklyQuantity: 600 }, restoredCofferKey: currency(2), untaintedManaCrystals: { quantity: 143, quantityEarnedThisWeek: 250, maxWeeklyQuantity: 250, maxQuantity: 1000 }, nebulousVoidcore: currency(1, 3, 1), trovehuntersBounty: { questCompleted: true, bagCount: 1, hasBuff: false },
       }, money: { gold: 1284553, silver: 24, copper: 128455324, copperOnly: 17 },
     } : index === 1 ? {
       equipment: { averageItemLevel: 321, setPieces: [], items: hunterEquipment },

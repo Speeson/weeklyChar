@@ -9,7 +9,7 @@ import { apiFetch, getToken } from '@/lib/auth'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 import { keystoneColor } from '@/lib/colors'
 import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
-import { currencyCapState, formatTrovehunterStatus, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, wowheadHref } from '@/lib/season2Currencies'
+import { currencyCapState, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, trovehunterStatus, type TrovehunterDetail, wowheadHref } from '@/lib/season2Currencies'
 import { formatSparkQuantity } from '@/lib/sparkQuantity'
 import { formatVaultReward } from '@/lib/vaultRewards'
 import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
@@ -390,6 +390,41 @@ function WowheadIcon({ iconName }: { iconName: string }) {
   )
 }
 
+function TrovehunterStatusIcon({ kind }: { kind: 'obtained' | 'notObtained' | TrovehunterDetail }) {
+  const paths = kind === 'obtained'
+    ? <><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></>
+    : kind === 'notObtained'
+      ? <><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></>
+      : kind === 'active'
+        ? <path d="m13 2-8 12h7l-1 8 8-12h-7z"/>
+        : kind === 'inBags'
+          ? <><path d="m4 7 8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></>
+          : <><path d="M4 10h16v11H4zM2 6h20v4H2zM12 6v15M12 6H7.5A2.5 2.5 0 1 1 12 3.5zm0 0h4.5A2.5 2.5 0 1 0 12 3.5z"/></>
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 flex-none">{paths}</svg>
+}
+
+function TrovehunterStatus({ info }: { info: CurrencyInfo }) {
+  const status = trovehunterStatus(info)
+  if (!status.known) return <span className="text-gray-600">—</span>
+  const detail = status.detail === 'active'
+    ? 'Activo actualmente'
+    : status.detail === 'inBags'
+      ? 'En bolsas sin usar'
+      : status.detail === 'claimed'
+        ? 'Reclamado'
+        : null
+  return <span className="inline-grid gap-0.5 text-left">
+    <strong className={`inline-flex items-center gap-1 ${status.obtained ? 'text-emerald-300' : 'text-red-300'}`}>
+      <TrovehunterStatusIcon kind={status.obtained ? 'obtained' : 'notObtained'} />
+      {status.obtained ? 'Obtenido' : 'No obtenido'}
+    </strong>
+    {status.detail && detail ? <small className={`inline-flex items-center gap-1 text-[11px] font-semibold ${status.detail === 'active' ? 'text-cyan-300' : status.detail === 'inBags' ? 'text-amber-300' : 'text-emerald-200'}`}>
+      <TrovehunterStatusIcon kind={status.detail} />
+      {detail}
+    </small> : null}
+  </span>
+}
+
 function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRENCIES[number]) {
   const key = currency.key
   const info = char.currencies?.[key]
@@ -399,10 +434,10 @@ function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRE
       <WowheadLink
         type={currency.wowheadType}
         id={currency.wowheadId}
-        className={info.questCompleted ? 'font-bold text-emerald-300' : 'font-semibold text-gray-300'}
+        className="font-semibold text-gray-300"
       >
         <WowheadIcon iconName={currency.iconName} />
-        {formatTrovehunterStatus(info)}
+        <TrovehunterStatus info={info} />
       </WowheadLink>
     )
   }

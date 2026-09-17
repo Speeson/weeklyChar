@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, GripVertical, Power, PowerOff } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleX, Gift, GripVertical, Package, Power, PowerOff, Zap } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import medal1 from "../assets/medals/tier1.avif";
 import medal2 from "../assets/medals/tier2.avif";
@@ -10,7 +10,7 @@ import { WowheadTooltip } from "../components/WowheadTooltip";
 import { UpgradeTrackIcon } from "../components/UpgradeTrackIcon";
 import { classColor } from "../core/characterDisplay";
 import { loadInactiveCharacterIds, saveInactiveCharacterIds } from "../core/characterTracking";
-import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor } from "../core/characterSnapshots";
+import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor, trovehunterStatus } from "../core/characterSnapshots";
 import { MIDNIGHT_SEASON_2_DUNGEONS } from "../core/season2";
 import type { Character, CharacterCurrency, CharacterState, EquipmentItem, TalentTreeSnapshot } from "../core/types";
 import { blizzardIconUrl } from "../core/wowhead";
@@ -29,14 +29,14 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "TALENTOS DE CLASE", heroTalents: "TALENTOS HEROICOS", specTalents: "TALENTOS DE ESPECIALIZACIÓN",
   dungeons: "MAZMORRAS", greatVault: "GRAN CÁMARA", preyHunts: "CACERÍAS", currencies: "MONEDAS", gold: "ORO",
   raids: "Bandas", world: "Mundo", weekly: "Semanal", season: "Temporada", maximum: "Máximo",
-  noCap: "Sin límite relevante", completed: "Completado", showTalents: "Mostrar configuración completa", totalRating: "Rating total",
+  noCap: "Sin límite relevante", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Rating total",
 } : {
   account: "ACCOUNT", realm: "REALM", characters: "CHARACTERS",
   gear: "GEAR", itemLevel: "Item Level", setPieces: "Set Pieces", talents: "TALENTS",
   classTalents: "CLASS TALENTS", heroTalents: "HERO TALENTS", specTalents: "SPEC TALENTS",
   dungeons: "DUNGEONS", greatVault: "GREAT VAULT", preyHunts: "PREY HUNTS", currencies: "CURRENCIES", gold: "GOLD",
   raids: "Raids", world: "World", weekly: "Weekly", season: "Season", maximum: "Max",
-  noCap: "No relevant cap", completed: "Completed", showTalents: "Show full build", totalRating: "Total rating",
+  noCap: "No relevant cap", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
 };
 
 const ENCHANT_ICON_FALLBACK = 463531;
@@ -173,6 +173,23 @@ function CurrencyIcon({ fallbackIcon, fallbackIconID, info, region, symbol }: { 
   return <span className="currency-card__icon">{icon && !failed ? <img alt="" onError={() => setFailed(true)} src={icon}/> : symbol}</span>;
 }
 
+function TrovehunterStatus({ info, language }: { info?: CharacterCurrency; language: "es" | "en" }) {
+  const copy = characterCopy(language);
+  const status = trovehunterStatus(info);
+  if (!status.known) return <strong className="currency-card__unknown">—</strong>;
+  const detail = status.detail === "active"
+    ? <><Zap aria-hidden="true"/><span>{copy.bountyActive}</span></>
+    : status.detail === "inBags"
+      ? <><Package aria-hidden="true"/><span>{copy.bountyInBags}</span></>
+      : status.detail === "claimed"
+        ? <><Gift aria-hidden="true"/><span>{copy.bountyClaimed}</span></>
+        : null;
+  return <div className="currency-card__bounty" data-detail={status.detail ?? undefined} data-obtained={status.obtained}>
+    <strong>{status.obtained ? <CheckCircle2 aria-hidden="true"/> : <CircleX aria-hidden="true"/>}<span>{status.obtained ? copy.bountyObtained : copy.bountyNotObtained}</span></strong>
+    {detail ? <small>{detail}</small> : null}
+  </div>;
+}
+
 function CurrencyCard({ currencyKey, info, language, region }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; language: "es" | "en"; region: string }) {
   const copy = characterCopy(language);
   const caps = currencyCapState(info);
@@ -182,7 +199,7 @@ function CurrencyCard({ currencyKey, info, language, region }: { currencyKey: ty
   const label = language === "es" ? currencyKey.labelEs : currencyKey.label;
   return <WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}>
     <article className={`currency-card${caps.isMaxed ? " is-maxed" : ""}`} data-currency={currencyKey.key}>
-      <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <strong className="currency-card__completed">✓ {copy.completed}</strong> : <div className="currency-card__values"><strong>{value}</strong><footer>
+      <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <TrovehunterStatus info={info} language={language}/> : <div className="currency-card__values"><strong>{value}</strong><footer>
         {!hasCap ? <span>{copy.noCap}</span> : null}
         {number(info?.maxWeeklyQuantity) > 0 ? <span className={caps.isWeeklyMaxed ? "is-maxed" : ""}>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
         {number(info?.maxQuantity) > 0 ? <span className={caps.isSeasonMaxed || caps.isTotalMaxed ? "is-maxed" : ""}>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {number(info?.maxQuantity)}</span> : null}

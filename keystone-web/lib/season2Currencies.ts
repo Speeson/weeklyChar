@@ -36,9 +36,29 @@ export const MIDNIGHT_SEASON_2_CURRENCIES: Season2CurrencyMetadata[] = [
 export const DEFAULT_SEASON_2_CURRENCY_VISIBILITY: Record<Season2CurrencyKey, boolean> =
   Object.fromEntries(MIDNIGHT_SEASON_2_CURRENCIES.map(currency => [currency.key, true])) as Record<Season2CurrencyKey, boolean>
 
-export function formatTrovehunterStatus(info: { questCompleted?: boolean } | null | undefined): string {
-  if (!info) return '—'
-  return info.questCompleted ? 'Completed' : 'Incomplete'
+export type TrovehunterDetail = 'active' | 'inBags' | 'claimed'
+
+export type TrovehunterInfo = {
+  questCompleted?: boolean
+  bagCount?: number
+  hasBuff?: boolean
+}
+
+export function trovehunterStatus(info: TrovehunterInfo | null | undefined): {
+  obtained: boolean
+  detail: TrovehunterDetail | null
+  known: boolean
+} {
+  if (!info || (typeof info.questCompleted !== 'boolean' && typeof info.bagCount !== 'number' && typeof info.hasBuff !== 'boolean')) {
+    return { obtained: false, detail: null, known: false }
+  }
+  const inBags = typeof info.bagCount === 'number' && Number.isFinite(info.bagCount) && info.bagCount > 0
+  const active = info.hasBuff === true
+  const obtained = info.questCompleted === true || inBags || active
+  if (!obtained) return { obtained: false, detail: null, known: true }
+  if (active) return { obtained: true, detail: 'active', known: true }
+  if (inBags) return { obtained: true, detail: 'inBags', known: true }
+  return { obtained: true, detail: typeof info.bagCount === 'number' && info.hasBuff === false ? 'claimed' : null, known: true }
 }
 
 export function wowheadHref(type: 'currency' | 'item' | 'spell', id: number): string {

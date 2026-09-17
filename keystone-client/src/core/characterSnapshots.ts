@@ -55,6 +55,25 @@ export function currencyCapState(currency: CharacterCurrency | null | undefined)
   return { isWeeklyMaxed, isSeasonMaxed, isTotalMaxed, isMaxed: isWeeklyMaxed || isSeasonMaxed || isTotalMaxed };
 }
 
+export type TrovehunterDetail = "active" | "inBags" | "claimed";
+
+export function trovehunterStatus(info: Pick<CharacterCurrency, "questCompleted" | "bagCount" | "hasBuff"> | null | undefined): {
+  obtained: boolean;
+  detail: TrovehunterDetail | null;
+  known: boolean;
+} {
+  if (!info || (typeof info.questCompleted !== "boolean" && typeof info.bagCount !== "number" && typeof info.hasBuff !== "boolean")) {
+    return { obtained: false, detail: null, known: false };
+  }
+  const inBags = finite(info.bagCount) > 0;
+  const active = info.hasBuff === true;
+  const obtained = info.questCompleted === true || inBags || active;
+  if (!obtained) return { obtained: false, detail: null, known: true };
+  if (active) return { obtained: true, detail: "active", known: true };
+  if (inBags) return { obtained: true, detail: "inBags", known: true };
+  return { obtained: true, detail: typeof info.bagCount === "number" && info.hasBuff === false ? "claimed" : null, known: true };
+}
+
 export function keystoneColor(level: number | null | undefined) {
   if (!level) return "#8b98aa";
   if (level >= 13) return "#db35ff";

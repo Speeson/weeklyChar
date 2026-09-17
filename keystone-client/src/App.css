@@ -1678,7 +1678,17 @@ h2 {
 .currency-card__values > strong { align-self: center; font-size: 24px; line-height: 26px; }
 .currency-card footer { min-width: 0; display: grid; justify-items: end; color: var(--theme-text-muted); font-size: 11px; font-weight: 700; line-height: 14px; white-space: nowrap; }
 .currency-card footer span.is-maxed, .currency-card.is-maxed .currency-card__values > strong { color: #ff3b3b; }
-.currency-card__completed { grid-column: 2; grid-row: 2; align-self: center; color: #00f06d !important; font-size: 17px !important; }
+.currency-card__unknown { grid-column: 2; grid-row: 2; align-self: center; color: var(--theme-text-muted); font-size: 20px; }
+.currency-card__bounty { min-width: 0; grid-column: 2; grid-row: 2; align-self: center; display: grid; gap: 3px; }
+.currency-card__bounty > strong, .currency-card__bounty > small { min-width: 0; display: flex; align-items: center; gap: 5px; line-height: 1.15; }
+.currency-card__bounty > strong { color: #ff6b6b; font-size: 15px; }
+.currency-card__bounty[data-obtained="true"] > strong { color: #00f06d; }
+.currency-card__bounty > small { color: var(--theme-text-muted); font-size: 10px; font-weight: 750; }
+.currency-card__bounty[data-detail="active"] > small { color: #67e8f9; }
+.currency-card__bounty[data-detail="inBags"] > small { color: #fcd34d; }
+.currency-card__bounty[data-detail="claimed"] > small { color: #86efac; }
+.currency-card__bounty svg { width: 14px; height: 14px; flex: 0 0 auto; stroke-width: 2.25; }
+.currency-card__bounty > small svg { width: 12px; height: 12px; }
 .money-card { display: grid !important; grid-template-columns: 38px auto !important; grid-template-rows: 20px minmax(0, 1fr) !important; align-items: center; justify-content: center; gap: 5px 10px; }
 .money-card h2 { grid-column: 1 / -1; width: 100%; }
 .money-card__icon { width: 38px; height: 38px; overflow: hidden; border: 1px solid var(--theme-accent); border-radius: 50%; }

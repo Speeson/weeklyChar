@@ -2,17 +2,23 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  formatTrovehunterStatus,
+  trovehunterStatus,
   currencyCapState,
   MIDNIGHT_SEASON_2_CURRENCIES,
   migrateSeason2CurrencyVisibility,
   wowheadHref,
 } from './season2Currencies.ts'
 
-test('formats Trovehunter weekly completion as readable text', () => {
-  assert.equal(formatTrovehunterStatus({ questCompleted: true }), 'Completed')
-  assert.equal(formatTrovehunterStatus({ questCompleted: false }), 'Incomplete')
-  assert.equal(formatTrovehunterStatus(undefined), '—')
+test('derives Trovehunter acquisition and lifecycle status', () => {
+  assert.deepEqual(trovehunterStatus(undefined), { obtained: false, detail: null, known: false })
+  assert.deepEqual(trovehunterStatus({ questCompleted: false, bagCount: 0, hasBuff: false }), { obtained: false, detail: null, known: true })
+  assert.deepEqual(trovehunterStatus({ questCompleted: true, bagCount: 1, hasBuff: false }), { obtained: true, detail: 'inBags', known: true })
+  assert.deepEqual(trovehunterStatus({ questCompleted: true, bagCount: 0, hasBuff: true }), { obtained: true, detail: 'active', known: true })
+  assert.deepEqual(trovehunterStatus({ questCompleted: true, bagCount: 0, hasBuff: false }), { obtained: true, detail: 'claimed', known: true })
+  assert.deepEqual(trovehunterStatus({ questCompleted: true }), { obtained: true, detail: null, known: true })
+  assert.deepEqual(trovehunterStatus({}), { obtained: false, detail: null, known: false })
+  assert.equal(trovehunterStatus({ questCompleted: false, bagCount: 1, hasBuff: false }).obtained, true)
+  assert.equal(trovehunterStatus({ questCompleted: false, bagCount: 0, hasBuff: true }).obtained, true)
 })
 
 test('builds direct Wowhead destinations for Season 2 tooltips', () => {
