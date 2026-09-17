@@ -84,6 +84,7 @@ function parseCapability(value: unknown, summary: boolean): KeystonePlannerCapab
 function parseObjective(value: unknown): KeystonePlannerObjective | null {
   if (!record(value) || !integer(value.itemId, 1) || !nullableString(value.itemName, 512)
     || !nullableString(value.iconUrl) || !integer(value.tier, 1) || !string(value.variantKey, 1024)
+    || !(value.upgradeTrack === undefined || value.upgradeTrack === null || string(value.upgradeTrack, 64))
     || typeof value.voidcoreState !== "string" || !VOIDCORE.has(value.voidcoreState)) return null;
   if (value.iconUrl !== null) {
     try { if (new URL(value.iconUrl).protocol !== "https:") return null; } catch { return null; }
@@ -91,6 +92,7 @@ function parseObjective(value: unknown): KeystonePlannerObjective | null {
   return {
     itemId: value.itemId, itemName: value.itemName as string | null, iconUrl: value.iconUrl as string | null,
     tier: value.tier, variantKey: value.variantKey, voidcoreState: value.voidcoreState as KeystonePlannerObjective["voidcoreState"],
+    ...(typeof value.upgradeTrack === "string" ? { upgradeTrack: value.upgradeTrack } : {}),
   };
 }
 

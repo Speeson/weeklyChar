@@ -3,6 +3,7 @@ import { useI18n } from "../core/i18n";
 import { compactItemSlotLabel } from "../core/itemSlotLabel";
 import type { KeystoneSelectorObjective } from "../core/types";
 import { WowheadTooltip } from "./WowheadTooltip";
+import { UpgradeTrackIcon } from "./UpgradeTrackIcon";
 
 function bonusIdsFromVariantKey(variantKey: string): number[] {
   const match = variantKey.match(/^bonus:(\d+(?:,\d+)*)$/);
@@ -25,6 +26,7 @@ export function TeamItemTooltip({ objective }: { objective: KeystoneSelectorObje
     <>
       <span className="teams-item__icon">
         {objective.iconUrl ? <img alt="" src={objective.iconUrl} /> : <PackageOpen aria-hidden="true" />}
+        <UpgradeTrackIcon track={objective.upgradeTrack} className="upgrade-track-icon--badge" />
         {slotLabel ? <span className="teams-item__slot" aria-hidden="true">{slotLabel}</span> : null}
         {objective.owned ? <i className="teams-item__owned" aria-label={t("teams.owned")}><Check aria-hidden="true" /></i> : null}
       </span>

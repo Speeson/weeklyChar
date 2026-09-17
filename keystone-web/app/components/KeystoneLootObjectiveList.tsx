@@ -8,6 +8,7 @@ import {
   type KeystoneLootObjective,
 } from '@/lib/keystoneLootObjectives'
 import KeystoneLootItemTooltip from './KeystoneLootItemTooltip'
+import UpgradeTrackIcon from './UpgradeTrackIcon'
 
 function OwnedCheck() {
   return <span aria-label="Ya lo tienes" className="absolute bottom-0 left-0 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_2px_rgba(3,10,6,0.9),0_0_8px_rgba(49,233,129,0.75)]">
@@ -20,6 +21,7 @@ function ItemIcon({ objective }: { objective: KeystoneLootObjective }) {
     return (
       <span className="relative h-11 w-11 shrink-0">
         <span role="img" aria-label={`Icono de ${objectiveItemName(objective)}`} className={`block h-11 w-11 rounded border border-gray-700 bg-cover bg-center ${objective.owned ? 'grayscale opacity-40' : ''}`} style={{ backgroundImage: `url(${objective.iconUrl})` }} />
+        <UpgradeTrackIcon track={objective.upgradeTrack} className="absolute left-0 top-0" />
         {objective.owned && <OwnedCheck />}
       </span>
     )
@@ -30,6 +32,7 @@ function ItemIcon({ objective }: { objective: KeystoneLootObjective }) {
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.5">
         <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />
       </svg>
+      <UpgradeTrackIcon track={objective.upgradeTrack} className="absolute left-0 top-0" />
       {objective.owned && <OwnedCheck />}
     </span>
   )

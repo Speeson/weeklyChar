@@ -389,6 +389,7 @@ function plannerObjective(objective: ReturnType<typeof buildKeystoneLootPlannerO
     sourceType: objective.sourceType,
     sourceId: objective.sourceId,
     variantKey: objective.variantKey,
+    ...(objective.upgradeTrack ? { upgradeTrack: objective.upgradeTrack } : {}),
     voidcoreState: objective.voidcoreState,
   }
 }
@@ -494,6 +495,7 @@ async function publicRecommendations(
         iconUrl: null as string | null,
         tier: objective.tier,
         variantKey: objective.variantKey,
+        ...(objective.upgradeTrack ? { upgradeTrack: objective.upgradeTrack } : {}),
         voidcoreState: objective.voidcoreState,
       })),
       capabilities: assignment.capabilities.map(capability => ({

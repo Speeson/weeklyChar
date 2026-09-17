@@ -358,6 +358,13 @@ fallback only. Client language selection is an immediate serialized partial sett
 longer depends on the general Save action. The fields remain in `keystone_loot_json`; no migration
 or Web change is required.
 
+Upgrade-track presentation uses Blizzard's exact item-link upgrade track when available. The
+optional `upgradeTrack` Favorite field passes through the existing KeystoneLoot JSON and objective,
+Selector, and Planner DTOs. Until every published component emits that field, the Client restores
+Champion, Hero, and Myth from the verified Midnight Season 2 exact-variant bonus-list ranges in
+`variantKey`; base and unknown variants show no icon. Client and Web render icons on owned UI,
+without modifying Wowhead tooltip HTML or inferring tracks from item level.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

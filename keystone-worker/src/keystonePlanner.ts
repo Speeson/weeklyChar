@@ -57,6 +57,7 @@ export type PlannerObjective = {
   sourceType: string
   sourceId: number | string
   variantKey: string
+  upgradeTrack?: string
   voidcoreState: KeystoneLootVoidcoreState
 }
 

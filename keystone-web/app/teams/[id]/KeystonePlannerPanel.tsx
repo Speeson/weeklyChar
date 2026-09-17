@@ -8,6 +8,7 @@ import { DUNGEON_ABBR_BY_ID } from '@/lib/season2'
 import { objectiveItemName, tierPresentation, voidcorePresentation } from '@/lib/keystoneLootObjectives'
 import { specName, specOptionsForClass } from '@/lib/wowSpecs'
 import KeystoneLootItemTooltip from '@/app/components/KeystoneLootItemTooltip'
+import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 import {
   DEFAULT_PLANNER_OPTIONS,
   PLANNER_DIAGNOSTIC_LABELS,
@@ -70,8 +71,11 @@ function PlannerObjectiveTile({ objective, challengeMapId, specId }: {
   const name = objectiveItemName(objective)
   return (
     <KeystoneLootItemTooltip objective={{ ...objective, sourceType: 'dungeon', sourceId: challengeMapId, slotName: null, itemClassName: null, itemSubClassName: null, statNames: [], specId }} triggerClassName={`w-[76px] rounded-lg border p-1.5 text-center ${tier.tone}`}>
-      {objective.iconUrl ? <span role="img" aria-label={`Icono de ${name}`} className="mx-auto block h-12 w-12 rounded-md border border-current/30 bg-cover bg-center" style={{ backgroundImage: `url(${objective.iconUrl})` }} />
-        : <span aria-hidden="true" className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-gray-500">?</span>}
+      <span className="relative mx-auto block h-12 w-12">
+        {objective.iconUrl ? <span role="img" aria-label={`Icono de ${name}`} className="block h-12 w-12 rounded-md border border-current/30 bg-cover bg-center" style={{ backgroundImage: `url(${objective.iconUrl})` }} />
+          : <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-gray-500">?</span>}
+        <UpgradeTrackIcon track={objective.upgradeTrack} className="absolute left-0 top-0" />
+      </span>
       <span className="mt-1 block truncate text-[10px] font-bold text-gray-100">{name}</span>
       <span className={`mt-0.5 block truncate text-[9px] ${voidcore.tone}`}>{voidcore.label}</span>
     </KeystoneLootItemTooltip>

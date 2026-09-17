@@ -56,6 +56,7 @@ export type PlannerObjective = {
   iconUrl: string | null
   tier: number
   variantKey: string
+  upgradeTrack?: string | null
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
 
@@ -231,6 +232,7 @@ function parseCapability(value: unknown, summary: boolean): PlannerCapability | 
 function parseObjective(value: unknown): PlannerObjective | null {
   if (!record(value) || !integer(value.itemId, 1) || !nullableString(value.itemName, 512)
     || !nullableString(value.iconUrl) || !integer(value.tier, 1) || !nonEmptyString(value.variantKey, 512)
+    || !(value.upgradeTrack === undefined || value.upgradeTrack === null || nonEmptyString(value.upgradeTrack, 64))
     || typeof value.voidcoreState !== 'string' || !VOIDCORE.has(value.voidcoreState)) return null
   if (value.iconUrl !== null) {
     try { if (new URL(value.iconUrl).protocol !== 'https:') return null } catch { return null }

@@ -51,4 +51,13 @@ describe("TeamItemTooltip exact variant metadata", () => {
     expect(label).toHaveClass("teams-item__slot");
     expect(label.parentElement).toHaveClass("teams-item__icon");
   });
+
+  it("places the known upgrade track on the item image without changing Wowhead", () => {
+    renderWithTheme(<I18nProvider language="es"><TeamItemTooltip objective={objective({ upgradeTrack: "Héroe" })} /></I18nProvider>);
+    const icon = screen.getByRole("img", { name: "Héroe" });
+    expect(icon).toHaveClass("upgrade-track-icon--badge");
+    expect(icon.style.backgroundImage).toContain("hero");
+    expect(icon.parentElement).toHaveClass("teams-item__icon");
+    expect(screen.getByRole("link", { name: "Exact item" })).toHaveAttribute("data-wowhead", expect.stringContaining("bonus=1498:6652"));
+  });
 });

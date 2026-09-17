@@ -52,6 +52,15 @@ _PLANNER_DIAGNOSTICS = {
     "DUPLICATE_CANDIDATE", "INVALID_LOCK", "UNCONFIGURED_PARTICIPANT", "NO_VALID_COMPOSITION",
 }
 
+# Midnight Season 2 endgame upgrade-track bonus lists. Verified against Blizzard's
+# ItemBonus DB2 for Retail 12.1.0.69814 and the exact variants captured locally by
+# KeystoneLoot. The API-provided track always takes precedence over this client fallback.
+_MIDNIGHT_S2_UPGRADE_TRACK_BONUSES = (
+    (range(12833, 12841), "Champion"),
+    (range(12841, 12849), "Hero"),
+    (range(12849, 12857), "Myth"),
+)
+
 
 class TeamServiceError(Exception):
     def __init__(self, code: str, message: str):
@@ -74,6 +83,23 @@ def _text(value: Any, maximum: int) -> bool:
 
 def _nullable_text(value: Any, maximum: int) -> bool:
     return value is None or _text(value, maximum)
+
+
+def _upgrade_track(value: Any, variant_key: Any) -> str | None:
+    if isinstance(value, str):
+        return value
+    if not isinstance(variant_key, str) or not variant_key.startswith("bonus:"):
+        return None
+    try:
+        bonus_ids = {int(part) for part in variant_key.removeprefix("bonus:").split(",")}
+    except ValueError:
+        return None
+    matches = {
+        track
+        for bonus_range, track in _MIDNIGHT_S2_UPGRADE_TRACK_BONUSES
+        if any(bonus_id in bonus_range for bonus_id in bonus_ids)
+    }
+    return matches.pop() if len(matches) == 1 else None
 
 
 def _nullable_number(value: Any) -> bool:
@@ -255,6 +281,7 @@ def _objective(value: Any) -> dict[str, Any] | None:
     secondary_stats = value.get("secondaryStatNames")
     other_stats = value.get("otherStatNames")
     quality_type = value.get("qualityType")
+    upgrade_track = value.get("upgradeTrack")
     item_level = value.get("itemLevel")
     variant_key = value.get("variantKey", "base")
     classified_stats = [*primary_stats, *secondary_stats, *other_stats] \
@@ -268,6 +295,7 @@ def _objective(value: Any) -> dict[str, Any] | None:
             or not _stat_names(other_stats) or len(classified_stats) != len(stats) \
             or set(classified_stats) != set(stats) \
             or not (quality_type is None or (isinstance(quality_type, str) and quality_type in _QUALITY_TYPES)) \
+            or not (upgrade_track is None or _text(upgrade_track, 64)) \
             or not (item_level is None or _positive(item_level)) \
             or not _text(variant_key, 1024) \
             or not ("owned" not in value or isinstance(value["owned"], bool)) \
@@ -279,6 +307,9 @@ def _objective(value: Any) -> dict[str, Any] | None:
         "secondaryStatNames", "otherStatNames", "qualityType", "voidcoreState",
     )}
     projected = {**result, "itemLevel": item_level, "variantKey": variant_key}
+    resolved_upgrade_track = _upgrade_track(upgrade_track, variant_key)
+    if resolved_upgrade_track:
+        projected["upgradeTrack"] = resolved_upgrade_track
     if value.get("owned") is True:
         projected["owned"] = True
     return projected
@@ -347,9 +378,14 @@ def _planner_objective(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict) or not _positive(value.get("itemId")) \
             or not _nullable_text(value.get("itemName"), 512) or not _nullable_https(value.get("iconUrl")) \
             or not _positive(value.get("tier")) or not _text(value.get("variantKey"), 1024) \
+            or not (value.get("upgradeTrack") is None or _text(value.get("upgradeTrack"), 64)) \
             or value.get("voidcoreState") not in _VOIDCORE_STATES:
         return None
-    return {key: value[key] for key in ("itemId", "itemName", "iconUrl", "tier", "variantKey", "voidcoreState")}
+    objective = {key: value[key] for key in ("itemId", "itemName", "iconUrl", "tier", "variantKey", "voidcoreState")}
+    upgrade_track = _upgrade_track(value.get("upgradeTrack"), value["variantKey"])
+    if upgrade_track:
+        objective["upgradeTrack"] = upgrade_track
+    return objective
 
 
 def _planner_capability(value: Any, summary: bool) -> dict[str, Any] | None:

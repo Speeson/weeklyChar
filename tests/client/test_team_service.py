@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "keystone-client" / "sidecar"))
 
 from team_service import (  # noqa: E402
-    TeamService, TeamServiceError, _objective, _planner_request_valid, sanitize_planner,
+    TeamService, TeamServiceError, _objective, _planner_objective, _planner_request_valid, sanitize_planner,
     sanitize_selector,
 )
 
@@ -170,8 +170,12 @@ class TeamServiceTests(unittest.TestCase):
         owned = _objective({**objective, "owned": True})
         self.assertTrue(owned["owned"])
         self.assertNotIn("owned", projected)
+        tracked = _objective({**objective, "upgradeTrack": "Hero"})
+        self.assertEqual(tracked["upgradeTrack"], "Hero")
+        self.assertNotIn("upgradeTrack", projected)
         for malformed in (
             {**objective, "qualityType": "MYTHIC"},
+            {**objective, "upgradeTrack": "x" * 65},
             {**objective, "itemLevel": 0},
             {**objective, "itemLevel": 402.5},
             {**objective, "variantKey": ""},
@@ -183,6 +187,33 @@ class TeamServiceTests(unittest.TestCase):
         ):
             with self.subTest(malformed=malformed):
                 self.assertIsNone(_objective(malformed))
+
+    def test_planner_objective_preserves_optional_upgrade_track(self):
+        objective = {"itemId": 10, "itemName": "Báculo", "iconUrl": None,
+                     "tier": 3, "variantKey": "bonus:1", "voidcoreState": "pending"}
+        self.assertNotIn("upgradeTrack", _planner_objective(objective))
+        self.assertEqual(_planner_objective({**objective, "upgradeTrack": "Hero"})["upgradeTrack"], "Hero")
+        self.assertIsNone(_planner_objective({**objective, "upgradeTrack": "x" * 65}))
+
+    def test_midnight_s2_exact_variant_restores_missing_upgrade_track_for_client_surfaces(self):
+        selector = {
+            "itemId": 10, "itemName": "Báculo", "iconUrl": None, "tier": 3,
+            "specIds": [62], "sourceType": "dungeon", "sourceId": 399, "slotId": 16,
+            "slotName": "Mano principal", "itemClassName": "Arma", "itemSubClassName": "Báculo",
+            "statNames": [], "primaryStatNames": [], "secondaryStatNames": [], "otherStatNames": [],
+            "qualityType": "EPIC", "itemLevel": 318, "variantKey": "bonus:1674,3188,12845",
+            "voidcoreState": "pending",
+        }
+        planner = {key: selector[key] for key in (
+            "itemId", "itemName", "iconUrl", "tier", "variantKey", "voidcoreState",
+        )}
+
+        self.assertEqual(_objective(selector)["upgradeTrack"], "Hero")
+        self.assertEqual(_planner_objective(planner)["upgradeTrack"], "Hero")
+        self.assertEqual(_objective({**selector, "variantKey": "bonus:1674,12833"})["upgradeTrack"], "Champion")
+        self.assertEqual(_planner_objective({**planner, "variantKey": "bonus:1674,12849"})["upgradeTrack"], "Myth")
+        self.assertEqual(_objective({**selector, "upgradeTrack": "Héroe"})["upgradeTrack"], "Héroe")
+        self.assertNotIn("upgradeTrack", _objective({**selector, "variantKey": "bonus:1674,99999"}))
 
     def test_selector_accepts_owned_only_character_without_counting_it_as_pending(self):
         objective = {

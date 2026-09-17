@@ -15,7 +15,7 @@ const objective = (itemId: number, tier: number, overrides: Partial<KeystoneSele
   sourceId: 399, slotId: 16, slotName: "Mano principal", itemClassName: "Arma", itemSubClassName: "Báculo",
   statNames: ["Intelecto", "Aguante", "Celeridad", "Maestría"],
   primaryStatNames: ["Intelecto", "Aguante"], secondaryStatNames: ["Celeridad", "Maestría"],
-  otherStatNames: [], qualityType: "EPIC", itemLevel: 402, variantKey: `preview:${itemId}`,
+  otherStatNames: [], qualityType: "EPIC", itemLevel: 402, upgradeTrack: "Hero", variantKey: `preview:${itemId}`,
   voidcoreState: "pending", ...overrides,
 });
 
@@ -94,7 +94,7 @@ function plannerAssignment(userId: number, username: string, characterId: number
   return {
     userId, username, characterId, characterName, wowClass, specId, role, lootSpecId: specId,
     playPreference: "preferred",
-    objectives: objectiveTiers.map((tier, index) => ({ itemId: itemId + index, itemName: `Eco de Medianoche ${itemId + index}`, iconUrl: null, tier, variantKey: `planner:${itemId + index}`, voidcoreState: "pending" })),
+    objectives: objectiveTiers.map((tier, index) => ({ itemId: itemId + index, itemName: `Eco de Medianoche ${itemId + index}`, iconUrl: null, tier, variantKey: `planner:${itemId + index}`, upgradeTrack: "Hero", voidcoreState: "pending" })),
     capabilities: [],
   };
 }

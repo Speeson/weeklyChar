@@ -173,6 +173,7 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     || !(value.qualityType === null || (typeof value.qualityType === "string"
       && ITEM_QUALITY_TYPES.includes(value.qualityType as typeof ITEM_QUALITY_TYPES[number])))
     || !(itemLevel === null || positive(itemLevel)) || !text(variantKey, 1024)
+    || !(value.upgradeTrack === undefined || value.upgradeTrack === null || text(value.upgradeTrack, 64))
     || !(value.owned === undefined || typeof value.owned === "boolean")
     || typeof value.voidcoreState !== "string"
     || !VOIDCORE_STATES.includes(value.voidcoreState as typeof VOIDCORE_STATES[number])) return null;
@@ -185,6 +186,7 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     otherStatNames: [...value.otherStatNames] as string[],
     qualityType: value.qualityType as KeystoneSelectorObjective["qualityType"],
     itemLevel: itemLevel as number | null, variantKey: variantKey as string,
+    ...(typeof value.upgradeTrack === "string" ? { upgradeTrack: value.upgradeTrack } : {}),
     voidcoreState: value.voidcoreState as KeystoneSelectorObjective["voidcoreState"] };
   if (value.owned === true) objective.owned = true;
   return objective;

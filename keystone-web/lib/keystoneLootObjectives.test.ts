@@ -64,6 +64,11 @@ test('runtime parser accepts available, empty and every explicit owner status', 
   }
 })
 
+test('owner objectives preserve an optional upgrade track', () => {
+  assert.equal(parseOwnerObjectivesResponse(available({ objectives: [{ ...objective, upgradeTrack: 'Myth' }] }))?.objectives[0].upgradeTrack, 'Myth')
+  assert.equal(parseOwnerObjectivesResponse(available({ objectives: [{ ...objective, upgradeTrack: 'x'.repeat(65) }] })), null)
+})
+
 test('runtime parser fails closed for malformed DTOs and responses', () => {
   const invalid = [
     null,

@@ -28,6 +28,7 @@ export type KeystoneLootSelectorObjectiveDTO = {
   secondaryStatNames: string[]
   otherStatNames: string[]
   qualityType: string | null
+  upgradeTrack?: string
   itemLevel: number | null
   variantKey: string
   voidcoreState: KeystoneLootVoidcoreState
@@ -156,6 +157,7 @@ function selectorObjective(
     secondaryStatNames: selected.secondaryStatNames,
     otherStatNames: selected.otherStatNames,
     qualityType: selected.qualityType,
+    ...(selected.upgradeTrack ? { upgradeTrack: selected.upgradeTrack } : {}),
     itemLevel: selected.itemLevel,
     variantKey: selected.variantKey,
     voidcoreState: selected.voidcoreState,

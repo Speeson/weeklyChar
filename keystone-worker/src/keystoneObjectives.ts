@@ -32,6 +32,7 @@ export type KeystoneLootObjectiveDTO = {
   secondaryStatNames: string[]
   otherStatNames: string[]
   qualityType: string | null
+  upgradeTrack?: string
   itemLevel: number | null
   variantKey: string
   voidcoreState: KeystoneLootVoidcoreState
@@ -148,6 +149,7 @@ function objectiveFromFavorite(
     secondaryStatNames: [],
     otherStatNames: [],
     qualityType: favorite.qualityType ?? null,
+    ...(favorite.upgradeTrack ? { upgradeTrack: favorite.upgradeTrack } : {}),
     itemLevel: favorite.itemLevel ?? null,
     variantKey: effectiveVariantKey(favorite),
     voidcoreState: !usedItems

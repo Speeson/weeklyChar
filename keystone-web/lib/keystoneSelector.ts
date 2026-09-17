@@ -13,6 +13,7 @@ export type KeystoneSelectorTierCounts = {
 export type KeystoneSelectorObjective = {
   itemId: number
   itemName: string | null
+  upgradeTrack?: string | null
   iconUrl: string | null
   tier: number
   specIds: number[]
@@ -175,6 +176,7 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
     || !nullableSafeString(value.itemClassName, 128)
     || !nullableSafeString(value.itemSubClassName, 128)
     || !(value.owned === undefined || typeof value.owned === 'boolean')
+    || !(value.upgradeTrack === undefined || value.upgradeTrack === null || safeString(value.upgradeTrack, 64))
     || typeof value.voidcoreState !== 'string'
     || !VOIDCORE_STATES.includes(value.voidcoreState as KeystoneLootVoidcoreState)) return null
   const statNames = parseStatNames(value.statNames)
@@ -182,6 +184,7 @@ function parseObjective(value: unknown): KeystoneSelectorObjective | null {
   const objective: KeystoneSelectorObjective = {
     itemId: value.itemId,
     itemName: value.itemName,
+    ...(typeof value.upgradeTrack === 'string' ? { upgradeTrack: value.upgradeTrack } : {}),
     iconUrl: value.iconUrl,
     tier: value.tier,
     specIds: [...value.specIds] as number[],

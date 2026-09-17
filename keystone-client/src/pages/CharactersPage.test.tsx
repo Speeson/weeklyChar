@@ -74,6 +74,18 @@ describe("CharactersPage", () => {
     expect(item.dataset.wowhead).toContain("spec=102");
   });
 
+  it("shows upgrade-track icons on equipment and before raid, dungeon, and world Vault levels", () => {
+    const characters = charactersPreview();
+    characters[0].equipment!.items[0].upgrade = { track: "Hero", currentLevel: 2, maxLevel: 6 };
+    const { container } = renderPage({ ...state, characters });
+    expect(container.querySelector(".gear-item__piece .upgrade-track-icon--badge")).toHaveAttribute("aria-label", "Hero");
+    const categoryRows = container.querySelectorAll(".vault-panel > div");
+    expect(categoryRows).toHaveLength(3);
+    for (const row of categoryRows) {
+      expect(row.querySelector(".vault-slot__reward .upgrade-track-icon")).toBeTruthy();
+    }
+  });
+
   it("shows real gem and enchant icons below equipped items", () => {
     const characters = charactersPreview();
     characters[0].equipment!.items[0].gems[0].iconFileID = 133785;

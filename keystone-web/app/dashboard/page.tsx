@@ -10,6 +10,7 @@ import Navbar from '@/app/components/Navbar'
 import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 import WeeklyReset from '@/app/components/WeeklyReset'
 import { formatVaultReward } from '@/lib/vaultRewards'
+import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 import {
   compactKeystoneLabel,
   DUNGEON_ABBR_BY_ID,
@@ -188,8 +189,12 @@ function vaultRewardLevels(bucket?: VaultBucket) {
   return [...(bucket?.slots ?? [])]
     .sort((a, b) => (a.threshold ?? 0) - (b.threshold ?? 0))
     .slice(0, 3)
-    .map(slot => slot.unlocked ? formatVaultReward(slot.rewardItemLevel, slot.rewardUpgradeTrack, 'es') ?? '—' : '—')
-    .join('  ')
+    .map((slot, index) => {
+      const reward = slot.unlocked ? formatVaultReward(slot.rewardItemLevel, slot.rewardUpgradeTrack, 'es') : null
+      return <span key={slot.threshold ?? index} className="inline-flex items-center gap-1">
+        {reward ? <UpgradeTrackIcon track={slot.rewardUpgradeTrack} /> : null}{reward ?? '—'}
+      </span>
+    })
 }
 
 function nebulousVoidcore(char: Character) {
@@ -209,14 +214,14 @@ function CharacterInfoTooltip({ char, id }: { char: Character; id: string }) {
   ] as const
 
   return (
-    <div id={id} role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-3 w-max -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-950/95 p-3 text-left opacity-0 shadow-2xl shadow-black/60 backdrop-blur transition group-hover:opacity-100 group-focus-within:opacity-100">
+    <div id={id} role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-3 w-max max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-950/95 p-3 text-left opacity-0 shadow-2xl shadow-black/60 backdrop-blur transition group-hover:opacity-100 group-focus-within:opacity-100">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-500">Great Vault</p>
           <div className="mt-1 grid gap-1">
             {vaultCategories.map(([label, bucket, maxProgress]) => <div key={label} className="rounded-lg bg-gray-900/80 px-3 py-2">
               <div className="flex min-w-full items-center justify-between gap-3"><span className="text-[10px] font-bold uppercase text-gray-500">{label}</span><span className="text-xs font-bold text-gray-400">{vaultProgress(bucket, maxProgress)}</span></div>
-              <div className="mt-1 flex items-center justify-between gap-5"><span className="whitespace-pre text-sm font-semibold text-green-400">{vaultSlots(bucket)}</span><strong className="whitespace-pre text-xs text-emerald-300">{vaultRewardLevels(bucket)}</strong></div>
+              <div className="mt-1 flex items-center justify-between gap-5"><span className="whitespace-pre text-sm font-semibold text-green-400">{vaultSlots(bucket)}</span><strong className="flex flex-wrap items-center justify-end gap-2 text-xs text-emerald-300">{vaultRewardLevels(bucket)}</strong></div>
             </div>)}
           </div>
           {topRuns.length > 0 && (

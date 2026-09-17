@@ -172,3 +172,13 @@ test('exact variants stay separate and carry exact metadata into objectives', ()
     { variantKey: 'bonus:1501,6652', itemLevel: 402, qualityType: 'EPIC' },
   ])
 })
+
+test('upgrade track follows the exact favorite variant and remains optional for older snapshots', () => {
+  const page = buildKeystoneLootObjectivePage(supported([
+    favorite(10, 3, { bonusIds: [1], upgradeTrack: 'Hero' }),
+    favorite(11, 3),
+  ]), { limit: 50 })
+  assert.equal(page.objectives.find(item => item.itemId === 10)?.upgradeTrack, 'Hero')
+  assert.equal(page.objectives.find(item => item.itemId === 11)?.upgradeTrack, undefined)
+  assert.equal(classifyKeystoneLootSnapshot(supported([favorite(10, 3, { upgradeTrack: 'x'.repeat(65) })])).status, 'unavailable')
+})

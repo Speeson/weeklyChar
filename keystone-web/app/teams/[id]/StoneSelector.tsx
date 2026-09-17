@@ -21,6 +21,7 @@ import {
 import { compactItemSlotLabel, objectiveItemName, tierPresentation } from '@/lib/keystoneLootObjectives'
 import { specName } from '@/lib/wowSpecs'
 import KeystoneLootItemTooltip from '@/app/components/KeystoneLootItemTooltip'
+import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 import KeystonePlannerPanel from './KeystonePlannerPanel'
 
 type SelectorTeamMember = {
@@ -84,6 +85,7 @@ function SelectorItemTile({ objective }: { objective: KeystoneSelectorObjective 
         ) : (
           <span aria-hidden="true" className={`flex h-13 w-13 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-lg text-gray-500 ${objective.owned ? 'grayscale opacity-40' : ''}`}>?</span>
         )}
+        <UpgradeTrackIcon track={objective.upgradeTrack} className="absolute left-0 top-0" />
         {slotLabel && <span aria-hidden="true" className={`absolute inset-x-px bottom-px h-4 overflow-hidden rounded-sm bg-gray-950/95 px-0.5 font-black leading-4 tracking-[-0.02em] text-white [text-shadow:0_1px_2px_#000] ${objective.owned ? 'pl-[17px] text-right text-[9px]' : 'text-center text-[10px]'}`}>{slotLabel}</span>}
         {objective.owned && <span aria-label="Ya lo tienes" className="absolute bottom-0 left-0 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_2px_rgba(3,10,6,0.9),0_0_8px_rgba(49,233,129,0.75)]"><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4L19 6" /></svg></span>}
       </span>

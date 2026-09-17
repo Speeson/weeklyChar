@@ -13,6 +13,7 @@ import offensiveSynergyIcon from "../assets/planner/offensive-synergy.jpg";
 import { PlannerPreferencesModal } from "../components/PlannerPreferencesModal";
 import { RemoteAvatar } from "../components/RemoteAvatar";
 import { TeamItemTooltip } from "../components/TeamItemTooltip";
+import { UpgradeTrackIcon } from "../components/UpgradeTrackIcon";
 import { WowRoleIcon } from "../components/WowRoleIcon";
 import { WowheadSpellIcon, WowheadTooltip } from "../components/WowheadTooltip";
 import { classColor } from "../core/characterDisplay";
@@ -309,6 +310,7 @@ function PlannerObjectiveIcon({ assignment, objective }: { assignment: KeystoneP
   const copy = usePlannerCopy();
   return <WowheadTooltip className="planner-objective-icon" id={objective.itemId} label={objective.itemName ?? `${copy.item} #${objective.itemId}`} options={{ spec: assignment.lootSpecId }} type="item"><span data-tier={objective.tier}>
     {objective.iconUrl ? <img alt="" src={objective.iconUrl} /> : <Gem aria-hidden="true" />}
+    <UpgradeTrackIcon track={objective.upgradeTrack} className="upgrade-track-icon--badge" />
   </span></WowheadTooltip>;
 }
 

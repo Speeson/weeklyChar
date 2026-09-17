@@ -392,6 +392,7 @@ export type KeystoneSelectorObjective = {
   secondaryStatNames: string[];
   otherStatNames: string[];
   qualityType: ItemQualityType | null;
+  upgradeTrack?: string | null;
   itemLevel: number | null;
   variantKey: string;
   voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
@@ -503,6 +504,7 @@ export type KeystonePlannerObjective = {
   iconUrl: string | null;
   tier: number;
   variantKey: string;
+  upgradeTrack?: string | null;
   voidcoreState: "pending" | "completed_with_voidcore" | "voidcore_not_checked";
 };
 

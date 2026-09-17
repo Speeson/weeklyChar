@@ -32,6 +32,7 @@ export type KeystoneLootFavorite = {
   variantKey?: string
   itemLevel?: number | null
   qualityType?: KeystoneLootQualityType | null
+  upgradeTrack?: string | null
   owned?: boolean
   [key: string]: unknown
 }
@@ -144,6 +145,10 @@ function validateFavorite(value: unknown, index: number): string | null {
     && (typeof value.qualityType !== 'string'
       || !KEYSTONE_LOOT_QUALITY_TYPES.includes(value.qualityType as KeystoneLootQualityType))) {
     return `favorites[${index}].qualityType no es válido`
+  }
+  if (value.upgradeTrack !== undefined && value.upgradeTrack !== null
+    && !boundedString(value.upgradeTrack, 64)) {
+    return `favorites[${index}].upgradeTrack no es válido`
   }
   if (value.variantKey !== undefined) {
     if (!boundedString(value.variantKey, KEYSTONE_LOOT_LIMITS.variantKeyLength)) {

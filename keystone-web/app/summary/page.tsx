@@ -12,6 +12,7 @@ import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
 import { currencyCapState, formatTrovehunterStatus, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, wowheadHref } from '@/lib/season2Currencies'
 import { formatSparkQuantity } from '@/lib/sparkQuantity'
 import { formatVaultReward } from '@/lib/vaultRewards'
+import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 
 interface Keystone {
   level: number | null
@@ -250,8 +251,8 @@ function VaultProgress({ bucket, dungeon = false, maxProgress }: { bucket?: Vaul
     <span className="group relative inline-flex whitespace-pre" tabIndex={hasDetails ? 0 : -1}>
       {vaultSlots(bucket)}
       {progress && <span className="ml-2 text-xs text-gray-400">{progress}</span>}
-      {hasDetails && <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-56 -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-950 p-2 text-left shadow-xl group-hover:grid group-focus:grid">
-        {slots.map((slot, index) => { const reward = slot.unlocked ? formatVaultReward(slot.rewardItemLevel, slot.rewardUpgradeTrack, 'es') : null; return <span key={`${slot.threshold ?? index}`} className="flex items-center justify-between gap-4 py-0.5 text-xs"><span className="text-gray-400">Cofre {index + 1}: {slot.progress ?? 0}/{slot.threshold ?? 0}</span>{reward ? <b className="text-emerald-300">{reward}</b> : null}</span> })}
+      {hasDetails && <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-64 max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-950 p-2 text-left shadow-xl group-hover:grid group-focus:grid">
+        {slots.map((slot, index) => { const reward = slot.unlocked ? formatVaultReward(slot.rewardItemLevel, slot.rewardUpgradeTrack, 'es') : null; return <span key={`${slot.threshold ?? index}`} className="flex items-center justify-between gap-4 py-0.5 text-xs"><span className="text-gray-400">Cofre {index + 1}: {slot.progress ?? 0}/{slot.threshold ?? 0}</span>{reward ? <b className="inline-flex items-center gap-1 text-emerald-300"><UpgradeTrackIcon track={slot.rewardUpgradeTrack} />{reward}</b> : null}</span> })}
         {topRuns.map((run, index) => { const level = run.level ?? 0; return <span key={`${run.mapChallengeModeID ?? run.name}-${level}-${index}`} className="py-0.5 text-xs"><span className="truncate text-gray-300">{(run.mapChallengeModeID && DUNGEON_ABBR_BY_ID.get(run.mapChallengeModeID)) ?? run.name ?? 'Mythic+'} +{level}</span></span> })}
       </span>}
     </span>

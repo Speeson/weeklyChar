@@ -6,6 +6,7 @@ export type KeystoneLootVoidcoreState =
 export type KeystoneLootObjective = {
   itemId: number
   itemName: string | null
+  upgradeTrack?: string | null
   iconUrl: string | null
   tier: number
   specId: number
@@ -138,6 +139,7 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
     || !nullableString(value.itemClassName, 128)
     || !nullableString(value.itemSubClassName, 128)
     || !statNames(value.statNames)
+    || !(value.upgradeTrack === undefined || value.upgradeTrack === null || (typeof value.upgradeTrack === 'string' && value.upgradeTrack.length > 0 && value.upgradeTrack.length <= 64))
     || !(value.owned === undefined || typeof value.owned === 'boolean')
     || typeof value.voidcoreState !== 'string'
     || !VOIDCORE_STATES.includes(value.voidcoreState as KeystoneLootVoidcoreState)) return null
@@ -153,6 +155,7 @@ function parseObjective(value: unknown): KeystoneLootObjective | null {
   const objective: KeystoneLootObjective = {
     itemId: value.itemId,
     itemName: value.itemName,
+    ...(typeof value.upgradeTrack === 'string' ? { upgradeTrack: value.upgradeTrack } : {}),
     iconUrl: value.iconUrl,
     tier: value.tier,
     specId: value.specId,

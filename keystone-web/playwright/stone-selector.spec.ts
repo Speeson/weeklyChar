@@ -50,6 +50,7 @@ const tierCounts = {
 const baseObjective = {
   itemId: 12345,
   itemName: 'Brazales estabilizantes de embalsamador',
+  upgradeTrack: 'Hero',
   iconUrl: 'https://render.worldofwarcraft.com/eu/icons/56/object.jpg',
   tier: 3,
   specIds: [62, 64],
@@ -226,6 +227,9 @@ test('summary preserves character order and expanded multi-spec grids keep obtai
   await expect(cards.nth(0).getByText('BEST IN SLOT · 3')).toBeVisible()
   await expect(cards.nth(0).getByText('Completados / obtenidos')).toHaveCount(0)
   await expect(cards.nth(0).getByLabel('Ya lo tienes')).toBeVisible()
+  const upgradeIcons = cards.nth(0).getByRole('img', { name: 'Hero' })
+  await expect(upgradeIcons.first()).toBeVisible()
+  await expect(upgradeIcons.first()).toHaveCSS('background-image', /upgrade-tracks\/hero\.png/u)
   await expect(cards.nth(0).getByText('Muñec.', { exact: true }).first()).toBeVisible()
 
   await cards.nth(1).getByRole('button', { name: 'Ver objetos' }).click()

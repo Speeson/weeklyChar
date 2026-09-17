@@ -15,6 +15,7 @@ import {
 export type KeystoneLootTooltipItem = {
   itemId: number
   itemName: string | null
+  upgradeTrack?: string | null
   iconUrl: string | null
   tier: number
   sourceType: string

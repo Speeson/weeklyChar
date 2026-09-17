@@ -348,8 +348,13 @@ integer item/spec IDs, positive integer tiers without a maximum, and numeric or 
 string source identity. Known optional item fields are type-checked.
 
 Exact Favorite variants add optional positive-safe-integer `itemLevel`, allowlisted
-`qualityType`, and a deterministic `variantKey`. The key is `base` when `bonusIds` are absent or
+`qualityType`, optional bounded localized `upgradeTrack` from `C_Item.GetItemUpgradeInfo` on the exact
+item link, and a deterministic `variantKey`. `upgradeTrack` is absent when the variant cannot be
+resolved; item level and item rarity never substitute for it. The key is `base` when `bonusIds` are absent or
 empty and otherwise encodes the sorted numeric bonus IDs; a supplied key must match those IDs.
+As a bounded compatibility path for already-published snapshots, the Client may restore Champion,
+Hero, or Myth from the verified Midnight Season 2 upgrade bonus-list ID inside a non-base
+`variantKey`. An explicit `upgradeTrack` wins; unknown, conflicting, and base variants remain absent.
 Legacy Favorites without `owned` remain valid and actionable. Objective and Selector identity includes this key, so equal
 item/source/spec Favorites with different saved bonus variants remain separate before asynchronous
 item metadata is available.
@@ -601,7 +606,8 @@ Stone Selector aggregate endpoint:
   endpoints. Metadata failure never removes an objective.
 - Exact addon `qualityType` takes precedence over the locale-scoped Blizzard base quality; cached
   Blizzard quality is only the fallback for legacy/unresolved Favorites. Exact `itemLevel` and
-  `variantKey` pass through the same allowlisted DTO. Variant quality is never written into the
+  `variantKey` and optional `upgradeTrack` pass through the same allowlisted DTO. Variant quality and
+  upgrade track are never written into the
   generic `(region, locale, item_id)` metadata cache.
 - Migration `0006_keystone_loot_item_quality_and_stat_groups.sql` additively caches Blizzard's
   stable item-quality type and three name-only stat groups. Classification uses Blizzard stat
@@ -628,6 +634,7 @@ The Selector objective allowlist is:
   secondaryStatNames: string[]
   otherStatNames: string[]
   qualityType: 'POOR' | 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'ARTIFACT' | 'HEIRLOOM' | null
+  upgradeTrack?: string
   owned?: true
   voidcoreState: 'pending' | 'completed_with_voidcore' | 'voidcore_not_checked'
 }
