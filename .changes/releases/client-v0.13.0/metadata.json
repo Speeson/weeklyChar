@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.12.0",
+  "version": "0.13.0",
+  "bump": "minor",
+  "tag": "client-v0.13.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "upgrade-track-icons.json"
+  ]
+}
