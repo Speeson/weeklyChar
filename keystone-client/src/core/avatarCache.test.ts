@@ -65,7 +65,8 @@ beforeEach(() => {
 
       async readAsDataURL(blob: Blob) {
         const bytes = await blob.arrayBuffer();
-        this.result = `data:${blob.type};base64,${Buffer.from(bytes).toString("base64")}`;
+        const binary = Array.from(new Uint8Array(bytes), value => String.fromCharCode(value)).join("");
+        this.result = `data:${blob.type};base64,${btoa(binary)}`;
         this.onload?.();
       }
     });
