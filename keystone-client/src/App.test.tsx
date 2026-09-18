@@ -593,7 +593,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Auralis/ }));
 
     expect(setProfileAvatarMock).toHaveBeenCalledWith({ avatarUrl: "https://img.test/auralis.jpg" });
-    expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/auralis.jpg"]')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/auralis.jpg"]')).toBeInTheDocument();
+    });
   });
 
   it("places the selected-avatar check at card level", async () => {
