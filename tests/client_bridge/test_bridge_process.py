@@ -198,6 +198,7 @@ class BridgeProcessTests(unittest.TestCase):
                     "startMinimized": False,
                     "minimizeOnClose": False,
                     "closeBehavior": "ask",
+                    "lockWindowAspectRatio": False,
                     "lang": "es",
                 },
                 "wow": {
@@ -319,7 +320,7 @@ class BridgeProcessTests(unittest.TestCase):
         self.assertTrue(initial["ok"])
         self.assertEqual(
             initial["data"],
-            {"startMinimized": False, "minimizeOnClose": False, "closeBehavior": "ask", "lang": "es"},
+            {"startMinimized": False, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "lang": "es"},
         )
 
         updated = self.bridge.send(
@@ -333,7 +334,7 @@ class BridgeProcessTests(unittest.TestCase):
         self.assertTrue(updated["ok"])
         self.assertEqual(
             updated["data"],
-            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "lang": "en"},
         )
 
         rejected = self.bridge.send(

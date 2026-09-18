@@ -126,6 +126,21 @@ describe("SettingsPage", () => {
     expect(updateSettingsMock).toHaveBeenCalledWith({ ...initialSettings, closeBehavior: "exit" });
   });
 
+  it("saves the optional window proportion lock", async () => {
+    const user = userEvent.setup();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, lockWindowAspectRatio: true });
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    const checkbox = await screen.findByLabelText("Bloquear proporción al cambiar el tamaño");
+    expect(checkbox).not.toBeChecked();
+    await user.click(checkbox);
+    await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ ...initialSettings, lockWindowAspectRatio: true });
+    expect(await screen.findByRole("status")).toHaveTextContent("Ajustes guardados.");
+  });
+
   it("persists language immediately without saving unrelated drafts", async () => {
     const user = userEvent.setup();
     const onSettingsChanged = vi.fn();

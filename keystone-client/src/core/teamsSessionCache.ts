@@ -2,6 +2,31 @@ import type { TeamsDataSource } from "./teams";
 import type { ClientTeamDetail, ClientTeamSummary, KeystoneSelectorResponse } from "./types";
 
 type SelectorLocale = "es_ES" | "en_US";
+const SELECTED_TEAM_STORAGE_PREFIX = "keystone-client.teams.selected.";
+
+function selectedTeamStorageKey(username: string): string | null {
+  const normalized = username.trim().toLocaleLowerCase();
+  return normalized ? `${SELECTED_TEAM_STORAGE_PREFIX}${encodeURIComponent(normalized)}` : null;
+}
+
+function storedTeamId(username: string): number | null {
+  const key = selectedTeamStorageKey(username);
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw || !/^[1-9]\d*$/.test(raw)) return null;
+    const id = Number(raw);
+    return Number.isSafeInteger(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+export function preferredTeamId(availableTeams: ClientTeamSummary[], currentId: number | null, username: string): number | null {
+  if (availableTeams.some(team => team.id === currentId)) return currentId;
+  const savedId = storedTeamId(username);
+  return availableTeams.find(team => team.id === savedId)?.id ?? availableTeams[0]?.id ?? null;
+}
 
 let generation = 0;
 let teams: ClientTeamSummary[] | null = null;
@@ -53,8 +78,12 @@ export function getCachedSelector(
   return selectors.get(selectorKey(teamId, challengeMapId, locale)) ?? null;
 }
 
-export function setSelectedTeamId(teamId: number | null): void {
+export function setSelectedTeamId(teamId: number | null, username = ""): void {
   selectedTeamId = teamId;
+  const key = selectedTeamStorageKey(username);
+  if (key && teamId !== null) {
+    try { localStorage.setItem(key, String(teamId)); } catch { /* Storage may be unavailable. */ }
+  }
 }
 
 export function loadTeams(dataSource: TeamsDataSource): Promise<ClientTeamSummary[]> {
@@ -113,16 +142,14 @@ export function loadSelector(
   return request;
 }
 
-export async function prefetchTeamsSession(dataSource: TeamsDataSource): Promise<void> {
+export async function prefetchTeamsSession(dataSource: TeamsDataSource, username = ""): Promise<void> {
   const currentTeams = await loadTeams(dataSource);
   if (currentTeams.length === 0) {
     setSelectedTeamId(null);
     return;
   }
-  const targetTeamId = currentTeams.some(team => team.id === selectedTeamId)
-    ? selectedTeamId as number
-    : currentTeams[0].id;
-  setSelectedTeamId(targetTeamId);
+  const targetTeamId = preferredTeamId(currentTeams, selectedTeamId, username)!;
+  setSelectedTeamId(targetTeamId, username);
   await loadTeamDetail(dataSource, targetTeamId);
 }
 

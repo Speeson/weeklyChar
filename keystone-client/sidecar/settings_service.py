@@ -12,6 +12,7 @@ _FIELD_MAP = {
     "startMinimized": "start_minimized",
     "minimizeOnClose": "minimize_on_close",
     "closeBehavior": "close_behavior",
+    "lockWindowAspectRatio": "lock_window_aspect_ratio",
     "lang": "lang",
 }
 
@@ -33,6 +34,7 @@ def get_settings(cfg: dict[str, Any]) -> dict[str, Any]:
         "startMinimized": bool(cfg.get("start_minimized")),
         "minimizeOnClose": bool(cfg.get("minimize_on_close")),
         "closeBehavior": close_behavior,
+        "lockWindowAspectRatio": bool(cfg.get("lock_window_aspect_ratio")),
         "lang": cfg.get("lang") if cfg.get("lang") in _LANGUAGES else "es",
     }
 
@@ -44,7 +46,7 @@ def update_settings(cfg: dict[str, Any], updates: dict[str, Any]) -> dict[str, A
     for key, value in updates.items():
         if key not in _FIELD_MAP:
             raise SettingsError(SETTINGS_INVALID_PAYLOAD, f"Unknown setting: {key}.")
-        if key in ("startMinimized", "minimizeOnClose") and not isinstance(value, bool):
+        if key in ("startMinimized", "minimizeOnClose", "lockWindowAspectRatio") and not isinstance(value, bool):
             raise SettingsError(SETTINGS_INVALID_PAYLOAD, f"{key} must be a boolean.")
         if key == "closeBehavior" and (not isinstance(value, str) or value not in _CLOSE_BEHAVIORS):
             raise SettingsError(SETTINGS_INVALID_PAYLOAD, "closeBehavior must be ask, minimize or exit.")

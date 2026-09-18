@@ -142,6 +142,20 @@ test.describe("preview states", () => {
     await expectStableReleaseScreenshot(page, "settings-theme-selector.png");
   });
 
+  test("keeps the window proportion option and save action usable at Full HD startup size", async ({ page }) => {
+    await page.setViewportSize({ width: 1478, height: 832 });
+    await page.goto("/?preview=sync-success");
+    await page.getByRole("button", { name: "Configuracion" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Ajustes" });
+    const lock = dialog.getByRole("checkbox", { name: "Bloquear proporción al cambiar el tamaño" });
+    await expect(lock).toBeInViewport();
+    await lock.check();
+    const save = dialog.getByRole("button", { name: "Guardar ajustes" });
+    await save.scrollIntoViewIfNeeded();
+    await expect(save).toBeInViewport();
+  });
+
   test("renders the signed update confirmation above the client", async ({ page }) => {
     await page.goto("/?preview=sync-success&updater=available");
 

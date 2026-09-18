@@ -40,7 +40,7 @@ function source(overrides: Partial<TeamsDataSource> = {}): TeamsDataSource {
 }
 
 describe("Teams session cache", () => {
-  beforeEach(() => clearTeamsSessionCache());
+  beforeEach(() => { clearTeamsSessionCache(); localStorage.clear(); });
 
   it("deduplicates concurrent list and detail consumers while caching both responses", async () => {
     let resolveList!: (value: typeof teams) => void;
@@ -92,6 +92,32 @@ describe("Teams session cache", () => {
     expect(dataSource.getTeam).toHaveBeenCalledWith(7);
     expect(dataSource.getKeystoneSelector).not.toHaveBeenCalled();
     expect(getTeamsSessionSnapshot().selectedTeamId).toBe(7);
+  });
+
+  it("restores the last selected Team for its user after a new session", async () => {
+    const available = [...teams, { id: 8, name: "Second Team", memberCount: 1 }];
+    const dataSource = source({ listTeams: vi.fn(async () => available) });
+
+    setSelectedTeamId(8, "Speeson");
+    clearTeamsSessionCache();
+    await prefetchTeamsSession(dataSource, "speeson");
+
+    expect(getTeamsSessionSnapshot().selectedTeamId).toBe(8);
+    expect(dataSource.getTeam).toHaveBeenCalledWith(8);
+
+    clearTeamsSessionCache();
+    await prefetchTeamsSession(dataSource, "other-user");
+    expect(getTeamsSessionSnapshot().selectedTeamId).toBe(7);
+  });
+
+  it("falls back to an available Team when the saved Team is no longer accessible", async () => {
+    setSelectedTeamId(8, "Speeson");
+    clearTeamsSessionCache();
+
+    await prefetchTeamsSession(source(), "Speeson");
+
+    expect(getTeamsSessionSnapshot().selectedTeamId).toBe(7);
+    expect(localStorage.getItem("keystone-client.teams.selected.speeson")).toBe("7");
   });
 
   it("clears all private data, selected Team and in-flight identity at an auth boundary", async () => {

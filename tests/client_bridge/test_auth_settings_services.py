@@ -349,7 +349,7 @@ class SettingsServiceTests(unittest.TestCase):
 
         self.assertEqual(
             settings,
-            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "lang": "en"},
         )
         self.assertNotIn("sync_token", settings)
         self.assertNotIn("access_token", settings)
@@ -369,7 +369,7 @@ class SettingsServiceTests(unittest.TestCase):
 
         self.assertEqual(
             settings,
-            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "lang": "en"},
         )
         self.assertEqual(self.saved_cfg["sync_token"], "sync")
         self.assertEqual(self.saved_cfg["unknown_future_key"], {"x": 1})
@@ -388,6 +388,17 @@ class SettingsServiceTests(unittest.TestCase):
         self.assertEqual(restarted_settings["lang"], "en")
         self.assertTrue(restarted_settings["startMinimized"])
         self.assertEqual(self.saved_cfg["sync_token"], "sync")
+
+    def test_window_aspect_lock_is_saved_and_requires_a_boolean(self) -> None:
+        cfg = {"lang": "es", "unknown_future_key": "kept"}
+
+        updated = settings_service.update_settings(cfg, {"lockWindowAspectRatio": True})
+
+        self.assertTrue(updated["lockWindowAspectRatio"])
+        self.assertTrue(settings_service.get_settings(self.saved_cfg)["lockWindowAspectRatio"])
+        self.assertEqual(self.saved_cfg["unknown_future_key"], "kept")
+        with self.assertRaises(settings_service.SettingsError):
+            settings_service.update_settings(cfg, {"lockWindowAspectRatio": "yes"})
 
     def test_close_behavior_migrates_legacy_minimize_and_keeps_it_compatible(self) -> None:
         legacy = {"start_minimized": False, "minimize_on_close": True, "lang": "es"}

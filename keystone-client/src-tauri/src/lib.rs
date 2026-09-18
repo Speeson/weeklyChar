@@ -2,6 +2,7 @@ mod bridge;
 mod state;
 mod tray;
 mod window;
+mod window_sizing;
 
 use bridge::CoreBridgeError;
 use serde_json::Value;
@@ -68,6 +69,11 @@ fn hide_to_tray(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
     window::hide_to_tray(&app)
 }
 
+#[tauri::command]
+fn set_window_aspect_lock(app: tauri::AppHandle, enabled: bool) -> Result<(), CoreBridgeError> {
+    window_sizing::set_aspect_lock(&app, enabled)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -89,6 +95,7 @@ pub fn run() {
             app.manage(CoreBridgeState::new(app.handle().clone()));
             tray::setup_tray(app)?;
             window::setup_window_lifecycle(app.handle());
+            window_sizing::setup_initial_size(app.handle());
             window::apply_start_minimized(app.handle());
             Ok(())
         })
@@ -100,7 +107,8 @@ pub fn run() {
             open_releases,
             open_raiderio_character,
             exit_app,
-            hide_to_tray
+            hide_to_tray,
+            set_window_aspect_lock
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -25,6 +25,7 @@ _DEFAULTS = {
     "start_minimized": False,
     "minimize_on_close": False,
     "close_behavior": "ask",
+    "lock_window_aspect_ratio": False,
     "login_at": None,
     "lang": "es",
     "cached_characters": [],

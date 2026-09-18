@@ -1,0 +1,9 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Equipos recuerda el último equipo abierto al volver a iniciar el cliente.",
+  "details": [
+    "La selección se guarda por usuario y se restaura si el equipo sigue disponible."
+  ]
+}

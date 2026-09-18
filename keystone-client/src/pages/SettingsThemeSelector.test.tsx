@@ -63,6 +63,8 @@ describe("Settings theme integration", () => {
     await user.tab();
     await user.tab();
     await user.tab();
+    expect(screen.getByLabelText("Bloquear proporción al cambiar el tamaño")).toHaveFocus();
+    await user.tab();
     expect(selector).toHaveFocus();
 
     await user.selectOptions(selector, "void");

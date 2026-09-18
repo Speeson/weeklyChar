@@ -25,7 +25,7 @@ import {
 } from "../core/teams";
 import {
   getCachedSelector, getCachedTeamDetail, getTeamsSessionSnapshot, loadSelector, loadTeamDetail,
-  loadTeams, removeTeamFromSessionCache, setSelectedTeamId,
+  loadTeams, preferredTeamId, removeTeamFromSessionCache, setSelectedTeamId,
 } from "../core/teamsSessionCache";
 import { specName, wowClassIconUrl, wowLootBagIconUrl, wowSpecializationIconUrl } from "../core/wowSpecs";
 import { DEFAULT_KEYSTONE_PLANNER_OPTIONS } from "../core/keystonePlanner";
@@ -927,10 +927,8 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const brandMark = useThemeAsset("teams-loading-mark");
   const [initialSession] = useState(() => {
     const snapshot = getTeamsSessionSnapshot();
-    const initialTeamId = snapshot.teams?.some(team => team.id === snapshot.selectedTeamId)
-      ? snapshot.selectedTeamId
-      : snapshot.teams?.[0]?.id ?? null;
-    if (initialTeamId !== snapshot.selectedTeamId) setSelectedTeamId(initialTeamId);
+    const initialTeamId = preferredTeamId(snapshot.teams ?? [], snapshot.selectedTeamId, currentUsername);
+    if (initialTeamId !== snapshot.selectedTeamId) setSelectedTeamId(initialTeamId, currentUsername);
     return {
       teams: snapshot.teams,
       teamId: initialTeamId,
@@ -969,8 +967,8 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       teamsRef.current = result;
       setTeams(result);
       setTeamId(current => {
-        const next = result.some(team => team.id === current) ? current : result[0]?.id ?? null;
-        setSelectedTeamId(next);
+        const next = preferredTeamId(result, current, currentUsername);
+        setSelectedTeamId(next, currentUsername);
         return next;
       });
       return result;
@@ -982,7 +980,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       }
       throw caught;
     });
-  }, [dataSource, onSessionExpired, t]);
+  }, [currentUsername, dataSource, onSessionExpired, t]);
 
   useEffect(() => {
     void refreshTeams().catch(() => undefined);
@@ -999,10 +997,11 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
 
   useEffect(() => {
     if (teams && teams.length > 0 && teamId === null) {
-      setSelectedTeamId(teams[0].id);
-      setTeamId(teams[0].id);
+      const next = preferredTeamId(teams, null, currentUsername)!;
+      setSelectedTeamId(next, currentUsername);
+      setTeamId(next);
     }
-  }, [teamId, teams]);
+  }, [currentUsername, teamId, teams]);
 
   useEffect(() => {
     const generation = ++detailGeneration.current;
@@ -1128,7 +1127,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   return <section className="teams-page">
     <div className="teams-top-row">
       <TeamPicker activeId={teamId} onOpen={() => { void refreshTeams().catch(() => undefined); }} onSelect={(nextTeamId) => {
-        setSelectedTeamId(nextTeamId);
+        setSelectedTeamId(nextTeamId, currentUsername);
         setTeamId(nextTeamId);
         setDetail(getCachedTeamDetail(nextTeamId));
       }} teams={teams ?? []} />

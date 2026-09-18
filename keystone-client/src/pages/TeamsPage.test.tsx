@@ -158,6 +158,7 @@ async function showPlannerResults(user: ReturnType<typeof userEvent.setup>, resp
 describe("TeamsPage compact ranking", () => {
   beforeEach(() => {
     clearTeamsSessionCache();
+    localStorage.clear();
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ icon: "inv_misc_questionmark" }) })));
   });
 
@@ -392,6 +393,26 @@ describe("TeamsPage compact ranking", () => {
     expect(await screen.findByRole("button", { name: second.name })).toBeInTheDocument();
     expect(screen.getByText("Selecciona una mazmorra para ver los objetivos del equipo.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
+  });
+
+  it("opens the last selected Team after the client session is cleared", async () => {
+    const user = userEvent.setup();
+    const second = { ...detail, id: 8, name: "Second Team", members: [] };
+    const dataSource = source({
+      listTeams: vi.fn(async () => [{ id: 7, name: detail.name, memberCount: 2 }, { id: 8, name: second.name, memberCount: 0 }]),
+      getTeam: vi.fn(async id => id === 7 ? detail : second),
+    });
+    const first = renderPage(dataSource);
+    await user.click(await screen.findByRole("button", { name: detail.name }));
+    await user.click(screen.getByRole("option", { name: second.name }));
+    expect(await screen.findByRole("button", { name: second.name })).toBeInTheDocument();
+
+    first.unmount();
+    clearTeamsSessionCache();
+    renderPage(dataSource);
+
+    expect(await screen.findByRole("button", { name: second.name })).toBeInTheDocument();
+    expect(dataSource.getTeam).toHaveBeenLastCalledWith(8);
   });
 
   it("soft-filters one or multiple members without hiding or reordering rows, persists across dungeons, and clears explicitly", async () => {

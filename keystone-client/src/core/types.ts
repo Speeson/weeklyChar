@@ -73,6 +73,7 @@ export type ClientSettings = {
   startMinimized: boolean;
   minimizeOnClose: boolean;
   closeBehavior: "ask" | "minimize" | "exit";
+  lockWindowAspectRatio?: boolean;
   lang: "es" | "en";
 };
 

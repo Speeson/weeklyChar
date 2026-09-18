@@ -32,6 +32,10 @@ export function startWindowDragging(): Promise<void> {
   return getCurrentWindow().startDragging();
 }
 
+export function setWindowAspectLock(enabled: boolean): Promise<void> {
+  return invoke<void>("set_window_aspect_lock", { enabled });
+}
+
 export function exitApplication(): Promise<void> {
   return invoke<void>("exit_app");
 }

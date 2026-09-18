@@ -216,6 +216,14 @@ export function SettingsPage({
             <option value="exit">{t("settings.closeExit")}</option>
           </select>
         </label>
+        <label className="check-row">
+          <input
+            checked={settings.lockWindowAspectRatio ?? false}
+            onChange={(event) => setSettings((current) => ({ ...current, lockWindowAspectRatio: event.target.checked }))}
+            type="checkbox"
+          />
+          {t("settings.lockWindowAspectRatio")}
+        </label>
       </section>
 
       <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />

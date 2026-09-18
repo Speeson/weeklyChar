@@ -21,6 +21,7 @@ import {
   minimizeWindow,
   openReleases,
   openWeb,
+  setWindowAspectLock,
   startWindowDragging,
 } from "./core/native";
 import { getPreviewState, isCharactersPreview, isTeamsPreview } from "./core/preview";
@@ -128,6 +129,13 @@ function App() {
   const closeDialogOpenRef = useRef(false);
 
   settingsRef.current = settings;
+
+  useEffect(() => {
+    if (!settings || !isTauri()) return;
+    void setWindowAspectLock(settings.lockWindowAspectRatio === true).catch(caught => {
+      setError(formatError(caught, translate(settings.lang, "settings.error")));
+    });
+  }, [settings?.lockWindowAspectRatio, settings?.lang]);
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -384,14 +392,14 @@ function App() {
     if (!auth?.authenticated || bridgeStatus !== "ready" || !settings || !wow || !sync || !characters || !addon
       || (previewMode && !isTeamsPreview())) return;
     let cancelled = false;
-    void prefetchTeamsSession(teamsDataSource).catch(caught => {
+    void prefetchTeamsSession(teamsDataSource, authenticatedUsername ?? "").catch(caught => {
       if (!cancelled && typeof caught === "object" && caught !== null && "code" in caught
         && String((caught as CoreError).code) === "SESSION_EXPIRED") {
         handleSessionExpired();
       }
     });
     return () => { cancelled = true; };
-  }, [addon, auth?.authenticated, bridgeStatus, characters, handleSessionExpired, previewMode,
+  }, [addon, auth?.authenticated, authenticatedUsername, bridgeStatus, characters, handleSessionExpired, previewMode,
     settings, sync, teamsDataSource, wow]);
 
   async function handleAvatarSelect(avatarUrl: string) {
