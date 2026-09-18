@@ -1,0 +1,12 @@
+{
+  "component": "client",
+  "current_version": "0.13.1",
+  "version": "0.14.0",
+  "bump": "minor",
+  "tag": "client-v0.14.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-adaptive-window-sizing.json",
+    "remember-last-team.json"
+  ]
+}
