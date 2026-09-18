@@ -256,6 +256,7 @@ jobs:
         working-directory: keystone-client
         run: |
           npm test
+          if ($LASTEXITCODE -ne 0) { throw "React tests failed." }
           npm run build
 
       - name: Validate Rust

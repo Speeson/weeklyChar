@@ -37,9 +37,13 @@ class MemoryCache {
 
 let cache: MemoryCache;
 let deleteCache: ReturnType<typeof vi.fn>;
+const supportsBlobResponse = (() => {
+  try { new Response(new Blob(["test"])); return true; } catch { return false; }
+})();
 
 function imageResponse(body = "jpeg", type = "image/jpeg", headers: Record<string, string> = {}) {
-  return new Response(new Blob([body], { type }), {
+  const content = supportsBlobResponse ? new Blob([body], { type }) : body;
+  return new Response(content, {
     headers: { "content-length": String(body.length), "content-type": type, ...headers },
     status: 200,
   });
@@ -53,6 +57,19 @@ beforeEach(() => {
     open: vi.fn().mockResolvedValue(cache),
   });
   vi.stubGlobal("fetch", vi.fn());
+  if (!supportsBlobResponse) {
+    vi.stubGlobal("FileReader", class {
+      result: string | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      async readAsDataURL(blob: Blob) {
+        const bytes = await blob.arrayBuffer();
+        this.result = `data:${blob.type};base64,${Buffer.from(bytes).toString("base64")}`;
+        this.onload?.();
+      }
+    });
+  }
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
 });
 
