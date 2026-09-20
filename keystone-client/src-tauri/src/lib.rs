@@ -75,6 +75,20 @@ fn set_window_aspect_lock(app: tauri::AppHandle, enabled: bool) -> Result<(), Co
     window_sizing::set_aspect_lock(&app, enabled)
 }
 
+#[tauri::command]
+fn configure_overlay_shortcut(
+    app: tauri::AppHandle,
+    enabled: bool,
+    shortcut: String,
+) -> Result<overlay::OverlayShortcutStatus, String> {
+    overlay::configure(&app, enabled, shortcut)
+}
+
+#[tauri::command]
+fn get_overlay_shortcut_status() -> overlay::OverlayShortcutStatus {
+    overlay::status()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -95,7 +109,11 @@ pub fn run() {
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
             app.manage(CoreBridgeState::new(app.handle().clone()));
-            overlay::setup(app.handle())?;
+            let overlay_settings = app
+                .state::<CoreBridgeState>()
+                .request("settings.get".to_string(), serde_json::json!({}))
+                .map_err(|error| error.to_string());
+            overlay::setup(app.handle(), overlay_settings);
             tray::setup_tray(app)?;
             window::setup_window_lifecycle(app.handle());
             window_sizing::setup_initial_size(app.handle());
@@ -111,7 +129,9 @@ pub fn run() {
             open_raiderio_character,
             exit_app,
             hide_to_tray,
-            set_window_aspect_lock
+            set_window_aspect_lock,
+            configure_overlay_shortcut,
+            get_overlay_shortcut_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

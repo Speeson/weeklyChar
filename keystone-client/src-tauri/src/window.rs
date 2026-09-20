@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use tauri_plugin_opener::OpenerExt;
 
-use crate::{bridge::CoreBridgeError, state::CoreBridgeState};
+use crate::{bridge::CoreBridgeError, overlay, state::CoreBridgeState};
 
 const MAIN_WINDOW: &str = "main";
 const WEB_URL: &str = "https://keystonesync.esgarpe.dev";
@@ -19,7 +19,9 @@ pub fn show_main_window(app: &AppHandle) {
     if let Some(window) = main_window(app) {
         let _ = window.unminimize();
         let _ = window.show();
-        let _ = window.set_focus();
+        if !overlay::is_active() {
+            let _ = window.set_focus();
+        }
     }
 }
 

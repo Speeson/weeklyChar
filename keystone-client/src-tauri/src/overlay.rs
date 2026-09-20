@@ -1,15 +1,74 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use serde::Serialize;
+use serde_json::Value;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex, MutexGuard,
+};
 use tauri::Manager;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-static OVERLAY_ENABLED: AtomicBool = AtomicBool::new(false);
-pub const OVERLAY_SHORTCUT: &str = "Ctrl+Shift+K";
+static OVERLAY_ACTIVE: AtomicBool = AtomicBool::new(false);
+static REGISTRATION_STATE: Mutex<OverlayRegistrationState> =
+    Mutex::new(OverlayRegistrationState::new());
+pub const DEFAULT_OVERLAY_SHORTCUT: &str = "Ctrl+Shift+K";
 
 #[derive(Debug, PartialEq)]
 struct OverlayWindowFlags {
     always_on_top: bool,
     skip_taskbar: bool,
     request_focus: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct OverlayShortcutStatus {
+    enabled: bool,
+    shortcut: String,
+    registered: bool,
+    last_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct RegisteredBinding {
+    shortcut: Shortcut,
+}
+
+#[derive(Debug)]
+struct OverlayRegistrationState {
+    enabled: bool,
+    shortcut: String,
+    registered: Option<RegisteredBinding>,
+    last_error: Option<String>,
+}
+
+impl OverlayRegistrationState {
+    const fn new() -> Self {
+        Self {
+            enabled: false,
+            shortcut: String::new(),
+            registered: None,
+            last_error: None,
+        }
+    }
+
+    fn status(&self) -> OverlayShortcutStatus {
+        OverlayShortcutStatus {
+            enabled: self.enabled,
+            shortcut: if self.shortcut.is_empty() {
+                DEFAULT_OVERLAY_SHORTCUT.to_string()
+            } else {
+                self.shortcut.clone()
+            },
+            registered: self.registered.is_some(),
+            last_error: self.last_error.clone(),
+        }
+    }
+}
+
+fn registration_state() -> MutexGuard<'static, OverlayRegistrationState> {
+    REGISTRATION_STATE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 fn overlay_window_flags() -> OverlayWindowFlags {
@@ -20,17 +79,137 @@ fn overlay_window_flags() -> OverlayWindowFlags {
     }
 }
 
-pub fn setup(app: &tauri::AppHandle) -> Result<(), tauri_plugin_global_shortcut::Error> {
+fn parse_shortcut(value: &str) -> Result<Shortcut, String> {
+    let shortcut = value
+        .parse::<Shortcut>()
+        .map_err(|error| format!("Invalid overlay shortcut: {error}"))?;
+    if shortcut.mods == Modifiers::empty() {
+        return Err("The overlay shortcut must include at least one modifier.".to_string());
+    }
+    Ok(shortcut)
+}
+
+fn register(app: &tauri::AppHandle, shortcut: Shortcut) -> Result<(), String> {
     app.global_shortcut()
-        .on_shortcut(OVERLAY_SHORTCUT, |app, _shortcut, event| {
+        .on_shortcut(shortcut, |app, _shortcut, event| {
             if event.state == ShortcutState::Pressed {
                 let _ = toggle(app);
             }
         })
+        .map_err(|error| format!("Could not register the overlay shortcut: {error}"))
 }
 
-pub fn is_enabled() -> bool {
-    OVERLAY_ENABLED.load(Ordering::SeqCst)
+fn set_registration_error(error: String) -> String {
+    registration_state().last_error = Some(error.clone());
+    error
+}
+
+pub fn setup(app: &tauri::AppHandle, settings: Result<Value, String>) {
+    let (enabled, shortcut) = match settings {
+        Ok(settings) => (
+            settings
+                .get("overlayEnabled")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            settings
+                .get("overlayShortcut")
+                .and_then(Value::as_str)
+                .unwrap_or(DEFAULT_OVERLAY_SHORTCUT)
+                .to_string(),
+        ),
+        Err(error) => {
+            let mut state = registration_state();
+            state.shortcut = DEFAULT_OVERLAY_SHORTCUT.to_string();
+            state.last_error = Some(error);
+            return;
+        }
+    };
+
+    if configure(app, enabled, shortcut.clone()).is_err() {
+        let mut state = registration_state();
+        state.enabled = enabled;
+        state.shortcut = shortcut;
+    }
+}
+
+pub fn status() -> OverlayShortcutStatus {
+    registration_state().status()
+}
+
+pub fn configure(
+    app: &tauri::AppHandle,
+    enabled: bool,
+    shortcut_value: String,
+) -> Result<OverlayShortcutStatus, String> {
+    let shortcut = parse_shortcut(&shortcut_value).map_err(set_registration_error)?;
+    let mut state = registration_state();
+
+    if !enabled {
+        let was_active = is_active();
+        if was_active {
+            restore_normal_window(app).map_err(|error| {
+                state.last_error = Some(error.clone());
+                error
+            })?;
+        }
+
+        if let Some(current) = &state.registered {
+            if let Err(error) = app.global_shortcut().unregister(current.shortcut) {
+                let message = format!("Could not unregister the overlay shortcut: {error}");
+                if was_active {
+                    let _ = enable(app);
+                }
+                state.last_error = Some(message.clone());
+                return Err(message);
+            }
+        }
+
+        state.enabled = false;
+        state.shortcut = shortcut_value;
+        state.registered = None;
+        state.last_error = None;
+        return Ok(state.status());
+    }
+
+    if state
+        .registered
+        .as_ref()
+        .is_some_and(|current| current.shortcut.id() == shortcut.id())
+    {
+        state.enabled = true;
+        state.shortcut = shortcut_value;
+        state.last_error = None;
+        return Ok(state.status());
+    }
+
+    register(app, shortcut).map_err(|error| {
+        state.last_error = Some(error.clone());
+        error
+    })?;
+
+    if let Some(current) = &state.registered {
+        if let Err(error) = app.global_shortcut().unregister(current.shortcut) {
+            let rollback = app.global_shortcut().unregister(shortcut);
+            let message = match rollback {
+                Ok(()) => format!("Could not replace the overlay shortcut: {error}"),
+                Err(rollback_error) => format!(
+                    "Could not replace the overlay shortcut: {error}; cleanup also failed: {rollback_error}"
+                ),
+            };
+            state.last_error = Some(message.clone());
+            return Err(message);
+        }
+    }
+
+    state.enabled = true;
+    state.shortcut = shortcut_value;
+    state.registered = Some(RegisteredBinding { shortcut });
+    state.last_error = None;
+    Ok(state.status())
+}
+
+pub fn is_active() -> bool {
+    OVERLAY_ACTIVE.load(Ordering::SeqCst)
 }
 
 pub fn enable(app: &tauri::AppHandle) -> Result<(), String> {
@@ -52,7 +231,7 @@ pub fn enable(app: &tauri::AppHandle) -> Result<(), String> {
     debug_assert!(!flags.request_focus);
     window.show().map_err(|error| error.to_string())?;
 
-    OVERLAY_ENABLED.store(true, Ordering::SeqCst);
+    OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
     Ok(())
 }
 
@@ -62,6 +241,23 @@ pub fn disable(app: &tauri::AppHandle) -> Result<(), String> {
         .ok_or_else(|| "main window unavailable".to_string())?;
 
     window.hide().map_err(|error| error.to_string())?;
+    reset_window_flags(&window)?;
+
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
+    Ok(())
+}
+
+fn restore_normal_window(app: &tauri::AppHandle) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window unavailable".to_string())?;
+    reset_window_flags(&window)?;
+    window.show().map_err(|error| error.to_string())?;
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
+    Ok(())
+}
+
+fn reset_window_flags(window: &tauri::WebviewWindow) -> Result<(), String> {
     window
         .set_focusable(true)
         .map_err(|error| error.to_string())?;
@@ -70,14 +266,11 @@ pub fn disable(app: &tauri::AppHandle) -> Result<(), String> {
         .map_err(|error| error.to_string())?;
     window
         .set_skip_taskbar(false)
-        .map_err(|error| error.to_string())?;
-
-    OVERLAY_ENABLED.store(false, Ordering::SeqCst);
-    Ok(())
+        .map_err(|error| error.to_string())
 }
 
 pub fn toggle(app: &tauri::AppHandle) -> Result<(), String> {
-    if is_enabled() {
+    if is_active() {
         disable(app)
     } else {
         enable(app)
@@ -86,7 +279,10 @@ pub fn toggle(app: &tauri::AppHandle) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_enabled, overlay_window_flags, Ordering, OVERLAY_ENABLED, OVERLAY_SHORTCUT};
+    use super::{
+        is_active, overlay_window_flags, parse_shortcut, registration_state, status, Modifiers,
+        Ordering, OVERLAY_ACTIVE,
+    };
 
     #[test]
     fn overlay_never_requests_focus() {
@@ -98,18 +294,39 @@ mod tests {
     }
 
     #[test]
-    fn overlay_shortcut_is_stable() {
-        assert_eq!(OVERLAY_SHORTCUT, "Ctrl+Shift+K");
+    fn overlay_shortcut_requires_a_modifier() {
+        assert!(parse_shortcut("K").is_err());
+        assert!(parse_shortcut("Ctrl+Shift").is_err());
+
+        let shortcut = parse_shortcut("Ctrl+Shift+K").unwrap();
+        assert!(shortcut.mods.contains(Modifiers::CONTROL));
+        assert!(shortcut.mods.contains(Modifiers::SHIFT));
+    }
+
+    #[test]
+    fn overlay_status_has_safe_defaults() {
+        let mut state = registration_state();
+        state.enabled = false;
+        state.shortcut.clear();
+        state.registered = None;
+        state.last_error = None;
+        drop(state);
+
+        let status = status();
+        assert!(!status.enabled);
+        assert_eq!(status.shortcut, "Ctrl+Shift+K");
+        assert!(!status.registered);
+        assert_eq!(status.last_error, None);
     }
 
     #[test]
     fn overlay_state_can_be_toggled() {
-        OVERLAY_ENABLED.store(false, Ordering::SeqCst);
+        OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
 
-        assert!(!is_enabled());
+        assert!(!is_active());
 
-        OVERLAY_ENABLED.store(true, Ordering::SeqCst);
+        OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
 
-        assert!(is_enabled());
+        assert!(is_active());
     }
 }
