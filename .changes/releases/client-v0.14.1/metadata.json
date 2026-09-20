@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.14.0",
+  "version": "0.14.1",
+  "bump": "patch",
+  "tag": "client-v0.14.1",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-profile-avatar-offline-cache.json"
+  ]
+}
