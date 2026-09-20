@@ -41,6 +41,9 @@ pub fn enable(app: &tauri::AppHandle) -> Result<(), String> {
 
     window.unminimize().map_err(|error| error.to_string())?;
     window
+        .set_focusable(false)
+        .map_err(|error| error.to_string())?;
+    window
         .set_always_on_top(flags.always_on_top)
         .map_err(|error| error.to_string())?;
     window
@@ -59,6 +62,9 @@ pub fn disable(app: &tauri::AppHandle) -> Result<(), String> {
         .ok_or_else(|| "main window unavailable".to_string())?;
 
     window.hide().map_err(|error| error.to_string())?;
+    window
+        .set_focusable(true)
+        .map_err(|error| error.to_string())?;
     window
         .set_always_on_top(false)
         .map_err(|error| error.to_string())?;
