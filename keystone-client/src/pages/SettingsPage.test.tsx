@@ -1,10 +1,11 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSettings, updateSettings } from "../core/settings";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SettingsPage } from "./SettingsPage";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
+import { configureOverlayShortcut, getOverlayShortcutStatus } from "../core/native";
 import type { ClientSettings } from "../core/types";
 
 vi.mock("../core/settings", () => ({
@@ -17,15 +18,24 @@ vi.mock("../core/autostart", () => ({
   setAutostartEnabled: vi.fn(),
 }));
 
+vi.mock("../core/native", () => ({
+  configureOverlayShortcut: vi.fn(),
+  getOverlayShortcutStatus: vi.fn(),
+}));
+
 const getSettingsMock = vi.mocked(getSettings);
 const updateSettingsMock = vi.mocked(updateSettings);
 const getAutostartEnabledMock = vi.mocked(getAutostartEnabled);
 const setAutostartEnabledMock = vi.mocked(setAutostartEnabled);
+const configureOverlayShortcutMock = vi.mocked(configureOverlayShortcut);
+const getOverlayShortcutStatusMock = vi.mocked(getOverlayShortcutStatus);
 
 const initialSettings = {
   startMinimized: false,
   minimizeOnClose: false,
   closeBehavior: "ask" as const,
+  overlayEnabled: false,
+  overlayShortcut: "Ctrl+Shift+K",
   lang: "es" as const,
 };
 
@@ -37,8 +47,22 @@ describe("SettingsPage", () => {
     updateSettingsMock.mockReset();
     getAutostartEnabledMock.mockReset();
     setAutostartEnabledMock.mockReset();
+    configureOverlayShortcutMock.mockReset();
+    getOverlayShortcutStatusMock.mockReset();
     getAutostartEnabledMock.mockResolvedValue(false);
     setAutostartEnabledMock.mockImplementation(async (enabled) => enabled);
+    configureOverlayShortcutMock.mockImplementation(async (enabled, shortcut) => ({
+      enabled,
+      shortcut,
+      registered: enabled,
+      lastError: null,
+    }));
+    getOverlayShortcutStatusMock.mockResolvedValue({
+      enabled: false,
+      shortcut: "Ctrl+Shift+K",
+      registered: false,
+      lastError: null,
+    });
   });
 
   it("renders the canonical selectable themes in Settings", () => {
@@ -65,6 +89,8 @@ describe("SettingsPage", () => {
       startMinimized: true,
       minimizeOnClose: false,
       closeBehavior: "ask",
+      overlayEnabled: false,
+      overlayShortcut: "Ctrl+Shift+K",
       lang: "en",
     });
 
@@ -83,11 +109,15 @@ describe("SettingsPage", () => {
       startMinimized: false,
       minimizeOnClose: false,
       closeBehavior: "ask",
+      overlayEnabled: false,
+      overlayShortcut: "Ctrl+Shift+K",
       lang: "en",
     }).mockResolvedValueOnce({
       startMinimized: true,
       minimizeOnClose: false,
       closeBehavior: "ask",
+      overlayEnabled: false,
+      overlayShortcut: "Ctrl+Shift+K",
       lang: "en",
     });
 
@@ -102,6 +132,8 @@ describe("SettingsPage", () => {
       startMinimized: true,
       minimizeOnClose: false,
       closeBehavior: "ask",
+      overlayEnabled: false,
+      overlayShortcut: "Ctrl+Shift+K",
       lang: "en",
     });
     expect(setAutostartEnabledMock).toHaveBeenCalledWith(false);
@@ -110,6 +142,8 @@ describe("SettingsPage", () => {
       startMinimized: true,
       minimizeOnClose: false,
       closeBehavior: "ask",
+      overlayEnabled: false,
+      overlayShortcut: "Ctrl+Shift+K",
       lang: "en",
     });
   });
@@ -139,6 +173,70 @@ describe("SettingsPage", () => {
 
     expect(updateSettingsMock).toHaveBeenCalledWith({ ...initialSettings, lockWindowAspectRatio: true });
     expect(await screen.findByRole("status")).toHaveTextContent("Ajustes guardados.");
+  });
+
+  it("captures, registers, and persists an enabled overlay shortcut", async () => {
+    const user = userEvent.setup();
+    const saved = {
+      ...initialSettings,
+      overlayEnabled: true,
+      overlayShortcut: "Ctrl+Shift+KeyM",
+    };
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockResolvedValueOnce(saved);
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    await user.click(await screen.findByLabelText("Activar overlay de World of Warcraft"));
+    const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
+    await user.click(recorder);
+    fireEvent.keyDown(recorder, { code: "KeyM", key: "M", ctrlKey: true, shiftKey: true });
+    await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+
+    expect(configureOverlayShortcutMock).toHaveBeenCalledWith(true, "Ctrl+Shift+KeyM");
+    expect(updateSettingsMock).toHaveBeenCalledWith(saved);
+    expect(await screen.findByRole("status")).toHaveTextContent("Ajustes guardados.");
+  });
+
+  it("keeps the working shortcut when native registration rejects a conflict", async () => {
+    const user = userEvent.setup();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    configureOverlayShortcutMock.mockRejectedValueOnce("Shortcut already registered");
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    await user.click(await screen.findByLabelText("Activar overlay de World of Warcraft"));
+    await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(updateSettingsMock).not.toHaveBeenCalled();
+    expect(configureOverlayShortcutMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolls the native overlay binding back when local persistence fails", async () => {
+    const user = userEvent.setup();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockRejectedValueOnce(new Error("disk failed"));
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    await user.click(await screen.findByLabelText("Activar overlay de World of Warcraft"));
+    await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("disk failed");
+    expect(configureOverlayShortcutMock).toHaveBeenNthCalledWith(1, true, "Ctrl+Shift+K");
+    expect(configureOverlayShortcutMock).toHaveBeenNthCalledWith(2, false, "Ctrl+Shift+K");
+  });
+
+  it("shows a registration error detected during native startup", async () => {
+    getSettingsMock.mockResolvedValueOnce({ ...initialSettings, overlayEnabled: true });
+    getOverlayShortcutStatusMock.mockResolvedValueOnce({
+      enabled: true,
+      shortcut: "Ctrl+Shift+K",
+      registered: false,
+      lastError: "Shortcut is already in use",
+    });
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut is already in use");
   });
 
   it("persists language immediately without saving unrelated drafts", async () => {

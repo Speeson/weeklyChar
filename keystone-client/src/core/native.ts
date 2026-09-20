@@ -4,6 +4,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const CLOSE_REQUESTED_EVENT = "keystone://close-requested";
 
+export type OverlayShortcutStatus = {
+  enabled: boolean;
+  shortcut: string;
+  registered: boolean;
+  lastError: string | null;
+};
+
 export function openWeb(): Promise<void> {
   return invoke<void>("open_web");
 }
@@ -34,6 +41,14 @@ export function startWindowDragging(): Promise<void> {
 
 export function setWindowAspectLock(enabled: boolean): Promise<void> {
   return invoke<void>("set_window_aspect_lock", { enabled });
+}
+
+export function configureOverlayShortcut(enabled: boolean, shortcut: string): Promise<OverlayShortcutStatus> {
+  return invoke<OverlayShortcutStatus>("configure_overlay_shortcut", { enabled, shortcut });
+}
+
+export function getOverlayShortcutStatus(): Promise<OverlayShortcutStatus> {
+  return invoke<OverlayShortcutStatus>("get_overlay_shortcut_status");
 }
 
 export function exitApplication(): Promise<void> {

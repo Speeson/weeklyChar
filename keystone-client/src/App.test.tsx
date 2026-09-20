@@ -57,7 +57,19 @@ vi.mock("./core/profile", () => ({
 }));
 
 vi.mock("./core/native", () => ({
+  configureOverlayShortcut: vi.fn((enabled: boolean, shortcut: string) => Promise.resolve({
+    enabled,
+    shortcut,
+    registered: enabled,
+    lastError: null,
+  })),
   exitApplication: vi.fn(() => Promise.resolve()),
+  getOverlayShortcutStatus: vi.fn(() => Promise.resolve({
+    enabled: false,
+    shortcut: "Ctrl+Shift+K",
+    registered: false,
+    lastError: null,
+  })),
   listenWindowCloseRequested: vi.fn(() => Promise.resolve(() => undefined)),
   minimizeToTray: vi.fn(() => Promise.resolve()),
   minimizeWindow: vi.fn(() => Promise.resolve()),
@@ -178,7 +190,14 @@ const anonymousState: SystemState = {
   protocolVersion: 1,
   bridge: "ready",
   auth: { authenticated: false, username: null, avatarUrl: null },
-  settings: { startMinimized: false, minimizeOnClose: false, closeBehavior: "ask", lang: "es" },
+  settings: {
+    startMinimized: false,
+    minimizeOnClose: false,
+    closeBehavior: "ask",
+    overlayEnabled: false,
+    overlayShortcut: "Ctrl+Shift+K",
+    lang: "es",
+  },
   wow: emptyWow,
   sync: idleSync,
   characters: emptyCharacters,
@@ -189,7 +208,14 @@ const authenticatedState: SystemState = {
   protocolVersion: 1,
   bridge: "ready",
   auth: { authenticated: true, username: "player", avatarUrl: null },
-  settings: { startMinimized: false, minimizeOnClose: false, closeBehavior: "ask", lang: "es" },
+  settings: {
+    startMinimized: false,
+    minimizeOnClose: false,
+    closeBehavior: "ask",
+    overlayEnabled: false,
+    overlayShortcut: "Ctrl+Shift+K",
+    lang: "es",
+  },
   wow: detectedWow,
   sync: { ...idleSync, state: "success", selectedAccounts: 1 },
   characters: {

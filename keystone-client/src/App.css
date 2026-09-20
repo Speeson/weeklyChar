@@ -2298,6 +2298,36 @@ h2 {
   font-weight: 650;
 }
 
+.settings-shortcut-recorder {
+  display: grid;
+  grid-template-columns: minmax(190px, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 5px 12px;
+}
+
+.settings-shortcut-recorder button {
+  min-width: 190px;
+  justify-self: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-shortcut-recorder button[aria-pressed="true"] {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+  box-shadow: 0 0 0 2px var(--theme-focus-ring);
+}
+
+.settings-shortcut-help {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.settings-shortcut-error {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .settings-segmented {
   display: inline-flex;
 }

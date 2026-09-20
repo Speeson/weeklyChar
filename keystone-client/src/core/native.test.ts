@@ -1,7 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { minimizeToTray, minimizeWindow, openBattleNetAuthorization, openForgotPassword, startWindowDragging } from "./native";
+import {
+  configureOverlayShortcut,
+  getOverlayShortcutStatus,
+  minimizeToTray,
+  minimizeWindow,
+  openBattleNetAuthorization,
+  openForgotPassword,
+  startWindowDragging,
+} from "./native";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/window", () => ({
@@ -58,5 +66,24 @@ describe("native window actions", () => {
     await startWindowDragging();
 
     expect(startDragging).toHaveBeenCalledOnce();
+  });
+
+  it("configures and reads the native overlay shortcut runtime", async () => {
+    const status = {
+      enabled: true,
+      shortcut: "Ctrl+Shift+KeyM",
+      registered: true,
+      lastError: null,
+    };
+    invokeMock.mockResolvedValueOnce(status).mockResolvedValueOnce(status);
+
+    await expect(configureOverlayShortcut(true, "Ctrl+Shift+KeyM")).resolves.toEqual(status);
+    await expect(getOverlayShortcutStatus()).resolves.toEqual(status);
+
+    expect(invokeMock).toHaveBeenNthCalledWith(1, "configure_overlay_shortcut", {
+      enabled: true,
+      shortcut: "Ctrl+Shift+KeyM",
+    });
+    expect(invokeMock).toHaveBeenNthCalledWith(2, "get_overlay_shortcut_status");
   });
 });

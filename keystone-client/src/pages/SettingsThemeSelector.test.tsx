@@ -65,6 +65,10 @@ describe("Settings theme integration", () => {
     await user.tab();
     expect(screen.getByLabelText("Bloquear proporción al cambiar el tamaño")).toHaveFocus();
     await user.tab();
+    expect(screen.getByLabelText("Activar overlay de World of Warcraft")).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" })).toHaveFocus();
+    await user.tab();
     expect(selector).toHaveFocus();
 
     await user.selectOptions(selector, "void");

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
 import { ThemeSelector } from "../components/ThemeSelector";
+import { OverlayShortcutRecorder } from "../components/OverlayShortcutRecorder";
 import { Button } from "../components/ui";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
+import { configureOverlayShortcut, getOverlayShortcutStatus } from "../core/native";
 import { getSettings, updateSettings } from "../core/settings";
 import type { ClientSettings, CoreError } from "../core/types";
 import { useI18n } from "../core/i18n";
@@ -32,7 +34,23 @@ const idleUpdater: UpdaterSnapshot = {
   error: null,
 };
 
+const DEFAULT_OVERLAY_SHORTCUT = "Ctrl+Shift+K";
+
+function withOverlayDefaults(settings: ClientSettings): ClientSettings {
+  if (settings.overlayEnabled !== undefined && settings.overlayShortcut !== undefined) {
+    return settings;
+  }
+  return {
+    ...settings,
+    overlayEnabled: settings.overlayEnabled ?? false,
+    overlayShortcut: settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT,
+  };
+}
+
 function formatSettingsError(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as CoreError).message);
   }
@@ -52,7 +70,7 @@ export function SettingsPage({
 }: SettingsPageProps) {
   const { t } = useI18n();
   const { setTheme, theme, themes } = useTheme();
-  const [settings, setSettings] = useState<ClientSettings>(initialSettings);
+  const [settings, setSettings] = useState<ClientSettings>(() => withOverlayDefaults(initialSettings));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -61,7 +79,7 @@ export function SettingsPage({
   const [loadedAutostart, setLoadedAutostart] = useState(false);
   const mountedRef = useRef(true);
   const settingsGenerationRef = useRef(0);
-  const persistedSettingsRef = useRef(initialSettings);
+  const persistedSettingsRef = useRef(withOverlayDefaults(initialSettings));
   const languageWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -80,11 +98,15 @@ export function SettingsPage({
     const loadGeneration = settingsGenerationRef.current;
     setLoading(true);
     setError(null);
-    Promise.all([getSettings(), getAutostartEnabled()])
-      .then(([loaded, nativeAutostart]) => {
+    Promise.all([getSettings(), getAutostartEnabled(), getOverlayShortcutStatus()])
+      .then(([loadedSettings, nativeAutostart, overlayStatus]) => {
         if (!cancelled) {
+          const loaded = withOverlayDefaults(loadedSettings);
           setAutostartState(nativeAutostart);
           setLoadedAutostart(nativeAutostart);
+          if (overlayStatus.lastError) {
+            setError(overlayStatus.lastError);
+          }
           if (settingsGenerationRef.current === loadGeneration) {
             persistedSettingsRef.current = loaded;
             setSettings(loaded);
@@ -115,19 +137,36 @@ export function SettingsPage({
     setSaving(true);
     setMessage(null);
     setError(null);
+    let overlayConfigured = false;
+    const persisted = withOverlayDefaults(persistedSettingsRef.current);
     try {
       await languageWriteQueueRef.current;
       const nativeAutostart = await setAutostartEnabled(autostartEnabled);
       if (nativeAutostart !== autostartEnabled) {
         throw new Error(t("settings.autostartMismatch"));
       }
-      const saved = await updateSettings(settings);
+      await configureOverlayShortcut(
+        settings.overlayEnabled ?? false,
+        settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT,
+      );
+      overlayConfigured = true;
+      const saved = withOverlayDefaults(await updateSettings(settings));
       persistedSettingsRef.current = saved;
       setSettings(saved);
       onSettingsChanged(saved);
       setLoadedAutostart(nativeAutostart);
       setMessage(t("settings.saved"));
     } catch (caught) {
+      if (overlayConfigured) {
+        try {
+          await configureOverlayShortcut(
+            persisted.overlayEnabled ?? false,
+            persisted.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT,
+          );
+        } catch {
+          // Preserve the original error; runtime status exposes any rollback failure.
+        }
+      }
       if (autostartEnabled !== loadedAutostart) {
         try {
           setAutostartState(await setAutostartEnabled(loadedAutostart));
@@ -224,6 +263,22 @@ export function SettingsPage({
           />
           {t("settings.lockWindowAspectRatio")}
         </label>
+        <label className="check-row">
+          <input
+            checked={settings.overlayEnabled ?? false}
+            onChange={(event) => setSettings((current) => ({ ...current, overlayEnabled: event.target.checked }))}
+            type="checkbox"
+          />
+          {t("settings.overlayEnabled")}
+        </label>
+        <div className="settings-field">
+          <span>{t("settings.overlayShortcut")}</span>
+          <OverlayShortcutRecorder
+            disabled={loading || saving}
+            onChange={(overlayShortcut) => setSettings((current) => ({ ...current, overlayShortcut }))}
+            value={settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT}
+          />
+        </div>
       </section>
 
       <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />
