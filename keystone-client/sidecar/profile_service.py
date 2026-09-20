@@ -50,7 +50,10 @@ class ProfileService:
                 timeout=10,
             )
         except session.exceptions.RequestException as exc:
-            raise ProfileError(PROFILE_UPDATE_FAILED, "No se pudo actualizar el avatar.") from exc
+            raise ProfileError(
+                PROFILE_UPDATE_FAILED,
+                "Se necesita conexion para cambiar el avatar.",
+            ) from exc
 
         if not response.ok:
             raise ProfileError(PROFILE_UPDATE_FAILED, "No se pudo actualizar el avatar.")

@@ -9,7 +9,7 @@ import { ClientContextMenu } from "./components/ClientContextMenu";
 import { RemoteAvatar } from "./components/RemoteAvatar";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
-import { clearAvatarCache } from "./core/avatarCache";
+import { cacheProfileAvatar, clearAvatarCache } from "./core/avatarCache";
 import { findPostUpdateChangelog, markChangelogSeen, type PostUpdateChangelog } from "./core/changelog";
 import { coreRequest } from "./core/client";
 import { classColor } from "./core/characterDisplay";
@@ -383,6 +383,12 @@ function App() {
   const authenticatedUsername = auth?.authenticated ? auth.username : null;
 
   useEffect(() => {
+    if (auth?.authenticated && auth.avatarUrl) {
+      void cacheProfileAvatar(auth.avatarUrl);
+    }
+  }, [auth?.authenticated, auth?.avatarUrl]);
+
+  useEffect(() => {
     if (teamsSessionOwner.current === authenticatedUsername) return;
     clearTeamsSessionCache();
     teamsSessionOwner.current = authenticatedUsername;
@@ -409,6 +415,10 @@ function App() {
     setAvatarSaving(true);
     setAvatarError(null);
     try {
+      if (!previewMode && !await cacheProfileAvatar(avatarUrl)) {
+        setAvatarError(t("avatar.cacheError"));
+        return;
+      }
       const nextAuth = previewMode
         ? { ...auth!, avatarUrl }
         : await setProfileAvatar({ avatarUrl });

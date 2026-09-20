@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   avatarCacheLimits,
+  cacheProfileAvatar,
   clearAvatarCache,
   getCachedAvatarSource,
   normalizeAvatarUrl,
+  removeCachedAvatar,
 } from "./avatarCache";
 
 class MemoryCache {
@@ -36,6 +38,7 @@ class MemoryCache {
 }
 
 let cache: MemoryCache;
+let profileCache: MemoryCache;
 let deleteCache: ReturnType<typeof vi.fn>;
 const supportsBlobResponse = (() => {
   try { new Response(new Blob(["test"])); return true; } catch { return false; }
@@ -51,10 +54,13 @@ function imageResponse(body = "jpeg", type = "image/jpeg", headers: Record<strin
 
 beforeEach(() => {
   cache = new MemoryCache();
+  profileCache = new MemoryCache();
   deleteCache = vi.fn().mockResolvedValue(true);
   vi.stubGlobal("caches", {
     delete: deleteCache,
-    open: vi.fn().mockResolvedValue(cache),
+    open: vi.fn((name: string) => Promise.resolve(
+      name === "keystone-client-profile-avatar-v1" ? profileCache : cache,
+    )),
   });
   vi.stubGlobal("fetch", vi.fn());
   if (!supportsBlobResponse) {
@@ -100,6 +106,30 @@ describe("avatar cache", () => {
     expect(cache.entries).toHaveLength(1);
   });
 
+  it("keeps a dedicated copy of the selected profile avatar for a later offline start", async () => {
+    const url = "https://img.test/profile.jpg";
+    vi.mocked(fetch).mockResolvedValueOnce(imageResponse("selected-profile"));
+
+    await expect(cacheProfileAvatar(url)).resolves.toBe(true);
+    cache.entries.clear();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+
+    await expect(getCachedAvatarSource(url)).resolves.toMatch(/^data:image\/jpeg;base64,/u);
+    expect(profileCache.entries.has(url)).toBe(true);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("removes a corrupt avatar from both general and profile storage", async () => {
+    const url = "https://img.test/corrupt.jpg";
+    cache.entries.set(url, imageResponse("bad"));
+    profileCache.entries.set(url, imageResponse("bad"));
+
+    await removeCachedAvatar(url);
+
+    expect(cache.entries.has(url)).toBe(false);
+    expect(profileCache.entries.has(url)).toBe(false);
+  });
+
   it("coalesces concurrent downloads of the same avatar", async () => {
     let complete!: (response: Response) => void;
     vi.mocked(fetch).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
@@ -139,6 +169,7 @@ describe("avatar cache", () => {
   it("clears the versioned cache without allowing cleanup failure to escape", async () => {
     await clearAvatarCache();
     expect(deleteCache).toHaveBeenCalledWith("keystone-client-avatars-v1");
+    expect(deleteCache).toHaveBeenCalledWith("keystone-client-profile-avatar-v1");
     deleteCache.mockRejectedValueOnce(new Error("storage unavailable"));
     await expect(clearAvatarCache()).resolves.toBeUndefined();
   });

@@ -107,6 +107,17 @@ class ProfileServiceTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, PROFILE_UPDATE_FAILED)
         self.assertEqual(cfg["avatar_url"], "https://img.test/old.jpg")
 
+    def test_connection_failure_explains_that_avatar_changes_require_internet(self):
+        with self.assertRaises(ProfileError) as raised:
+            ProfileService(session=FakeSession(error=True)).set_avatar(
+                valid_config(),
+                "https://img.test/new.jpg",
+                [{"avatarUrl": "https://img.test/new.jpg"}],
+            )
+
+        self.assertEqual(raised.exception.code, PROFILE_UPDATE_FAILED)
+        self.assertIn("conexion", raised.exception.message.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

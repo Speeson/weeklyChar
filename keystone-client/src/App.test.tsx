@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { login, logout } from "./core/auth";
+import { cacheProfileAvatar } from "./core/avatarCache";
 import { coreRequest } from "./core/client";
 import { listenCoreEvents } from "./core/events";
 import { getSettings, updateSettings } from "./core/settings";
@@ -32,6 +33,14 @@ vi.mock("./core/auth", () => ({
   login: vi.fn(),
   logout: vi.fn(),
 }));
+
+vi.mock("./core/avatarCache", async importOriginal => {
+  const original = await importOriginal<typeof import("./core/avatarCache")>();
+  return {
+    ...original,
+    cacheProfileAvatar: vi.fn().mockResolvedValue(true),
+  };
+});
 
 vi.mock("./core/settings", () => ({
   getSettings: vi.fn(),
@@ -155,6 +164,7 @@ const coreRequestMock = vi.mocked(coreRequest);
 const listenCoreEventsMock = vi.mocked(listenCoreEvents);
 const loginMock = vi.mocked(login);
 const logoutMock = vi.mocked(logout);
+const cacheProfileAvatarMock = vi.mocked(cacheProfileAvatar);
 const getSettingsMock = vi.mocked(getSettings);
 const updateSettingsMock = vi.mocked(updateSettings);
 const exitApplicationMock = vi.mocked(exitApplication);
@@ -214,6 +224,8 @@ describe("App", () => {
     listenCoreEventsMock.mockReset();
     loginMock.mockReset();
     logoutMock.mockReset();
+    cacheProfileAvatarMock.mockReset();
+    cacheProfileAvatarMock.mockResolvedValue(true);
     getSettingsMock.mockReset();
     updateSettingsMock.mockReset();
     exitApplicationMock.mockClear();
@@ -593,9 +605,55 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Auralis/ }));
 
     expect(setProfileAvatarMock).toHaveBeenCalledWith({ avatarUrl: "https://img.test/auralis.jpg" });
+    expect(cacheProfileAvatarMock).toHaveBeenCalledWith("https://img.test/auralis.jpg");
     await waitFor(() => {
       expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/auralis.jpg"]')).toBeInTheDocument();
     });
+  });
+
+  it("persists the selected avatar before updating the remote profile", async () => {
+    const user = userEvent.setup();
+    const avatarUrl = "https://img.test/auralis.jpg";
+    let finishCaching!: (cached: boolean) => void;
+    cacheProfileAvatarMock.mockReturnValueOnce(new Promise(resolve => { finishCaching = resolve; }));
+    setProfileAvatarMock.mockResolvedValueOnce({ authenticated: true, username: "player", avatarUrl });
+    mockStartup({
+      ...authenticatedState,
+      characters: {
+        ...authenticatedState.characters,
+        characters: [{ ...authenticatedState.characters.characters[0], avatarUrl }],
+      },
+    });
+
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
+    await user.click(screen.getByRole("button", { name: /Auralis/ }));
+
+    expect(setProfileAvatarMock).not.toHaveBeenCalled();
+    finishCaching(true);
+    await waitFor(() => expect(setProfileAvatarMock).toHaveBeenCalledWith({ avatarUrl }));
+  });
+
+  it("keeps the previous avatar when the selected portrait cannot be cached", async () => {
+    const user = userEvent.setup();
+    const avatarUrl = "https://img.test/auralis.jpg";
+    cacheProfileAvatarMock.mockResolvedValueOnce(false);
+    mockStartup({
+      ...authenticatedState,
+      characters: {
+        ...authenticatedState.characters,
+        characters: [{ ...authenticatedState.characters.characters[0], avatarUrl }],
+      },
+    });
+
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
+    await user.click(screen.getByRole("button", { name: /Auralis/ }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo guardar el avatar");
+    expect(setProfileAvatarMock).not.toHaveBeenCalled();
   });
 
   it("places the selected-avatar check at card level", async () => {
@@ -613,6 +671,19 @@ describe("App", () => {
     const check = card.querySelector(".ks-avatar-choice__check")!;
     expect(check.parentElement).toBe(card);
     expect(card.querySelector(".ks-avatar-choice__portrait .ks-avatar-choice__check")).toBeNull();
+  });
+
+  it("promotes an existing active avatar into the dedicated offline cache", async () => {
+    const avatarUrl = "https://img.test/existing-profile.jpg";
+    mockStartup({
+      ...authenticatedState,
+      auth: { ...authenticatedState.auth, avatarUrl },
+    });
+
+    render(<App />);
+
+    await screen.findByText("player");
+    await waitFor(() => expect(cacheProfileAvatarMock).toHaveBeenCalledWith(avatarUrl));
   });
 
   it("replaces the WebView context menu with the four compact client actions", async () => {

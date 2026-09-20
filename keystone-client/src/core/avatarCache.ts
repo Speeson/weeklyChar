@@ -1,4 +1,5 @@
 const AVATAR_CACHE_NAME = "keystone-client-avatars-v1";
+const PROFILE_AVATAR_CACHE_NAME = "keystone-client-profile-avatar-v1";
 const MAX_AVATAR_BYTES = 256 * 1024;
 const MAX_AVATAR_ENTRIES = 100;
 const AVATAR_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -15,10 +16,10 @@ export function normalizeAvatarUrl(value: string): string | null {
   }
 }
 
-async function openAvatarCache(): Promise<Cache | null> {
+async function openAvatarCache(name = AVATAR_CACHE_NAME): Promise<Cache | null> {
   if (typeof globalThis.caches === "undefined") return null;
   try {
-    return await globalThis.caches.open(AVATAR_CACHE_NAME);
+    return await globalThis.caches.open(name);
   } catch {
     return null;
   }
@@ -62,6 +63,14 @@ async function resolveAvatar(url: string): Promise<string | null> {
     await cache.delete(url);
   }
 
+  const profileCache = await openAvatarCache(PROFILE_AVATAR_CACHE_NAME);
+  const profileAvatar = await profileCache?.match(url);
+  if (profileAvatar) {
+    const blob = await validatedBlob(profileAvatar);
+    if (blob) return blobDataUrl(blob);
+    await profileCache?.delete(url);
+  }
+
   if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
   try {
     const response = await fetch(url, {
@@ -96,26 +105,51 @@ export function getCachedAvatarSource(value: string): Promise<string | null> {
   return request;
 }
 
+export async function cacheProfileAvatar(value: string): Promise<boolean> {
+  const url = normalizeAvatarUrl(value);
+  if (url === null) return false;
+  const source = await getCachedAvatarSource(url);
+  if (source === null) return false;
+
+  const [avatarCache, profileCache] = await Promise.all([
+    openAvatarCache(),
+    openAvatarCache(PROFILE_AVATAR_CACHE_NAME),
+  ]);
+  if (!avatarCache || !profileCache) return false;
+  const response = await avatarCache.match(url) ?? await profileCache.match(url);
+  if (!response) return false;
+  const blob = await validatedBlob(response);
+  if (!blob) return false;
+  try {
+    const existing = await profileCache.keys();
+    await Promise.all(existing.map(key => profileCache.delete(key)));
+    await profileCache.put(url, new Response(blob, {
+      headers: { "content-length": String(blob.size), "content-type": blob.type },
+      status: 200,
+    }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function removeCachedAvatar(value: string): Promise<void> {
   const url = normalizeAvatarUrl(value);
-  const cache = url ? await openAvatarCache() : null;
-  if (cache && url) {
-    try {
-      await cache.delete(url);
-    } catch {
-      // Invalid cached media falls back to the remote source on the next retry.
-    }
-  }
+  if (!url) return;
+  const cachesToClean = await Promise.all([
+    openAvatarCache(),
+    openAvatarCache(PROFILE_AVATAR_CACHE_NAME),
+  ]);
+  await Promise.allSettled(cachesToClean.map(cache => cache?.delete(url)));
 }
 
 export async function clearAvatarCache(): Promise<void> {
   inFlight.clear();
   if (typeof globalThis.caches === "undefined") return;
-  try {
-    await globalThis.caches.delete(AVATAR_CACHE_NAME);
-  } catch {
-    // Cache cleanup must never block logout.
-  }
+  await Promise.allSettled([
+    globalThis.caches.delete(AVATAR_CACHE_NAME),
+    globalThis.caches.delete(PROFILE_AVATAR_CACHE_NAME),
+  ]);
 }
 
 export const avatarCacheLimits = {
