@@ -349,7 +349,7 @@ class SettingsServiceTests(unittest.TestCase):
 
         self.assertEqual(
             settings,
-            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "overlayEnabled": False, "overlayShortcut": "Ctrl+Shift+K", "lang": "en"},
         )
         self.assertNotIn("sync_token", settings)
         self.assertNotIn("access_token", settings)
@@ -369,7 +369,7 @@ class SettingsServiceTests(unittest.TestCase):
 
         self.assertEqual(
             settings,
-            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "lang": "en"},
+            {"startMinimized": True, "minimizeOnClose": False, "closeBehavior": "ask", "lockWindowAspectRatio": False, "overlayEnabled": False, "overlayShortcut": "Ctrl+Shift+K", "lang": "en"},
         )
         self.assertEqual(self.saved_cfg["sync_token"], "sync")
         self.assertEqual(self.saved_cfg["unknown_future_key"], {"x": 1})
@@ -399,6 +399,27 @@ class SettingsServiceTests(unittest.TestCase):
         self.assertEqual(self.saved_cfg["unknown_future_key"], "kept")
         with self.assertRaises(settings_service.SettingsError):
             settings_service.update_settings(cfg, {"lockWindowAspectRatio": "yes"})
+
+    def test_overlay_settings_are_local_normalized_and_validated(self) -> None:
+        cfg = {"lang": "es", "unknown_future_key": "kept"}
+
+        updated = settings_service.update_settings(
+            cfg,
+            {"overlayEnabled": True, "overlayShortcut": "control + shift + KeyM"},
+        )
+
+        self.assertTrue(updated["overlayEnabled"])
+        self.assertEqual(updated["overlayShortcut"], "Ctrl+Shift+KeyM")
+        self.assertEqual(self.saved_cfg["overlay_shortcut"], "Ctrl+Shift+KeyM")
+        self.assertEqual(self.saved_cfg["unknown_future_key"], "kept")
+
+        for invalid in ("K", "Ctrl+Shift", "Ctrl+Ctrl+K", "Ctrl++K", "Ctrl+?"):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(settings_service.SettingsError):
+                    settings_service.update_settings(cfg, {"overlayShortcut": invalid})
+
+        with self.assertRaises(settings_service.SettingsError):
+            settings_service.update_settings(cfg, {"overlayEnabled": "yes"})
 
     def test_close_behavior_migrates_legacy_minimize_and_keeps_it_compatible(self) -> None:
         legacy = {"start_minimized": False, "minimize_on_close": True, "lang": "es"}
