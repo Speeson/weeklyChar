@@ -1,4 +1,5 @@
 mod bridge;
+mod overlay;
 mod state;
 mod tray;
 mod window;
