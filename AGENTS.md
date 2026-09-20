@@ -113,6 +113,8 @@ Deployment Impact:
 - Use `--json --strict` for machine/CI-oriented checks.
 - Use `--addon-changed` to represent changes in the external canonical `Speeson/KeystoneSync` addon repository.
 - Script output reports required consideration; it does not authorize remote operations.
+- Before an authorized push to `main`, read `RELEASE_WORKFLOW.md` and translate the classified impact into the expected orchestrator actions. A valid Client changeset with `CLIENT_RELEASE=true` can produce `publish_client=true` and an automatic GitHub Release when the repository gate is enabled.
+- After pushing release-impacting changes to `main`, inspect the matching `Deploy Orchestrator` run through completion (or report that it is still running). Report the actual automatic release/deploy state; never infer "no release" merely because no manual release command was executed.
 
 ## Remote Operation Restrictions
 

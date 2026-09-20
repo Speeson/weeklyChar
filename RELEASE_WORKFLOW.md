@@ -77,6 +77,8 @@ Estado actual verificado:
 - La Web se valida en GitHub Actions pero su despliegue de produccion sigue en la integracion externa de Vercel. El repositorio no expone un deployment status o endpoint de revision fiable, por lo que la readiness Web no forma parte del gate automatico. Verificar Web en produccion sigue siendo un paso operacional cuando haya impacto Web.
 - Nunca hacer push sin confirmacion explicita del usuario.
 - Antes de cualquier push, revisar el estado de Git y confirmar que los cambios pertenecen al alcance esperado.
+- Antes de subir a `main`, convertir el resultado de Deployment Impact en acciones esperadas del orquestador. Si `CLIENT_RELEASE=true`, hay que advertir que el push puede iniciar una publicacion automatica cuando `TAURI_CLIENT_RELEASE_ENABLED=true`.
+- Despues de subir a `main`, consultar la ejecucion correspondiente de `Deploy Orchestrator` y seguirla hasta estado terminal cuando publique o despliegue. El informe final debe distinguir entre release en curso, release publicada, release fallida y ausencia real de release; no basta con indicar que no se ejecuto una orden manual.
 - Si hay cambios mezclados de addon, cliente y web, separar mentalmente el impacto:
   - Addon: repo propio + tag.
   - Cliente: repo principal + datos de release.
