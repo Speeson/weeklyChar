@@ -32,7 +32,60 @@ _MODIFIER_ALIASES = {
     "command": "Super",
     "super": "Super",
 }
-_SHORTCUT_KEY = re.compile(r"^[A-Za-z0-9]+$")
+_SHORTCUT_KEY_CODES = {
+    "ARROWDOWN",
+    "ARROWLEFT",
+    "ARROWRIGHT",
+    "ARROWUP",
+    "BACKQUOTE",
+    "BACKSLASH",
+    "BACKSPACE",
+    "BRACKETLEFT",
+    "BRACKETRIGHT",
+    "CAPSLOCK",
+    "COMMA",
+    "DELETE",
+    "DOWN",
+    "END",
+    "ENTER",
+    "EQUAL",
+    "HOME",
+    "INSERT",
+    "LEFT",
+    "MINUS",
+    "NUMLOCK",
+    "NUMPADADD",
+    "NUMPADDECIMAL",
+    "NUMPADDIVIDE",
+    "NUMPADENTER",
+    "NUMPADEQUAL",
+    "NUMPADMULTIPLY",
+    "NUMPADSUBTRACT",
+    "PAGEDOWN",
+    "PAGEUP",
+    "PAUSE",
+    "PERIOD",
+    "PRINTSCREEN",
+    "QUOTE",
+    "RIGHT",
+    "SCROLLLOCK",
+    "SEMICOLON",
+    "SLASH",
+    "SPACE",
+    "TAB",
+    "UP",
+}
+
+
+def _is_supported_shortcut_key(value: str) -> bool:
+    key = value.upper()
+    if re.fullmatch(r"[A-Z0-9]", key):
+        return True
+    if re.fullmatch(r"KEY[A-Z]|DIGIT[0-9]|NUMPAD[0-9]", key):
+        return True
+    if re.fullmatch(r"F(?:[1-9]|1[0-9]|2[0-4])", key):
+        return True
+    return key in _SHORTCUT_KEY_CODES
 
 
 @dataclass(frozen=True)
@@ -66,7 +119,7 @@ def normalize_overlay_shortcut(value: Any) -> str:
         modifiers.append(modifier)
 
     key = parts[-1]
-    if key.lower() in _MODIFIER_ALIASES or not _SHORTCUT_KEY.fullmatch(key):
+    if key.lower() in _MODIFIER_ALIASES or not _is_supported_shortcut_key(key):
         raise SettingsError(
             SETTINGS_INVALID_PAYLOAD,
             "overlayShortcut must end with one supported key.",

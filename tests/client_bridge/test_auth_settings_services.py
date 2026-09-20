@@ -413,13 +413,28 @@ class SettingsServiceTests(unittest.TestCase):
         self.assertEqual(self.saved_cfg["overlay_shortcut"], "Ctrl+Shift+KeyM")
         self.assertEqual(self.saved_cfg["unknown_future_key"], "kept")
 
-        for invalid in ("K", "Ctrl+Shift", "Ctrl+Ctrl+K", "Ctrl++K", "Ctrl+?"):
+        for invalid in (
+            "K",
+            "Ctrl+Shift",
+            "Ctrl+Ctrl+K",
+            "Ctrl++K",
+            "Ctrl+?",
+            "Ctrl+Banana",
+            "Ctrl+F25",
+        ):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(settings_service.SettingsError):
                     settings_service.update_settings(cfg, {"overlayShortcut": invalid})
 
         with self.assertRaises(settings_service.SettingsError):
             settings_service.update_settings(cfg, {"overlayEnabled": "yes"})
+
+        self.assertEqual(
+            settings_service.get_settings({"overlay_shortcut": "Ctrl+Banana"})[
+                "overlayShortcut"
+            ],
+            "Ctrl+Shift+K",
+        )
 
     def test_close_behavior_migrates_legacy_minimize_and_keeps_it_compatible(self) -> None:
         legacy = {"start_minimized": False, "minimize_on_close": True, "lang": "es"}
