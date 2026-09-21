@@ -4,7 +4,13 @@ import { ThemeSelector } from "../components/ThemeSelector";
 import { OverlayShortcutRecorder } from "../components/OverlayShortcutRecorder";
 import { Button } from "../components/ui";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
-import { configureOverlayShortcut, getOverlayShortcutStatus } from "../core/native";
+import {
+  beginOverlayShortcutCapture,
+  configureOverlayShortcut,
+  endOverlayShortcutCapture,
+  getOverlayShortcutStatus,
+  validateOverlayShortcut,
+} from "../core/native";
 import { getSettings, updateSettings } from "../core/settings";
 import type { ClientSettings, CoreError } from "../core/types";
 import { useI18n } from "../core/i18n";
@@ -295,11 +301,16 @@ export function SettingsPage({
               setOverlayError(null);
               setSettings((current) => ({ ...current, overlayShortcut }));
             }}
+            onRecordingStart={async () => {
+              setOverlayError(null);
+              await beginOverlayShortcutCapture();
+            }}
+            onRecordingStop={endOverlayShortcutCapture}
             onRestore={() => {
               setOverlayError(null);
               setSettings((current) => ({ ...current, overlayShortcut: DEFAULT_OVERLAY_SHORTCUT }));
             }}
-            onStartRecording={() => setOverlayError(null)}
+            onValidate={validateOverlayShortcut}
             value={settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT}
           />
         </div>

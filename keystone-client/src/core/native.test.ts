@@ -2,13 +2,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  beginOverlayShortcutCapture,
   configureOverlayShortcut,
+  endOverlayShortcutCapture,
   getOverlayShortcutStatus,
   minimizeToTray,
   minimizeWindow,
   openBattleNetAuthorization,
   openForgotPassword,
   startWindowDragging,
+  validateOverlayShortcut,
 } from "./native";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -85,5 +88,19 @@ describe("native window actions", () => {
       shortcut: "Ctrl+Shift+KeyM",
     });
     expect(invokeMock).toHaveBeenNthCalledWith(2, "get_overlay_shortcut_status");
+  });
+
+  it("routes overlay shortcut capture lifecycle and validation through Rust", async () => {
+    invokeMock.mockResolvedValue(undefined);
+
+    await beginOverlayShortcutCapture();
+    await validateOverlayShortcut("Ctrl+Shift+KeyJ");
+    await endOverlayShortcutCapture();
+
+    expect(invokeMock).toHaveBeenNthCalledWith(1, "begin_overlay_shortcut_capture");
+    expect(invokeMock).toHaveBeenNthCalledWith(2, "validate_overlay_shortcut", {
+      shortcut: "Ctrl+Shift+KeyJ",
+    });
+    expect(invokeMock).toHaveBeenNthCalledWith(3, "end_overlay_shortcut_capture");
   });
 });

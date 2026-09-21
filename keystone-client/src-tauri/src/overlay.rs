@@ -8,6 +8,7 @@ use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 static OVERLAY_ACTIVE: AtomicBool = AtomicBool::new(false);
+static SHORTCUT_CAPTURE_ACTIVE: AtomicBool = AtomicBool::new(false);
 static REGISTRATION_STATE: Mutex<OverlayRegistrationState> =
     Mutex::new(OverlayRegistrationState::new());
 pub const DEFAULT_OVERLAY_SHORTCUT: &str = "Ctrl+Shift+K";
@@ -92,11 +93,41 @@ fn parse_shortcut(value: &str) -> Result<Shortcut, String> {
 fn register(app: &tauri::AppHandle, shortcut: Shortcut) -> Result<(), String> {
     app.global_shortcut()
         .on_shortcut(shortcut, |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
+            if should_toggle_for_shortcut_event(event.state) {
                 let _ = toggle(app);
             }
         })
         .map_err(|error| format!("Could not register the overlay shortcut: {error}"))
+}
+
+fn should_toggle_for_shortcut_event(state: ShortcutState) -> bool {
+    state == ShortcutState::Pressed && !SHORTCUT_CAPTURE_ACTIVE.load(Ordering::SeqCst)
+}
+
+pub fn begin_shortcut_capture() {
+    SHORTCUT_CAPTURE_ACTIVE.store(true, Ordering::SeqCst);
+}
+
+pub fn end_shortcut_capture() {
+    SHORTCUT_CAPTURE_ACTIVE.store(false, Ordering::SeqCst);
+}
+
+pub fn validate_shortcut(app: &tauri::AppHandle, shortcut_value: String) -> Result<(), String> {
+    let shortcut = parse_shortcut(&shortcut_value)?;
+    let matches_registered = registration_state()
+        .registered
+        .as_ref()
+        .is_some_and(|current| current.shortcut.id() == shortcut.id());
+    if matches_registered {
+        return Ok(());
+    }
+
+    app.global_shortcut()
+        .register(shortcut)
+        .map_err(|error| format!("Could not use the overlay shortcut: {error}"))?;
+    app.global_shortcut()
+        .unregister(shortcut)
+        .map_err(|error| format!("Could not finish checking the overlay shortcut: {error}"))
 }
 
 fn set_registration_error(error: String) -> String {
@@ -280,8 +311,9 @@ pub fn toggle(app: &tauri::AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_active, overlay_window_flags, parse_shortcut, registration_state, status, Modifiers,
-        Ordering, OVERLAY_ACTIVE,
+        begin_shortcut_capture, end_shortcut_capture, is_active, overlay_window_flags,
+        parse_shortcut, registration_state, should_toggle_for_shortcut_event, status, Modifiers,
+        Ordering, ShortcutState, OVERLAY_ACTIVE,
     };
 
     #[test]
@@ -328,5 +360,18 @@ mod tests {
         OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
 
         assert!(is_active());
+    }
+
+    #[test]
+    fn overlay_shortcut_is_ignored_while_recording() {
+        end_shortcut_capture();
+        assert!(should_toggle_for_shortcut_event(ShortcutState::Pressed));
+        assert!(!should_toggle_for_shortcut_event(ShortcutState::Released));
+
+        begin_shortcut_capture();
+        assert!(!should_toggle_for_shortcut_event(ShortcutState::Pressed));
+
+        end_shortcut_capture();
+        assert!(should_toggle_for_shortcut_event(ShortcutState::Pressed));
     }
 }

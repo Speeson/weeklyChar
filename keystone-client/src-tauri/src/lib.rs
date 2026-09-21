@@ -89,6 +89,21 @@ fn get_overlay_shortcut_status() -> overlay::OverlayShortcutStatus {
     overlay::status()
 }
 
+#[tauri::command]
+fn begin_overlay_shortcut_capture() {
+    overlay::begin_shortcut_capture();
+}
+
+#[tauri::command]
+fn validate_overlay_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<(), String> {
+    overlay::validate_shortcut(&app, shortcut)
+}
+
+#[tauri::command]
+fn end_overlay_shortcut_capture() {
+    overlay::end_shortcut_capture();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -131,7 +146,10 @@ pub fn run() {
             hide_to_tray,
             set_window_aspect_lock,
             configure_overlay_shortcut,
-            get_overlay_shortcut_status
+            get_overlay_shortcut_status,
+            begin_overlay_shortcut_capture,
+            validate_overlay_shortcut,
+            end_overlay_shortcut_capture
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

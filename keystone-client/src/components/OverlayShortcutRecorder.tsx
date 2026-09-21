@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useI18n } from "../core/i18n";
 
 const MODIFIER_CODES = new Set([
@@ -93,8 +93,10 @@ type OverlayShortcutRecorderProps = {
   disabled?: boolean;
   error?: string | null;
   onChange: (shortcut: string) => void;
+  onRecordingStart?: () => Promise<void>;
+  onRecordingStop?: () => Promise<void>;
   onRestore: () => void;
-  onStartRecording?: () => void;
+  onValidate?: (shortcut: string) => Promise<void>;
   value: string;
 };
 
@@ -102,24 +104,74 @@ export function OverlayShortcutRecorder({
   disabled = false,
   error = null,
   onChange,
+  onRecordingStart,
+  onRecordingStop,
   onRestore,
-  onStartRecording,
+  onValidate,
   value,
 }: OverlayShortcutRecorderProps) {
   const { t } = useI18n();
   const helpId = useId();
   const [recording, setRecording] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const recordingRef = useRef(false);
+  const recordingSessionRef = useRef(0);
+  const stopRecordingRef = useRef(onRecordingStop);
+  const validatingRef = useRef(false);
   const visibleError = captureError ?? error;
 
-  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+  useEffect(() => {
+    stopRecordingRef.current = onRecordingStop;
+  }, [onRecordingStop]);
+
+  useEffect(() => () => {
+    if (recordingRef.current) {
+      recordingRef.current = false;
+      void stopRecordingRef.current?.();
+    }
+  }, []);
+
+  function formatCaptureError(caught: unknown): string {
+    if (typeof caught === "string" && caught.trim()) return caught;
+    if (caught instanceof Error && caught.message.trim()) return caught.message;
+    return t("settings.error");
+  }
+
+  async function startRecording() {
+    if (recordingRef.current) return;
+    recordingSessionRef.current += 1;
+    recordingRef.current = true;
+    setRecording(true);
+    setCaptureError(null);
+    try {
+      await onRecordingStart?.();
+    } catch (caught) {
+      recordingRef.current = false;
+      setRecording(false);
+      setCaptureError(formatCaptureError(caught));
+    }
+  }
+
+  async function stopRecording() {
+    if (!recordingRef.current) return;
+    recordingRef.current = false;
+    recordingSessionRef.current += 1;
+    setRecording(false);
+    await onRecordingStop?.();
+  }
+
+  async function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (!recording) return;
     event.preventDefault();
     event.stopPropagation();
 
     if (event.code === "Escape") {
-      setRecording(false);
       setCaptureError(null);
+      try {
+        await stopRecording();
+      } catch (caught) {
+        setCaptureError(formatCaptureError(caught));
+      }
       return;
     }
     if (MODIFIER_CODES.has(event.code)) {
@@ -132,9 +184,22 @@ export function OverlayShortcutRecorder({
       return;
     }
 
-    onChange(shortcut);
-    setRecording(false);
-    setCaptureError(null);
+    if (validatingRef.current) return;
+    const recordingSession = recordingSessionRef.current;
+    validatingRef.current = true;
+    try {
+      await onValidate?.(shortcut);
+      if (!recordingRef.current || recordingSession !== recordingSessionRef.current) return;
+      await stopRecording();
+      onChange(shortcut);
+      setCaptureError(null);
+    } catch (caught) {
+      if (recordingRef.current && recordingSession === recordingSessionRef.current) {
+        setCaptureError(formatCaptureError(caught));
+      }
+    } finally {
+      validatingRef.current = false;
+    }
   }
 
   return (
@@ -144,11 +209,8 @@ export function OverlayShortcutRecorder({
         aria-label={t("settings.overlayShortcutAria", { shortcut: formatShortcut(value) })}
         aria-pressed={recording}
         disabled={disabled}
-        onClick={() => {
-          onStartRecording?.();
-          setRecording(true);
-          setCaptureError(null);
-        }}
+        onBlur={() => void stopRecording().catch((caught) => setCaptureError(formatCaptureError(caught)))}
+        onClick={() => void startRecording()}
         onKeyDown={handleKeyDown}
         type="button"
       >
@@ -157,8 +219,8 @@ export function OverlayShortcutRecorder({
       <button
         disabled={disabled}
         onClick={() => {
+          void stopRecording().catch((caught) => setCaptureError(formatCaptureError(caught)));
           onRestore();
-          setRecording(false);
           setCaptureError(null);
         }}
         type="button"

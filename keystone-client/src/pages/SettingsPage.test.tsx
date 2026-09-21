@@ -5,7 +5,13 @@ import { getSettings, updateSettings } from "../core/settings";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SettingsPage } from "./SettingsPage";
 import { getAutostartEnabled, setAutostartEnabled } from "../core/autostart";
-import { configureOverlayShortcut, getOverlayShortcutStatus } from "../core/native";
+import {
+  beginOverlayShortcutCapture,
+  configureOverlayShortcut,
+  endOverlayShortcutCapture,
+  getOverlayShortcutStatus,
+  validateOverlayShortcut,
+} from "../core/native";
 import type { ClientSettings } from "../core/types";
 
 vi.mock("../core/settings", () => ({
@@ -19,8 +25,11 @@ vi.mock("../core/autostart", () => ({
 }));
 
 vi.mock("../core/native", () => ({
+  beginOverlayShortcutCapture: vi.fn(),
   configureOverlayShortcut: vi.fn(),
+  endOverlayShortcutCapture: vi.fn(),
   getOverlayShortcutStatus: vi.fn(),
+  validateOverlayShortcut: vi.fn(),
 }));
 
 const getSettingsMock = vi.mocked(getSettings);
@@ -29,6 +38,9 @@ const getAutostartEnabledMock = vi.mocked(getAutostartEnabled);
 const setAutostartEnabledMock = vi.mocked(setAutostartEnabled);
 const configureOverlayShortcutMock = vi.mocked(configureOverlayShortcut);
 const getOverlayShortcutStatusMock = vi.mocked(getOverlayShortcutStatus);
+const beginOverlayShortcutCaptureMock = vi.mocked(beginOverlayShortcutCapture);
+const endOverlayShortcutCaptureMock = vi.mocked(endOverlayShortcutCapture);
+const validateOverlayShortcutMock = vi.mocked(validateOverlayShortcut);
 
 const initialSettings = {
   startMinimized: false,
@@ -49,6 +61,9 @@ describe("SettingsPage", () => {
     setAutostartEnabledMock.mockReset();
     configureOverlayShortcutMock.mockReset();
     getOverlayShortcutStatusMock.mockReset();
+    beginOverlayShortcutCaptureMock.mockReset();
+    endOverlayShortcutCaptureMock.mockReset();
+    validateOverlayShortcutMock.mockReset();
     getAutostartEnabledMock.mockResolvedValue(false);
     setAutostartEnabledMock.mockImplementation(async (enabled) => enabled);
     configureOverlayShortcutMock.mockImplementation(async (enabled, shortcut) => ({
@@ -63,6 +78,9 @@ describe("SettingsPage", () => {
       registered: false,
       lastError: null,
     });
+    beginOverlayShortcutCaptureMock.mockResolvedValue();
+    endOverlayShortcutCaptureMock.mockResolvedValue();
+    validateOverlayShortcutMock.mockResolvedValue();
   });
 
   it("renders the canonical selectable themes in Settings", () => {
@@ -190,8 +208,11 @@ describe("SettingsPage", () => {
     const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
     await user.click(recorder);
     fireEvent.keyDown(recorder, { code: "KeyM", key: "M", ctrlKey: true, shiftKey: true });
+    await vi.waitFor(() => expect(validateOverlayShortcutMock).toHaveBeenCalledWith("Ctrl+Shift+KeyM"));
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
+    expect(beginOverlayShortcutCaptureMock).toHaveBeenCalledOnce();
+    expect(endOverlayShortcutCaptureMock).toHaveBeenCalledOnce();
     expect(configureOverlayShortcutMock).toHaveBeenCalledWith(true, "Ctrl+Shift+KeyM");
     expect(updateSettingsMock).toHaveBeenCalledWith(saved);
     expect(await screen.findByRole("status")).toHaveTextContent("Ajustes guardados.");
@@ -229,6 +250,27 @@ describe("SettingsPage", () => {
     expect(screen.queryByText(/Haz clic y pulsa una combinación/)).not.toBeInTheDocument();
     expect(updateSettingsMock).not.toHaveBeenCalled();
     expect(configureOverlayShortcutMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a shortcut conflict during capture without waiting for save", async () => {
+    const user = userEvent.setup();
+    getSettingsMock.mockResolvedValueOnce({ ...initialSettings, overlayEnabled: true });
+    validateOverlayShortcutMock.mockRejectedValueOnce("Shortcut already registered");
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    const recorder = await screen.findByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
+    await user.click(recorder);
+    fireEvent.keyDown(recorder, { code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(recorder).toHaveAttribute("aria-pressed", "true");
+    expect(beginOverlayShortcutCaptureMock).toHaveBeenCalledOnce();
+    expect(endOverlayShortcutCaptureMock).not.toHaveBeenCalled();
+    expect(configureOverlayShortcutMock).not.toHaveBeenCalled();
+    expect(updateSettingsMock).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(recorder, { code: "Escape", key: "Escape" });
+    await vi.waitFor(() => expect(endOverlayShortcutCaptureMock).toHaveBeenCalledOnce());
   });
 
   it("rolls the native overlay binding back when local persistence fails", async () => {

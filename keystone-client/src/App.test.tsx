@@ -57,12 +57,14 @@ vi.mock("./core/profile", () => ({
 }));
 
 vi.mock("./core/native", () => ({
+  beginOverlayShortcutCapture: vi.fn(() => Promise.resolve()),
   configureOverlayShortcut: vi.fn((enabled: boolean, shortcut: string) => Promise.resolve({
     enabled,
     shortcut,
     registered: enabled,
     lastError: null,
   })),
+  endOverlayShortcutCapture: vi.fn(() => Promise.resolve()),
   exitApplication: vi.fn(() => Promise.resolve()),
   getOverlayShortcutStatus: vi.fn(() => Promise.resolve({
     enabled: false,
@@ -74,6 +76,7 @@ vi.mock("./core/native", () => ({
   minimizeToTray: vi.fn(() => Promise.resolve()),
   minimizeWindow: vi.fn(() => Promise.resolve()),
   openWeb: vi.fn(() => Promise.resolve()),
+  validateOverlayShortcut: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("./core/sync", () => ({

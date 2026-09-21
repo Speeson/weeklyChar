@@ -51,6 +51,18 @@ export function getOverlayShortcutStatus(): Promise<OverlayShortcutStatus> {
   return invoke<OverlayShortcutStatus>("get_overlay_shortcut_status");
 }
 
+export function beginOverlayShortcutCapture(): Promise<void> {
+  return invoke<void>("begin_overlay_shortcut_capture");
+}
+
+export function validateOverlayShortcut(shortcut: string): Promise<void> {
+  return invoke<void>("validate_overlay_shortcut", { shortcut });
+}
+
+export function endOverlayShortcutCapture(): Promise<void> {
+  return invoke<void>("end_overlay_shortcut_capture");
+}
+
 export function exitApplication(): Promise<void> {
   return invoke<void>("exit_app");
 }
