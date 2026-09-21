@@ -336,7 +336,7 @@ describe("SettingsPage", () => {
     await user.click(await screen.findByLabelText("Activar overlay"));
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("disk failed");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron guardar los ajustes.");
     expect(configureOverlayShortcutMock).toHaveBeenNthCalledWith(1, true, "Ctrl+Shift+K");
     expect(configureOverlayShortcutMock).toHaveBeenNthCalledWith(2, false, "Ctrl+Shift+K");
   });
@@ -380,7 +380,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
     await user.click(await screen.findByRole("button", { name: "English" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("disk failed");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron guardar los ajustes.");
     expect(screen.getByRole("button", { name: "Español" })).toHaveAttribute("aria-pressed", "true");
     expect(onSettingsChanged).toHaveBeenLastCalledWith(initialSettings);
   });
@@ -448,7 +448,7 @@ describe("SettingsPage", () => {
     await user.click(await screen.findByLabelText("Arrancar con Windows"));
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Windows rejected autostart");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron guardar los ajustes.");
     expect(screen.getByLabelText("Arrancar con Windows")).not.toBeChecked();
     expect(updateSettingsMock).not.toHaveBeenCalled();
   });
@@ -465,7 +465,7 @@ describe("SettingsPage", () => {
     await screen.findByRole("button", { name: "Guardar ajustes" });
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No guardado.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron guardar los ajustes.");
   });
 
   it("exposes manual update and release actions", async () => {
@@ -497,9 +497,9 @@ describe("SettingsPage", () => {
       />,
     );
 
-    expect(await screen.findByText("Version 0.4.0 disponible")).toBeInTheDocument();
+    expect(await screen.findByText("Versión 0.4.0 disponible")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Actualizar" }));
-    await user.click(screen.getByRole("button", { name: "Ver releases" }));
+    await user.click(screen.getByRole("button", { name: "Ver versiones publicadas" }));
     await user.click(screen.getByRole("button", { name: "Buscar actualizaciones" }));
     expect(onOpenUpdate).toHaveBeenCalledOnce();
     expect(onOpenReleases).toHaveBeenCalledOnce();

@@ -297,7 +297,7 @@ describe("AddonPage", () => {
         },
       });
     });
-    expect(await screen.findAllByText("Installing validated addon package.")).toHaveLength(2);
+    expect(await screen.findByText("Operación en curso")).toBeInTheDocument();
 
     act(() => {
       eventHandler({
@@ -319,6 +319,6 @@ describe("AddonPage", () => {
       });
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No valid addon release or cache is available.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo instalar el addon.");
   });
 });

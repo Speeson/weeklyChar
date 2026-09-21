@@ -6,7 +6,7 @@ import { useI18n } from "../core/i18n";
 import type {
   ClientPlannerPreferenceUpdate, ClientPlannerPreferences, ClientTeamCharacter, KeystonePlannerPreferenceState,
 } from "../core/types";
-import { specializationsForClass, wowLootBagIconUrl, wowSpecializationIconUrl, type ClientWowSpecialization } from "../core/wowSpecs";
+import { specName, specializationsForClass, wowClassName, wowLootBagIconUrl, wowSpecializationIconUrl, type ClientWowSpecialization } from "../core/wowSpecs";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import { WowRoleIcon } from "./WowRoleIcon";
 import { RemoteAvatar } from "./RemoteAvatar";
@@ -225,6 +225,7 @@ export function PlannerPreferencesModal({ characters, error, initial, loading, o
     const ready = rows.some(row => row.playPreference !== null && row.playPreference !== "disabled");
     const loot = lootDraft.find(item => item.characterId === character.characterId);
     const primarySpec = rows.find(row => row.spec.id === loot?.primaryLootSpecId)?.spec ?? null;
+    const primarySpecName = primarySpec ? specName(primarySpec.id, language) : null;
     const lootIcon = primarySpec ? wowSpecializationIconUrl(primarySpec.id) : null;
     return <section
       className={`planner-preference-character${active ? "" : " is-inactive"}${draggingCharacterId === character.characterId ? " is-dragging" : ""}`}
@@ -242,7 +243,7 @@ export function PlannerPreferencesModal({ characters, error, initial, loading, o
       <div className="planner-preference-character__identity">
         <GripVertical aria-hidden="true" className="planner-preference-character__drag" />
         <CharacterAvatar character={character} />
-        <div><strong>{character.name}</strong><small>{active ? `${character.wowClass} · ${character.realm}` : (es ? "Inactivo · todo desactivado" : "Inactive · everything disabled")}</small>
+        <div><strong>{character.name}</strong><small>{active ? `${wowClassName(character.wowClass, language) ?? character.wowClass} · ${character.realm}` : (es ? "Inactivo · todo desactivado" : "Inactive · everything disabled")}</small>
           {active && (!ready || loot?.primaryLootSpecId === null) ? <em>{es ? "Configura juego y botín" : "Configure play and loot"}</em> : null}</div>
         <button
           aria-label={`${es ? "Configurar botín de" : "Configure loot for"} ${character.name}`}
@@ -252,17 +253,18 @@ export function PlannerPreferencesModal({ characters, error, initial, loading, o
           onClick={event => { event.stopPropagation(); openLoot(character.characterId); }}
           onDragStart={event => event.preventDefault()}
           ref={guideStep === "loot" && character.characterId === guideCharacterId ? lootGuideTarget : undefined}
-          title={primarySpec ? `${es ? "Botín primario" : "Primary loot"}: ${primarySpec.name}` : (es ? "Configurar botín" : "Configure loot")}
+          title={primarySpecName ? `${es ? "Botín primario" : "Primary loot"}: ${primarySpecName}` : (es ? "Configurar botín" : "Configure loot")}
           type="button"
         ><img alt="" aria-hidden="true" data-placeholder={lootIcon === null} src={lootIcon ?? wowLootBagIconUrl()} /></button>
       </div>
       <div className="planner-preference-character__specs" data-spec-count={rows.length}>{rows.map(row => {
         const key = `${character.characterId}:${row.spec.id}`;
         const selected = row.playPreference;
+        const localizedSpec = specName(row.spec.id, language);
         return <article className="planner-preference-spec" data-state={selected ?? "unset"} key={row.spec.id}>
           <button
             aria-expanded={availabilityKey === key}
-            aria-label={`${row.spec.name} · ${selected ? stateLabel[selected] : (es ? "Selecciona tu preferencia" : "Select your preference")}`}
+            aria-label={`${localizedSpec} · ${selected ? stateLabel[selected] : (es ? "Selecciona tu preferencia" : "Select your preference")}`}
             className="planner-preference-spec__toggle"
             data-guide-target={guideStep === "availability" && key === guideAvailabilityKey}
             disabled={!active}
@@ -271,7 +273,7 @@ export function PlannerPreferencesModal({ characters, error, initial, loading, o
             type="button"
           >
             <span className="planner-role-frame"><WowRoleIcon role={row.spec.role} /></span>
-            <span><strong>{row.spec.name}</strong><small>{selected ? stateLabel[selected] : (es ? "Selecciona tu preferencia" : "Select your preference")}</small></span>
+            <span><strong>{localizedSpec}</strong><small>{selected ? stateLabel[selected] : (es ? "Selecciona tu preferencia" : "Select your preference")}</small></span>
             {selected ? <span className="planner-preference-spec__state" data-state={selected}><StateIcon state={selected} /></span> : null}
             <ChevronDown aria-hidden="true" />
           </button>
@@ -322,8 +324,8 @@ export function PlannerPreferencesModal({ characters, error, initial, loading, o
     </div>
 
     {openAvailabilityRow ? <div className="planner-preference-popover-backdrop" onClick={() => setAvailabilityKey(null)}>
-      <section aria-label={`${openAvailabilityRow.character.name} · ${openAvailabilityRow.spec.name}`} className="planner-availability-popover" onClick={event => event.stopPropagation()}>
-        <header><span className="planner-spec-icon"><SpecIcon spec={openAvailabilityRow.spec} /></span><div><small>{openAvailabilityRow.character.name}</small><strong>{openAvailabilityRow.spec.name}</strong></div><button aria-label={es ? "Cerrar" : "Close"} onClick={() => setAvailabilityKey(null)} type="button"><X /></button></header>
+      <section aria-label={`${openAvailabilityRow.character.name} · ${specName(openAvailabilityRow.spec.id, language)}`} className="planner-availability-popover" onClick={event => event.stopPropagation()}>
+        <header><span className="planner-spec-icon"><SpecIcon spec={openAvailabilityRow.spec} /></span><div><small>{openAvailabilityRow.character.name}</small><strong>{specName(openAvailabilityRow.spec.id, language)}</strong></div><button aria-label={es ? "Cerrar" : "Close"} onClick={() => setAvailabilityKey(null)} type="button"><X /></button></header>
         <div role="listbox">{STATES.map(state => <button aria-selected={openAvailabilityRow.playPreference === state} data-state={state} key={state} onClick={() => {
           setDraft(current => current.map(row => row.character.characterId === openAvailabilityRow.character.characterId && row.spec.id === openAvailabilityRow.spec.id ? { ...row, playPreference: state } : row));
           setAvailabilityKey(null);
@@ -338,7 +340,9 @@ export function PlannerPreferencesModal({ characters, error, initial, loading, o
           <div className="planner-loot-matrix__header" role="row"><span role="columnheader">{es ? "Especialización" : "Specialization"}</span><span role="columnheader">{es ? "Primaria" : "Primary"}</span><span role="columnheader">{es ? "Secundaria" : "Secondary"}</span><span role="columnheader">{es ? "Sin interés" : "No interest"}</span></div>
           {specializationsForClass(openLootCharacter.wowClass).map(spec => {
             const priority = openLootDraft.primaryLootSpecId === spec.id ? "primary" : openLootDraft.secondaryLootSpecIds.includes(spec.id) ? "secondary" : "none";
-            return <div className="planner-loot-matrix__row" key={spec.id} role="row"><span role="cell"><span className="planner-spec-icon"><SpecIcon spec={spec} /></span><strong>{spec.name}</strong></span>{(["primary", "secondary", "none"] as const).map(option => <span key={option} role="cell"><button aria-label={`${spec.name} · ${option}`} aria-pressed={priority === option} onClick={() => setLootPriority(openLootCharacter.characterId, spec.id, option)} type="button"><i /></button></span>)}</div>;
+            const localizedSpec = specName(spec.id, language);
+            const priorityLabel = es ? { primary: "primaria", secondary: "secundaria", none: "sin interés" } : { primary: "primary", secondary: "secondary", none: "no interest" };
+            return <div className="planner-loot-matrix__row" key={spec.id} role="row"><span role="cell"><span className="planner-spec-icon"><SpecIcon spec={spec} /></span><strong>{localizedSpec}</strong></span>{(["primary", "secondary", "none"] as const).map(option => <span key={option} role="cell"><button aria-label={`${localizedSpec} · ${priorityLabel[option]}`} aria-pressed={priority === option} onClick={() => setLootPriority(openLootCharacter.characterId, spec.id, option)} type="button"><i /></button></span>)}</div>;
           })}
         </div>
         <p>{es ? "Para cambiar la primaria, desmarca primero la actual. Cada spec sólo puede pertenecer a una columna." : "To change the primary, clear the current one first. Each spec can belong to only one column."}</p>

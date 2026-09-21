@@ -64,7 +64,7 @@ test.describe("Poison hover geometry stability", () => {
     const hasAvatar = (await avatar.count()) > 0;
     const avatarBefore = hasAvatar ? await box(avatar) : null;
     const shellBefore = await box(shell);
-    await page.getByRole("button", { name: "Menu de usuario de Spee" }).hover();
+    await page.getByRole("button", { name: "Menú de usuario de Spee" }).hover();
     await page.waitForTimeout(80);
     if (hasAvatar) {
       expect(await box(avatar)).toEqual(avatarBefore);

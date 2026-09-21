@@ -1,6 +1,7 @@
 import { useI18n } from "../core/i18n";
 import { ThemedIcon } from "./ThemedIcon";
 import { ReleaseNotesMarkdown } from "./ReleaseNotesMarkdown";
+import { localizedReleaseNotes } from "../core/releaseNotes";
 
 type ChangelogModalProps = {
   version: string;
@@ -9,7 +10,7 @@ type ChangelogModalProps = {
 };
 
 export function ChangelogModal({ version, notes, onClose }: ChangelogModalProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   return (
     <div aria-labelledby="changelog-modal-title" aria-modal="true" className="ks-modal ks-update-modal" role="dialog">
       <div className="ks-modal__panel ks-update-modal__panel">
@@ -24,7 +25,7 @@ export function ChangelogModal({ version, notes, onClose }: ChangelogModalProps)
         </div>
         <div className="ks-update-modal__body">
           <section className="ks-update-modal__notes">
-            <ReleaseNotesMarkdown notes={notes} fallback={t("updater.noNotes")} />
+            <ReleaseNotesMarkdown notes={localizedReleaseNotes(notes, language)} fallback={t("updater.noNotes")} />
           </section>
         </div>
         <div className="ks-update-modal__actions">

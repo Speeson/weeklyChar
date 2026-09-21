@@ -34,6 +34,7 @@ import { forceSync } from "./core/sync";
 import { tauriUpdaterAdapter } from "./core/tauriUpdater";
 import { UpdateController, type UpdaterSnapshot } from "./core/updater";
 import { I18nProvider, translate } from "./core/i18n";
+import { localizedCoreErrorMessage } from "./core/errorDisplay";
 import { bundledRelease } from "./generated/release";
 import { useThemeAsset } from "./theme/useThemeAsset";
 import type {
@@ -88,14 +89,6 @@ function AvatarChoice({
   );
 }
 
-function formatError(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-
-  return fallback;
-}
-
 function App() {
   const appIcon = useThemeAsset("brand-mark");
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>("loading");
@@ -133,7 +126,7 @@ function App() {
   useEffect(() => {
     if (!settings || !isTauri()) return;
     void setWindowAspectLock(settings.lockWindowAspectRatio === true).catch(caught => {
-      setError(formatError(caught, translate(settings.lang, "settings.error")));
+      setError(localizedCoreErrorMessage(caught, settings.lang, translate(settings.lang, "settings.error")));
     });
   }, [settings?.lockWindowAspectRatio, settings?.lang]);
 
@@ -211,7 +204,8 @@ function App() {
           return;
         }
         setBridgeStatus("error");
-        setError(formatError(caught, translate("es", "common.bridgeError")));
+        const startupLanguage = settingsRef.current?.lang ?? "es";
+        setError(localizedCoreErrorMessage(caught, startupLanguage, translate(startupLanguage, "common.bridgeError")));
         document.title = "KeystoneClient - Error";
       } finally {
         if (!cancelled) {
@@ -359,7 +353,7 @@ function App() {
       setAuth((current) => current?.authenticated ? current : nextAuth);
     } catch (caught) {
       setAuth((current) => current?.authenticated ? current : previousAuth);
-      setError(formatError(caught, t("common.bridgeError")));
+      setError(localizedCoreErrorMessage(caught, language, t("common.bridgeError")));
     } finally {
       setBusyAction(null);
     }
@@ -374,7 +368,7 @@ function App() {
       const state = await coreRequest<SystemState>("system.get_state");
       applySystemState(state);
     } catch (caught) {
-      setError(formatError(caught, t("common.bridgeError")));
+      setError(localizedCoreErrorMessage(caught, language, t("common.bridgeError")));
     } finally {
       setBusyAction(null);
     }
@@ -425,7 +419,7 @@ function App() {
       setAuth(nextAuth);
       setAvatarPickerOpen(false);
     } catch (caught) {
-      setAvatarError(formatError(caught, t("common.bridgeError")));
+      setAvatarError(localizedCoreErrorMessage(caught, language, t("common.bridgeError")));
     } finally {
       setAvatarSaving(false);
     }
@@ -436,7 +430,7 @@ function App() {
     try {
       await action();
     } catch (caught) {
-      setError(formatError(caught, t("common.bridgeError")));
+      setError(localizedCoreErrorMessage(caught, language, t("common.bridgeError")));
     }
   }
 
@@ -447,7 +441,7 @@ function App() {
     try {
       setSync(await forceSync());
     } catch (caught) {
-      setError(formatError(caught, t("sync.errorGeneric")));
+      setError(localizedCoreErrorMessage(caught, language, t("sync.errorGeneric")));
     }
   }
 
@@ -496,7 +490,7 @@ function App() {
           const saved = await updateSettings({ closeBehavior: behavior });
           handleSettingsChanged(saved);
         } catch (caught) {
-          setCloseChoiceError(formatError(caught, t("settings.error")));
+          setCloseChoiceError(localizedCoreErrorMessage(caught, language, t("settings.error")));
           setCloseChoiceSaving(false);
           return;
         }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compactTeamKeystone, MIDNIGHT_SEASON_2_DUNGEONS, SEASON_2_DUNGEON_BY_ID } from "./season2";
+import { compactTeamKeystone, dungeonName, MIDNIGHT_SEASON_2_DUNGEONS, SEASON_2_DUNGEON_BY_ID } from "./season2";
 
 describe("Client Season 2 display pool", () => {
   it("contains exactly the eight verified dungeon identifiers and abbreviations", () => {
@@ -15,6 +15,14 @@ describe("Client Season 2 display pool", () => {
     expect(compactTeamKeystone(12, 399, "Ruby Life Pools")).toBe("+12 RLP");
     expect(compactTeamKeystone(9, 999, "Future Dungeon")).toBe("+9 Future Dungeon");
     expect(compactTeamKeystone(8, 999, null)).toBe("+8 ID 999");
+  });
+
+  it("provides canonical names in both supported languages", () => {
+    for (const dungeon of MIDNIGHT_SEASON_2_DUNGEONS) {
+      expect(dungeonName(dungeon, "es")).toBe(dungeon.nameEs);
+      expect(dungeonName(dungeon, "en")).toBe(dungeon.name);
+    }
+    expect(dungeonName(SEASON_2_DUNGEON_BY_ID.get(584)!, "es")).toBe("Valle Cegador");
   });
 
 });

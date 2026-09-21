@@ -104,7 +104,7 @@ describe("SyncPage", () => {
 
   it("renders idle, watching, syncing, success and error states", () => {
     const { container, rerender } = render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialSync={idleStatus} initialWow={wowState} preview />);
-    expect(screen.getAllByText("Esperando sincronizacion")).toHaveLength(1);
+    expect(screen.getAllByText("Esperando sincronización")).toHaveLength(1);
     expect(container.querySelectorAll('[data-sync-state="idle"]')).toHaveLength(1);
 
     rerender(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialSync={{ ...idleStatus, running: true, state: "watching" }} initialWow={wowState} preview />);
@@ -116,13 +116,13 @@ describe("SyncPage", () => {
     expect(container.querySelectorAll('[data-sync-state="syncing"]')).toHaveLength(1);
 
     rerender(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialSync={{ ...idleStatus, state: "success" }} initialWow={wowState} preview />);
-    expect(screen.getAllByText("Sincronizacion completada")).toHaveLength(1);
+    expect(screen.getAllByText("Sincronización completada")).toHaveLength(1);
     expect(container.querySelectorAll('[data-sync-state="success"]')).toHaveLength(1);
 
     rerender(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialSync={{ ...idleStatus, state: "error", lastError: "Fallido" }} initialWow={wowState} preview />);
-    expect(screen.getAllByText("Error de sincronizacion")).toHaveLength(1);
+    expect(screen.getAllByText("Error de sincronización")).toHaveLength(1);
     expect(container.querySelectorAll('[data-sync-state="error"]')).toHaveLength(1);
-    expect(screen.getAllByText("Fallido").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Revisa el último resultado").length).toBeGreaterThan(0);
   });
 
   it("tracks addon status in the first summary card", () => {
@@ -147,7 +147,7 @@ describe("SyncPage", () => {
         preview
       />,
     );
-    expect(screen.getByLabelText("Addon: Actualizado")).toHaveTextContent("Version 0.1.17 instalada");
+    expect(screen.getByLabelText("Addon: Actualizado")).toHaveTextContent("Versión 0.1.17 instalada");
 
     rerender(
       <SyncPage
@@ -158,7 +158,7 @@ describe("SyncPage", () => {
         preview
       />,
     );
-    expect(screen.getByLabelText("Addon: Actualización disponible")).toHaveTextContent("Version 0.1.17 disponible");
+    expect(screen.getByLabelText("Addon: Actualización disponible")).toHaveTextContent("Versión 0.1.17 disponible");
     expect(screen.getByLabelText("Addon: Actualización disponible")).toHaveClass("sync-summary-card--warning");
   });
 
@@ -171,8 +171,8 @@ describe("SyncPage", () => {
     expect(screen.getByText("0")).toHaveStyle({ color: "#00C800" });
     expect(screen.getByLabelText("Personajes: 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Cuentas: 1")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Piedra Angular" })).toBeInTheDocument();
-    expect(screen.getByText("Version de la aplicacion")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Piedra angular" })).toBeInTheDocument();
+    expect(screen.getByText("Versión de la aplicación")).toBeInTheDocument();
     expect(screen.getByText("v0.1.0")).toBeInTheDocument();
     expect(screen.getByText("Detectados")).toBeInTheDocument();
   });
@@ -280,11 +280,11 @@ describe("SyncPage", () => {
       event: "sync.status",
       data: { ...idleStatus, state: "error", lastError: "Network failed." },
     });
-    expect(await screen.findByLabelText("Estado actual: Error de sincronizacion")).toHaveTextContent("Network failed.");
+    expect(await screen.findByLabelText("Estado actual: Error de sincronización")).toHaveTextContent("No se pudo enviar la sincronización.");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Sincronizar ahora" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Sign in before syncing.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Inicia sesión para sincronizar.");
   });
 
   it("disables force when no selected account exists", () => {

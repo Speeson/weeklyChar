@@ -426,7 +426,7 @@ function validRequest(request: KeystonePlannerRequest): boolean {
 }
 
 export async function getKeystonePlanner(
-  teamId: number, request: KeystonePlannerRequest,
+  teamId: number, request: KeystonePlannerRequest, locale: "es_ES" | "en_US" = "es_ES",
 ): Promise<KeystonePlannerResponse> {
   if (!integer(teamId, 1) || !validRequest(request)) {
     throw error("INVALID_REQUEST", "La solicitud del Planner no es válida.");
@@ -439,6 +439,7 @@ export async function getKeystonePlanner(
     stoneCharacterId: request.stoneCharacterId,
     options: { ...request.options },
     locks: request.locks.map((lock: KeystonePlannerLock) => ({ ...lock })),
+    locale,
   });
   const parsed = parseKeystonePlannerResponse(raw, teamId, request);
   if (!parsed) throw error("INVALID_PLANNER_RESPONSE", "La respuesta del Planner no es válida.");

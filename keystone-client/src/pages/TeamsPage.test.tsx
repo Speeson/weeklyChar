@@ -142,7 +142,7 @@ function renderPage(dataSource = source(), language: Language = "es", onSessionE
 }
 
 async function selectRuby(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("button", { name: /Ruby Life Pools/u }));
+  await user.click(await screen.findByRole("button", { name: /Estanques de Vida Rubí/u }));
   return screen.findAllByTestId("selector-character");
 }
 
@@ -248,7 +248,7 @@ describe("TeamsPage compact ranking", () => {
     first.unmount();
 
     renderPage(dataSource);
-    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    await user.click(screen.getByRole("button", { name: /Estanques de Vida Rubí/u }));
 
     expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
     expect(screen.queryByLabelText("Cargando objetivos")).not.toBeInTheDocument();
@@ -270,10 +270,10 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByText("2 personajes")).toBeInTheDocument();
     expect(screen.getByText("1 personaje")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Seleccionar/u })).toHaveLength(8);
-    const ruby = screen.getByRole("button", { name: /Ruby Life Pools.*2 piedras/u });
-    expect(ruby).toHaveTextContent("Ruby Life Pools");
+    const ruby = screen.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras/u });
+    expect(ruby).toHaveTextContent("Estanques de Vida Rubí");
     expect(ruby.querySelector(".teams-dungeon__art")).toHaveAttribute("src", expect.stringContaining("ruby-life-pools"));
-    expect(screen.getByRole("button", { name: /Voidscar Arena.*0 piedras/u })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Arena Lacravacua.*0 piedras/u })).toBeEnabled();
     expect(screen.getByText("Selecciona una mazmorra para ver los objetivos del equipo.")).toBeInTheDocument();
     expect(document.querySelector(".teams-selector-panel__prompt > img")).toHaveAttribute("src", expect.stringContaining("app-icon"));
     expect(screen.getByText("Las piedras iluminadas están disponibles actualmente.")).toBeInTheDocument();
@@ -431,26 +431,26 @@ describe("TeamsPage compact ranking", () => {
     await user.click(speeson);
     expect(screen.getByText("1 seleccionado")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limpiar filtros" })).toHaveTextContent("Limpiar");
-    expect(screen.getByRole("button", { name: /Ruby Life Pools.*1 piedra$/u })).toHaveAttribute("data-available", "true");
+    expect(screen.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
     let rows = screen.getAllByTestId("selector-character");
     expect(rows).toHaveLength(1);
     expect(within(rows[0]).getByText("Spee")).toBeInTheDocument();
     expect(screen.queryByText("Bakuhatsu")).not.toBeInTheDocument();
     expect(screen.getByText("1 personaje · 1 objetivo")).toBeInTheDocument();
-    expect(document.querySelector(".teams-dungeon-summary .teams-tier-line")).toHaveTextContent("1 BiS0 Must0 Nice0 Cat");
+    expect(document.querySelector(".teams-dungeon-summary .teams-tier-line")).toHaveTextContent("1 Óptimo0 Imprescindible0 Recomendable0 Catalizador");
     const filteredOwnerChips = document.querySelectorAll(".teams-stone-owner-chip");
     expect(filteredOwnerChips).toHaveLength(1);
     expect(filteredOwnerChips[0]).toHaveTextContent("Spee+8(Ana)");
 
     await user.click(ana);
     expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ruby Life Pools.*0 piedras$/u })).toHaveAttribute("data-available", "false");
+    expect(screen.getByRole("button", { name: /Estanques de Vida Rubí.*0 piedras$/u })).toHaveAttribute("data-available", "false");
     expect(screen.queryAllByTestId("selector-character")).toHaveLength(0);
     expect(screen.getByText("0 personajes · 0 objetivos")).toBeInTheDocument();
     expect(screen.getByText(/Ningún personaje del equipo/u)).toBeInTheDocument();
 
     await user.click(speeson);
-    await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
+    await user.click(screen.getByRole("button", { name: /Templo de Sethraliss/u }));
     await screen.findByText(/6 objetivos/u);
     expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "false");
@@ -470,7 +470,7 @@ describe("TeamsPage compact ranking", () => {
 
     await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
     await waitFor(() => expect(screen.queryByRole("status", { name: /Cargando configuración/u })).not.toBeInTheDocument());
-    expect(screen.getByRole("button", { name: /Ruby Life Pools.*2 piedras$/u })).toHaveAttribute("data-available", "true");
+    expect(screen.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras$/u })).toHaveAttribute("data-available", "true");
     expect(document.querySelectorAll(".teams-stone-owner-chip")).toHaveLength(2);
     expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "false");
@@ -488,7 +488,7 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     const empty = { ...selector, challengeMapId: 585, availability: { stoneCount: 0, stones: [] }, summary: { ...selector.summary, charactersWithObjectives: 0, totalObjectives: 0 }, characters: [] };
     renderPage(source({ getKeystoneSelector: vi.fn(async () => empty) }));
-    const zero = await screen.findByRole("button", { name: /Voidscar Arena.*0 piedras/u });
+    const zero = await screen.findByRole("button", { name: /Arena Lacravacua.*0 piedras/u });
     await user.click(zero);
     expect(zero).toHaveAttribute("aria-pressed", "true");
     await screen.findByText("0 personajes · 0 objetivos");
@@ -503,8 +503,8 @@ describe("TeamsPage compact ranking", () => {
     const dataSource = source({ getKeystoneSelector: vi.fn((_team, dungeon): Promise<KeystoneSelectorResponse> => new Promise(done => resolvers.set(dungeon, done))) });
     renderPage(dataSource);
     await screen.findByRole("button", { name: detail.name });
-    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
-    await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
+    await user.click(screen.getByRole("button", { name: /Estanques de Vida Rubí/u }));
+    await user.click(screen.getByRole("button", { name: /Templo de Sethraliss/u }));
     await act(async () => resolvers.get(250)?.({ ...selector, challengeMapId: 250, summary: { ...selector.summary, totalObjectives: 22 } }));
     expect(await screen.findByText(/22 objetivos/u)).toBeInTheDocument();
     await act(async () => resolvers.get(399)?.(selector));
@@ -521,9 +521,9 @@ describe("TeamsPage compact ranking", () => {
       .mockReturnValueOnce(refresh);
     renderPage(source({ getKeystoneSelector }));
     await selectRuby(user);
-    await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
-    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
-    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    await user.click(screen.getByRole("button", { name: /Templo de Sethraliss/u }));
+    await user.click(screen.getByRole("button", { name: /Estanques de Vida Rubí/u }));
+    await user.click(screen.getByRole("button", { name: /Estanques de Vida Rubí/u }));
 
     expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
     expect(screen.queryByLabelText("Cargando objetivos")).not.toBeInTheDocument();
@@ -547,15 +547,15 @@ describe("TeamsPage compact ranking", () => {
     });
     renderPage(dataSource);
     await selectRuby(user);
-    await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
-    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    await user.click(screen.getByRole("button", { name: /Templo de Sethraliss/u }));
+    await user.click(screen.getByRole("button", { name: /Estanques de Vida Rubí/u }));
     expect(await screen.findByText("2 personajes · 7 objetivos")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: detail.name }));
     await user.click(screen.getByRole("option", { name: second.name }));
     await screen.findByRole("button", { name: second.name });
-    await user.click(screen.getByRole("button", { name: /Ruby Life Pools/u }));
+    await user.click(screen.getByRole("button", { name: /Estanques de Vida Rubí/u }));
     expect(await screen.findByText("2 personajes · 19 objetivos")).toBeInTheDocument();
     expect(getKeystoneSelector).toHaveBeenLastCalledWith(8, 399, "es_ES");
   });
@@ -585,7 +585,7 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
-    expect(screen.getAllByText("Ruby Life Pools")).toHaveLength(1);
+    expect(screen.getAllByText("Estanques de Vida Rubí")).toHaveLength(1);
     expect(document.querySelector(".teams-dungeon-context")).not.toBeInTheDocument();
     expect(screen.queryByText("2 piedras · Bakuhatsu + Spee")).not.toBeInTheDocument();
     const ownerChips = document.querySelectorAll<HTMLElement>(".teams-stone-owner-chip");
@@ -607,11 +607,11 @@ describe("TeamsPage compact ranking", () => {
     expect(rows[0]).toHaveAttribute("data-expanded", "true");
     expect(within(rows[0]).getByText("Bakuhatsu")).toBeInTheDocument();
     expect(within(rows[0]).getByRole("button", { name: "Todos · 6" })).toBeInTheDocument();
-    await user.click(within(rows[0]).getByRole("button", { name: "Arcane · 4" }));
-    expect(within(rows[0]).getByText("BEST IN SLOT · 2")).toBeInTheDocument();
-    expect(within(rows[0]).getByText("OTHER · 1")).toBeInTheDocument();
+    await user.click(within(rows[0]).getByRole("button", { name: "Arcano · 4" }));
+    expect(within(rows[0]).getByText("ÓPTIMO · 2")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("OTROS · 1")).toBeInTheDocument();
     expect(within(rows[0]).queryByText(/Completados \/ obtenidos/u)).not.toBeInTheDocument();
-    expect(within(rows[0]).getByText("BEST IN SLOT · 2").closest(".teams-objective-group")).toHaveAttribute("data-category", "bestInSlot");
+    expect(within(rows[0]).getByText("ÓPTIMO · 2").closest(".teams-objective-group")).toHaveAttribute("data-category", "bestInSlot");
     expand.focus();
     await user.keyboard("{Enter}");
     expect(rows[0]).toHaveAttribute("data-expanded", "false");
@@ -641,7 +641,7 @@ describe("TeamsPage compact ranking", () => {
 
     await waitFor(() => expect(getKeystonePlanner).toHaveBeenCalledWith(7, expect.objectContaining({
       participantUserIds: expect.arrayContaining([2, 3]), targetLevel: 12, challengeMapId: 399, stoneCharacterId: 10, locks: [],
-    })));
+    }), "es_ES"));
     expect(document.querySelectorAll(".planner-recommendation")).toHaveLength(5);
     expect(screen.getAllByLabelText("Dueño de la piedra").length).toBeGreaterThan(0);
     const firstParty = document.querySelector(".planner-recommendation__party")!;
@@ -653,12 +653,12 @@ describe("TeamsPage compact ranking", () => {
     expect(external.querySelectorAll(".planner-external-preview__class")).toHaveLength(4);
     expect(external.querySelectorAll(".planner-external-preview__class img")).toHaveLength(4);
     await user.click(within(external).getByRole("button", { name: /Ver clases recomendadas: 5/u }));
-    const externalDialog = screen.getByRole("dialog", { name: /Clases recomendadas.*Healer/u });
-    expect(within(externalDialog).getByText("Druid")).toBeInTheDocument();
-    expect(within(externalDialog).getByText("Hunter")).toBeInTheDocument();
+    const externalDialog = screen.getByRole("dialog", { name: /Clases recomendadas.*Sanador/u });
+    expect(within(externalDialog).getByText("Druida")).toBeInTheDocument();
+    expect(within(externalDialog).getByText("Cazador")).toBeInTheDocument();
     expect(within(externalDialog).queryByText("Restoration")).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: /Clases recomendadas.*Healer/u })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Clases recomendadas.*Sanador/u })).not.toBeInTheDocument();
     const cards = [...document.querySelectorAll<HTMLElement>(".planner-recommendation")];
     const compactLootMarker = cards[0].querySelector<HTMLElement>(".planner-spec-marker--loot");
     expect(compactLootMarker?.querySelector(":scope > .planner-loot-pouch img")).toHaveAttribute("src", expect.stringContaining("inv_misc_bag_10.jpg"));
@@ -673,12 +673,12 @@ describe("TeamsPage compact ranking", () => {
     expect(cards[1].querySelector(".planner-utilities > section:last-child > strong")).toHaveTextContent("Buffs / Defensivos / Utilidades");
     expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Objetivos");
     expect(cards[1].querySelector(".planner-recommendation__metrics")).toHaveTextContent("2 Preferidos");
-    expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protection" }).length).toBeGreaterThan(0);
-    expect(within(cards[1]).getAllByRole("img", { name: "Especialización de botín: Protection" }).length).toBeGreaterThan(0);
+    expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protección" }).length).toBeGreaterThan(0);
+    expect(within(cards[1]).getAllByRole("img", { name: "Especialización de botín: Protección" }).length).toBeGreaterThan(0);
     expect(within(cards[1]).getAllByText("Ana").length).toBeGreaterThan(0);
     expect(within(cards[1]).queryByText("Paladin · Protection")).not.toBeInTheDocument();
     expect(within(cards[1]).queryByTitle("Paladin")).not.toBeInTheDocument();
-    expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protection" })[0].querySelector(".planner-spec-icon__specialization")).toHaveAttribute("src", expect.stringContaining("236264"));
+    expect(within(cards[1]).getAllByRole("img", { name: "Especialización jugada: Protección" })[0].querySelector(".planner-spec-icon__specialization")).toHaveAttribute("src", expect.stringContaining("236264"));
     expect(within(cards[1]).getByRole("link", { name: "Escudo" })).toHaveAttribute("data-wowhead", expect.stringContaining("spec=66"));
     expect(within(cards[1]).queryByLabelText("Dueño de la piedra +12")).not.toBeInTheDocument();
     const expandedOwnerCard = cards[1].querySelector(".planner-player-card .planner-owner-crown")?.closest(".planner-player-card");
@@ -692,9 +692,9 @@ describe("TeamsPage compact ranking", () => {
     expect([...objectiveRow!.children].filter(child => child.matches(".planner-objective-icon"))).toHaveLength(5);
     await user.click(within(cards[1]).getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 6/u }));
     const breakdown = screen.getByRole("dialog", { name: /Desglose de objetivos · Bakuhatsu/u });
-    expect(within(breakdown).getByText("BiS · 1")).toBeInTheDocument();
-    expect(within(breakdown).getByText("Must · 1")).toBeInTheDocument();
-    expect(within(breakdown).getByText("Catalyst · 1")).toBeInTheDocument();
+    expect(within(breakdown).getByText("Óptimo · 1")).toBeInTheDocument();
+    expect(within(breakdown).getByText("Imprescindible · 1")).toBeInTheDocument();
+    expect(within(breakdown).getByText("Catalizador · 1")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: /Desglose de objetivos/u })).not.toBeInTheDocument();
   });
@@ -724,7 +724,7 @@ describe("TeamsPage compact ranking", () => {
     await waitFor(() => expect(getKeystonePlanner).toHaveBeenCalledTimes(2));
     expect(getKeystonePlanner).toHaveBeenLastCalledWith(7, expect.objectContaining({
       options: expect.objectContaining({ bloodlust: false }),
-    }));
+    }), "es_ES");
 
     act(() => resolveRecalculation?.(planned));
     await waitFor(() => expect(results).toHaveAttribute("data-recalculating", "false"));
@@ -753,7 +753,7 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.queryByText("Buffos de clase")).not.toBeInTheDocument();
     expect(screen.queryByText("Sinergia de daño")).not.toBeInTheDocument();
 
-    await user.click(within(mode).getByRole("button", { name: "Avanzado · Specs" }));
+    await user.click(within(mode).getByRole("button", { name: "Avanzado · Especializaciones" }));
     expect(screen.getAllByRole("checkbox").map(control => control.getAttribute("aria-label"))).toEqual([
       "Rellenar la composición",
       "Ansia de sangre", "Resurrección en combate", "Sinergia ofensiva", "Defensiva de grupo", "Utilidad de mazmorra",
@@ -761,7 +761,7 @@ describe("TeamsPage compact ranking", () => {
     await user.click(screen.getByRole("checkbox", { name: "Defensiva de grupo" }));
     await user.click(within(mode).getByRole("button", { name: "Rápido · Clases" }));
     expect(screen.queryByRole("checkbox", { name: "Defensiva de grupo" })).not.toBeInTheDocument();
-    await user.click(within(mode).getByRole("button", { name: "Avanzado · Specs" }));
+    await user.click(within(mode).getByRole("button", { name: "Avanzado · Especializaciones" }));
     expect(screen.getByRole("checkbox", { name: "Defensiva de grupo" })).not.toBeChecked();
   });
 
@@ -789,7 +789,7 @@ describe("TeamsPage compact ranking", () => {
     await user.click(screen.getByRole("checkbox", { name: "Rellenar la composición" }));
     await waitFor(() => expect(getKeystonePlanner).toHaveBeenLastCalledWith(7, expect.objectContaining({
       options: expect.objectContaining({ fillComposition: false }),
-    })));
+    }), "es_ES"));
     await waitFor(() => expect(document.querySelectorAll(".planner-external-preview")).toHaveLength(0));
     expect(document.querySelector(".planner-recommendation__party")).toHaveAttribute("data-centered", "true");
     await user.click(screen.getByRole("button", { name: "Expandir #1" }));
@@ -881,7 +881,7 @@ describe("TeamsPage compact ranking", () => {
     await user.click(within(firstResult).getByRole("button", { name: "Expandir #1" }));
     const externalCard = firstResult.querySelector<HTMLElement>(".planner-external-card")!;
     expect(externalCard.querySelectorAll('.planner-external-card__selectors [data-icon-kind="class"]')).toHaveLength(4);
-    expect(within(externalCard).getByRole("button", { name: /Seleccionar recomendación: Warrior/u })).toHaveAttribute("aria-pressed", "true");
+    expect(within(externalCard).getByRole("button", { name: /Seleccionar recomendación: Guerrero/u })).toHaveAttribute("aria-pressed", "true");
     expect(within(externalCard).getByRole("status", { name: /\+4\.50%/u })).toBeInTheDocument();
     const contributions = within(externalCard).getByRole("group", { name: "Buffs / Defensivos / Utilidades" });
     expect(externalCard.querySelectorAll(".planner-external-card__contributions > section")).toHaveLength(1);
@@ -893,10 +893,10 @@ describe("TeamsPage compact ranking", () => {
     expect(within(externalCard).getByRole("link", { name: /Grito de batalla/u })).toHaveAttribute("data-wowhead", "domain=es");
     await waitFor(() => expect(within(externalCard).getByRole("link", { name: /Grito de batalla/u }).querySelector(".planner-capability-chip__icon img")).toBeInTheDocument());
 
-    await user.click(within(externalCard).getByRole("button", { name: /Seleccionar recomendación: Mage/u }));
+    await user.click(within(externalCard).getByRole("button", { name: /Seleccionar recomendación: Mago/u }));
     expect(within(externalCard).getByRole("status", { name: /\+3\.10%/u })).toBeInTheDocument();
     expect(within(externalCard).getByRole("link", { name: /Intelecto Arcano/u })).toBeInTheDocument();
-    expect(within(externalCard).getByRole("link", { name: /Counterspell/u })).toBeInTheDocument();
+    expect(within(externalCard).getByRole("link", { name: "Utilidades" })).toBeInTheDocument();
     expect(within(externalCard).queryByText("Pummel")).not.toBeInTheDocument();
     expect(within(externalCard).getByRole("button", { name: /Ver clases recomendadas: 5/u })).toBeInTheDocument();
   });
@@ -914,9 +914,9 @@ describe("TeamsPage compact ranking", () => {
     expect(externalCard.querySelectorAll('.planner-external-card__selectors [data-icon-kind="spec"]')).toHaveLength(4);
     expect(externalCard.querySelector('.planner-external-card__selectors img[src*="classicon_"]')).not.toBeInTheDocument();
     await user.click(within(externalCard).getByRole("button", { name: /Ver clases recomendadas: 5/u }));
-    const dialog = screen.getByRole("dialog", { name: /Specs recomendadas/u });
+    const dialog = screen.getByRole("dialog", { name: /Especializaciones recomendadas/u });
     expect(dialog.querySelector(".planner-external-popover__choice")?.querySelectorAll(".planner-external-popover__icons img")).toHaveLength(2);
-    expect(within(dialog).getByText("Fury Warrior")).toBeInTheDocument();
+    expect(within(dialog).getByText("Furia Guerrero")).toBeInTheDocument();
   });
 
   it("combines party capabilities and reveals overflow from a body portal", async () => {
@@ -933,8 +933,7 @@ describe("TeamsPage compact ranking", () => {
     await user.hover(more);
     const popup = screen.getByRole("tooltip");
     expect(popup.parentElement).toBe(document.body);
-    expect(within(popup).getByText("Remove Curse")).toBeInTheDocument();
-    expect(within(popup).getByText("Imprison")).toBeInTheDocument();
+    expect(within(popup).getAllByText("Utilidades").length).toBeGreaterThanOrEqual(2);
     await user.unhover(more);
     fireEvent.mouseEnter(popup);
     await new Promise(resolve => window.setTimeout(resolve, 250));
@@ -944,7 +943,7 @@ describe("TeamsPage compact ranking", () => {
     await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
 
     fireEvent.focus(more);
-    await waitFor(() => expect(within(screen.getByRole("tooltip")).getByText("Remove Curse")).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole("tooltip")).getAllByText("Utilidades").length).toBeGreaterThanOrEqual(2));
     fireEvent.keyDown(more, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
   });
@@ -1019,8 +1018,7 @@ describe("TeamsPage compact ranking", () => {
     expect(within(capabilityGroup).queryByText("Grito de batalla")).not.toBeInTheDocument();
     const utilityMore = within(capabilityGroup).getByRole("button", { name: /Mostrar 6 utilidades más/u });
     await user.hover(utilityMore);
-    expect(within(screen.getByRole("tooltip")).getByText("Rallying Cry")).toBeInTheDocument();
-    expect(within(screen.getByRole("tooltip")).getByText("Heroic Leap")).toBeInTheDocument();
+    expect(within(screen.getByRole("tooltip")).getAllByText("Utilidades").length).toBeGreaterThanOrEqual(2);
     await user.unhover(utilityMore);
 
     const composition = within(firstResult).getByRole("group", { name: "Composición" });
@@ -1029,7 +1027,7 @@ describe("TeamsPage compact ranking", () => {
     expect(within(composition).getByTitle("Número de jugadores externos")).toBeInTheDocument();
     const dpsCards = firstResult.querySelectorAll<HTMLElement>('.planner-external-card[data-role="dps"]');
     for (const card of dpsCards) {
-      await user.click(within(card).getByRole("button", { name: /Seleccionar recomendación: Fire Mage/u }));
+      await user.click(within(card).getByRole("button", { name: /Seleccionar recomendación: Fuego Mago/u }));
     }
     expect(composition.querySelector('.planner-summary-damage[data-profile="magical"]')).toBeInTheDocument();
 
@@ -1046,8 +1044,7 @@ describe("TeamsPage compact ranking", () => {
     await user.hover(synergyMore);
     const synergyPopup = screen.getByRole("tooltip");
     expect(within(synergyPopup).getByRole("link", { name: /Intelecto Arcano/u })).toBeInTheDocument();
-    expect(within(synergyPopup).getByText("Buff 6")).toBeInTheDocument();
-    expect(within(synergyPopup).getByText("Buff 7")).toBeInTheDocument();
+    expect(within(synergyPopup).getAllByText("Utilidades").length).toBeGreaterThanOrEqual(2);
   });
 
   it("keeps tank, healer, and DPS cards in fixed role slots when the tank is external", async () => {
@@ -1152,10 +1149,10 @@ describe("TeamsPage compact ranking", () => {
     expect(dialog.querySelectorAll('[data-zone="inactive"] .planner-preference-character')).toHaveLength(2);
     expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
     await user.click(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }));
-    const initialNoInterest = within(dialog).getAllByRole("button", { name: /· none$/u });
+    const initialNoInterest = within(dialog).getAllByRole("button", { name: /· sin interés$/u });
     expect(initialNoInterest).toHaveLength(3);
     initialNoInterest.forEach(option => expect(option).toHaveAttribute("aria-pressed", "true"));
-    await user.click(within(dialog).getByRole("button", { name: "Arcane · primary" }));
+    await user.click(within(dialog).getByRole("button", { name: "Arcano · primaria" }));
     await user.click(within(dialog).getByRole("button", { name: "Listo" }));
     const inactiveCard = within(dialog).getByText("Bakuhatsu").closest(".planner-preference-character") as HTMLElement;
     const activeZone = dialog.querySelector('[data-zone="active"]') as HTMLElement;
@@ -1163,9 +1160,9 @@ describe("TeamsPage compact ranking", () => {
     fireEvent.dragStart(inactiveCard, { dataTransfer: transfer });
     fireEvent.dragOver(activeZone, { dataTransfer: transfer });
     fireEvent.drop(activeZone, { dataTransfer: transfer });
-    expect(within(dialog).getByRole("button", { name: /Arcane · Selecciona tu preferencia/u })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: /Arcano · Selecciona tu preferencia/u })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
-    await user.click(within(dialog).getByRole("button", { name: /Arcane · Selecciona tu preferencia/u }));
+    await user.click(within(dialog).getByRole("button", { name: /Arcano · Selecciona tu preferencia/u }));
     expect(within(dialog).getAllByRole("option")).toHaveLength(4);
     await user.click(within(dialog).getByRole("option", { name: /Preferida/u }));
     await user.click(within(dialog).getByRole("button", { name: "Guardar y planificar" }));
@@ -1185,9 +1182,9 @@ describe("TeamsPage compact ranking", () => {
     const dialog = screen.getByRole("dialog", { name: "Configura tus personajes" });
     await user.click(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }));
 
-    const arcanePrimary = within(dialog).getByRole("button", { name: "Arcane · primary" });
-    const firePrimary = within(dialog).getByRole("button", { name: "Fire · primary" });
-    const fireSecondary = within(dialog).getByRole("button", { name: "Fire · secondary" });
+    const arcanePrimary = within(dialog).getByRole("button", { name: "Arcano · primaria" });
+    const firePrimary = within(dialog).getByRole("button", { name: "Fuego · primaria" });
+    const fireSecondary = within(dialog).getByRole("button", { name: "Fuego · secundaria" });
     expect(arcanePrimary).toHaveAttribute("aria-pressed", "true");
     await user.click(fireSecondary);
     expect(fireSecondary).toHaveAttribute("aria-pressed", "true");
@@ -1215,9 +1212,9 @@ describe("TeamsPage compact ranking", () => {
     const dialog = screen.getByRole("dialog", { name: "Configura tus personajes" });
     await user.click(within(dialog).getByRole("button", { name: "Configurar botín de Bakuhatsu" }));
 
-    const fireSecondary = within(dialog).getByRole("button", { name: "Fire · secondary" });
-    const frostSecondary = within(dialog).getByRole("button", { name: "Frost · secondary" });
-    const frostNone = within(dialog).getByRole("button", { name: "Frost · none" });
+    const fireSecondary = within(dialog).getByRole("button", { name: "Fuego · secundaria" });
+    const frostSecondary = within(dialog).getByRole("button", { name: "Escarcha · secundaria" });
+    const frostNone = within(dialog).getByRole("button", { name: "Escarcha · sin interés" });
     await user.click(fireSecondary);
     await user.click(frostSecondary);
     expect(fireSecondary).toHaveAttribute("aria-pressed", "true");
@@ -1314,7 +1311,7 @@ describe("TeamsPage compact ranking", () => {
     fireEvent.drop(activeZone, { dataTransfer: transfer });
 
     expect(dialog.querySelector('[data-zone="active"]')).toHaveTextContent("Bakuhatsu");
-    expect(within(dialog).getByRole("button", { name: /Arcane · Desactivada/u })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: /Arcano · Desactivada/u })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
   });
 

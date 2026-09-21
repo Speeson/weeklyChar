@@ -111,6 +111,6 @@ describe("WowPage", () => {
     render(<WowPage initialWow={initialWow} onWowChanged={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Redetectar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No valido.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("La instalación de WoW seleccionada no es válida.");
   });
 });

@@ -33,14 +33,14 @@ for (const state of [
 
 test("captures Poison Settings artwork review", async ({ page }) => {
   await preparePoison(page, "sync-success");
-  await page.getByRole("button", { name: "Configuracion" }).click();
+  await page.getByRole("button", { name: "Configuración" }).click();
   await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
   await capture(page, "settings.png");
 });
 
 test("captures Poison user-menu artwork review", async ({ page }) => {
   await preparePoison(page, "sync-success");
-  await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+  await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
   await expect(page.getByRole("menu")).toBeVisible();
   await capture(page, "user-menu.png");
 });

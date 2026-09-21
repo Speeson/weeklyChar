@@ -484,6 +484,7 @@ async function publicRecommendations(
   env: Env,
   recommendations: readonly KeystonePlannerRecommendation[],
   regionByCharacter: ReadonlyMap<number, string>,
+  locale: string,
 ): Promise<Array<Record<string, unknown>>> {
   const projected = recommendations.map(recommendation => ({
     ...recommendation,
@@ -551,7 +552,7 @@ async function publicRecommendations(
     const uniqueEntries = [...entries.values()]
     for (let offset = 0; offset < uniqueEntries.length; offset += METADATA_BATCH_SIZE) {
       const batch = uniqueEntries.slice(offset, offset + METADATA_BATCH_SIZE)
-      const enriched = await enrichKeystoneLootObjectives(env, region, batch.map(entry => entry.objective))
+      const enriched = await enrichKeystoneLootObjectives(env, region, batch.map(entry => entry.objective), { locale })
       for (let index = 0; index < batch.length; index += 1) {
         for (const target of batch[index].targets) {
           target.itemName = enriched[index].itemName
@@ -567,6 +568,7 @@ export async function runKeystonePlanner(
   env: Env,
   teamId: number,
   request: KeystonePlannerPublicRequest,
+  locale = 'es_ES',
 ): Promise<Record<string, unknown>> {
   const stones = await plannerStones(env, teamId, request)
   if (stones.length === 0) {
@@ -599,6 +601,6 @@ export async function runKeystonePlanner(
     targetLevel: request.targetLevel,
     availability: { eligibleStoneCount: stones.length },
     ...result,
-    recommendations: await publicRecommendations(env, result.recommendations, regionByCharacter),
+    recommendations: await publicRecommendations(env, result.recommendations, regionByCharacter, locale),
   }
 }

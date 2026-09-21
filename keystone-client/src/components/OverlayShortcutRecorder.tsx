@@ -173,9 +173,8 @@ export function OverlayShortcutRecorder({
   }, [onPoll, recording]);
 
   function formatCaptureError(caught: unknown): string {
-    if (typeof caught === "string" && caught.trim()) return caught;
-    if (caught instanceof Error && caught.message.trim()) return caught.message;
-    return t("settings.error");
+    void caught;
+    return t("settings.overlayShortcutUnavailable");
   }
 
   async function startRecording() {

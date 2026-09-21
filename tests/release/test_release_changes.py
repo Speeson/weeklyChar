@@ -93,6 +93,22 @@ class ReleaseChangesTests(unittest.TestCase):
         self.assertIn("Añade instalación remota.", notes)
         self.assertIn("Se conserva el texto en español.", notes)
 
+    def test_client_notes_include_bilingual_sections_and_legacy_fallback(self):
+        self.write_changeset(
+            "client.json",
+            summary="Corrige la interfaz.",
+            details=["Usa nombres oficiales."],
+            summaryEn="Fixes the interface.",
+            detailsEn=["Uses official names."],
+        )
+        self.write_changeset("legacy.json", summary="Cambio histórico.")
+        notes = release_changes.render_notes(release_changes.plan_release(self.tmp, "client", "0.2.1"))
+        self.assertIn("<!-- lang:es -->", notes)
+        self.assertIn("<!-- lang:en -->", notes)
+        self.assertIn("Fixes the interface.", notes)
+        self.assertIn("Uses official names.", notes)
+        self.assertIn("This change is described in the Spanish release notes.", notes)
+
     def test_prepare_consumes_changesets_and_writes_metadata(self):
         self.write_changeset("client.json", type="minor", category="added")
         plan = release_changes.plan_release(self.tmp, "client", "0.2.1", "auto")

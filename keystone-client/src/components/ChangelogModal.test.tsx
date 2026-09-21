@@ -19,6 +19,6 @@ describe("ChangelogModal", () => {
   it("keeps the empty-note fallback", () => {
     render(<ChangelogModal version="0.x.x" notes="" onClose={vi.fn()} />);
 
-    expect(screen.getByText("No hay notas disponibles para esta version.")).toBeInTheDocument();
+    expect(screen.getByText("No hay notas disponibles para esta versión.")).toBeInTheDocument();
   });
 });

@@ -5,10 +5,10 @@ import { expectStableReleaseScreenshot, releaseSectionHeading } from "./release-
 const THEME_STORAGE_KEY = "keystone-client.theme";
 
 const synchronizationStates = [
-  { preview: "sync-idle", snapshot: "poison-sync-idle.png", label: "Esperando sincronizacion" },
+  { preview: "sync-idle", snapshot: "poison-sync-idle.png", label: "Esperando sincronización" },
   { preview: "sync-watching", snapshot: "poison-sync-watching.png", label: "Listo para sincronizar" },
   { preview: "sync-syncing", snapshot: "poison-sync-syncing.png", label: "Sincronizando" },
-  { preview: "sync-error", snapshot: "poison-sync-error.png", label: "Error de sincronizacion" },
+  { preview: "sync-error", snapshot: "poison-sync-error.png", label: "Error de sincronización" },
 ] as const;
 
 async function installStoredTheme(page: Page, value: string) {
@@ -76,7 +76,7 @@ test.describe("Poison visual states", () => {
     await page.goto("/?preview=sync-success");
     await expectPoisonTheme(page);
     await expect(page.getByText("Makabe")).toBeVisible();
-    await expect(page.getByLabel("Estado de sincronizacion").getByText("Sincronizacion completada")).toBeVisible();
+    await expect(page.getByLabel("Estado de sincronización").getByText("Sincronización completada")).toBeVisible();
     await expectImagesReady(page);
     await expectStableReleaseScreenshot(page, "poison-sync-success.png");
   });
@@ -96,7 +96,7 @@ test.describe("Poison visual states", () => {
 
   test("renders Poison Settings with the visible selector", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
 
     await expectPoisonTheme(page);
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
@@ -110,7 +110,7 @@ test.describe("Poison visual states", () => {
     await page.goto("/?preview=sync-success&updater=available");
 
     await expectPoisonTheme(page);
-    const modal = page.getByRole("dialog", { name: "Actualizacion 0.4.0" });
+    const modal = page.getByRole("dialog", { name: "Actualización 0.4.0" });
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.4.0" })).toBeVisible();
     await expect(modal.getByRole("listitem")).toHaveCount(2);
@@ -122,7 +122,7 @@ test.describe("Poison visual states", () => {
     await page.goto("/?preview=sync-success&changelog=post-update");
 
     await expectPoisonTheme(page);
-    const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
+    const modal = page.getByRole("dialog", { name: "Novedades de la actualización" });
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("heading", { level: 1, name: `KeystoneClient ${bundledRelease.version}` })).toBeVisible();
     await expect(modal.getByRole("heading", { level: 2, name: releaseSectionHeading(bundledRelease.notes), exact: true })).toBeVisible();
@@ -131,17 +131,17 @@ test.describe("Poison visual states", () => {
 
   test("renders the user menu over the Poison view", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+    await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
 
     await expectPoisonTheme(page);
     await expect(page.getByRole("menu")).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Cerrar sesion" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Cerrar sesión" })).toBeVisible();
     await expectStableReleaseScreenshot(page, "poison-user-menu.png");
   });
 
   test("renders the avatar picker over the Poison view", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+    await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
     await page.getByRole("menuitem", { name: "Cambiar avatar" }).click();
 
     await expectPoisonTheme(page);
@@ -211,7 +211,7 @@ test.describe("theme behavior in the browser", () => {
   test("persists a Settings selection across reload", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "keystone");
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
 
     const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
     await themeSelector.selectOption("poison");
@@ -220,7 +220,7 @@ test.describe("theme behavior in the browser", () => {
 
     await page.reload();
     await expectPoisonTheme(page);
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
     await expect(page.getByRole("combobox", { name: "Tema visual" })).toHaveValue("poison");
   });
 
@@ -230,7 +230,7 @@ test.describe("theme behavior in the browser", () => {
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "keystone");
     await expect(page.getByText("Makabe")).toBeVisible();
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
     await expect(page.getByRole("combobox", { name: "Tema visual" })).toHaveValue("keystone");
   });
 
@@ -246,7 +246,7 @@ test.describe("theme behavior in the browser", () => {
     await expect(addonTab).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("heading", { name: "Addon", exact: true })).toBeVisible();
 
-    const settings = page.getByRole("button", { name: "Configuracion" });
+    const settings = page.getByRole("button", { name: "Configuración" });
     await settings.focus();
     await expect(settings).toBeFocused();
     await page.keyboard.press("Enter");

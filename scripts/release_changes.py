@@ -19,6 +19,13 @@ CATEGORY_TITLES = {
     "removed": "Eliminado",
     "security": "Seguridad",
 }
+CATEGORY_TITLES_EN = {
+    "added": "New",
+    "changed": "Changes",
+    "fixed": "Fixes",
+    "removed": "Removed",
+    "security": "Security",
+}
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
 
@@ -30,6 +37,8 @@ class Changeset:
     category: str
     summary: str
     details: tuple[str, ...]
+    summary_en: str | None
+    details_en: tuple[str, ...]
 
     @property
     def name(self) -> str:
@@ -113,6 +122,13 @@ def validate_changeset(path: Path, raw: object) -> Changeset:
     if not isinstance(details, list) or not all(isinstance(item, str) and item.strip() for item in details):
         raise ChangesetError(f"{path}: details must be a string array")
 
+    summary_en = raw.get("summaryEn")
+    if summary_en is not None and (not isinstance(summary_en, str) or not summary_en.strip()):
+        raise ChangesetError(f"{path}: summaryEn must be a non-empty string")
+    details_en = raw.get("detailsEn", [])
+    if not isinstance(details_en, list) or not all(isinstance(item, str) and item.strip() for item in details_en):
+        raise ChangesetError(f"{path}: detailsEn must be a string array")
+
     return Changeset(
         path=path,
         components=tuple(components),
@@ -120,6 +136,8 @@ def validate_changeset(path: Path, raw: object) -> Changeset:
         category=category,
         summary=summary.strip(),
         details=tuple(item.strip() for item in details),
+        summary_en=summary_en.strip() if isinstance(summary_en, str) else None,
+        details_en=tuple(item.strip() for item in details_en),
     )
 
 
@@ -152,7 +170,7 @@ def plan_release(root: Path, component: str, current_version: str, requested_bum
 
 
 def render_notes(plan: ReleasePlan) -> str:
-    lines = [
+    spanish = [
         f"# KeystoneClient {plan.next_version}" if plan.component == "client" else f"# KeystoneSync {plan.next_version}",
         "",
     ]
@@ -164,13 +182,27 @@ def render_notes(plan: ReleasePlan) -> str:
         entries = by_category[category]
         if not entries:
             continue
-        lines.extend((f"## {CATEGORY_TITLES[category]}", ""))
+        spanish.extend((f"## {CATEGORY_TITLES[category]}", ""))
         for changeset in entries:
-            lines.append(f"- {changeset.summary}")
+            spanish.append(f"- {changeset.summary}")
             for detail in changeset.details:
-                lines.append(f"  - {detail}")
-        lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+                spanish.append(f"  - {detail}")
+        spanish.append("")
+    if plan.component != "client":
+        return "\n".join(spanish).rstrip() + "\n"
+
+    english = [f"# KeystoneClient {plan.next_version}", ""]
+    for category in ALLOWED_CATEGORIES:
+        entries = by_category[category]
+        if not entries:
+            continue
+        english.extend((f"## {CATEGORY_TITLES_EN[category]}", ""))
+        for changeset in entries:
+            english.append(f"- {changeset.summary_en or 'This change is described in the Spanish release notes.'}")
+            for detail in changeset.details_en:
+                english.append(f"  - {detail}")
+        english.append("")
+    return "<!-- lang:es -->\n" + "\n".join(spanish).rstrip() + "\n\n<!-- lang:en -->\n" + "\n".join(english).rstrip() + "\n"
 
 
 def write_release_files(root: Path, plan: ReleasePlan, version_file: Path) -> Path:

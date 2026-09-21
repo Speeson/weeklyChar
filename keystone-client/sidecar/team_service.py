@@ -879,13 +879,13 @@ class TeamService:
             raise TeamServiceError(INVALID_PLANNER_PREFERENCES_RESPONSE, "La API devolvió preferencias no válidas.")
         return parsed
 
-    def plan_keystone(self, cfg: dict[str, Any], team_id: int, request: dict[str, Any]) -> dict[str, Any]:
-        if not _positive(team_id) or not _planner_request_valid(request):
+    def plan_keystone(self, cfg: dict[str, Any], team_id: int, request: dict[str, Any], locale: str = "es_ES") -> dict[str, Any]:
+        if not _positive(team_id) or not _planner_request_valid(request) or locale not in _BLIZZARD_LOCALES:
             raise TeamServiceError(INVALID_TEAM_REQUEST, "La solicitud del Planner no es válida.")
         token = cfg.get("access_token")
         if not isinstance(token, str) or not token or not config_module.is_session_valid(cfg):
             raise TeamServiceError(SESSION_EXPIRED, "La sesión ha caducado. Inicia sesión de nuevo.")
-        url = f"{config_module._normalize_api_url(cfg.get('api_url'))}/api/teams/{team_id}/keystone-planner"
+        url = f"{config_module._normalize_api_url(cfg.get('api_url'))}/api/teams/{team_id}/keystone-planner?locale={locale}"
         try:
             response = self._session.post(
                 url, headers={"Authorization": f"Bearer {token}"}, json=request, timeout=15,

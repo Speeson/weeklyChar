@@ -182,7 +182,7 @@ test("centers the Poison avatar without changing the empty or dropdown states", 
   await expect(avatar).toHaveCSS("transform", "matrix(1, 0, 0, 1, 1, -4)");
   await capture(page, "profile-with-avatar.png");
 
-  const trigger = page.getByRole("button", { name: "Menu de usuario de Spee" });
+  const trigger = page.getByRole("button", { name: "Menú de usuario de Spee" });
   await trigger.click();
   await expect(page.getByRole("menu")).toBeVisible();
   await capture(page, "profile-dropdown.png");

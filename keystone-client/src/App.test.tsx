@@ -289,7 +289,7 @@ describe("App", () => {
     expect(await screen.findByText("player")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sincronizar" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Auralis")).toBeInTheDocument();
-    expect(screen.getByText("Version de la aplicacion")).toBeInTheDocument();
+    expect(screen.getByText("Versión de la aplicación")).toBeInTheDocument();
     expect(document.querySelector(".ks-user-menu__avatar-image")).not.toBeInTheDocument();
     expect(document.querySelector(".ks-user-menu__avatar-frame")).toBeInTheDocument();
   });
@@ -367,8 +367,8 @@ describe("App", () => {
     });
     expect(getTeamsSessionSnapshot().teams?.[0]?.name).toBe("Private Team");
 
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
-    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesión" }));
 
     expect(getTeamsSessionSnapshot()).toEqual({ teams: null, selectedTeamId: null });
   });
@@ -387,10 +387,10 @@ describe("App", () => {
     const listRequests = coreRequestMock.mock.calls.filter(([command]) => command === "teams.list").length;
     const detailRequests = coreRequestMock.mock.calls.filter(([command]) => command === "teams.get").length;
 
-    await user.click(screen.getByRole("button", { name: "Configuracion" }));
+    await user.click(screen.getByRole("button", { name: "Configuración" }));
     expect(screen.getByRole("dialog", { name: "Ajustes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Cerrar configuracion" }));
+    await user.click(screen.getByRole("button", { name: "Cerrar configuración" }));
     expect(screen.queryByRole("dialog", { name: "Ajustes" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mythiqueros 2.0" })).toBeInTheDocument();
     expect(coreRequestMock.mock.calls.filter(([command]) => command === "teams.list")).toHaveLength(listRequests);
@@ -457,7 +457,7 @@ describe("App", () => {
         message: "Instalando paquete validado.",
       },
     });
-    expect(await screen.findByLabelText("Addon: Instalando Addon")).toHaveTextContent("Instalando paquete validado.");
+    expect(await screen.findByLabelText("Addon: Instalando Addon")).toHaveTextContent("Operación en curso");
 
     eventHandler({
       protocolVersion: 1,
@@ -630,7 +630,7 @@ describe("App", () => {
 
     render(<App />);
     await screen.findByText("player");
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
     await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
     await user.click(screen.getByRole("button", { name: /Auralis/ }));
 
@@ -656,7 +656,7 @@ describe("App", () => {
     });
 
     render(<App />);
-    await user.click(await screen.findByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(await screen.findByRole("button", { name: "Menú de usuario de player" }));
     await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
     await user.click(screen.getByRole("button", { name: /Auralis/ }));
 
@@ -678,7 +678,7 @@ describe("App", () => {
     });
 
     render(<App />);
-    await user.click(await screen.findByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(await screen.findByRole("button", { name: "Menú de usuario de player" }));
     await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
     await user.click(screen.getByRole("button", { name: /Auralis/ }));
 
@@ -695,7 +695,7 @@ describe("App", () => {
       characters: { ...authenticatedState.characters, characters: [{ ...authenticatedState.characters.characters[0], avatarUrl }] },
     });
     render(<App />);
-    await user.click(await screen.findByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(await screen.findByRole("button", { name: "Menú de usuario de player" }));
     await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
     const card = screen.getByRole("button", { name: /Auralis/ });
     const check = card.querySelector(".ks-avatar-choice__check")!;
@@ -725,7 +725,7 @@ describe("App", () => {
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(4);
     expect(within(menu).getByRole("menuitem", { name: "Sincronizar ahora" })).toBeVisible();
     expect(within(menu).getByRole("menuitem", { name: "Cambiar avatar" })).toBeVisible();
-    expect(within(menu).getByRole("menuitem", { name: "Configuracion" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Configuración" })).toBeVisible();
     expect(within(menu).getByRole("menuitem", { name: "Minimizar a la bandeja" })).toBeVisible();
   });
 
@@ -747,11 +747,11 @@ describe("App", () => {
 
     render(<App />);
     await screen.findByText("player");
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
     await user.click(screen.getByRole("menuitem", { name: "Cambiar avatar" }));
     await user.click(screen.getByRole("button", { name: /Auralis/ }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No guardado.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo actualizar el perfil.");
     expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/old.jpg"]')).toBeInTheDocument();
   });
 
@@ -794,12 +794,12 @@ describe("App", () => {
     render(<App />);
     await screen.findByText("player");
 
-    await user.click(screen.getByRole("button", { name: "Configuracion" }));
+    await user.click(screen.getByRole("button", { name: "Configuración" }));
 
     expect(screen.getByRole("dialog", { name: "Ajustes" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "General" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Seleccion de cuentas" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Aplicacion" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Selección de cuentas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aplicación" })).toBeInTheDocument();
   });
 
   it("switches the whole shell language immediately from Settings", async () => {
@@ -810,7 +810,7 @@ describe("App", () => {
 
     render(<App />);
     await screen.findByText("player");
-    await user.click(screen.getByRole("button", { name: "Configuracion" }));
+    await user.click(screen.getByRole("button", { name: "Configuración" }));
     await user.click(await screen.findByRole("button", { name: "English" }));
 
     expect(screen.getByRole("button", { name: "Sync" })).toBeInTheDocument();
@@ -826,8 +826,8 @@ describe("App", () => {
     render(<App />);
     await screen.findByText("player");
 
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
-    const logoutButton = screen.getByRole("menuitem", { name: "Cerrar sesion" });
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
+    const logoutButton = screen.getByRole("menuitem", { name: "Cerrar sesión" });
     expect(logoutButton.querySelector("svg")).toBeInTheDocument();
     await user.click(logoutButton);
 
@@ -842,8 +842,8 @@ describe("App", () => {
 
     render(<App />);
     await screen.findByText("player");
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
-    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesión" }));
 
     expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
   });
@@ -861,8 +861,8 @@ describe("App", () => {
 
     render(<App />);
     await screen.findByText("player");
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
-    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesion" }));
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
+    await user.click(screen.getByRole("menuitem", { name: "Cerrar sesión" }));
     await user.type(await screen.findByLabelText("Usuario"), "next-player");
     await user.type(screen.getByLabelText("Contraseña"), "secret-password");
     await user.click(screen.getByRole("button", { name: "Entrar" }));
@@ -877,7 +877,7 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Bridge stopped.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo iniciar el servicio local de KeystoneClient.");
     expect(screen.getByText("Error")).toBeInTheDocument();
   });
 

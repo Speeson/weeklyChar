@@ -60,7 +60,7 @@ for (const theme of themes) {
     expect(table.trackBackground).toBe(expectedColors[theme].track);
     expect(table.thumbBackground !== "rgba(0, 0, 0, 0)" || table.thumbImage !== "none").toBe(true);
 
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
     const settings = await scrollbarColors(page, ".ks-modal__content");
     expect(settings.scrollHeight).toBeGreaterThan(settings.clientHeight);
     expect(settings.hasThemeTokens).toBe(true);

@@ -253,8 +253,9 @@ async function bearer(env, userId = 1) {
   return { Authorization: `Bearer ${await createAccessToken(env.JWT_SECRET, userId)}` }
 }
 
-async function plan(env, payload = body(), userId = 1, teamId = 1) {
-  return app.request(`/api/teams/${teamId}/keystone-planner`, {
+async function plan(env, payload = body(), userId = 1, teamId = 1, locale = null) {
+  const query = locale === null ? '' : `?locale=${encodeURIComponent(locale)}`
+  return app.request(`/api/teams/${teamId}/keystone-planner${query}`, {
     method: 'POST',
     headers: { ...await bearer(env, userId), 'Content-Type': 'application/json' },
     body: typeof payload === 'string' ? payload : JSON.stringify(payload),
@@ -342,6 +343,11 @@ test('adapter loads configured played/loot specs and produces a real exact 1/1/3
   assert.equal(owner.objectives[0].itemId, 100)
   assert.equal(result.recommendations[0].lootSummary.weightedScore, 100)
   assert.deepEqual(env.DB.plannerQueryKinds, ['participants', 'stones', 'characters_preferences'])
+})
+
+test('Planner locale is allowlisted at the route boundary', async () => {
+  assert.equal((await plan(fixture(), body(), 1, 1, 'fr_FR')).status, 400)
+  assert.equal((await plan(fixture(), body(), 1, 1, 'en_US')).status, 200)
 })
 
 test('adapter recommends character primary loot before a stronger secondary independently of played spec', async () => {

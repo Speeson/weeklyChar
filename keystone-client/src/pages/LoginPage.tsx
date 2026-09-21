@@ -6,8 +6,9 @@ import { Button, TextField } from "../components/ui";
 import { cancelBattleNetLogin, login, pollBattleNetLogin, register, startBattleNetLogin } from "../core/auth";
 import { pollBattleNetUntilComplete } from "../core/battleNetAuth";
 import { useI18n } from "../core/i18n";
+import { localizedCoreErrorMessage } from "../core/errorDisplay";
 import { exitApplication, openBattleNetAuthorization, openForgotPassword, openWeb } from "../core/native";
-import type { AuthState, CoreError, RegisterPayload } from "../core/types";
+import type { AuthState, RegisterPayload } from "../core/types";
 
 type LoginPageProps = {
   onAuthenticated: (auth: AuthState) => void;
@@ -25,16 +26,8 @@ const emptyRegistration: RegisterPayload = {
   dateOfBirth: "",
 };
 
-function formatLoginError(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-
-  return fallback;
-}
-
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const [mode, setMode] = useState<AuthMode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -72,7 +65,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
       setPassword("");
       onAuthenticated(auth);
     } catch (caught) {
-      setError(formatLoginError(caught, t("login.error")));
+      setError(localizedCoreErrorMessage(caught, language, t("login.error")));
     } finally {
       setLoading(false);
     }
@@ -92,7 +85,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     setError(null);
     setSuccess(null);
     try {
-      const result = await register({
+      await register({
         ...registration,
         firstName: registration.firstName.trim(),
         lastName: registration.lastName.trim(),
@@ -100,9 +93,9 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         username: registration.username.trim(),
       });
       setRegistration((current) => ({ ...current, password: "", confirmPassword: "" }));
-      setSuccess(result.message);
+      setSuccess(t("register.success"));
     } catch (caught) {
-      setError(formatLoginError(caught, t("register.error")));
+      setError(localizedCoreErrorMessage(caught, language, t("register.error")));
     } finally {
       setLoading(false);
     }
@@ -113,7 +106,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     try {
       await action();
     } catch (caught) {
-      setError(formatLoginError(caught, t("login.nativeActionError")));
+      setError(localizedCoreErrorMessage(caught, language, t("login.nativeActionError")));
     }
   }
 
@@ -139,7 +132,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
       if (result.status === "expired") setError(t("login.battleNetExpired"));
       else if (result.status === "consumed") setError(t("login.battleNetConsumed"));
     } catch (caught) {
-      setError(formatLoginError(caught, t("login.battleNetError")));
+      setError(localizedCoreErrorMessage(caught, language, t("login.battleNetError")));
     } finally {
       setBattleNetStatus("idle");
     }

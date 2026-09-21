@@ -301,15 +301,18 @@ def handle_planner_preferences_update(payload: dict[str, Any]) -> dict[str, Any]
 
 def handle_teams_keystone_planner(payload: dict[str, Any]) -> dict[str, Any]:
     team_id = _require_positive_id(payload, "teamId")
-    expected = {
+    required = {
         "teamId", "participantUserIds", "targetLevel", "challengeMapId", "stoneCharacterId",
         "options", "locks",
     }
-    if set(payload) != expected:
+    if set(payload) not in (required, required | {"locale"}):
         raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain the exact Planner request fields.")
-    request = {key: value for key, value in payload.items() if key != "teamId"}
+    locale = payload.get("locale", "es_ES")
+    if locale not in {"es_ES", "en_US"}:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "payload must contain a supported Planner locale.")
+    request = {key: value for key, value in payload.items() if key not in {"teamId", "locale"}}
     try:
-        return TEAM_SERVICE.plan_keystone(config_module.load(), team_id, request)
+        return TEAM_SERVICE.plan_keystone(config_module.load(), team_id, request, locale)
     except team_service.TeamServiceError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
 

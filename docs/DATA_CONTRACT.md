@@ -693,6 +693,11 @@ values and character order remain authoritative. Local spec filtering deduplicat
 does not alter top-level totals; completed Voidcore and owned items are separated for presentation.
 Preview fixtures implement the same safe interface and remain development-only.
 
+Keystone Planner calls carry the same allowlisted locale from React through the sidecar as the
+`locale` query parameter. The Worker uses it only for the transient Blizzard item-metadata
+projection returned with Planner recommendations; locale is not persisted and callers that omit it
+retain the `es_ES` compatibility default.
+
 The Client tooltip renders only `itemName`, `iconUrl`, slot/class/subclass names, bounded and
 classified stat names, Blizzard item quality, source, spec IDs, tier, ownership, and Voidcore state. It
 omits absent rows, falls back to
