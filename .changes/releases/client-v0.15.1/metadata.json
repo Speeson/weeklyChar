@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.0",
+  "version": "0.15.1",
+  "bump": "patch",
+  "tag": "client-v0.15.1",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-localization-consistency.json"
+  ]
+}
