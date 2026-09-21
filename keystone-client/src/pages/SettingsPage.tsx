@@ -75,6 +75,7 @@ export function SettingsPage({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [overlayError, setOverlayError] = useState<string | null>(null);
   const [autostartEnabled, setAutostartState] = useState(false);
   const [loadedAutostart, setLoadedAutostart] = useState(false);
   const mountedRef = useRef(true);
@@ -98,6 +99,7 @@ export function SettingsPage({
     const loadGeneration = settingsGenerationRef.current;
     setLoading(true);
     setError(null);
+    setOverlayError(null);
     Promise.all([getSettings(), getAutostartEnabled(), getOverlayShortcutStatus()])
       .then(([loadedSettings, nativeAutostart, overlayStatus]) => {
         if (!cancelled) {
@@ -105,7 +107,7 @@ export function SettingsPage({
           setAutostartState(nativeAutostart);
           setLoadedAutostart(nativeAutostart);
           if (overlayStatus.lastError) {
-            setError(overlayStatus.lastError);
+            setOverlayError(overlayStatus.lastError);
           }
           if (settingsGenerationRef.current === loadGeneration) {
             persistedSettingsRef.current = loaded;
@@ -137,7 +139,9 @@ export function SettingsPage({
     setSaving(true);
     setMessage(null);
     setError(null);
+    setOverlayError(null);
     let overlayConfigured = false;
+    let overlayConfigurationFailed = false;
     const persisted = withOverlayDefaults(persistedSettingsRef.current);
     try {
       await languageWriteQueueRef.current;
@@ -145,10 +149,16 @@ export function SettingsPage({
       if (nativeAutostart !== autostartEnabled) {
         throw new Error(t("settings.autostartMismatch"));
       }
-      await configureOverlayShortcut(
-        settings.overlayEnabled ?? false,
-        settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT,
-      );
+      try {
+        await configureOverlayShortcut(
+          settings.overlayEnabled ?? false,
+          settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT,
+        );
+      } catch (caught) {
+        overlayConfigurationFailed = true;
+        setOverlayError(formatSettingsError(caught, t("settings.error")));
+        throw caught;
+      }
       overlayConfigured = true;
       const saved = withOverlayDefaults(await updateSettings(settings));
       persistedSettingsRef.current = saved;
@@ -174,7 +184,9 @@ export function SettingsPage({
           // Preserve the original error; the next Settings load reads OS truth again.
         }
       }
-      setError(formatSettingsError(caught, t("settings.error")));
+      if (!overlayConfigurationFailed) {
+        setError(formatSettingsError(caught, t("settings.error")));
+      }
     } finally {
       setSaving(false);
     }
@@ -266,7 +278,10 @@ export function SettingsPage({
         <label className="check-row">
           <input
             checked={settings.overlayEnabled ?? false}
-            onChange={(event) => setSettings((current) => ({ ...current, overlayEnabled: event.target.checked }))}
+            onChange={(event) => {
+              setOverlayError(null);
+              setSettings((current) => ({ ...current, overlayEnabled: event.target.checked }));
+            }}
             type="checkbox"
           />
           {t("settings.overlayEnabled")}
@@ -275,7 +290,16 @@ export function SettingsPage({
           <span>{t("settings.overlayShortcut")}</span>
           <OverlayShortcutRecorder
             disabled={loading || saving}
-            onChange={(overlayShortcut) => setSettings((current) => ({ ...current, overlayShortcut }))}
+            error={overlayError}
+            onChange={(overlayShortcut) => {
+              setOverlayError(null);
+              setSettings((current) => ({ ...current, overlayShortcut }));
+            }}
+            onRestore={() => {
+              setOverlayError(null);
+              setSettings((current) => ({ ...current, overlayShortcut: DEFAULT_OVERLAY_SHORTCUT }));
+            }}
+            onStartRecording={() => setOverlayError(null)}
             value={settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT}
           />
         </div>

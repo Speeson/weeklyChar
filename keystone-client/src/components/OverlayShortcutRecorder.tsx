@@ -91,16 +91,26 @@ export function formatShortcut(value: string): string {
 
 type OverlayShortcutRecorderProps = {
   disabled?: boolean;
+  error?: string | null;
   onChange: (shortcut: string) => void;
+  onRestore: () => void;
+  onStartRecording?: () => void;
   value: string;
 };
 
-export function OverlayShortcutRecorder({ disabled = false, onChange, value }: OverlayShortcutRecorderProps) {
+export function OverlayShortcutRecorder({
+  disabled = false,
+  error = null,
+  onChange,
+  onRestore,
+  onStartRecording,
+  value,
+}: OverlayShortcutRecorderProps) {
   const { t } = useI18n();
   const helpId = useId();
-  const errorId = useId();
   const [recording, setRecording] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const visibleError = captureError ?? error;
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (!recording) return;
@@ -130,11 +140,12 @@ export function OverlayShortcutRecorder({ disabled = false, onChange, value }: O
   return (
     <div className="settings-shortcut-recorder">
       <button
-        aria-describedby={`${helpId}${captureError ? ` ${errorId}` : ""}`}
+        aria-describedby={helpId}
         aria-label={t("settings.overlayShortcutAria", { shortcut: formatShortcut(value) })}
         aria-pressed={recording}
         disabled={disabled}
         onClick={() => {
+          onStartRecording?.();
           setRecording(true);
           setCaptureError(null);
         }}
@@ -143,10 +154,25 @@ export function OverlayShortcutRecorder({ disabled = false, onChange, value }: O
       >
         {recording ? t("settings.overlayShortcutRecording") : formatShortcut(value)}
       </button>
-      <span className="muted settings-shortcut-help" id={helpId}>
-        {recording ? t("settings.overlayShortcutCancelHint") : t("settings.overlayShortcutHelp")}
+      <button
+        disabled={disabled}
+        onClick={() => {
+          onRestore();
+          setRecording(false);
+          setCaptureError(null);
+        }}
+        type="button"
+      >
+        {t("settings.overlayShortcutRestore")}
+      </button>
+      <span
+        className={`settings-shortcut-help${visibleError ? " error" : " muted"}`}
+        id={helpId}
+        role={visibleError ? "alert" : undefined}
+      >
+        {visibleError
+          ?? (recording ? t("settings.overlayShortcutCancelHint") : t("settings.overlayShortcutHelp"))}
       </span>
-      {captureError ? <span className="error settings-shortcut-error" id={errorId} role="alert">{captureError}</span> : null}
     </div>
   );
 }

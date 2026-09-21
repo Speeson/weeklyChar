@@ -30,7 +30,7 @@ describe("OverlayShortcutRecorder", () => {
   it("captures a shortcut and supports Escape cancellation", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<OverlayShortcutRecorder onChange={onChange} value="Ctrl+Shift+K" />);
+    render(<OverlayShortcutRecorder onChange={onChange} onRestore={vi.fn()} value="Ctrl+Shift+K" />);
 
     const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
     await user.click(recorder);
@@ -47,7 +47,7 @@ describe("OverlayShortcutRecorder", () => {
   it("reports a missing modifier without replacing the shortcut", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<OverlayShortcutRecorder onChange={onChange} value="Ctrl+Shift+K" />);
+    render(<OverlayShortcutRecorder onChange={onChange} onRestore={vi.fn()} value="Ctrl+Shift+K" />);
 
     const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
     await user.click(recorder);
@@ -55,5 +55,29 @@ describe("OverlayShortcutRecorder", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("El atajo necesita al menos una tecla modificadora.");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("restores the default shortcut from the adjacent action", async () => {
+    const user = userEvent.setup();
+    const onRestore = vi.fn();
+    render(<OverlayShortcutRecorder onChange={vi.fn()} onRestore={onRestore} value="Ctrl+Shift+KeyM" />);
+
+    await user.click(screen.getByRole("button", { name: "Restaurar" }));
+
+    expect(onRestore).toHaveBeenCalledOnce();
+  });
+
+  it("shows a registration error in place of the help text", () => {
+    render(
+      <OverlayShortcutRecorder
+        error="Shortcut already registered"
+        onChange={vi.fn()}
+        onRestore={vi.fn()}
+        value="Ctrl+Shift+KeyJ"
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(screen.queryByText(/Haz clic y pulsa una combinación/)).not.toBeInTheDocument();
   });
 });

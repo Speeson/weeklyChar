@@ -6,7 +6,7 @@ Turn the validated Windows overlay POC into an opt-in Client feature with a user
 
 ## Approved Design
 
-- Settings adds an `Enable World of Warcraft overlay` checkbox and a keyboard shortcut recorder. The feature defaults off and the default shortcut remains `Ctrl+Shift+K`.
+- Settings adds an `Enable overlay` checkbox and a keyboard shortcut recorder. The feature defaults off, the default shortcut remains `Ctrl+Shift+K`, and a `Restore` action resets the edited shortcut to that default.
 - Shortcut capture accepts one main key plus at least one Ctrl, Shift, Alt, or Super modifier. Escape cancels capture. Invalid or OS-conflicting combinations show an error and do not replace the working shortcut.
 - Enabling, disabling, and rebinding take effect immediately without restarting. Disabling an active overlay restores the existing main window to normal focusable, taskbar-visible behavior.
 - The existing `main` window and complete React state remain the only UI. The successful Tauri `set_focusable(false)` strategy remains unchanged; no Win32 fallback is added.

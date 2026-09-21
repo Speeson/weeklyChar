@@ -186,7 +186,7 @@ describe("SettingsPage", () => {
     updateSettingsMock.mockResolvedValueOnce(saved);
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
-    await user.click(await screen.findByLabelText("Activar overlay de World of Warcraft"));
+    await user.click(await screen.findByLabelText("Activar overlay"));
     const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
     await user.click(recorder);
     fireEvent.keyDown(recorder, { code: "KeyM", key: "M", ctrlKey: true, shiftKey: true });
@@ -197,16 +197,36 @@ describe("SettingsPage", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Ajustes guardados.");
   });
 
+  it("restores the default overlay shortcut before saving", async () => {
+    const user = userEvent.setup();
+    const customSettings = { ...initialSettings, overlayShortcut: "Ctrl+Shift+KeyM" };
+    getSettingsMock.mockResolvedValueOnce(customSettings);
+    updateSettingsMock.mockResolvedValueOnce(initialSettings);
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={customSettings} onSettingsChanged={vi.fn()} />);
+    await screen.findByRole("button", { name: "Atajo del overlay: Ctrl + Shift + M" });
+    await user.click(screen.getByRole("button", { name: "Restaurar" }));
+    expect(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+
+    expect(configureOverlayShortcutMock).toHaveBeenCalledWith(false, "Ctrl+Shift+K");
+    expect(updateSettingsMock).toHaveBeenCalledWith(initialSettings);
+  });
+
   it("keeps the working shortcut when native registration rejects a conflict", async () => {
     const user = userEvent.setup();
     getSettingsMock.mockResolvedValueOnce(initialSettings);
     configureOverlayShortcutMock.mockRejectedValueOnce("Shortcut already registered");
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
-    await user.click(await screen.findByLabelText("Activar overlay de World of Warcraft"));
+    await user.click(await screen.findByLabelText("Activar overlay"));
+    const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
+    await user.click(recorder);
+    fireEvent.keyDown(recorder, { code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true });
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(screen.queryByText(/Haz clic y pulsa una combinación/)).not.toBeInTheDocument();
     expect(updateSettingsMock).not.toHaveBeenCalled();
     expect(configureOverlayShortcutMock).toHaveBeenCalledTimes(1);
   });
@@ -217,7 +237,7 @@ describe("SettingsPage", () => {
     updateSettingsMock.mockRejectedValueOnce(new Error("disk failed"));
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
-    await user.click(await screen.findByLabelText("Activar overlay de World of Warcraft"));
+    await user.click(await screen.findByLabelText("Activar overlay"));
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("disk failed");
