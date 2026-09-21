@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider, type Language } from "../core/i18n";
 import type { TeamsDataSource } from "../core/teams";
+import { classColor } from "../core/characterDisplay";
 import {
   clearTeamsSessionCache, loadTeamDetail, loadTeams, setSelectedTeamId,
 } from "../core/teamsSessionCache";
@@ -264,8 +265,8 @@ describe("TeamsPage compact ranking", () => {
     renderPage(dataSource);
     expect(await screen.findByRole("button", { name: "Mythiqueros 2.0" })).toHaveAttribute("aria-haspopup", "listbox");
     expect(screen.getByLabelText("Filtros de miembros")).toHaveClass("teams-member-strip");
-    expect(await screen.findByRole("button", { name: "Filtrar por Speeson, 2 personajes" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Filtrar por Ana con un nombre largo, 1 personaje" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Filtrar por Speeson, 2 personajes" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Filtrar por Ana con un nombre largo, 1 personaje" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("2 personajes")).toBeInTheDocument();
     expect(screen.getByText("1 personaje")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Seleccionar/u })).toHaveLength(8);
@@ -415,30 +416,72 @@ describe("TeamsPage compact ranking", () => {
     expect(dataSource.getTeam).toHaveBeenLastCalledWith(8);
   });
 
-  it("soft-filters one or multiple members without hiding or reordering rows, persists across dungeons, and clears explicitly", async () => {
+  it("selects every Objectives member by default and filters characters, stones, and summaries", async () => {
     const user = userEvent.setup();
     renderPage();
     await selectRuby(user);
+    const speeson = screen.getByRole("button", { name: /Filtrar por Speeson/u });
+    const ana = screen.getByRole("button", { name: /Filtrar por Ana/u });
+    expect(speeson).toHaveAttribute("aria-pressed", "true");
+    expect(ana).toHaveAttribute("aria-pressed", "true");
     const before = screen.getAllByTestId("selector-character");
     expect(within(before[0]).getByText("Bakuhatsu")).toBeInTheDocument();
     expect(within(before[1]).getByText("Spee")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Filtrar por Speeson/u }));
+
+    await user.click(speeson);
     expect(screen.getByText("1 seleccionado")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limpiar filtros" })).toHaveTextContent("Limpiar");
+    expect(screen.getByRole("button", { name: /Ruby Life Pools.*1 piedra$/u })).toHaveAttribute("data-available", "true");
     let rows = screen.getAllByTestId("selector-character");
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveAttribute("data-emphasis", "full");
-    expect(rows[1]).toHaveAttribute("data-emphasis", "muted");
-    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
-    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
-    rows = screen.getAllByTestId("selector-character");
-    expect(rows.every(row => row.getAttribute("data-emphasis") === "full")).toBe(true);
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByText("Spee")).toBeInTheDocument();
+    expect(screen.queryByText("Bakuhatsu")).not.toBeInTheDocument();
+    expect(screen.getByText("1 personaje · 1 objetivo")).toBeInTheDocument();
+    expect(document.querySelector(".teams-dungeon-summary .teams-tier-line")).toHaveTextContent("1 BiS0 Must0 Nice0 Cat");
+    const filteredOwnerChips = document.querySelectorAll(".teams-stone-owner-chip");
+    expect(filteredOwnerChips).toHaveLength(1);
+    expect(filteredOwnerChips[0]).toHaveTextContent("Spee+8(Ana)");
+
+    await user.click(ana);
+    expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ruby Life Pools.*0 piedras$/u })).toHaveAttribute("data-available", "false");
+    expect(screen.queryAllByTestId("selector-character")).toHaveLength(0);
+    expect(screen.getByText("0 personajes · 0 objetivos")).toBeInTheDocument();
+    expect(screen.getByText(/Ningún personaje del equipo/u)).toBeInTheDocument();
+
+    await user.click(speeson);
     await user.click(screen.getByRole("button", { name: /Temple of Sethraliss/u }));
-    await screen.findByText(/7 objetivos/u);
+    await screen.findByText(/6 objetivos/u);
     expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "false");
     await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
     expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps Objectives filters independent from Planner participant selection", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    const speeson = screen.getByRole("button", { name: /Filtrar por Speeson/u });
+    await user.click(speeson);
+    expect(speeson).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await waitFor(() => expect(screen.queryByRole("status", { name: /Cargando configuración/u })).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /Ruby Life Pools.*2 piedras$/u })).toHaveAttribute("data-available", "true");
+    expect(document.querySelectorAll(".teams-stone-owner-chip")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "false");
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    await user.click(screen.getByRole("button", { name: /Filtrar por Ana/u }));
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Objetivos" }));
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Filtrar por Ana/u })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("selects a zero-stone dungeon and renders its compact header and benign empty state", async () => {
@@ -448,7 +491,8 @@ describe("TeamsPage compact ranking", () => {
     const zero = await screen.findByRole("button", { name: /Voidscar Arena.*0 piedras/u });
     await user.click(zero);
     expect(zero).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByText("0 piedras disponibles")).toBeInTheDocument();
+    await screen.findByText("0 personajes · 0 objetivos");
+    expect(document.querySelectorAll(".teams-stone-owner-chip")).toHaveLength(0);
     expect(screen.getByText(/Ningún personaje del equipo/u)).toBeInTheDocument();
     expect(screen.getByText(/tampoco tiene una piedra/u)).toBeInTheDocument();
   });
@@ -541,10 +585,19 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
-    expect(screen.getAllByText("Ruby Life Pools")).toHaveLength(2);
-    expect(document.querySelector(".teams-dungeon-context")).toHaveTextContent("Ruby Life Pools");
-    expect(screen.getByText("2 piedras · Bakuhatsu + Spee")).toBeInTheDocument();
+    expect(screen.getAllByText("Ruby Life Pools")).toHaveLength(1);
+    expect(document.querySelector(".teams-dungeon-context")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 piedras · Bakuhatsu + Spee")).not.toBeInTheDocument();
+    const ownerChips = document.querySelectorAll<HTMLElement>(".teams-stone-owner-chip");
+    expect(ownerChips).toHaveLength(2);
+    expect(ownerChips[0]).toHaveTextContent("Bakuhatsu+12(Speeson)");
+    expect(within(ownerChips[0]).getByText("+12")).toHaveClass("teams-stone-owner-chip__level");
+    expect(ownerChips[0].style.getPropertyValue("--teams-owner-color")).toBe(classColor("Mage"));
+    expect(ownerChips[1]).toHaveTextContent("Spee+8(Ana)");
+    expect(within(ownerChips[1]).getByText("+8")).toHaveClass("teams-stone-owner-chip__level");
+    expect(ownerChips[1].style.getPropertyValue("--teams-owner-color")).toBe(classColor("Paladin"));
     expect(screen.getByText("2 personajes · 7 objetivos")).toHaveClass("teams-summary-total");
+    expect(document.querySelector(".teams-dungeon-metrics")).toContainElement(screen.getByText("2 personajes · 7 objetivos"));
     expect(within(rows[0]).getByText("#1")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Bakuhatsu")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Spee")).toBeInTheDocument();

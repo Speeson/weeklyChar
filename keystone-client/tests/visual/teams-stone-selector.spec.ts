@@ -65,6 +65,65 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await expect(ruby).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
   await expect(page.getByTestId("selector-character")).toHaveCount(8);
+  const memberFilters = page.locator(".teams-member-filter");
+  await expect(memberFilters).toHaveCount(8);
+  expect(await memberFilters.evaluateAll(elements => elements.every(element => element.getAttribute("aria-pressed") === "true"))).toBe(true);
+  const selectedMemberVisual = await memberFilters.first().evaluate(element => {
+    const style = getComputedStyle(element);
+    const card = element.getBoundingClientRect();
+    const strip = element.parentElement!.getBoundingClientRect();
+    const picker = document.querySelector<HTMLElement>(".teams-picker__trigger")!.getBoundingClientRect();
+    return {
+      background: style.backgroundImage,
+      border: style.borderColor,
+      cardBottom: card.bottom,
+      cardHeight: card.height,
+      cardTop: card.top,
+      pickerHeight: picker.height,
+      shadow: style.boxShadow,
+      stripBottom: strip.bottom,
+      stripHeight: strip.height,
+      stripTop: strip.top,
+    };
+  });
+  expect(selectedMemberVisual.background).not.toBe("none");
+  expect(selectedMemberVisual.cardHeight).toBe(selectedMemberVisual.pickerHeight);
+  expect(selectedMemberVisual.stripHeight).toBeGreaterThan(selectedMemberVisual.cardHeight);
+  expect(selectedMemberVisual.cardTop).toBeGreaterThanOrEqual(selectedMemberVisual.stripTop);
+  expect(selectedMemberVisual.cardBottom).toBeLessThanOrEqual(selectedMemberVisual.stripBottom);
+  expect(selectedMemberVisual.shadow).toContain("rgb(49, 233, 129)");
+  await memberFilters.first().click();
+  await expect(memberFilters.first()).toHaveAttribute("aria-pressed", "false");
+  expect(await page.getByTestId("selector-character").count()).toBeLessThan(8);
+  await expect(page.getByRole("button", { name: /Ruby Life Pools.*1 piedra$/u })).toHaveAttribute("data-available", "true");
+  const deselectedMemberVisual = await memberFilters.first().evaluate(element => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundImage, border: style.borderColor, shadow: style.boxShadow };
+  });
+  expect(deselectedMemberVisual.background).not.toBe(selectedMemberVisual.background);
+  expect(deselectedMemberVisual.shadow).not.toContain("rgb(49, 233, 129)");
+  await memberFilters.first().click();
+  await expect(page.getByTestId("selector-character")).toHaveCount(8);
+  await expect(page.getByRole("button", { name: /Ruby Life Pools.*2 piedras$/u })).toHaveAttribute("data-available", "true");
+  const ownerChips = page.locator(".teams-stone-owner-chip");
+  await expect(ownerChips).toHaveCount(2);
+  await expect(ownerChips.first()).toContainText("Bakuhatsu+12(Speeson)");
+  await expect(ownerChips.nth(1)).toContainText("Auralisdelaluzeterna+9(GuardianaDeLosSecretosDelVacío)");
+  await expect(ownerChips.first().locator(".teams-stone-owner-chip__level")).toHaveCSS("color", "rgb(255, 159, 67)");
+  await expect(page.locator(".teams-dungeon-context")).toHaveCount(0);
+  const headerGeometry = await page.locator(".teams-dungeon-summary").evaluate(element => {
+    const summary = element.getBoundingClientRect();
+    const metrics = element.querySelector(".teams-dungeon-metrics")!.getBoundingClientRect();
+    const chip = element.querySelector<HTMLElement>(".teams-stone-owner-chip strong")!;
+    return {
+      metricsRightInset: summary.right - metrics.right,
+      ownerNameFont: Number.parseFloat(getComputedStyle(chip).fontSize),
+      ownerColor: getComputedStyle(chip.parentElement!).color,
+    };
+  });
+  expect(headerGeometry.metricsRightInset).toBeLessThanOrEqual(12);
+  expect(headerGeometry.ownerNameFont).toBe(14);
+  expect(headerGeometry.ownerColor).not.toBe("rgb(255, 255, 255)");
   const firstSummary = page.getByTestId("selector-character").first().locator(".teams-character-row__summary");
   const summaryTypography = await firstSummary.evaluate(element => {
     const styleSize = (selector: string) => Number.parseFloat(getComputedStyle(element.querySelector(selector)!).fontSize);
