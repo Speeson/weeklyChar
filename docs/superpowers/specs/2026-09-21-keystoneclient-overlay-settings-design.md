@@ -6,8 +6,9 @@ Turn the validated Windows overlay POC into an opt-in Client feature with a user
 
 ## Approved Design
 
-- Settings adds an `Enable overlay` checkbox and a keyboard shortcut recorder. The feature defaults off, the default shortcut remains `Ctrl+Shift+K`, and a `Restore` action resets the edited shortcut to that default.
-- Shortcut capture accepts one main key plus at least one Ctrl, Shift, Alt, or Super modifier. Escape cancels capture. Before recording begins, the working overlay shortcut is temporarily unregistered so it cannot toggle the window or consume the key event. Windows key state is polled during capture so even a combination reserved by another application can be identified; each candidate is checked natively as it is entered, and invalid or OS-conflicting combinations show an immediate inline error without replacing the working shortcut.
+- Settings adds an `Enable overlay` checkbox and a keyboard shortcut recorder. The shortcut controls are visible only while the overlay is enabled. The feature defaults off, the default shortcut remains `Ctrl+Shift+K`, and a `Restore` action resets the edited shortcut to that default.
+- Shortcut capture accepts one main key plus at least one Ctrl, Shift, Alt, or Super modifier. Escape cancels capture. Before recording begins, the working overlay shortcut is temporarily unregistered so it cannot toggle the window or consume the key event. Windows key state is polled during capture so even a combination reserved by another application can be identified; each candidate is checked natively as it is entered, and invalid or OS-conflicting combinations show an immediate localized error without exposing native error codes or replacing the working shortcut.
+- Settings keeps `Save settings` and `Close` actions in a permanently visible footer, aligned to the right and styled as green confirmation and red dismissal actions respectively.
 - Enabling, disabling, and rebinding take effect immediately without restarting. Disabling an active overlay restores the existing main window to normal focusable, taskbar-visible behavior.
 - The existing `main` window and complete React state remain the only UI. The successful Tauri `set_focusable(false)` strategy remains unchanged; no Win32 fallback is added.
 

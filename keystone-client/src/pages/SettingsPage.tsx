@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { OverlayShortcutRecorder } from "../components/OverlayShortcutRecorder";
@@ -20,7 +20,9 @@ import { useTheme } from "../theme/useTheme";
 
 type SettingsPageProps = {
   appVersion: string;
+  children?: ReactNode;
   initialSettings: ClientSettings;
+  onClose?: () => void;
   onSettingsChanged: (settings: ClientSettings) => void;
   updater?: UpdaterSnapshot;
   onCheckUpdates?: () => void;
@@ -67,7 +69,9 @@ function formatSettingsError(error: unknown, fallback: string): string {
 
 export function SettingsPage({
   appVersion,
+  children,
   initialSettings,
+  onClose,
   onSettingsChanged,
   updater = idleUpdater,
   onCheckUpdates,
@@ -114,7 +118,7 @@ export function SettingsPage({
           setAutostartState(nativeAutostart);
           setLoadedAutostart(nativeAutostart);
           if (overlayStatus.lastError) {
-            setOverlayError(overlayStatus.lastError);
+            setOverlayError(t("settings.overlayShortcutUnavailable"));
           }
           if (settingsGenerationRef.current === loadGeneration) {
             persistedSettingsRef.current = loaded;
@@ -163,7 +167,7 @@ export function SettingsPage({
         );
       } catch (caught) {
         overlayConfigurationFailed = true;
-        setOverlayError(formatSettingsError(caught, t("settings.error")));
+        setOverlayError(t("settings.overlayShortcutUnavailable"));
         throw caught;
       }
       overlayConfigured = true;
@@ -240,127 +244,156 @@ export function SettingsPage({
       })
     : t("settings.lastCheck");
 
+  async function runOverlayCaptureAction(action: () => Promise<void>) {
+    try {
+      await action();
+    } catch {
+      throw new Error(t("settings.overlayShortcutUnavailable"));
+    }
+  }
+
   return (
-    <>
-      <section className="settings-block settings-general" aria-labelledby="settings-general-title">
-        <h3 id="settings-general-title">{t("settings.general")}</h3>
-        {loading ? <p className="muted">{t("settings.loading")}</p> : null}
-        <label className="check-row">
-          <input checked={autostartEnabled} onChange={(event) => setAutostartState(event.target.checked)} type="checkbox" />
-          {t("settings.autostart")}
-        </label>
-        <label className="check-row">
-          <input
-            checked={settings.startMinimized}
-            type="checkbox"
-            onChange={(event) =>
-              setSettings((current) => ({ ...current, startMinimized: event.target.checked }))
-            }
-          />
-          {t("settings.startMinimized")}
-        </label>
-        <label className="settings-field">
-          <span>{t("settings.closeBehavior")}</span>
-          <select
-            aria-label={t("settings.closeBehavior")}
-            value={settings.closeBehavior}
-            onChange={(event) => setSettings((current) => ({
-              ...current,
-              closeBehavior: event.target.value as ClientSettings["closeBehavior"],
-            }))}
+    <div className="settings-modal-body">
+      <div className="ks-modal__content">
+        <section className="settings-block settings-general" aria-labelledby="settings-general-title">
+          <h3 id="settings-general-title">{t("settings.general")}</h3>
+          {loading ? <p className="muted">{t("settings.loading")}</p> : null}
+          <label className="check-row">
+            <input checked={autostartEnabled} onChange={(event) => setAutostartState(event.target.checked)} type="checkbox" />
+            {t("settings.autostart")}
+          </label>
+          <label className="check-row">
+            <input
+              checked={settings.startMinimized}
+              type="checkbox"
+              onChange={(event) =>
+                setSettings((current) => ({ ...current, startMinimized: event.target.checked }))
+              }
+            />
+            {t("settings.startMinimized")}
+          </label>
+          <label className="settings-field">
+            <span>{t("settings.closeBehavior")}</span>
+            <select
+              aria-label={t("settings.closeBehavior")}
+              value={settings.closeBehavior}
+              onChange={(event) => setSettings((current) => ({
+                ...current,
+                closeBehavior: event.target.value as ClientSettings["closeBehavior"],
+              }))}
+            >
+              <option value="ask">{t("settings.closeAsk")}</option>
+              <option value="minimize">{t("settings.closeMinimize")}</option>
+              <option value="exit">{t("settings.closeExit")}</option>
+            </select>
+          </label>
+          <label className="check-row">
+            <input
+              checked={settings.lockWindowAspectRatio ?? false}
+              onChange={(event) => setSettings((current) => ({ ...current, lockWindowAspectRatio: event.target.checked }))}
+              type="checkbox"
+            />
+            {t("settings.lockWindowAspectRatio")}
+          </label>
+          <label className="check-row">
+            <input
+              checked={settings.overlayEnabled ?? false}
+              onChange={(event) => {
+                setOverlayError(null);
+                setSettings((current) => ({ ...current, overlayEnabled: event.target.checked }));
+              }}
+              type="checkbox"
+            />
+            {t("settings.overlayEnabled")}
+          </label>
+          {settings.overlayEnabled ? (
+            <div className="settings-field">
+              <span>{t("settings.overlayShortcut")}</span>
+              <OverlayShortcutRecorder
+                disabled={loading || saving}
+                error={overlayError}
+                onChange={(overlayShortcut) => {
+                  setOverlayError(null);
+                  setSettings((current) => ({ ...current, overlayShortcut }));
+                }}
+                onPoll={pollOverlayShortcutCapture}
+                onRecordingStart={async () => {
+                  setOverlayError(null);
+                  await runOverlayCaptureAction(beginOverlayShortcutCapture);
+                }}
+                onRecordingStop={() => runOverlayCaptureAction(endOverlayShortcutCapture)}
+                onRestore={() => {
+                  setOverlayError(null);
+                  setSettings((current) => ({ ...current, overlayShortcut: DEFAULT_OVERLAY_SHORTCUT }));
+                }}
+                onValidate={(shortcut) => runOverlayCaptureAction(() => validateOverlayShortcut(shortcut))}
+                value={settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT}
+              />
+            </div>
+          ) : null}
+        </section>
+
+        {children}
+        <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />
+
+        <section className="settings-block settings-application" aria-labelledby="settings-application-title">
+          <h3 id="settings-application-title">{t("settings.application")}</h3>
+          <div className="settings-language" role="group" aria-label={t("settings.language")}>
+            <span>{t("settings.language")}</span>
+            <div className="settings-segmented">
+              <button
+                aria-pressed={settings.lang === "es"}
+                onClick={() => persistLanguage("es")}
+                type="button"
+              >
+                {t("settings.spanish")}
+              </button>
+              <button
+                aria-pressed={settings.lang === "en"}
+                onClick={() => persistLanguage("en")}
+                type="button"
+              >
+                {t("settings.english")}
+              </button>
+            </div>
+          </div>
+          <div className="settings-version-row">
+            <div className="settings-version-copy">
+              <strong>{t("settings.clientVersion", { version: appVersion })}</strong>
+              {updateStatus ? <span>{updateStatus}</span> : null}
+            </div>
+            <div className="actions">
+              <button disabled={!updateAvailable} onClick={onOpenUpdate} type="button">{t("settings.update")}</button>
+              <button onClick={onOpenReleases} type="button">{t("settings.releases")}</button>
+              <button disabled={checkingUpdate} onClick={onCheckUpdates} type="button">
+                {checkingUpdate ? t("addon.checking") : t("settings.checkUpdates")}
+              </button>
+            </div>
+          </div>
+          <p className="muted settings-last-check">{lastCheck}</p>
+        </section>
+      </div>
+      <div className="ks-modal__footer settings-actions-footer">
+        <div className="settings-actions-feedback">
+          {error ? <p className="error" role="alert">{error}</p> : null}
+          {message ? <p className="success" role="status">{message}</p> : null}
+        </div>
+        <div className="actions">
+          <Button
+            disabled={saving || loading}
+            icon={<ThemedIcon name="save" size={18} />}
+            onClick={saveSettings}
+            variant="success"
           >
-            <option value="ask">{t("settings.closeAsk")}</option>
-            <option value="minimize">{t("settings.closeMinimize")}</option>
-            <option value="exit">{t("settings.closeExit")}</option>
-          </select>
-        </label>
-        <label className="check-row">
-          <input
-            checked={settings.lockWindowAspectRatio ?? false}
-            onChange={(event) => setSettings((current) => ({ ...current, lockWindowAspectRatio: event.target.checked }))}
-            type="checkbox"
-          />
-          {t("settings.lockWindowAspectRatio")}
-        </label>
-        <label className="check-row">
-          <input
-            checked={settings.overlayEnabled ?? false}
-            onChange={(event) => {
-              setOverlayError(null);
-              setSettings((current) => ({ ...current, overlayEnabled: event.target.checked }));
-            }}
-            type="checkbox"
-          />
-          {t("settings.overlayEnabled")}
-        </label>
-        <div className="settings-field">
-          <span>{t("settings.overlayShortcut")}</span>
-          <OverlayShortcutRecorder
-            disabled={loading || saving}
-            error={overlayError}
-            onChange={(overlayShortcut) => {
-              setOverlayError(null);
-              setSettings((current) => ({ ...current, overlayShortcut }));
-            }}
-            onPoll={pollOverlayShortcutCapture}
-            onRecordingStart={async () => {
-              setOverlayError(null);
-              await beginOverlayShortcutCapture();
-            }}
-            onRecordingStop={endOverlayShortcutCapture}
-            onRestore={() => {
-              setOverlayError(null);
-              setSettings((current) => ({ ...current, overlayShortcut: DEFAULT_OVERLAY_SHORTCUT }));
-            }}
-            onValidate={validateOverlayShortcut}
-            value={settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT}
-          />
+            {saving ? t("settings.saving") : t("settings.save")}
+          </Button>
+          {onClose ? (
+            <Button disabled={saving} onClick={onClose} variant="danger">
+              {t("common.close")}
+            </Button>
+          ) : null}
         </div>
-      </section>
-
-      <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />
-
-      <section className="settings-block settings-application" aria-labelledby="settings-application-title">
-        <h3 id="settings-application-title">{t("settings.application")}</h3>
-        <div className="settings-language" role="group" aria-label={t("settings.language")}>
-          <span>{t("settings.language")}</span>
-          <div className="settings-segmented">
-            <button
-              aria-pressed={settings.lang === "es"}
-              onClick={() => persistLanguage("es")}
-              type="button"
-            >
-              {t("settings.spanish")}
-            </button>
-            <button
-              aria-pressed={settings.lang === "en"}
-              onClick={() => persistLanguage("en")}
-              type="button"
-            >
-              {t("settings.english")}
-            </button>
-          </div>
-        </div>
-        <div className="settings-version-row">
-          <div className="settings-version-copy">
-            <strong>{t("settings.clientVersion", { version: appVersion })}</strong>
-            {updateStatus ? <span>{updateStatus}</span> : null}
-          </div>
-          <div className="actions">
-            <button disabled={!updateAvailable} onClick={onOpenUpdate} type="button">{t("settings.update")}</button>
-            <button onClick={onOpenReleases} type="button">{t("settings.releases")}</button>
-            <button disabled={checkingUpdate} onClick={onCheckUpdates} type="button">
-              {checkingUpdate ? t("addon.checking") : t("settings.checkUpdates")}
-            </button>
-          </div>
-        </div>
-        <p className="muted settings-last-check">{lastCheck}</p>
-        {error ? <p className="error" role="alert">{error}</p> : null}
-        {message ? <p className="success" role="status">{message}</p> : null}
-        <Button icon={<ThemedIcon name="save" size={18} />} onClick={saveSettings} disabled={saving || loading}>
-          {saving ? t("settings.saving") : t("settings.save")}
-        </Button>
-      </section>
-    </>
+      </div>
+    </div>
   );
 }

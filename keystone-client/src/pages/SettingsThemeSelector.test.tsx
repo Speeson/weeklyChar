@@ -12,6 +12,8 @@ const initialSettings = {
   startMinimized: false,
   minimizeOnClose: false,
   closeBehavior: "ask" as const,
+  overlayEnabled: true,
+  overlayShortcut: "Ctrl+Shift+K",
   lang: "es" as const,
 };
 

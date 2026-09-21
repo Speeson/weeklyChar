@@ -4,7 +4,7 @@ type Tone = "neutral" | "success" | "warning" | "danger";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: ReactNode;
-  variant?: "primary" | "secondary" | "danger";
+  variant?: "primary" | "secondary" | "success" | "danger";
 };
 
 export function Button({ children, className, icon, type = "button", variant = "secondary", ...props }: ButtonProps) {

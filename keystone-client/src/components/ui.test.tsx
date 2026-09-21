@@ -16,6 +16,7 @@ describe("design system primitives", () => {
       <div>
         <Card>Panel</Card>
         <Button onClick={onActivate} variant="primary">Guardar</Button>
+        <Button variant="success">Confirmar</Button>
         <Button disabled variant="danger">Eliminar</Button>
         <IconButton icon={<Search aria-hidden="true" size={16} />} label="Buscar rapido" />
         <Badge tone="success">Activo</Badge>
@@ -36,12 +37,14 @@ describe("design system primitives", () => {
     );
 
     const primary = screen.getByRole("button", { name: "Guardar" });
+    const success = screen.getByRole("button", { name: "Confirmar" });
     const danger = screen.getByRole("button", { name: "Eliminar" });
     fireEvent.click(primary);
 
     expect(screen.getByText("Panel")).toHaveAttribute("data-ui", "card");
     expect(primary).toHaveAttribute("data-ui", "button");
     expect(primary).toHaveAttribute("data-variant", "primary");
+    expect(success).toHaveAttribute("data-variant", "success");
     expect(onActivate).toHaveBeenCalledOnce();
     expect(danger).toHaveAttribute("data-variant", "danger");
     expect(danger).toBeDisabled();

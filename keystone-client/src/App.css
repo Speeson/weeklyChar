@@ -2271,14 +2271,35 @@ h2 {
   order: 3;
 }
 
+.settings-modal-body {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
 .ks-modal__footer {
-  order: 4;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 16px;
+  min-height: 68px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--theme-divider);
+  background: color-mix(in srgb, var(--theme-surface-2) 94%, transparent);
 }
 
 .ks-modal__footer button {
   min-width: 110px;
+}
+
+.settings-actions-feedback {
+  min-width: 0;
+  flex: 1;
+}
+
+.settings-actions-feedback p {
+  margin: 0;
 }
 
 .settings-language {
@@ -2635,6 +2656,18 @@ select[data-ui="select-field"]:focus-visible {
 .ui-button[data-variant="danger"]:active:not(:disabled) {
   border-color: var(--status-danger-border-strong);
   background: var(--status-danger-surface-strong);
+}
+
+.ui-button[data-variant="success"] {
+  border-color: var(--status-success-border);
+  color: var(--theme-text-bright);
+  background: color-mix(in srgb, var(--status-success-surface) 72%, var(--theme-surface-1));
+}
+
+.ui-button[data-variant="success"]:hover:not(:disabled),
+.ui-button[data-variant="success"]:active:not(:disabled) {
+  border-color: var(--status-success);
+  background: color-mix(in srgb, var(--status-success) 34%, var(--theme-surface-1));
 }
 
 .ui-badge {

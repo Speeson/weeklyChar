@@ -109,6 +109,7 @@ const es = {
   "settings.overlayShortcutRecording": "Pulsa el nuevo atajo...",
   "settings.overlayShortcutCancelHint": "Pulsa Esc para cancelar.",
   "settings.overlayShortcutModifierRequired": "El atajo necesita al menos una tecla modificadora.",
+  "settings.overlayShortcutUnavailable": "No se puede guardar ese atajo de teclado. Está reservado por otra aplicación.",
   "settings.overlayShortcutRestore": "Restaurar",
   "settings.closeAsk": "Preguntar siempre",
   "settings.closeMinimize": "Minimizar a la bandeja",
@@ -323,6 +324,7 @@ const es = {
 export type TranslationKey = keyof typeof es;
 
 const en: Record<TranslationKey, string> = {
+  "settings.overlayShortcutUnavailable": "That keyboard shortcut cannot be saved because another application has reserved it.",
   "common.addon": "Addon", "common.cancel": "Cancel", "common.close": "Close", "common.error": "Error", "common.loading": "Loading...", "common.notAvailable": "Unavailable", "common.save": "Save", "common.bridgeError": "The Python bridge returned a controlled error.",
   "shell.mainNavigation": "Main", "shell.sync": "Sync", "shell.characters": "Characters", "shell.teams": "Teams", "shell.settings": "Settings", "shell.user": "User", "shell.userMenu": "User menu for {name}", "shell.changeAvatar": "Change avatar", "shell.logout": "Sign out", "shell.windowControls": "Window controls", "shell.minimize": "Minimize", "shell.close": "Close", "shell.openWeb": "Open Web", "shell.minimizeTray": "Minimize to tray",
   "close.title": "What do you want to do with KeystoneClient?", "close.cancelLabel": "Cancel close", "close.exit": "Close KeystoneClient", "close.remember": "Remember my choice",

@@ -54,6 +54,9 @@ const initialSettings = {
   lang: "es" as const,
 };
 
+const overlayShortcutUnavailable =
+  "No se puede guardar ese atajo de teclado. Está reservado por otra aplicación.";
+
 describe("SettingsPage", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -225,9 +228,10 @@ describe("SettingsPage", () => {
 
   it("restores the default overlay shortcut before saving", async () => {
     const user = userEvent.setup();
-    const customSettings = { ...initialSettings, overlayShortcut: "Ctrl+Shift+KeyM" };
+    const customSettings = { ...initialSettings, overlayEnabled: true, overlayShortcut: "Ctrl+Shift+KeyM" };
+    const restoredSettings = { ...initialSettings, overlayEnabled: true };
     getSettingsMock.mockResolvedValueOnce(customSettings);
-    updateSettingsMock.mockResolvedValueOnce(initialSettings);
+    updateSettingsMock.mockResolvedValueOnce(restoredSettings);
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={customSettings} onSettingsChanged={vi.fn()} />);
     await screen.findByRole("button", { name: "Atajo del overlay: Ctrl + Shift + M" });
@@ -235,8 +239,53 @@ describe("SettingsPage", () => {
     expect(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
-    expect(configureOverlayShortcutMock).toHaveBeenCalledWith(false, "Ctrl+Shift+K");
-    expect(updateSettingsMock).toHaveBeenCalledWith(initialSettings);
+    expect(configureOverlayShortcutMock).toHaveBeenCalledWith(true, "Ctrl+Shift+K");
+    expect(updateSettingsMock).toHaveBeenCalledWith(restoredSettings);
+  });
+
+  it("only shows overlay shortcut controls while the overlay is enabled", async () => {
+    const user = userEvent.setup();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+
+    render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
+    const enabled = await screen.findByLabelText("Activar overlay");
+    expect(screen.queryByRole("button", { name: /Atajo del overlay:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restaurar" })).not.toBeInTheDocument();
+
+    await user.click(enabled);
+    expect(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restaurar" })).toBeInTheDocument();
+
+    await user.click(enabled);
+    expect(screen.queryByRole("button", { name: /Atajo del overlay:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restaurar" })).not.toBeInTheDocument();
+  });
+
+  it("keeps save and close actions together in the persistent footer", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    getSettingsMock.mockResolvedValueOnce(initialSettings);
+
+    const { container } = render(
+      <SettingsPage
+        appVersion="0.1.0"
+        initialSettings={initialSettings}
+        onClose={onClose}
+        onSettingsChanged={vi.fn()}
+      />,
+    );
+    const save = await screen.findByRole("button", { name: "Guardar ajustes" });
+    const close = screen.getByRole("button", { name: "Cerrar" });
+    const footer = container.querySelector(".settings-actions-footer");
+
+    expect(save).toHaveAttribute("data-variant", "success");
+    expect(close).toHaveAttribute("data-variant", "danger");
+    expect(footer).toContainElement(save);
+    expect(footer).toContainElement(close);
+    expect(container.querySelector(".ks-modal__content")).not.toContainElement(save);
+
+    await user.click(close);
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("keeps the working shortcut when native registration rejects a conflict", async () => {
@@ -251,7 +300,7 @@ describe("SettingsPage", () => {
     fireEvent.keyDown(recorder, { code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true });
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(await screen.findByRole("alert")).toHaveTextContent(overlayShortcutUnavailable);
     expect(screen.queryByText(/Haz clic y pulsa una combinación/)).not.toBeInTheDocument();
     expect(updateSettingsMock).not.toHaveBeenCalled();
     expect(configureOverlayShortcutMock).toHaveBeenCalledTimes(1);
@@ -267,7 +316,7 @@ describe("SettingsPage", () => {
     await user.click(recorder);
     fireEvent.keyDown(recorder, { code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(await screen.findByRole("alert")).toHaveTextContent(overlayShortcutUnavailable);
     expect(recorder).toHaveAttribute("aria-pressed", "true");
     expect(beginOverlayShortcutCaptureMock).toHaveBeenCalledOnce();
     expect(endOverlayShortcutCaptureMock).not.toHaveBeenCalled();
@@ -303,7 +352,7 @@ describe("SettingsPage", () => {
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut is already in use");
+    expect(await screen.findByRole("alert")).toHaveTextContent(overlayShortcutUnavailable);
   });
 
   it("persists language immediately without saving unrelated drafts", async () => {
