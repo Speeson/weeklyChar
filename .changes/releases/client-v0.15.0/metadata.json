@@ -1,0 +1,12 @@
+{
+  "component": "client",
+  "current_version": "0.14.1",
+  "version": "0.15.0",
+  "bump": "minor",
+  "tag": "client-v0.15.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-overlay-settings.json",
+    "client-teams-member-filter-header.json"
+  ]
+}
