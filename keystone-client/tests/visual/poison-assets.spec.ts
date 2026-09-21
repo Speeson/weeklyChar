@@ -125,7 +125,7 @@ test("Poison Addon primary actions use their integrated artwork icon", async ({ 
 
 test("Poison Settings save icons inherit the high-contrast gold-action foreground", async ({ page }) => {
   await page.goto("/?preview=sync-success");
-  await page.getByRole("button", { name: "Configuracion" }).click();
+  await page.getByRole("button", { name: "Configuración" }).click();
 
   const action = page.locator(".settings-gold-action").filter({ has: page.locator(".theme-icon") }).first();
   const icon = action.locator(".theme-icon");

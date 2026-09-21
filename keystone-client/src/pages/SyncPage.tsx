@@ -14,8 +14,10 @@ import {
 } from "../core/characterDisplay";
 import { openRaiderIoCharacter } from "../core/native";
 import { useI18n, type TranslationKey } from "../core/i18n";
+import { localizedCoreErrorMessage } from "../core/errorDisplay";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
-import type { AddonStatus, Character, CharacterState, CoreError, SyncState, SyncStatus, WowState } from "../core/types";
+import { dungeonName, SEASON_2_DUNGEON_BY_ID } from "../core/season2";
+import type { AddonStatus, Character, CharacterState, SyncState, SyncStatus, WowState } from "../core/types";
 import type { OptionalThemeAssetRole, RequiredThemeAssetRole } from "../theme/asset.registry";
 import { useThemeAsset } from "../theme/useThemeAsset";
 
@@ -36,14 +38,6 @@ const emptyWow: WowState = {
   selectedAccounts: [],
 };
 
-function formatError(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-
-  return fallback;
-}
-
 function formatTime(value: string | null, language: "es" | "en" = "es"): string {
   if (!value) {
     return "-";
@@ -53,6 +47,14 @@ function formatTime(value: string | null, language: "es" | "en" = "es"): string 
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function localizedKeystone(character: Character, language: "es" | "en"): string {
+  const keystone = character.currentKeystone;
+  if (!keystone?.level) return MISSING_CHARACTER_VALUE;
+  const catalog = keystone.challengeMapId ? SEASON_2_DUNGEON_BY_ID.get(keystone.challengeMapId) : null;
+  if (!catalog) return character.keystoneDisplay || `+${keystone.level}`;
+  return `+${keystone.level} ${dungeonName(catalog, language)} (${catalog.abbr})`;
 }
 
 function formatDate(value: string | null, language: "es" | "en" = "es", noSyncs = "Sin sincronizaciones"): string {
@@ -107,7 +109,7 @@ function addonMeta(addon: AddonStatus, t: Translate): AddonPresentation {
     }[addon.operation.action];
     return {
       label: operationLabel,
-      detail: addon.operation.message || t("addon.operation"),
+      detail: t("addon.operation"),
       icon: "addon-status-operation",
       tone: "info",
     };
@@ -138,9 +140,9 @@ function addonMeta(addon: AddonStatus, t: Translate): AddonPresentation {
     case "offline-cache":
       return { label: t("addon.offline"), detail: t("addon.cacheAvailable"), icon: "addon-status-offline-cache", tone: "info" };
     case "unavailable":
-      return { label: t("common.notAvailable"), detail: addon.message || t("addon.notFound"), icon: "addon-status-unavailable", tone: "error" };
+      return { label: t("common.notAvailable"), detail: t("addon.notFound"), icon: "addon-status-unavailable", tone: "error" };
     case "error":
-      return { label: t("addon.errorTitle"), detail: addon.message || t("addon.reviewInstall"), icon: "addon-status-error", tone: "error" };
+      return { label: t("addon.errorTitle"), detail: t("addon.reviewInstall"), icon: "addon-status-error", tone: "error" };
     default:
       return { label: t("addon.notInstalled"), detail: t("addon.installAvailable"), icon: "addon-status-not-installed", tone: "error" };
   }
@@ -152,6 +154,7 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
   const [busyAction, setBusyAction] = useState<SyncAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncErrorDetail, setSyncErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     setSync(initialSync);
@@ -169,14 +172,17 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
       }
       if (event.event === "sync.started" || event.event === "sync.status") {
         setSync(event.data);
+        if (event.data.state !== "error") setSyncErrorDetail(null);
       }
       if (event.event === "sync.completed") {
         setSync(event.data.status);
+        setSyncErrorDetail(null);
         setMessage(t("sync.syncedCount", { count: event.data.syncedCharacters }));
         setError(null);
       }
       if (event.event === "sync.error") {
         setMessage(null);
+        setSyncErrorDetail(localizedCoreErrorMessage(event.data, language, t("sync.errorGeneric")));
       }
     });
 
@@ -188,7 +194,7 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(formatError(caught, t("sync.errorGeneric")));
+          setError(localizedCoreErrorMessage(caught, language, t("sync.errorGeneric")));
         }
       });
 
@@ -209,9 +215,10 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
     try {
       const status = await request();
       setSync(status);
+      setSyncErrorDetail(null);
       setMessage(success);
     } catch (caught) {
-      setError(formatError(caught, t("sync.errorGeneric")));
+      setError(localizedCoreErrorMessage(caught, language, t("sync.errorGeneric")));
     } finally {
       setBusyAction(null);
     }
@@ -247,9 +254,9 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
         />
         <CharactersTable
           characters={characterState.characters}
-          error={characterState.lastError}
+          error={characterState.lastError ? t("sync.characterError") : null}
           loading={characterState.refreshing}
-          onOpenError={(caught) => setError(formatError(caught, t("sync.errorGeneric")))}
+          onOpenError={(caught) => setError(localizedCoreErrorMessage(caught, language, t("sync.errorGeneric")))}
         />
       </div>
 
@@ -262,7 +269,7 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
         message={message}
         onForce={() => runAction("force", forceSync, t("sync.forced"))}
         status={status}
-        sync={sync}
+        syncErrorDetail={syncErrorDetail}
       />
 
       {error ? <p className="error sync-screen__message" role="alert">{error}</p> : null}
@@ -326,7 +333,7 @@ type CharactersTableProps = {
 };
 
 function CharactersTable({ characters, error, loading, onOpenError }: CharactersTableProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const tableFrame = useThemeAsset("sync-table-frame");
   const columns: Array<{ key: CharacterSortKey; label: string }> = [
     { key: "name", label: t("sync.name") }, { key: "realm", label: t("sync.realm") },
@@ -399,7 +406,7 @@ function CharactersTable({ characters, error, loading, onOpenError }: Characters
               </span>
               <span role="cell">{row.realm}</span>
               <span className="sync-table__ilvl" role="cell" style={{ color: itemLevelColor(row.ilvl) ?? MISSING_VALUE_COLOR }}>{displayNumber(row.ilvl)}</span>
-              <span className="sync-table__key" role="cell">{row.keystoneDisplay || MISSING_CHARACTER_VALUE}</span>
+              <span className="sync-table__key" role="cell">{localizedKeystone(row, language)}</span>
               <span className="sync-table__rio" role="cell" style={{ color: raiderIoColor(row.rioScore) ?? MISSING_VALUE_COLOR }}>{displayNumber(row.rioScore)}</span>
             </div>
           ))}
@@ -430,10 +437,10 @@ type SidebarProps = {
   message: string | null;
   onForce: () => void;
   status: ReturnType<typeof stateMeta>;
-  sync: SyncStatus;
+  syncErrorDetail: string | null;
 };
 
-function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, message, onForce, status, sync }: SidebarProps) {
+function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, message, onForce, status, syncErrorDetail }: SidebarProps) {
   const { t } = useI18n();
   const brandEmblem = useThemeAsset("brand-emblem");
   const heroFrame = useThemeAsset("sync-hero-frame");
@@ -472,7 +479,7 @@ function SyncSidebar({ appVersion, busy, forceDisabled, lastSyncAt, language, me
           <img alt="" src={statusIcon} />
           <div>
             <strong>{status.label}</strong>
-            <span>{sync.lastError ?? status.detail}</span>
+            <span>{syncErrorDetail ?? status.detail}</span>
             <small>{message ?? formatCurrentTimestamp(lastSyncAt, language, t("sync.noPrevious"), t("sync.noSyncs"))}</small>
           </div>
         </div>

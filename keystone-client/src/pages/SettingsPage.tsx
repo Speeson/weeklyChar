@@ -13,8 +13,9 @@ import {
   validateOverlayShortcut,
 } from "../core/native";
 import { getSettings, updateSettings } from "../core/settings";
-import type { ClientSettings, CoreError } from "../core/types";
+import type { ClientSettings } from "../core/types";
 import { useI18n } from "../core/i18n";
+import { localizedCoreErrorMessage } from "../core/errorDisplay";
 import type { UpdaterSnapshot } from "../core/updater";
 import { useTheme } from "../theme/useTheme";
 
@@ -56,17 +57,6 @@ function withOverlayDefaults(settings: ClientSettings): ClientSettings {
   };
 }
 
-function formatSettingsError(error: unknown, fallback: string): string {
-  if (typeof error === "string" && error.trim()) {
-    return error;
-  }
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-
-  return fallback;
-}
-
 export function SettingsPage({
   appVersion,
   children,
@@ -79,7 +69,7 @@ export function SettingsPage({
   onOpenReleases,
   preview = false,
 }: SettingsPageProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const { setTheme, theme, themes } = useTheme();
   const [settings, setSettings] = useState<ClientSettings>(() => withOverlayDefaults(initialSettings));
   const [loading, setLoading] = useState(false);
@@ -129,7 +119,7 @@ export function SettingsPage({
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(formatSettingsError(caught, t("settings.error")));
+          setError(localizedCoreErrorMessage(caught, language, t("settings.error")));
         }
       })
       .finally(() => {
@@ -196,7 +186,7 @@ export function SettingsPage({
         }
       }
       if (!overlayConfigurationFailed) {
-        setError(formatSettingsError(caught, t("settings.error")));
+        setError(localizedCoreErrorMessage(caught, language, t("settings.error")));
       }
     } finally {
       setSaving(false);
@@ -224,7 +214,7 @@ export function SettingsPage({
         const persisted = persistedSettingsRef.current;
         setSettings((current) => ({ ...current, lang: persisted.lang }));
         onSettingsChanged(persisted);
-        setError(formatSettingsError(caught, t("settings.error")));
+        setError(localizedCoreErrorMessage(caught, language, t("settings.error")));
       }
     });
   }

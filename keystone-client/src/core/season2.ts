@@ -15,7 +15,7 @@ export const MIDNIGHT_SEASON_2_DUNGEONS: readonly SeasonDungeon[] = [
   { id: 588, name: "Altar of Fangs", nameEs: "Altar de los Colmillos", abbr: "AOF", teleportIconUrl: altarOfFangs },
   { id: 587, name: "Murder Row", nameEs: "Frontal de la Muerte", abbr: "MR", teleportIconUrl: murderRow },
   { id: 586, name: "Den of Nalorakk", nameEs: "Guarida de Nalorakk", abbr: "DON", teleportIconUrl: denOfNalorakk },
-  { id: 584, name: "The Blinding Vale", nameEs: "El Valle Cegador", abbr: "BV", teleportIconUrl: blindingVale },
+  { id: 584, name: "The Blinding Vale", nameEs: "Valle Cegador", abbr: "BV", teleportIconUrl: blindingVale },
   { id: 585, name: "Voidscar Arena", nameEs: "Arena Lacravacua", abbr: "VSA", teleportIconUrl: voidscarArena },
   { id: 249, name: "Kings' Rest", nameEs: "Reposo de los Reyes", abbr: "KR", teleportIconUrl: kingsRest },
   { id: 250, name: "Temple of Sethraliss", nameEs: "Templo de Sethraliss", abbr: "TOS", teleportIconUrl: templeOfSethraliss },
@@ -23,6 +23,10 @@ export const MIDNIGHT_SEASON_2_DUNGEONS: readonly SeasonDungeon[] = [
 ];
 
 export const SEASON_2_DUNGEON_BY_ID = new Map(MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => [dungeon.id, dungeon]));
+
+export function dungeonName(dungeon: SeasonDungeon, language: "es" | "en"): string {
+  return language === "es" ? dungeon.nameEs : dungeon.name;
+}
 
 export function compactTeamKeystone(level: number, challengeMapId: number, dungeon: string | null): string {
   return `+${level} ${SEASON_2_DUNGEON_BY_ID.get(challengeMapId)?.abbr ?? dungeon ?? `ID ${challengeMapId}`}`;

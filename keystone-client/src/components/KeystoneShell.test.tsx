@@ -76,7 +76,7 @@ describe("KeystoneShell profile menu", () => {
     const addonTab = screen.getByRole("button", { name: "Addon" });
     const teamsTab = screen.getByRole("button", { name: "Equipos" });
     const charactersTab = screen.getByRole("button", { name: "Personajes" });
-    const trigger = screen.getByRole("button", { name: "Menu de usuario de player" });
+    const trigger = screen.getByRole("button", { name: "Menú de usuario de player" });
 
     expect(frame).toHaveAttribute("data-ui", "keystone-shell");
     expect(syncTab).toHaveAttribute("data-ui", "shell-tab");
@@ -117,7 +117,7 @@ describe("KeystoneShell profile menu", () => {
   it("closes on outside click and Escape", async () => {
     const user = userEvent.setup();
     renderShell();
-    const trigger = screen.getByRole("button", { name: "Menu de usuario de player" });
+    const trigger = screen.getByRole("button", { name: "Menú de usuario de player" });
 
     await user.click(trigger);
     expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -133,10 +133,10 @@ describe("KeystoneShell profile menu", () => {
     const user = userEvent.setup();
     const onChangeAvatar = vi.fn();
     renderShell(onChangeAvatar);
-    await user.click(screen.getByRole("button", { name: "Menu de usuario de player" }));
+    await user.click(screen.getByRole("button", { name: "Menú de usuario de player" }));
 
     const items = screen.getAllByRole("menuitem");
-    expect(items.map((item) => item.textContent)).toEqual(["Cambiar avatar", "Cerrar sesion"]);
+    expect(items.map((item) => item.textContent)).toEqual(["Cambiar avatar", "Cerrar sesión"]);
     await user.click(items[0]);
     expect(onChangeAvatar).toHaveBeenCalledOnce();
   });
@@ -151,7 +151,7 @@ describe("KeystoneShell window dragging", () => {
     expect(onStartWindowDrag).toHaveBeenCalledOnce();
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "Sincronizar" }), { button: 0 });
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Configuracion" }), { button: 0 });
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Configuración" }), { button: 0 });
     expect(onStartWindowDrag).toHaveBeenCalledOnce();
   });
 

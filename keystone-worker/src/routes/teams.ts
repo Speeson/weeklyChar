@@ -264,12 +264,15 @@ teamRoutes.post('/api/teams/:teamId/keystone-planner', async c => {
   } catch (error) {
     return jsonError(c, 400, error instanceof Error ? error.message : 'Payload del Planner no válido')
   }
+  const requestedLocale = c.req.query('locale') ?? 'es_ES'
+  const locale = normalizeBlizzardLocale(requestedLocale)
+  if (locale !== requestedLocale) return jsonError(c, 400, 'locale no es válido')
   const participants = await plannerParticipantsForTeam(c.env, teamId, request.participantUserIds)
   if (participants.length !== request.participantUserIds.length) {
     return jsonError(c, 400, 'Todos los participantes deben pertenecer actualmente al team')
   }
   try {
-    const response = await runKeystonePlanner(c.env, teamId, request)
+    const response = await runKeystonePlanner(c.env, teamId, request, locale)
     return c.json(response, response.status === 'invalid_input' ? 400 : 200)
   } catch (error) {
     if (error instanceof PlannerDataLimitError) return jsonError(c, 422, error.message)

@@ -10,9 +10,10 @@ import {
   subscribeToAddonEvents,
   updateAddon,
 } from "../core/addon";
-import type { AddonStatus, CoreError, WowState } from "../core/types";
+import type { AddonStatus, WowState } from "../core/types";
 import { selectWowInstall } from "../core/wow";
 import { useI18n, type TranslationKey } from "../core/i18n";
+import { localizedCoreErrorMessage } from "../core/errorDisplay";
 import type { ThemeIconRole } from "../theme/icon.registry";
 import type { OptionalThemeAssetRole } from "../theme/asset.registry";
 import { useThemeAsset } from "../theme/useThemeAsset";
@@ -26,13 +27,6 @@ type AddonPageProps = {
 
 type AddonAction = "check" | "install" | "update" | "reinstall";
 type StatusTone = "default" | "good" | "bad" | "notice";
-
-function formatError(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-  return fallback;
-}
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 
@@ -115,7 +109,7 @@ function formatLastCheck(value: string | null, preview: boolean, language: "es" 
 
 function sourceLabel(source: AddonStatus["source"], t: Translate): string {
   if (source === "remote") {
-    return "KeystoneSync releases";
+    return t("addon.remoteReleases");
   }
   if (source === "cache") {
     return t("addon.localCache");
@@ -176,22 +170,22 @@ export function AddonPage({
       }
       if (event.event === "addon.check.completed" || event.event === "addon.status.changed") {
         setAddon(event.data);
-        setMessage(event.data.message || null);
+        setMessage(t("addon.statusUpdated"));
         setError(null);
       }
       if (event.event === "addon.install.started" || event.event === "addon.install.progress") {
         setAddon((current) => ({ ...current, operation: event.data }));
-        setMessage(event.data.message);
+        setMessage(t("addon.operation"));
       }
       if (event.event === "addon.install.completed") {
         setAddon(event.data.status);
-        setMessage(event.data.operation.message);
+        setMessage(t("addon.statusUpdated"));
         setError(null);
         setBusyAction(null);
       }
       if (event.event === "addon.install.failed") {
         setAddon((current) => ({ ...current, operation: event.data.operation }));
-        setError(event.data.error.message);
+        setError(localizedCoreErrorMessage(event.data.error, language, t("addon.errorGeneric")));
         setBusyAction(null);
       }
     });
@@ -204,7 +198,7 @@ export function AddonPage({
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(formatError(caught, t("addon.errorGeneric")));
+          setError(localizedCoreErrorMessage(caught, language, t("addon.errorGeneric")));
         }
       });
 
@@ -224,12 +218,12 @@ export function AddonPage({
     try {
       const status = await request();
       setAddon(status);
-      setMessage(status.operation?.message || success);
+      setMessage(status.operation ? t("addon.operation") : success);
       if (!status.operation) {
         setBusyAction(null);
       }
     } catch (caught) {
-      setError(formatError(caught, t("addon.errorGeneric")));
+      setError(localizedCoreErrorMessage(caught, language, t("addon.errorGeneric")));
       setBusyAction(null);
     }
   }
@@ -258,7 +252,7 @@ export function AddonPage({
       onWowChanged(nextWow);
       setMessage(t("addon.folderUpdated"));
     } catch (caught) {
-      setError(formatError(caught, t("addon.errorGeneric")));
+      setError(localizedCoreErrorMessage(caught, language, t("addon.errorGeneric")));
     } finally {
       setFolderBusy(false);
     }
@@ -283,7 +277,7 @@ export function AddonPage({
           // Report the original opener error below.
         }
       }
-      setError(formatError(caught, t("addon.errorGeneric")));
+      setError(localizedCoreErrorMessage(caught, language, t("addon.errorGeneric")));
     }
   }
 
@@ -299,7 +293,7 @@ export function AddonPage({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch (caught) {
-      setError(formatError(caught, t("addon.errorGeneric")));
+      setError(localizedCoreErrorMessage(caught, language, t("addon.errorGeneric")));
     }
   }
 
@@ -307,7 +301,7 @@ export function AddonPage({
   const canInstall = addon.state === "not-installed" || addon.state === "offline-cache";
   const canUpdate = addon.state === "update-available";
   const canReinstall = addon.installed;
-  const statusText = addon.operation?.message || stateLabel(addon, t);
+  const statusText = addon.operation ? ({ install: t("addon.installing"), update: t("addon.updating"), reinstall: t("addon.reinstalling") }[addon.operation.action]) : stateLabel(addon, t);
   const statusTextTone: StatusTone = addon.operation ? "notice" : stateTone(addon);
   const addonsPath = wow.install.addonsPath;
 

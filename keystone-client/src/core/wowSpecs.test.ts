@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { specializationsForClass, WOW_SPECIALIZATIONS, wowClassIconUrl, wowSpecializationIconUrl } from "./wowSpecs";
+import { specName, specializationsForClass, WOW_SPECIALIZATIONS, wowClassIconUrl, wowClassName, wowSpecializationIconUrl } from "./wowSpecs";
 
 describe("WoW Planner icon catalog", () => {
   it("has an official class and specialization icon for every supported specialization", () => {
@@ -23,5 +23,26 @@ describe("WoW Planner icon catalog", () => {
     expect(specializationsForClass("Druid").map(specialization => `${specialization.role}:${specialization.name}`)).toEqual([
       "tank:Guardian", "healer:Restoration", "dps:Balance", "dps:Feral",
     ]);
+  });
+
+  it("has canonical English and European Spanish names for every supported specialization", () => {
+    expect(WOW_SPECIALIZATIONS).toHaveLength(40);
+    for (const specialization of WOW_SPECIALIZATIONS) {
+      expect(specName(specialization.id, "en")).toBe(specialization.name);
+      expect(specName(specialization.id, "es")).toBe(specialization.nameEs);
+    }
+  });
+
+  it("preserves a snapshot fallback for a future unknown specialization", () => {
+    expect(specName(999_999, "es", "Especialización futura")).toBe("Especialización futura");
+  });
+
+  it("localizes all supported classes in both directions", () => {
+    const classes = new Map(WOW_SPECIALIZATIONS.map(spec => [spec.wowClass, wowClassName(spec.wowClass, "es")]));
+    expect(classes.size).toBe(13);
+    for (const [english, spanish] of classes) {
+      expect(spanish).not.toBe(english);
+      expect(wowClassName(spanish, "en")).toBe(english);
+    }
   });
 });

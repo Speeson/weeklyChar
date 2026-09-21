@@ -93,7 +93,7 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("Contraseña"), "secret");
     await user.click(screen.getByRole("button", { name: "Entrar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Credenciales no válidas.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("El usuario o la contraseña no son válidos.");
   });
 
   it("disables duplicate submit while loading", async () => {
@@ -182,7 +182,7 @@ describe("LoginPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Recuperar contraseña" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo abrir la recuperación de contraseña.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo completar la acción solicitada.");
     expect(screen.getByLabelText("Usuario")).toHaveValue("player");
     expect(screen.getByLabelText("Contraseña")).toHaveValue("secret");
   });
@@ -209,11 +209,11 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("Contraseña"), "secret1");
     await user.type(screen.getByLabelText("Confirmar contraseña"), "secret1");
     await user.click(screen.getByRole("button", { name: "Crear cuenta" }));
-    await screen.findByText("Cuenta creada.");
+    await screen.findByText("Cuenta creada. Revisa tu correo electrónico para verificarla antes de iniciar sesión.");
 
     await user.click(screen.getByRole("button", { name: "Acceder a la web" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo abrir KeystoneSync Web.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo completar la acción solicitada.");
   });
 
   it("submits the complete registration contract and returns to login", async () => {
@@ -245,7 +245,7 @@ describe("LoginPage", () => {
       password: "secret1",
       confirmPassword: "secret1",
     });
-    expect(await screen.findByText("Cuenta creada. Revisa tu email para verificarla.")).toBeInTheDocument();
+    expect(await screen.findByText("Cuenta creada. Revisa tu correo electrónico para verificarla antes de iniciar sesión.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Volver al inicio de sesión" }));
     expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
   });

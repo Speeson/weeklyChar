@@ -43,7 +43,7 @@ describe("UpdateModal", () => {
       />,
     );
 
-    expect(screen.getByText("No hay notas disponibles para esta version.")).toBeInTheDocument();
+    expect(screen.getByText("No hay notas disponibles para esta versión.")).toBeInTheDocument();
   });
 
   it("reports deterministic download progress", () => {

@@ -18,7 +18,8 @@ import { WowRoleIcon } from "../components/WowRoleIcon";
 import { WowheadSpellIcon, WowheadTooltip } from "../components/WowheadTooltip";
 import { classColor } from "../core/characterDisplay";
 import { useI18n } from "../core/i18n";
-import { MIDNIGHT_SEASON_2_DUNGEONS, SEASON_2_DUNGEON_BY_ID } from "../core/season2";
+import { localizedCoreError } from "../core/errorDisplay";
+import { dungeonName, MIDNIGHT_SEASON_2_DUNGEONS, SEASON_2_DUNGEON_BY_ID } from "../core/season2";
 import {
   groupSelectorObjectives, liveTeamsDataSource, selectorObjectivesForSpec, teamStoneCounts,
   type SelectorObjectiveGroup, type TeamsDataSource,
@@ -27,11 +28,11 @@ import {
   getCachedSelector, getCachedTeamDetail, getTeamsSessionSnapshot, loadSelector, loadTeamDetail,
   loadTeams, preferredTeamId, removeTeamFromSessionCache, setSelectedTeamId,
 } from "../core/teamsSessionCache";
-import { specName, wowClassIconUrl, wowLootBagIconUrl, wowSpecializationIconUrl } from "../core/wowSpecs";
+import { specName, wowClassIconUrl, wowClassName, wowLootBagIconUrl, wowSpecializationIconUrl } from "../core/wowSpecs";
 import { DEFAULT_KEYSTONE_PLANNER_OPTIONS } from "../core/keystonePlanner";
 import { useThemeAsset } from "../theme/useThemeAsset";
 import type {
-  ClientTeamDetail, ClientTeamSummary, CoreError, KeystoneSelectorCharacter, KeystoneSelectorResponse,
+  ClientTeamDetail, ClientTeamSummary, KeystoneSelectorCharacter, KeystoneSelectorResponse,
   KeystoneSelectorStone, KeystoneSelectorTierCounts, KeystonePlannerAssignment, KeystonePlannerObjective, KeystonePlannerRecommendation,
   ClientPlannerPreferenceUpdate, ClientPlannerPreferences, KeystonePlannerResponse,
   KeystonePlannerOptions, KeystonePlannerVacancy, KeystonePlannerVacancyCapability, KeystonePlannerVacancyRecommendation,
@@ -39,11 +40,7 @@ import type {
 
 type TeamsPageProps = { currentUsername?: string; dataSource?: TeamsDataSource; onOpenWeb: () => void; onSessionExpired: () => void };
 
-function errorInfo(error: unknown, fallback: string): CoreError {
-  return typeof error === "object" && error !== null && "code" in error && "message" in error
-    ? { code: String((error as CoreError).code), message: String((error as CoreError).message) }
-    : { code: "API_UNAVAILABLE", message: fallback };
-}
+const errorInfo = localizedCoreError;
 
 function Portrait({ avatarUrl, name, wowClass }: { avatarUrl: string | null; name: string; wowClass: string | null }) {
   return <span className="teams-portrait" style={{ backgroundColor: classColor(wowClass) }}>
@@ -53,9 +50,13 @@ function Portrait({ avatarUrl, name, wowClass }: { avatarUrl: string | null; nam
 }
 
 function TierSummary({ counts }: { counts: KeystoneSelectorTierCounts }) {
+  const { language } = useI18n();
+  const labels = language === "es"
+    ? { best: "Óptimo", must: "Imprescindible", nice: "Recomendable", catalyst: "Catalizador" }
+    : { best: "BiS", must: "Must", nice: "Nice", catalyst: "Catalyst" };
   return <span className="teams-tier-line">
-    <span><b>{counts.bestInSlot}</b> BiS</span><span><b>{counts.mustHave}</b> Must</span>
-    <span><b>{counts.niceToHave}</b> Nice</span><span><b>{counts.catalyst}</b> Cat</span>
+    <span><b>{counts.bestInSlot}</b> {labels.best}</span><span><b>{counts.mustHave}</b> {labels.must}</span>
+    <span><b>{counts.niceToHave}</b> {labels.nice}</span><span><b>{counts.catalyst}</b> {labels.catalyst}</span>
   </span>;
 }
 
@@ -111,7 +112,7 @@ function filterSelectorByMembers(selector: KeystoneSelectorResponse, selectedUse
 const PLANNER_COPY = {
   es: {
     noObjectives: "Sin objetivos", owner: "Dueño de la piedra", ownerTitle: "Dueño de la piedra · líder",
-    noLoot: "Sin objetivos de botín", item: "Objeto", value: "Valor de botín", buffs: "Buffos y sinergias",
+    noLoot: "Sin objetivos de botín", item: "Objeto", value: "Valor de botín", buffs: "Beneficios y sinergias",
     objectives: "objetivos", players: "jugadores", preferred: "Preferidos", available: "disponibles",
     damage: "Daño", vacancies: "huecos", bloodlust: "Ansia de sangre", battleRez: "Resurrección en combate",
     composition: "Composición", utilities: "Utilidades", partyEssentials: "Esenciales del grupo", capabilitySummary: "Buffs / Defensivos / Utilidades", externalPlayers: "Número de jugadores externos", objectiveSummary: "Objetivos", preferenceSummary: "Preferidos",
@@ -120,18 +121,18 @@ const PLANNER_COPY = {
     filterHelp: "La barra solo filtra las piedras disponibles.", stones: "Piedras disponibles",
     noStones: "No hay piedras visibles con este filtro.", options: "Prioridades del grupo", configure: "Configurar mis personajes",
     loadingPreferences: "Cargando configuración del Planner…",
-    quick: "Rápido · Clases", advanced: "Avanzado · Specs", recommendationMode: "Modo de recomendación",
+    quick: "Rápido · Clases", advanced: "Avanzado · Especializaciones", recommendationMode: "Modo de recomendación",
     fillComposition: "Rellenar la composición", scrollToEnd: "Ir al final del panel",
     offensiveSynergy: "Sinergia ofensiva", groupDefense: "Defensiva de grupo", dungeonUtility: "Utilidad de mazmorra",
     calculate: "Calcular Top 5", recalculate: "Recalcular Top 5",
     calculating: "Calculando…", recalculating: "Recalculando…", results: "Top 5 de configuraciones", resultTitle: "Top 5 para la piedra seleccionada",
     playedSpec: "Especialización jugada", lootSpec: "Especialización de botín",
-    externalSlot: "Plaza externa", externalCardTitle: "Externo", recommendedClasses: "Clases recomendadas", recommendedSpecs: "Specs recomendadas", viewClasses: "Ver clases recomendadas",
+    externalSlot: "Plaza externa", externalCardTitle: "Externo", recommendedClasses: "Clases recomendadas", recommendedSpecs: "Especializaciones recomendadas", viewClasses: "Ver clases recomendadas",
     expand: "Expandir", collapse: "Contraer",
-    closeClasses: "Cerrar recomendaciones", noExtraUtility: "Sin utilidad adicional", buffsDebuffs: "Buffs / Debuffs",
+    closeClasses: "Cerrar recomendaciones", noExtraUtility: "Sin utilidad adicional", buffsDebuffs: "Beneficios / Perjuicios",
     estimatedGain: "Ganancia ofensiva estimada para esta alternativa", selectRecommendation: "Seleccionar recomendación",
     moreUtilities: (count: number) => `Mostrar ${count} utilidades más`,
-    noBuffsDebuffs: "Sin aportación nueva", role: { tank: "Tank", healer: "Healer", dps: "DPS" },
+    noBuffsDebuffs: "Sin aportación nueva", role: { tank: "Tanque", healer: "Sanador", dps: "DPS" },
     selectError: "Selecciona una piedra exacta y entre 2 y 5 participantes.", requestError: "No se pudo calcular el Top 5.",
     stale: "La piedra exacta ya no está disponible. Actualiza el equipo y vuelve a seleccionarla.",
     unconfigured: "Hay participantes sin preferencias configuradas para el Planner.",
@@ -139,9 +140,9 @@ const PLANNER_COPY = {
     instruction: "Elige una piedra, marca de 2 a 5 participantes y calcula.",
     availability: { guaranteed: "garantizada", conditional: "condicional", none: "ausente" },
     profile: { physical: "físico", magical: "mágico", mixed: "mixto", unknown: "desconocido" },
-    capabilities: { CHAOS_BRAND: "Marca del caos", MYSTIC_TOUCH: "Toque místico", MARK_OF_THE_WILD: "Marca de lo salvaje", ARCANE_INTELLECT: "Intelecto Arcano", BATTLE_SHOUT: "Grito de batalla", POWER_WORD_FORTITUDE: "Palabra de poder: entereza", SKYFURY: "Furia del cielo" },
+    capabilities: { BLOODLUST: "Ansia de sangre", BATTLE_REZ: "Resurrección en combate", CHAOS_BRAND: "Marca del caos", MYSTIC_TOUCH: "Toque místico", MARK_OF_THE_WILD: "Marca de lo salvaje", ARCANE_INTELLECT: "Intelecto Arcano", BATTLE_SHOUT: "Grito de batalla", POWER_WORD_FORTITUDE: "Palabra de poder: entereza", SKYFURY: "Furia del cielo" },
     capabilityHints: { CHAOS_BRAND: "Daño mágico", MYSTIC_TOUCH: "Daño físico", MARK_OF_THE_WILD: "Versatilidad", ARCANE_INTELLECT: "Intelecto", BATTLE_SHOUT: "+5% AP", POWER_WORD_FORTITUDE: "Aguante", SKYFURY: "Maestría" },
-    tiers: { 3: "BiS", 2: "Must", 1: "Nice", 5: "Catalyst", 4: "Transfiguración", other: "Otros" },
+    tiers: { 3: "Óptimo", 2: "Imprescindible", 1: "Recomendable", 5: "Catalizador", 4: "Transfiguración", other: "Otros" },
   },
   en: {
     noObjectives: "No objectives", owner: "Keystone owner", ownerTitle: "Keystone owner · leader",
@@ -173,7 +174,7 @@ const PLANNER_COPY = {
     instruction: "Choose a keystone, select 2 to 5 participants, and calculate.",
     availability: { guaranteed: "guaranteed", conditional: "conditional", none: "missing" },
     profile: { physical: "physical", magical: "magical", mixed: "mixed", unknown: "unknown" },
-    capabilities: { CHAOS_BRAND: "Chaos Brand", MYSTIC_TOUCH: "Mystic Touch", MARK_OF_THE_WILD: "Mark of the Wild", ARCANE_INTELLECT: "Arcane Intellect", BATTLE_SHOUT: "Battle Shout", POWER_WORD_FORTITUDE: "Power Word: Fortitude", SKYFURY: "Skyfury" },
+    capabilities: { BLOODLUST: "Bloodlust", BATTLE_REZ: "Battle resurrection", CHAOS_BRAND: "Chaos Brand", MYSTIC_TOUCH: "Mystic Touch", MARK_OF_THE_WILD: "Mark of the Wild", ARCANE_INTELLECT: "Arcane Intellect", BATTLE_SHOUT: "Battle Shout", POWER_WORD_FORTITUDE: "Power Word: Fortitude", SKYFURY: "Skyfury" },
     capabilityHints: { CHAOS_BRAND: "Magic damage", MYSTIC_TOUCH: "Physical damage", MARK_OF_THE_WILD: "Versatility", ARCANE_INTELLECT: "Intellect", BATTLE_SHOUT: "+5% AP", POWER_WORD_FORTITUDE: "Stamina", SKYFURY: "Mastery" },
     tiers: { 3: "BiS", 2: "Must", 1: "Nice", 5: "Catalyst", 4: "Transmog", other: "Other" },
   },
@@ -186,7 +187,7 @@ function usePlannerCopy() {
 
 function localizedCapabilityName(copy: (typeof PLANNER_COPY)[keyof typeof PLANNER_COPY], capabilityId: string, fallback: string) {
   const key = capabilityId.toUpperCase() as keyof typeof copy.capabilities;
-  return copy.capabilities[key] ?? fallback;
+  return copy.capabilities[key] ?? (copy === PLANNER_COPY.es ? copy.utilities : fallback);
 }
 
 const PLANNER_CAPABILITY_ICON_NAMES: Readonly<Record<number, string>> = {
@@ -203,8 +204,9 @@ function plannerCapabilityIcon(spellId: number, type: KeystonePlannerRecommendat
 
 function PlannerSpecIcon({ loot = false, specId }: { loot?: boolean; specId: number }) {
   const copy = usePlannerCopy();
+  const { language } = useI18n();
   const specializationIcon = wowSpecializationIconUrl(specId);
-  const label = `${loot ? copy.lootSpec : copy.playedSpec}: ${specName(specId)}`;
+  const label = `${loot ? copy.lootSpec : copy.playedSpec}: ${specName(specId, language)}`;
   return <span className={`planner-spec-marker${loot ? " planner-spec-marker--loot" : ""}`}>
     <span aria-label={label} className="planner-spec-icon" role="img" title={label}>
       {specializationIcon ? <img alt="" className="planner-spec-icon__specialization" src={specializationIcon} /> : <span aria-hidden="true">?</span>}
@@ -253,8 +255,9 @@ function plannerVacancyRecommendations(vacancy: KeystonePlannerVacancy): Keyston
   });
 }
 
-function recommendationLabel(recommendation: KeystonePlannerVacancyRecommendation): string {
-  return recommendation.specName ? `${recommendation.specName} ${recommendation.wowClass}` : recommendation.wowClass;
+function recommendationLabel(recommendation: KeystonePlannerVacancyRecommendation, language: "es" | "en"): string {
+  const localizedClass = wowClassName(recommendation.wowClass, language) ?? recommendation.wowClass;
+  return recommendation.specId ? `${specName(recommendation.specId, language)} ${localizedClass}` : localizedClass;
 }
 
 function recommendationIcon(recommendation: KeystonePlannerVacancyRecommendation, advanced: boolean): string | null {
@@ -293,6 +296,7 @@ function PlannerExternalBreakdown({ onClose, onSelect, selectedId, vacancy }: {
   selectedId?: string; vacancy: KeystonePlannerVacancy;
 }) {
   const copy = usePlannerCopy();
+  const { language } = useI18n();
   const recommendations = plannerVacancyRecommendations(vacancy);
   const advanced = vacancy.recommendationMode === "advanced";
   const title = externalRecommendationTitle(copy, vacancy);
@@ -313,7 +317,7 @@ function PlannerExternalBreakdown({ onClose, onSelect, selectedId, vacancy }: {
         const content = <>
           <span className="planner-external-popover__identity">
             <span className="planner-external-popover__icons">{classIcon ? <img alt="" src={classIcon} /> : <CircleHelp aria-hidden="true" />}{advanced ? specIcon ? <img alt="" src={specIcon} /> : <CircleHelp aria-hidden="true" /> : null}</span>
-            <strong>{recommendationLabel(recommendation)}</strong>
+            <strong>{recommendationLabel(recommendation, language)}</strong>
           </span>
           <span className="planner-external-popover__capabilities" aria-label={`${copy.buffsDebuffs} · ${copy.utilities}`}>
             {[...recommendation.buffsDebuffs, ...recommendation.utilities].slice(0, 7).map(capability => <PlannerCapabilityChip capability={capability} compact key={`${recommendation.id}:${capability.spellId}`} />)}
@@ -323,7 +327,7 @@ function PlannerExternalBreakdown({ onClose, onSelect, selectedId, vacancy }: {
         </>;
         return <article data-selected={recommendation.id === selectedId} key={recommendation.id} style={{ "--planner-class-color": classColor(recommendation.wowClass) } as React.CSSProperties}>
           {onSelect
-            ? <button aria-label={`${copy.selectRecommendation}: ${recommendationLabel(recommendation)}`} className="planner-external-popover__choice" onClick={() => { onSelect(recommendation); onClose(); }} type="button">{content}</button>
+            ? <button aria-label={`${copy.selectRecommendation}: ${recommendationLabel(recommendation, language)}`} className="planner-external-popover__choice" onClick={() => { onSelect(recommendation); onClose(); }} type="button">{content}</button>
             : <div className="planner-external-popover__choice">{content}</div>}
         </article>;
       })}</div>
@@ -334,18 +338,19 @@ function PlannerExternalBreakdown({ onClose, onSelect, selectedId, vacancy }: {
 
 function PlannerExternalPreview({ partySlot, vacancy }: { partySlot: PlannerPartySlot; vacancy: KeystonePlannerVacancy }) {
   const copy = usePlannerCopy();
+  const { language } = useI18n();
   const [open, setOpen] = useState(false);
   const recommendations = plannerVacancyRecommendations(vacancy);
   const visible = recommendations.slice(0, 4);
   const advanced = vacancy.recommendationMode === "advanced";
-  const labels = visible.map(recommendationLabel).join(", ");
+  const labels = visible.map(recommendation => recommendationLabel(recommendation, language)).join(", ");
   return <div aria-label={`${copy.externalSlot}: ${copy.role[vacancy.role]}${labels ? `. ${externalRecommendationTitle(copy, vacancy)}: ${labels}` : ""}`} className="planner-external-preview" data-mode={advanced ? "advanced" : "quick"} data-party-slot={partySlot} data-role={vacancy.role} role="group">
     <span className="planner-role-watermark"><WowRoleIcon role={vacancy.role} /></span>
     <span aria-hidden="true" className="planner-external-preview__title">{copy.externalCardTitle}</span>
     <span aria-hidden="true" className="planner-external-preview__avatar"><CircleHelp /></span>
     {visible.map((recommendation, index) => {
       const icon = recommendationIcon(recommendation, advanced);
-      const label = recommendationLabel(recommendation);
+      const label = recommendationLabel(recommendation, language);
       return <span aria-label={label} className="planner-external-preview__class" data-corner={index + 1} data-icon-kind={advanced ? "spec" : "class"} key={recommendation.id} role="img" style={{ "--planner-class-color": classColor(recommendation.wowClass) } as React.CSSProperties} title={label}>
         {icon ? <img alt="" src={icon} /> : <CircleHelp aria-hidden="true" />}
       </span>;
@@ -509,6 +514,7 @@ function PlannerExternalCard({ onSelect, partySlot, selectedId, vacancy }: {
   vacancy: KeystonePlannerVacancy;
 }) {
   const copy = usePlannerCopy();
+  const { language } = useI18n();
   const recommendations = plannerVacancyRecommendations(vacancy);
   const [open, setOpen] = useState(false);
   const selected = recommendations.find(recommendation => recommendation.id === selectedId) ?? recommendations[0];
@@ -526,14 +532,14 @@ function PlannerExternalCard({ onSelect, partySlot, selectedId, vacancy }: {
       <span className="planner-external-card__selectors" role="group" aria-label={`${externalRecommendationTitle(copy, vacancy)} · ${copy.role[vacancy.role]}`}>
         {recommendations.slice(0, 4).map(recommendation => {
           const icon = recommendationIcon(recommendation, advanced);
-          const label = recommendationLabel(recommendation);
+          const label = recommendationLabel(recommendation, language);
           return <button aria-label={`${copy.selectRecommendation}: ${label}`} aria-pressed={recommendation.id === selected.id} data-icon-kind={advanced ? "spec" : "class"} key={recommendation.id} onClick={() => onSelect(recommendation)} title={label} type="button" style={{ "--planner-class-color": classColor(recommendation.wowClass) } as React.CSSProperties}>
             {icon ? <img alt="" src={icon} /> : <CircleHelp aria-hidden="true" />}
           </button>;
         })}
         {recommendations.length > 4 ? <button aria-label={`${copy.viewClasses}: ${recommendations.length}`} className="planner-external-card__more" onClick={() => setOpen(true)} type="button">+</button> : null}
       </span>
-      <span className="planner-external-card__identity"><strong>{recommendationLabel(selected)}</strong><small>{copy.externalSlot} · {copy.role[vacancy.role]}</small></span>
+      <span className="planner-external-card__identity"><strong>{recommendationLabel(selected, language)}</strong><small>{copy.externalSlot} · {copy.role[vacancy.role]}</small></span>
     </header>
     <div className="planner-external-card__contributions">
       <section aria-label={copy.capabilitySummary} role="group"><span className="planner-external-card__contribution-heading">
@@ -710,6 +716,7 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
   setSelectedUsers: React.Dispatch<React.SetStateAction<Set<number>>>; teamId: number | null;
 }) {
   const copy = usePlannerCopy();
+  const { language } = useI18n();
   const [minimumLevel, setMinimumLevel] = useState(1);
   const [selectedStoneId, setSelectedStoneId] = useState<number | null>(null);
   const [response, setResponse] = useState<KeystonePlannerResponse | null>(null);
@@ -761,15 +768,15 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
     dataSource.getKeystonePlanner(teamId, {
       participantUserIds: [...selectedUsers], targetLevel: selectedStone.level, challengeMapId: dungeonId,
       stoneCharacterId: selectedStone.characterId, options: requestedOptions, locks: [],
-    }).then(result => {
+    }, language === "es" ? "es_ES" : "en_US").then(result => {
       if (currentGeneration !== generation.current) return;
       setResponse(result); setExpanded(null);
     }).catch(caught => {
       if (currentGeneration !== generation.current) return;
-      const parsed = errorInfo(caught, copy.requestError);
+      const parsed = errorInfo(caught, language, copy.requestError);
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired(); else setPlannerError(parsed.message);
     }).finally(() => { if (currentGeneration === generation.current) setLoading(false); });
-  }, [copy.requestError, copy.selectError, dataSource, dungeonId, onSessionExpired, options, response, selectedStone, selectedUsers, teamId]);
+  }, [copy.requestError, copy.selectError, dataSource, dungeonId, language, onSessionExpired, options, response, selectedStone, selectedUsers, teamId]);
 
   useEffect(() => {
     if (previousOptions.current === options) return;
@@ -871,35 +878,36 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
   </div>;
 }
 
-const GROUP_LABELS: Record<SelectorObjectiveGroup["key"], string> = {
-  bestInSlot: "BEST IN SLOT", mustHave: "MUST HAVE", niceToHave: "NICE TO HAVE",
-  catalyst: "CATALYST", transmog: "TRANSMOG", other: "OTHER",
+const GROUP_LABELS: Record<"es" | "en", Record<SelectorObjectiveGroup["key"], string>> = {
+  es: { bestInSlot: "ÓPTIMO", mustHave: "IMPRESCINDIBLE", niceToHave: "RECOMENDABLE", catalyst: "CATALIZADOR", transmog: "TRANSFIGURACIÓN", other: "OTROS" },
+  en: { bestInSlot: "BEST IN SLOT", mustHave: "MUST HAVE", niceToHave: "NICE TO HAVE", catalyst: "CATALYST", transmog: "TRANSMOG", other: "OTHER" },
 };
 
 function ObjectiveGroups({ character, specId }: { character: KeystoneSelectorCharacter; specId: number | null }) {
+  const { language } = useI18n();
   const { groups } = groupSelectorObjectives(selectorObjectivesForSpec(character.objectives, specId));
   return <div className="teams-objectives">
     {groups.map(group => <section className="teams-objective-group" data-category={group.key} key={group.key}>
-      <h4>{GROUP_LABELS[group.key]} · {group.objectives.length}</h4>
+      <h4>{GROUP_LABELS[language][group.key]} · {group.objectives.length}</h4>
       <div className="teams-item-grid">{group.objectives.map(objective => <TeamItemTooltip key={`${objective.itemId}:${objective.sourceType}:${objective.sourceId}:${objective.variantKey}`} objective={objective} />)}</div>
     </section>)}
   </div>;
 }
 
 function SelectorCharacterRow({ character, rank }: { character: KeystoneSelectorCharacter; rank: number }) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [specId, setSpecId] = useState<number | null>(null);
   const controls = `teams-character-${character.characterId}`;
   const oneSpec = character.specs.length === 1 ? character.specs[0] : null;
-  const specLabel = character.specs.map(spec => specName(spec.specId)).join(" / ");
+  const classAndSpecLabel = [wowClassName(character.wowClass, language), character.specs.map(spec => specName(spec.specId, language)).join(" / ")].filter(Boolean).join(" · ");
   return <article className="teams-character-row" data-emphasis="full" data-expanded={expanded} data-owner-id={character.userId} data-testid="selector-character">
     <button aria-controls={controls} aria-expanded={expanded} aria-label={`${expanded ? t("teams.hideItems") : t("teams.showItems")} · ${character.characterName}`} className="teams-character-row__summary" onClick={() => setExpanded(value => !value)} type="button">
       <span className="teams-rank" aria-label={t("teams.rank", { rank })}>#{rank}</span>
       <Portrait avatarUrl={character.avatarUrl} name={character.characterName} wowClass={character.wowClass} />
       <div className="teams-character-row__identity">
         <strong style={{ color: classColor(character.wowClass) }}>{character.characterName}</strong>
-        <span className="teams-character-row__details"><span>{specLabel}</span><span>{character.realm}</span><span>{character.username}</span></span>
+        <span className="teams-character-row__details"><span>{classAndSpecLabel}</span><span>{character.realm}</span><span>{character.username}</span></span>
       </div>
       <strong className="teams-objective-count">{t("teams.objectiveCountShort", { count: character.totalObjectives })}</strong>
       <TierSummary counts={character.tierCounts} />
@@ -908,8 +916,8 @@ function SelectorCharacterRow({ character, rank }: { character: KeystoneSelector
     {expanded ? <div className="teams-character-row__content" id={controls}>
       {character.specs.length > 1 ? <div aria-label={t("teams.specFilter")} className="teams-specs" role="group">
         <button aria-pressed={specId === null} onClick={() => setSpecId(null)} type="button">{t("teams.allSpecs")} · {character.totalObjectives}</button>
-        {character.specs.map(spec => <button aria-pressed={specId === spec.specId} key={spec.specId} onClick={() => setSpecId(spec.specId)} type="button">{specName(spec.specId)} · {spec.objectiveCount}</button>)}
-      </div> : oneSpec ? <span className="teams-single-spec">{specName(oneSpec.specId)}</span> : null}
+        {character.specs.map(spec => <button aria-pressed={specId === spec.specId} key={spec.specId} onClick={() => setSpecId(spec.specId)} type="button">{specName(spec.specId, language)} · {spec.objectiveCount}</button>)}
+      </div> : oneSpec ? <span className="teams-single-spec">{specName(oneSpec.specId, language)}</span> : null}
       <ObjectiveGroups character={character} specId={specId} />
     </div> : null}
   </article>;
@@ -950,7 +958,7 @@ function MemberStrip({ detail, mode, onClear, onToggle, ownerUserId, selected }:
   detail: ClientTeamDetail | null; mode: "objectives" | "planner"; onClear: () => void;
   onToggle: (userId: number) => void; ownerUserId: number | null; selected: Set<number>;
 }) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const memberCount = detail?.members.length ?? 0;
   const showSelection = mode === "objectives" ? memberCount > 0 : selected.size > 0;
   const showClear = mode === "objectives" ? selected.size < memberCount : selected.size > 0;
@@ -959,9 +967,9 @@ function MemberStrip({ detail, mode, onClear, onToggle, ownerUserId, selected }:
       {detail?.members.map(member => {
         const unavailable = mode === "planner" && !member.plannerConfigured;
         const pinned = mode === "planner" && member.userId === ownerUserId;
-        return <button aria-label={t(member.characters.length === 1 ? "teams.memberFilterOne" : "teams.memberFilter", { name: member.username, count: member.characters.length })} aria-pressed={selected.has(member.userId)} className="teams-member-filter" data-pinned={pinned} data-unavailable={unavailable} disabled={unavailable} key={member.userId} onClick={() => onToggle(member.userId)} title={unavailable ? "Planner sin configurar" : undefined} type="button">
+        return <button aria-label={t(member.characters.length === 1 ? "teams.memberFilterOne" : "teams.memberFilter", { name: member.username, count: member.characters.length })} aria-pressed={selected.has(member.userId)} className="teams-member-filter" data-pinned={pinned} data-unavailable={unavailable} disabled={unavailable} key={member.userId} onClick={() => onToggle(member.userId)} title={unavailable ? (language === "es" ? "Planificador sin configurar" : "Planner not configured") : undefined} type="button">
         <span className="teams-member-filter__avatars">{member.characters.slice(0, 3).map(character => <Portrait avatarUrl={character.avatarUrl} key={character.characterId} name={character.name} wowClass={character.wowClass} />)}</span>
-        <span><strong>{member.username}</strong><small>{unavailable ? "Sin configurar" : t(member.characters.length === 1 ? "teams.characterCountOne" : "teams.characterCount", { count: member.characters.length })}</small></span>
+        <span><strong>{member.username}</strong><small>{unavailable ? (language === "es" ? "Sin configurar" : "Not configured") : t(member.characters.length === 1 ? "teams.characterCountOne" : "teams.characterCount", { count: member.characters.length })}</small></span>
         {pinned ? <Crown aria-hidden="true" className="teams-member-filter__owner" /> : null}
         <Check aria-hidden="true" className="teams-member-filter__check" />
       </button>;
@@ -1029,7 +1037,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       return result;
     }).catch(caught => {
       if (generation === listGeneration.current) {
-        const parsed = errorInfo(caught, t("teams.loadError"));
+        const parsed = errorInfo(caught, language, t("teams.loadError"));
         if (parsed.code === "SESSION_EXPIRED") onSessionExpired();
         else if (teamsRef.current === null) setTeamError(parsed.message);
       }
@@ -1080,7 +1088,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       hasRevealedTeam.current = true;
     }).catch(caught => {
       if (generation !== detailGeneration.current) return;
-      const parsed = errorInfo(caught, t("teams.loadError"));
+      const parsed = errorInfo(caught, language, t("teams.loadError"));
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired();
       else if (["TEAM_ACCESS_DENIED", "TEAM_NOT_FOUND"].includes(parsed.code)) {
         removeTeamFromSessionCache(teamId);
@@ -1102,7 +1110,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       if (generation === selectorGeneration.current) { setSelector(result); setSelectorError(null); }
     }).catch(caught => {
       if (generation !== selectorGeneration.current) return;
-      const parsed = errorInfo(caught, t("teams.selectorError"));
+      const parsed = errorInfo(caught, language, t("teams.selectorError"));
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired();
       else if (!cached) setSelectorError(parsed.message);
     }).finally(() => { if (generation === selectorGeneration.current) setSelectorLoading(false); });
@@ -1150,7 +1158,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       setPlannerPreferences(result); setOwnPlannerReadiness(ready);
       setPreferencesOpen(blockUntilReady && !ready);
     }).catch(caught => {
-      const parsed = errorInfo(caught, language === "es" ? "No se pudo cargar la configuración del Planner." : "Planner configuration could not be loaded.");
+      const parsed = errorInfo(caught, language, language === "es" ? "No se pudo cargar la configuración del Planificador." : "Planner configuration could not be loaded.");
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired();
       else { setPreferencesError(parsed.message); setPreferencesOpen(blockUntilReady); }
     }).finally(() => setPreferencesLoading(false));
@@ -1175,7 +1183,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       setPlannerPreferences(result); setOwnPlannerReadiness(ready);
       if (ready) setPreferencesOpen(false);
     } catch (caught) {
-      const parsed = errorInfo(caught, language === "es" ? "No se pudo guardar la configuración." : "The configuration could not be saved.");
+      const parsed = errorInfo(caught, language, language === "es" ? "No se pudo guardar la configuración." : "The configuration could not be saved.");
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired(); else setPreferencesError(parsed.message);
     } finally { setPreferencesSaving(false); }
   };
@@ -1230,9 +1238,10 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       <nav aria-label={t("teams.dungeons")} className="teams-dungeon-rail">
         {MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => {
           const count = counts.get(dungeon.id) ?? 0; const selected = dungeonId === dungeon.id;
-          return <button aria-label={t(count === 1 ? "teams.selectDungeonOne" : "teams.selectDungeon", { name: dungeon.name, count })} aria-pressed={selected} className="teams-dungeon" data-available={count > 0} disabled={!detail} key={dungeon.id} onClick={() => selectDungeon(dungeon.id)} title={dungeon.name} type="button">
+          const localizedName = dungeonName(dungeon, language);
+          return <button aria-label={t(count === 1 ? "teams.selectDungeonOne" : "teams.selectDungeon", { name: localizedName, count })} aria-pressed={selected} className="teams-dungeon" data-available={count > 0} disabled={!detail} key={dungeon.id} onClick={() => selectDungeon(dungeon.id)} title={localizedName} type="button">
             <img alt="" aria-hidden="true" className="teams-dungeon__art" src={dungeon.teleportIconUrl} />
-            <span>{dungeon.name}</span><b>{count}</b>
+            <span>{localizedName}</span><b>{count}</b>
           </button>;
         })}
       </nav>

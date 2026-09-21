@@ -3,10 +3,10 @@ import { bundledRelease } from "../../src/generated/release";
 import { expectStableReleaseScreenshot, releaseSectionHeading } from "./release-visual-fixture";
 
 const synchronizationStates = [
-  { preview: "sync-idle", snapshot: "sync-idle.png", label: "Esperando sincronizacion" },
+  { preview: "sync-idle", snapshot: "sync-idle.png", label: "Esperando sincronización" },
   { preview: "sync-watching", snapshot: "sync-watching.png", label: "Listo para sincronizar" },
   { preview: "sync-syncing", snapshot: "sync-syncing.png", label: "Sincronizando" },
-  { preview: "sync-error", snapshot: "sync-error.png", label: "Error de sincronizacion" },
+  { preview: "sync-error", snapshot: "sync-error.png", label: "Error de sincronización" },
 ] as const;
 
 test.describe("preview states", () => {
@@ -59,8 +59,8 @@ test.describe("preview states", () => {
   test("renders synchronization success preview", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await expect(page.getByText("Makabe")).toBeVisible();
-    await expect(page.getByLabel("Estado de sincronizacion").getByText("Sincronizacion completada")).toBeVisible();
-    await expect(page.getByText("Version de la aplicacion")).toBeVisible();
+    await expect(page.getByLabel("Estado de sincronización").getByText("Sincronización completada")).toBeVisible();
+    await expect(page.getByText("Versión de la aplicación")).toBeVisible();
     await page.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
     expect(await page.evaluate(() => ({
       frame: document.querySelector(".ks-app-frame")?.getBoundingClientRect().toJSON(),
@@ -129,7 +129,7 @@ test.describe("preview states", () => {
 
   test("renders the selectable theme control in Settings", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
 
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
@@ -137,15 +137,15 @@ test.describe("preview states", () => {
     const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
     await expect(themeSelector).toHaveValue("keystone");
     await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison", "Void"]);
-    await expect(page.getByRole("heading", { name: "Seleccion de cuentas" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Aplicacion" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Selección de cuentas" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Aplicación" })).toBeVisible();
     await expectStableReleaseScreenshot(page, "settings-theme-selector.png");
   });
 
   test("keeps the window proportion option and save action usable at Full HD startup size", async ({ page }) => {
     await page.setViewportSize({ width: 1478, height: 832 });
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Ajustes" });
     const lock = dialog.getByRole("checkbox", { name: "Bloquear proporción al cambiar el tamaño" });
@@ -159,7 +159,7 @@ test.describe("preview states", () => {
   test("renders the signed update confirmation above the client", async ({ page }) => {
     await page.goto("/?preview=sync-success&updater=available");
 
-    const modal = page.getByRole("dialog", { name: "Actualizacion 0.4.0" });
+    const modal = page.getByRole("dialog", { name: "Actualización 0.4.0" });
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("heading", { level: 1, name: "KeystoneClient 0.4.0" })).toBeVisible();
     await expect(modal.getByRole("listitem")).toHaveCount(2);
@@ -170,7 +170,7 @@ test.describe("preview states", () => {
   test("keeps long release notes above the download progress footer", async ({ page }) => {
     await page.goto("/?preview=sync-success&updater=downloading");
 
-    const modal = page.getByRole("dialog", { name: "Actualizacion 0.10.1" });
+    const modal = page.getByRole("dialog", { name: "Actualización 0.10.1" });
     const body = modal.locator(".ks-update-modal__body");
     const footer = modal.locator(".ks-update-modal__footer");
     const progressbar = modal.getByRole("progressbar");
@@ -193,7 +193,7 @@ test.describe("preview states", () => {
   test("renders the post-update changelog Markdown", async ({ page }) => {
     await page.goto("/?preview=sync-success&changelog=post-update");
 
-    const modal = page.getByRole("dialog", { name: "Novedades de la actualizacion" });
+    const modal = page.getByRole("dialog", { name: "Novedades de la actualización" });
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("heading", { level: 1, name: `KeystoneClient ${bundledRelease.version}` })).toBeVisible();
     await expect(modal.getByRole("heading", { level: 2, name: releaseSectionHeading(bundledRelease.notes), exact: true })).toBeVisible();
@@ -202,10 +202,10 @@ test.describe("preview states", () => {
 
   test("renders the user menu above the current view", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+    await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
 
     const menu = page.getByRole("menu");
-    const logoutButton = page.getByRole("menuitem", { name: "Cerrar sesion" });
+    const logoutButton = page.getByRole("menuitem", { name: "Cerrar sesión" });
     await expect(menu).toBeVisible();
     await expect(logoutButton.locator("svg")).toBeVisible();
 
@@ -224,7 +224,7 @@ test.describe("preview states", () => {
 
   test("renders the avatar picker above the current view", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+    await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
     await page.getByRole("menuitem", { name: "Cambiar avatar" }).click();
 
     await expect(page.getByRole("dialog", { name: "Cambiar avatar" })).toBeVisible();

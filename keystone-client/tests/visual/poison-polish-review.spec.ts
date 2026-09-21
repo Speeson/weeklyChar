@@ -45,14 +45,14 @@ test("captures character data scrolled beneath the fixed Poison frame", async ({
 
 test("captures the polished Poison user menu", async ({ page }) => {
   await preparePoison(page, "sync-success");
-  await page.getByRole("button", { name: "Menu de usuario de Spee" }).click();
+  await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
   await expect(page.getByRole("menu")).toBeVisible();
   await capture(page, "user-menu.png");
 });
 
 test("captures the polished Poison settings dialog", async ({ page }) => {
   await preparePoison(page, "sync-success");
-  await page.getByRole("button", { name: "Configuracion" }).click();
+  await page.getByRole("button", { name: "Configuración" }).click();
   await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
   await capture(page, "settings.png");
 });

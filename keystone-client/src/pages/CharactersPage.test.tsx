@@ -39,14 +39,14 @@ describe("CharactersPage", () => {
     const characters = charactersPreview();
     characters[0].mythicPlusSeason = { ...characters[0].mythicPlusSeason, rating: 3214 };
     const { container, rerender } = renderPage({ ...state, characters });
-    const chip = screen.getByText("Rating total").closest("span")!;
+    const chip = screen.getByText("Puntuación total").closest("span")!;
     expect(chip).toHaveClass("dungeons-panel__rating");
     expect(chip).toHaveTextContent("3214");
     expect(container.querySelector(".dungeons-panel > h2")).toContainElement(chip);
     characters[0].mythicPlusSeason = { dungeons: characters[0].mythicPlusSeason?.dungeons };
     characters[0].rioScore = 2987;
     rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
-    expect(screen.getByText("Rating total").closest("span")).toHaveTextContent("2987");
+    expect(screen.getByText("Puntuación total").closest("span")).toHaveTextContent("2987");
   });
 
   it("shows mixed Raider.IO tier counts and retains the generic fallback", () => {
@@ -94,7 +94,7 @@ describe("CharactersPage", () => {
     const characters = charactersPreview();
     characters[0].equipment!.items[0].upgrade = { track: "Hero", currentLevel: 2, maxLevel: 6 };
     const { container } = renderPage({ ...state, characters });
-    expect(container.querySelector(".gear-item__piece .upgrade-track-icon--badge")).toHaveAttribute("aria-label", "Hero");
+    expect(container.querySelector(".gear-item__piece .upgrade-track-icon--badge")).toHaveAttribute("aria-label", "Héroe");
     const categoryRows = container.querySelectorAll(".vault-panel > div");
     expect(categoryRows).toHaveLength(3);
     for (const row of categoryRows) {
@@ -163,7 +163,7 @@ describe("CharactersPage", () => {
     const { container } = renderPage();
     expect(container.querySelectorAll(".talent-preview a[data-wowhead]").length).toBeGreaterThan(0);
     expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Equilibrio");
-    expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Elegido de Elune");
+    expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Elección de Elune");
     expect(container.querySelectorAll(".talents-panel__identity img")).toHaveLength(2);
     expect(container.querySelectorAll<HTMLImageElement>(".talents-panel__identity img")[0].src).toContain("136096");
     expect(container.querySelectorAll<HTMLImageElement>(".talents-panel__identity img")[1].src).toContain("dungeon-teleports");
@@ -187,9 +187,9 @@ describe("CharactersPage", () => {
     hero.subTreeId = 24;
     const { container } = renderPage({ ...state, characters });
     expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Equilibrio");
-    expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Elegido de Elune");
+    expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Elección de Elune");
     await user.click(screen.getByRole("button", { name: /Mostrar configuración completa/i }));
-    expect(screen.getByRole("dialog").querySelector(".ks-talent-modal__identity")).toHaveTextContent("Bakuhatsu - Druida Equilibrio - Elegido de Elune");
+    expect(screen.getByRole("dialog").querySelector(".ks-talent-modal__identity")).toHaveTextContent("Bakuhatsu - Druida Equilibrio - Elección de Elune");
   });
 
   it("uses the Web currency semantic colors on card titles", () => {
@@ -306,13 +306,13 @@ describe("CharactersPage", () => {
     const user = userEvent.setup(); renderPage();
     await user.click(screen.getByRole("button", { name: "Mostrar configuración completa" }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("Elegido de Elune")).toBeVisible();
-    expect(dialog.querySelector(".ks-talent-modal__identity")).toHaveTextContent("Bakuhatsu - Druida Equilibrio - Elegido de Elune");
+    expect(within(dialog).getByText("Elección de Elune")).toBeVisible();
+    expect(dialog.querySelector(".ks-talent-modal__identity")).toHaveTextContent("Bakuhatsu - Druida Equilibrio - Elección de Elune");
     expect(dialog.querySelector(".ks-talent-modal__panel")).toHaveStyle("--class-color: #FF7C0A");
     expect(dialog.querySelectorAll("[data-tree-type]")).toHaveLength(4);
     expect(dialog.querySelector(".ks-talent-modal__content > .ks-talent-modal__omnium")).toBeInTheDocument();
     expect(dialog.querySelectorAll(".ks-talent-tree__edges line").length).toBeGreaterThan(0);
-    expect(within(dialog).getByRole("button", { name: "Copiar build" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Copiar configuración" })).toBeEnabled();
   });
 
   it("uses Blizzard's explicitly active Hero subtree when multiple choices are captured", async () => {
@@ -322,7 +322,7 @@ describe("CharactersPage", () => {
     characters[0].talents!.trees.splice(1, 0, { ...activeHero, active: false, name: "KEEPER OF THE GROVE" });
     renderPage({ ...state, characters });
     await user.click(screen.getByRole("button", { name: "Mostrar configuración completa" }));
-    expect(within(screen.getByRole("dialog")).getByText("Elegido de Elune")).toBeVisible();
+    expect(within(screen.getByRole("dialog")).getByText("Elección de Elune")).toBeVisible();
     expect(within(screen.getByRole("dialog")).queryByText("KEEPER OF THE GROVE")).not.toBeInTheDocument();
   });
 

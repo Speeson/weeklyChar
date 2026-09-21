@@ -304,7 +304,7 @@ class TeamServiceTests(unittest.TestCase):
 
         self.assertEqual(planned["status"], "no_valid_composition")
         self.assertNotIn("access_token", planned)
-        self.assertTrue(session.calls[0][0].endswith("/api/teams/7/keystone-planner"))
+        self.assertTrue(session.calls[0][0].endswith("/api/teams/7/keystone-planner?locale=es_ES"))
         self.assertEqual(session.calls[0][1]["headers"], {"Authorization": "Bearer access-secret"})
         self.assertEqual(session.calls[0][1]["json"], request)
         self.assertEqual(session.calls[0][1]["timeout"], 15)

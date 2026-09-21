@@ -2,6 +2,7 @@ import type { UpdaterSnapshot } from "../core/updater";
 import { useI18n } from "../core/i18n";
 import { ThemedIcon } from "./ThemedIcon";
 import { ReleaseNotesMarkdown } from "./ReleaseNotesMarkdown";
+import { localizedReleaseNotes } from "../core/releaseNotes";
 
 type UpdateModalProps = {
   snapshot: UpdaterSnapshot;
@@ -18,7 +19,7 @@ function progress(snapshot: UpdaterSnapshot): number | null {
 }
 
 export function UpdateModal({ snapshot, onClose, onInstall, onRetry }: UpdateModalProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const percent = progress(snapshot);
   const busy = snapshot.status === "downloading" || snapshot.status === "installing";
 
@@ -41,7 +42,7 @@ export function UpdateModal({ snapshot, onClose, onInstall, onRetry }: UpdateMod
 
         <div className="ks-update-modal__body">
           {snapshot.status === "error" ? (
-            <p className="error" role="alert">{snapshot.error ?? t("updater.errorGeneric")}</p>
+            <p className="error" role="alert">{t("updater.errorGeneric")}</p>
           ) : (
             <>
               <p className="ks-update-modal__version">
@@ -52,7 +53,7 @@ export function UpdateModal({ snapshot, onClose, onInstall, onRetry }: UpdateMod
               </p>
               <section aria-labelledby="update-notes-title" className="ks-update-modal__notes">
                 <h3 id="update-notes-title">{t("updater.notes")}</h3>
-                <ReleaseNotesMarkdown notes={snapshot.notes} fallback={t("updater.noNotes")} />
+                <ReleaseNotesMarkdown notes={localizedReleaseNotes(snapshot.notes, language)} fallback={t("updater.noNotes")} />
               </section>
             </>
           )}

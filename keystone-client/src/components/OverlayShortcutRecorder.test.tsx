@@ -80,7 +80,7 @@ describe("OverlayShortcutRecorder", () => {
     await user.click(recorder);
     fireEvent.keyDown(recorder, { code: "KeyJ", key: "J", ctrlKey: true, shiftKey: true });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se puede guardar ese atajo de teclado. Está reservado por otra aplicación.");
     expect(recorder).toHaveAttribute("aria-pressed", "true");
     expect(onChange).not.toHaveBeenCalled();
     expect(onRecordingStop).not.toHaveBeenCalled();
@@ -106,7 +106,7 @@ describe("OverlayShortcutRecorder", () => {
 
     await user.click(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se puede guardar ese atajo de teclado. Está reservado por otra aplicación.");
     expect(onValidate).toHaveBeenCalledWith("Ctrl+Shift+KeyJ");
   });
 

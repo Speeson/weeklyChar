@@ -56,8 +56,8 @@ test.describe("Poison hover review captures", () => {
     await preparePoison(page, "sync-success", "sync");
     await capturePair(page, page.locator(".ks-window-button--minimize"), "shell-minimize");
     await capturePair(page, page.locator(".ks-window-button--close"), "shell-close");
-    await capturePair(page, page.getByRole("button", { name: "Configuracion" }), "shell-settings");
-    await capturePair(page, page.getByRole("button", { name: "Menu de usuario de Spee" }), "shell-profile");
+    await capturePair(page, page.getByRole("button", { name: "Configuración" }), "shell-settings");
+    await capturePair(page, page.getByRole("button", { name: "Menú de usuario de Spee" }), "shell-profile");
   });
 
   test("captures footer web and tray actions", async ({ page }) => {

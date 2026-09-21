@@ -2,8 +2,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
-import type { CoreError, WowState } from "../core/types";
+import type { WowState } from "../core/types";
 import { useI18n } from "../core/i18n";
+import { localizedCoreErrorMessage } from "../core/errorDisplay";
 import { useThemeAsset } from "../theme/useThemeAsset";
 
 type OnboardingPageProps = {
@@ -14,13 +15,6 @@ type OnboardingPageProps = {
   preview?: boolean;
 };
 
-function errorMessage(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-  return fallback;
-}
-
 export function OnboardingPage({
   initialWow,
   onComplete,
@@ -28,7 +22,7 @@ export function OnboardingPage({
   onWowChanged,
   preview = false,
 }: OnboardingPageProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const appIcon = useThemeAsset("brand-mark");
   const [wow, setWow] = useState(initialWow);
   const [stage, setStage] = useState<"install" | "accounts">(
@@ -67,7 +61,7 @@ export function OnboardingPage({
     try {
       return applyWow(await action());
     } catch (caught) {
-      setError(errorMessage(caught, t("onboarding.error")));
+      setError(localizedCoreErrorMessage(caught, language, t("onboarding.error")));
       return null;
     } finally {
       setBusy(false);
@@ -99,7 +93,7 @@ export function OnboardingPage({
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(errorMessage(caught, t("onboarding.error")));
+          setError(localizedCoreErrorMessage(caught, language, t("onboarding.error")));
         }
       })
       .finally(() => {

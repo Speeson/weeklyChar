@@ -521,7 +521,7 @@ test("Poison keeps keyboard focus visible on the primary sync action", async ({ 
 
 test("Poison keeps the decorative modal stroke anchored to the dialog panel", async ({ page }) => {
   await page.goto("/?preview=sync-success");
-  await page.getByRole("button", { name: "Configuracion" }).click();
+  await page.getByRole("button", { name: "Configuración" }).click();
 
   const panel = page.locator(".ks-modal__panel");
   await expect(panel).toBeVisible();
@@ -536,7 +536,7 @@ test("Poison keeps the decorative modal stroke anchored to the dialog panel", as
 
 test("Poison does not force thin scrollbar geometry on modal content", async ({ page }) => {
   await page.goto("/?preview=sync-success");
-  await page.getByRole("button", { name: "Configuracion" }).click();
+  await page.getByRole("button", { name: "Configuración" }).click();
 
   const content = page.locator(".ks-modal__content");
   await expect(content).toBeVisible();

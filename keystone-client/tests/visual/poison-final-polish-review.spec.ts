@@ -59,7 +59,7 @@ test("captures rows inside the fixed frame at maximum scroll", async ({ page }) 
 test("captures the real avatar fixture beneath the profile artwork", async ({ page }) => {
   await preparePoison(page, "sync-success");
   await mountAvatarFixture(page);
-  const dropdown = page.getByRole("button", { name: "Menu de usuario de Spee" });
+  const dropdown = page.getByRole("button", { name: "Menú de usuario de Spee" });
   await dropdown.click();
   await expect(page.getByRole("menu")).toBeVisible();
   await dropdown.click();

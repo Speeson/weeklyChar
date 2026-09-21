@@ -45,9 +45,16 @@ describe("Keystone Planner core bridge", () => {
     const result = await getKeystonePlanner(7, request);
     expect(coreRequest).toHaveBeenCalledWith("teams.keystone_planner", {
       ...request, teamId: 7, participantUserIds: [2, 3], options: { ...DEFAULT_KEYSTONE_PLANNER_OPTIONS }, locks: [],
+      locale: "es_ES",
     });
     expect(result.recommendations[0].stone.characterId).toBe(10);
     expect(JSON.stringify(result)).not.toContain("SECRET");
+  });
+
+  it("forwards the selected English metadata locale", async () => {
+    vi.mocked(coreRequest).mockResolvedValueOnce(response());
+    await getKeystonePlanner(7, request, "en_US");
+    expect(coreRequest).toHaveBeenCalledWith("teams.keystone_planner", expect.objectContaining({ locale: "en_US" }));
   });
 
   it("forwards the explicit optional-party-fill choice", async () => {

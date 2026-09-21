@@ -1,6 +1,24 @@
 import type { KeystonePlannerRole } from "./types";
 
-export type ClientWowSpecialization = { id: number; name: string; wowClass: string; role: KeystonePlannerRole };
+import type { Language } from "./i18n";
+
+export type ClientWowSpecialization = { id: number; name: string; nameEs: string; wowClass: string; role: KeystonePlannerRole };
+
+const WOW_CLASS_NAMES_ES: Readonly<Record<string, string>> = {
+  "death knight": "Caballero de la Muerte",
+  "demon hunter": "Cazador de demonios",
+  druid: "Druida",
+  evoker: "Evocador",
+  hunter: "Cazador",
+  mage: "Mago",
+  monk: "Monje",
+  paladin: "Paladín",
+  priest: "Sacerdote",
+  rogue: "Pícaro",
+  shaman: "Chamán",
+  warlock: "Brujo",
+  warrior: "Guerrero",
+};
 
 const WOW_CLASS_ICON_NAMES: Readonly<Record<string, string>> = {
   "death knight": "classicon_deathknight", "demon hunter": "classicon_demonhunter", druid: "classicon_druid",
@@ -29,26 +47,36 @@ const WOW_SPECIALIZATION_ICON_FILE_IDS: Readonly<Record<number, number>> = {
 
 // Mirrors the Worker's verified catalog in keystone-worker/src/wowComposition.ts.
 export const WOW_SPECIALIZATIONS: readonly ClientWowSpecialization[] = [
-  { id: 62, name: "Arcane", wowClass: "Mage", role: "dps" }, { id: 63, name: "Fire", wowClass: "Mage", role: "dps" }, { id: 64, name: "Frost", wowClass: "Mage", role: "dps" },
-  { id: 65, name: "Holy", wowClass: "Paladin", role: "healer" }, { id: 66, name: "Protection", wowClass: "Paladin", role: "tank" }, { id: 70, name: "Retribution", wowClass: "Paladin", role: "dps" },
-  { id: 71, name: "Arms", wowClass: "Warrior", role: "dps" }, { id: 72, name: "Fury", wowClass: "Warrior", role: "dps" }, { id: 73, name: "Protection", wowClass: "Warrior", role: "tank" },
-  { id: 102, name: "Balance", wowClass: "Druid", role: "dps" }, { id: 103, name: "Feral", wowClass: "Druid", role: "dps" }, { id: 104, name: "Guardian", wowClass: "Druid", role: "tank" }, { id: 105, name: "Restoration", wowClass: "Druid", role: "healer" },
-  { id: 250, name: "Blood", wowClass: "Death Knight", role: "tank" }, { id: 251, name: "Frost", wowClass: "Death Knight", role: "dps" }, { id: 252, name: "Unholy", wowClass: "Death Knight", role: "dps" },
-  { id: 253, name: "Beast Mastery", wowClass: "Hunter", role: "dps" }, { id: 254, name: "Marksmanship", wowClass: "Hunter", role: "dps" }, { id: 255, name: "Survival", wowClass: "Hunter", role: "dps" },
-  { id: 256, name: "Discipline", wowClass: "Priest", role: "healer" }, { id: 257, name: "Holy", wowClass: "Priest", role: "healer" }, { id: 258, name: "Shadow", wowClass: "Priest", role: "dps" },
-  { id: 259, name: "Assassination", wowClass: "Rogue", role: "dps" }, { id: 260, name: "Outlaw", wowClass: "Rogue", role: "dps" }, { id: 261, name: "Subtlety", wowClass: "Rogue", role: "dps" },
-  { id: 262, name: "Elemental", wowClass: "Shaman", role: "dps" }, { id: 263, name: "Enhancement", wowClass: "Shaman", role: "dps" }, { id: 264, name: "Restoration", wowClass: "Shaman", role: "healer" },
-  { id: 265, name: "Affliction", wowClass: "Warlock", role: "dps" }, { id: 266, name: "Demonology", wowClass: "Warlock", role: "dps" }, { id: 267, name: "Destruction", wowClass: "Warlock", role: "dps" },
-  { id: 268, name: "Brewmaster", wowClass: "Monk", role: "tank" }, { id: 269, name: "Windwalker", wowClass: "Monk", role: "dps" }, { id: 270, name: "Mistweaver", wowClass: "Monk", role: "healer" },
-  { id: 577, name: "Havoc", wowClass: "Demon Hunter", role: "dps" }, { id: 581, name: "Vengeance", wowClass: "Demon Hunter", role: "tank" },
-  { id: 1467, name: "Devastation", wowClass: "Evoker", role: "dps" }, { id: 1468, name: "Preservation", wowClass: "Evoker", role: "healer" }, { id: 1473, name: "Augmentation", wowClass: "Evoker", role: "dps" },
-  { id: 1480, name: "Devourer", wowClass: "Demon Hunter", role: "dps" },
+  { id: 62, name: "Arcane", nameEs: "Arcano", wowClass: "Mage", role: "dps" }, { id: 63, name: "Fire", nameEs: "Fuego", wowClass: "Mage", role: "dps" }, { id: 64, name: "Frost", nameEs: "Escarcha", wowClass: "Mage", role: "dps" },
+  { id: 65, name: "Holy", nameEs: "Sagrado", wowClass: "Paladin", role: "healer" }, { id: 66, name: "Protection", nameEs: "Protección", wowClass: "Paladin", role: "tank" }, { id: 70, name: "Retribution", nameEs: "Reprensión", wowClass: "Paladin", role: "dps" },
+  { id: 71, name: "Arms", nameEs: "Armas", wowClass: "Warrior", role: "dps" }, { id: 72, name: "Fury", nameEs: "Furia", wowClass: "Warrior", role: "dps" }, { id: 73, name: "Protection", nameEs: "Protección", wowClass: "Warrior", role: "tank" },
+  { id: 102, name: "Balance", nameEs: "Equilibrio", wowClass: "Druid", role: "dps" }, { id: 103, name: "Feral", nameEs: "Feral", wowClass: "Druid", role: "dps" }, { id: 104, name: "Guardian", nameEs: "Guardián", wowClass: "Druid", role: "tank" }, { id: 105, name: "Restoration", nameEs: "Restauración", wowClass: "Druid", role: "healer" },
+  { id: 250, name: "Blood", nameEs: "Sangre", wowClass: "Death Knight", role: "tank" }, { id: 251, name: "Frost", nameEs: "Escarcha", wowClass: "Death Knight", role: "dps" }, { id: 252, name: "Unholy", nameEs: "Profano", wowClass: "Death Knight", role: "dps" },
+  { id: 253, name: "Beast Mastery", nameEs: "Dominio de bestias", wowClass: "Hunter", role: "dps" }, { id: 254, name: "Marksmanship", nameEs: "Puntería", wowClass: "Hunter", role: "dps" }, { id: 255, name: "Survival", nameEs: "Supervivencia", wowClass: "Hunter", role: "dps" },
+  { id: 256, name: "Discipline", nameEs: "Disciplina", wowClass: "Priest", role: "healer" }, { id: 257, name: "Holy", nameEs: "Sagrado", wowClass: "Priest", role: "healer" }, { id: 258, name: "Shadow", nameEs: "Sombra", wowClass: "Priest", role: "dps" },
+  { id: 259, name: "Assassination", nameEs: "Asesinato", wowClass: "Rogue", role: "dps" }, { id: 260, name: "Outlaw", nameEs: "Forajido", wowClass: "Rogue", role: "dps" }, { id: 261, name: "Subtlety", nameEs: "Sutileza", wowClass: "Rogue", role: "dps" },
+  { id: 262, name: "Elemental", nameEs: "Elemental", wowClass: "Shaman", role: "dps" }, { id: 263, name: "Enhancement", nameEs: "Mejora", wowClass: "Shaman", role: "dps" }, { id: 264, name: "Restoration", nameEs: "Restauración", wowClass: "Shaman", role: "healer" },
+  { id: 265, name: "Affliction", nameEs: "Aflicción", wowClass: "Warlock", role: "dps" }, { id: 266, name: "Demonology", nameEs: "Demonología", wowClass: "Warlock", role: "dps" }, { id: 267, name: "Destruction", nameEs: "Destrucción", wowClass: "Warlock", role: "dps" },
+  { id: 268, name: "Brewmaster", nameEs: "Maestro cervecero", wowClass: "Monk", role: "tank" }, { id: 269, name: "Windwalker", nameEs: "Viajero del viento", wowClass: "Monk", role: "dps" }, { id: 270, name: "Mistweaver", nameEs: "Tejedor de niebla", wowClass: "Monk", role: "healer" },
+  { id: 577, name: "Havoc", nameEs: "Devastación", wowClass: "Demon Hunter", role: "dps" }, { id: 581, name: "Vengeance", nameEs: "Venganza", wowClass: "Demon Hunter", role: "tank" },
+  { id: 1467, name: "Devastation", nameEs: "Devastación", wowClass: "Evoker", role: "dps" }, { id: 1468, name: "Preservation", nameEs: "Preservación", wowClass: "Evoker", role: "healer" }, { id: 1473, name: "Augmentation", nameEs: "Aumento", wowClass: "Evoker", role: "dps" },
+  { id: 1480, name: "Devourer", nameEs: "Devorador", wowClass: "Demon Hunter", role: "dps" },
 ];
 
 const SPECIALIZATION_BY_ID = new Map(WOW_SPECIALIZATIONS.map(spec => [spec.id, spec]));
 
-export function specName(specId: number): string {
-  return SPECIALIZATION_BY_ID.get(specId)?.name ?? `Spec ${specId}`;
+export function specName(specId: number, language: Language = "en", fallback?: string): string {
+  const spec = SPECIALIZATION_BY_ID.get(specId);
+  return spec ? (language === "es" ? spec.nameEs : spec.name) : fallback ?? `${language === "es" ? "Especialización" : "Spec"} ${specId}`;
+}
+
+export function wowClassName(wowClass: string | null | undefined, language: Language): string | null {
+  if (!wowClass) return null;
+  const normalized = wowClass.trim().toLocaleLowerCase();
+  const english = Object.keys(WOW_CLASS_NAMES_ES).find(key => key === normalized || WOW_CLASS_NAMES_ES[key].toLocaleLowerCase() === normalized);
+  if (!english) return wowClass;
+  if (language === "es") return WOW_CLASS_NAMES_ES[english];
+  return english.split(" ").map(part => part[0].toUpperCase() + part.slice(1)).join(" ");
 }
 
 export function wowClassIconUrl(wowClass: string): string | null {

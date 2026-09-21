@@ -206,7 +206,7 @@ test.describe("Void visual states", () => {
 
   test("renders the user dropdown with the Void asset", async ({ page }) => {
     await page.goto("/?preview=sync-success");
-    const trigger = page.getByRole("button", { name: /Menu de usuario/u });
+    const trigger = page.getByRole("button", { name: /Menú de usuario/u });
     await expect(trigger.locator('img[src$="dropdown-icon.png"]')).toBeVisible();
     await trigger.click();
     await expect(page.getByRole("menu")).toBeVisible();

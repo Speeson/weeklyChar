@@ -21,8 +21,8 @@ test("reviews the default, multiple-Team, empty and scaled shell states", async 
   await openTeams(page, "teams-default");
   await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Seleccionar/u })).toHaveCount(8);
-  await expect(page.getByRole("button", { name: /Ruby Life Pools.*2 piedras/u })).toBeEnabled();
-  await expect(page.getByRole("button", { name: /Kings' Rest.*0 piedras/u })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras/u })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Reposo de los Reyes.*0 piedras/u })).toBeEnabled();
   await expect(page.getByText(/GuardianaDeLosSecretos/u)).toBeVisible();
   await expect(page.getByText("Selecciona una mazmorra para ver los objetivos del equipo.")).toBeVisible();
   await capture(page, "01-default-early.png");
@@ -43,13 +43,13 @@ test("reviews the default, multiple-Team, empty and scaled shell states", async 
 
   await page.setViewportSize({ width: 940, height: 529 });
   await openTeams(page, "teams-default");
-  await expect(page.getByRole("button", { name: "Configuracion" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Configuración" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Minimizar", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cerrar", exact: true })).toBeVisible();
   await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
   await capture(page, "05-minimum-viewport.png");
 
-  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
   const scaledCard = page.getByTestId("selector-character").first();
   await scaledCard.getByRole("button", { name: "Ver objetos" }).click();
   const scaledItem = scaledCard.getByRole("link", { name: "Objeto #231001" });
@@ -60,7 +60,7 @@ test("reviews the default, multiple-Team, empty and scaled shell states", async 
 
 test("reviews populated, multi-spec, item grouping and tooltip states", async ({ page }) => {
   await openTeams(page, "teams-selector-full");
-  const ruby = page.getByRole("button", { name: /Ruby Life Pools.*2 piedras/u });
+  const ruby = page.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras/u });
   await ruby.click();
   await expect(ruby).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
@@ -95,7 +95,7 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await memberFilters.first().click();
   await expect(memberFilters.first()).toHaveAttribute("aria-pressed", "false");
   expect(await page.getByTestId("selector-character").count()).toBeLessThan(8);
-  await expect(page.getByRole("button", { name: /Ruby Life Pools.*1 piedra$/u })).toHaveAttribute("data-available", "true");
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
   const deselectedMemberVisual = await memberFilters.first().evaluate(element => {
     const style = getComputedStyle(element);
     return { background: style.backgroundImage, border: style.borderColor, shadow: style.boxShadow };
@@ -104,7 +104,7 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   expect(deselectedMemberVisual.shadow).not.toContain("rgb(49, 233, 129)");
   await memberFilters.first().click();
   await expect(page.getByTestId("selector-character")).toHaveCount(8);
-  await expect(page.getByRole("button", { name: /Ruby Life Pools.*2 piedras$/u })).toHaveAttribute("data-available", "true");
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras$/u })).toHaveAttribute("data-available", "true");
   const ownerChips = page.locator(".teams-stone-owner-chip");
   await expect(ownerChips).toHaveCount(2);
   await expect(ownerChips.first()).toContainText("Bakuhatsu+12(Speeson)");
@@ -157,7 +157,7 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   const firstCard = page.getByTestId("selector-character").first();
   await firstCard.getByRole("button", { name: "Ver objetos" }).click();
   await expect(firstCard.getByRole("button", { name: /Todos.*10/u })).toBeVisible();
-  await expect(firstCard.getByText(/BEST IN SLOT/u)).toBeVisible();
+  await expect(firstCard.getByText(/ÓPTIMO/u)).toBeVisible();
   await expect(firstCard.getByText(/Completados \/ obtenidos/u)).toHaveCount(0);
   const firstSlotLabel = firstCard.locator(".teams-item__slot").first();
   await expect(firstSlotLabel).toHaveText("Bastón");
@@ -211,8 +211,8 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
 
   await capture(page, "08-obtained-items-inline.png");
 
-  await firstCard.getByRole("button", { name: /Arcane.*7/u }).click();
-  await expect(firstCard.getByRole("button", { name: /Arcane.*7/u })).toHaveAttribute("aria-pressed", "true");
+  await firstCard.getByRole("button", { name: /Arcano.*7/u }).click();
+  await expect(firstCard.getByRole("button", { name: /Arcano.*7/u })).toHaveAttribute("aria-pressed", "true");
   const fallbackItem = firstCard.getByRole("link", { name: "Objeto #231001" });
   await fallbackItem.focus();
   await expect(fallbackItem).toHaveAttribute("href", "https://www.wowhead.com/item=231001");
@@ -222,7 +222,7 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await firstCard.getByRole("button", { name: "Ocultar objetos" }).click();
   const singleSpecCard = page.getByTestId("selector-character").nth(1);
   await singleSpecCard.getByRole("button", { name: "Ver objetos" }).click();
-  await expect(singleSpecCard.getByText(/BEST IN SLOT/u)).toBeVisible();
+  await expect(singleSpecCard.getByText(/ÓPTIMO/u)).toBeVisible();
   await expect(singleSpecCard.getByRole("group", { name: /especializaci/u })).toHaveCount(0);
   await capture(page, "10-single-spec-expanded.png");
 
@@ -238,20 +238,20 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
 
 test("reviews zero-stone, loading, empty objectives, API error and English", async ({ page }) => {
   await openTeams(page, "teams-selector-empty");
-  const zero = page.getByRole("button", { name: /Kings' Rest.*0 piedras/u });
+  const zero = page.getByRole("button", { name: /Reposo de los Reyes.*0 piedras/u });
   await zero.click();
   await expect(zero).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/personaje.*objetivos.*mazmorra/u)).toBeVisible();
   await capture(page, "11-zero-stone-empty.png");
 
   await openTeams(page, "teams-selector-loading");
-  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
   await expect(page.getByLabel("Cargando objetivos")).toBeVisible();
   await capture(page, "12-selector-loading.png");
 
   await openTeams(page, "teams-selector-error");
-  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
-  await expect(page.getByRole("alert")).toContainText(/API no/u);
+  await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
+  await expect(page.getByRole("alert")).toContainText(/No se pudo conectar con la API/u);
   await capture(page, "13-selector-error.png");
 
   await openTeams(page, "teams-selector-multispec", "en");
@@ -264,7 +264,7 @@ test("reviews zero-stone, loading, empty objectives, API error and English", asy
 
 test("reviews exact-stone Planner previews, owner crown, accordion and minimum viewport", async ({ page }) => {
   await openTeams(page, "teams-planner");
-  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
   await page.getByRole("button", { name: "Planificar piedra" }).click();
   const configureButton = page.getByRole("button", { name: "Configurar mis personajes" });
   const configPanel = page.locator(".planner-config-heading");
@@ -312,7 +312,7 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   await expect(page.getByText("Buffos de clase")).toHaveCount(0);
   await expect(page.getByText("Sinergia de daño")).toHaveCount(0);
   await capture(page, "15a-planner-quick.png");
-  await modeSelector.getByRole("button", { name: "Avanzado · Specs" }).click();
+  await modeSelector.getByRole("button", { name: "Avanzado · Especializaciones" }).click();
   expect(await configAside.evaluate(element => element.getBoundingClientRect().width)).toBeCloseTo(quickConfigWidth, 0);
   await expect(priorityLabels).toHaveCount(5);
   await expect(page.getByRole("checkbox", { name: "Defensiva de grupo" })).toBeVisible();
@@ -616,10 +616,10 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   expect(externalCardGeometry.gainSeparatorGap).toBeLessThanOrEqual(6);
   expect(externalCardGeometry.gainTitleGap).toBeGreaterThanOrEqual(4);
   expect(externalCardGeometry.separatorDelta).toBeLessThan(1);
-  await expect(externalCard.getByRole("button", { name: /Seleccionar recomendación: Evoker/u })).toHaveAttribute("aria-pressed", "true");
-  await externalCard.getByRole("button", { name: /Seleccionar recomendación: Mage/u }).click();
+  await expect(externalCard.getByRole("button", { name: /Seleccionar recomendación: Evocador/u })).toHaveAttribute("aria-pressed", "true");
+  await externalCard.getByRole("button", { name: /Seleccionar recomendación: Mago/u }).click();
   await expect(externalCard.getByText("Intelecto Arcano")).toHaveCount(0);
-  await expect(externalCard.getByText("Counterspell")).toHaveCount(0);
+  await expect(externalCard.getByText("Contrahechizo")).toHaveCount(0);
   await expect(externalCard.getByRole("link", { name: /Intelecto Arcano/u })).toHaveAttribute("data-wowhead", /domain=es/u);
   await externalCard.getByRole("button", { name: /Ver clases recomendadas: 5/u }).click();
   const externalDialog = page.getByRole("dialog", { name: /Clases recomendadas/u });
@@ -678,7 +678,7 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
   await recommendations.first().getByRole("button", { name: /Ver todos los objetivos · Bakuhatsu · 7/u }).click();
   const lootBreakdown = page.getByRole("dialog", { name: /Desglose de objetivos · Bakuhatsu/u });
   await expect(lootBreakdown).toBeVisible();
-  await expect(lootBreakdown.getByText(/BiS · 2/u)).toBeVisible();
+  await expect(lootBreakdown.getByText(/Óptimo · 2/u)).toBeVisible();
   await capture(page, "16a-planner-loot-breakdown.png");
   await page.keyboard.press("Escape");
   await expect(lootBreakdown).toBeHidden();
@@ -699,7 +699,7 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
 test("centers incomplete Planner previews and same-row detail pairs", async ({ page }) => {
   const openIncompletePair = async (stoneName: RegExp, teammateName: string) => {
     await openTeams(page, "teams-planner");
-    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
     await page.getByRole("button", { name: "Planificar piedra" }).click();
     await page.getByRole("button", { name: stoneName }).click();
     await page.getByRole("button", { name: new RegExp(`Filtrar por ${teammateName}`, "u") }).click();
@@ -748,10 +748,10 @@ test("centers incomplete Planner previews and same-row detail pairs", async ({ p
 
 test("reviews Advanced exact-spec vacancy recommendations", async ({ page }) => {
   await openTeams(page, "teams-planner");
-  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
   await page.getByRole("button", { name: "Planificar piedra" }).click();
   await page.getByRole("group", { name: "Modo de recomendación" })
-    .getByRole("button", { name: "Avanzado · Specs" }).click();
+    .getByRole("button", { name: "Avanzado · Especializaciones" }).click();
   await page.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }).click();
   for (const member of ["Guardiana", "Voidwalker", "Nightshift", "Ironforge"]) {
     await page.getByRole("button", { name: new RegExp(`Filtrar por ${member}`, "u") }).click();
@@ -764,7 +764,7 @@ test("reviews Advanced exact-spec vacancy recommendations", async ({ page }) => 
   await expect(preview.locator('img[src*="classicon_"]')).toHaveCount(0);
   await recommendations.first().getByRole("button", { name: "Expandir #1" }).click();
   const externalCard = recommendations.first().locator(".planner-external-card");
-  await expect(externalCard.getByText("Fury Warrior")).toBeVisible();
+  await expect(externalCard.getByText("Furia Guerrero")).toBeVisible();
   await expect(recommendations.first().getByRole("img", { name: "Daño: mixto" }).locator("img")).toHaveAttribute("src", /mix-damage/u);
   await expect(externalCard.locator('.planner-external-card__selectors [data-icon-kind="spec"]')).toHaveCount(4);
   await expect(externalCard.locator('.planner-external-card__selectors img[src*="classicon_"]')).toHaveCount(0);
@@ -781,7 +781,7 @@ test("reviews Advanced exact-spec vacancy recommendations", async ({ page }) => 
   expect(overflowLayers.popup).toBeGreaterThan(overflowLayers.card);
   await capabilityMore.evaluate(element => (element as HTMLElement).blur());
   await externalCard.getByRole("button", { name: /Ver clases recomendadas: 5/u }).click();
-  const dialog = page.getByRole("dialog", { name: /Specs recomendadas/u });
+  const dialog = page.getByRole("dialog", { name: /Especializaciones recomendadas/u });
   await expect(dialog.locator(".planner-external-popover__choice").first().locator(".planner-external-popover__icons img")).toHaveCount(2);
   await expect.poll(() => dialog.locator(".planner-external-popover__icons img").evaluateAll(images =>
     images.length === 10 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
@@ -796,7 +796,7 @@ test("reviews Advanced exact-spec vacancy recommendations", async ({ page }) => 
 
 test("reviews the blocking Planner character configuration", async ({ page }) => {
   await openTeams(page, "teams-planner-unconfigured");
-  await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+  await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
   await page.getByRole("button", { name: "Planificar piedra" }).click();
   const dialog = page.getByRole("dialog", { name: "Configura tus personajes" });
   await expect(dialog).toBeVisible();
@@ -805,7 +805,7 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   const inactiveZone = dialog.locator('[data-zone="inactive"]');
   const inactiveCard = inactiveZone.locator(".planner-preference-character").filter({ hasText: "Bakuhatsu" });
   await expect(inactiveCard).toHaveClass(/is-inactive/u);
-  await expect(inactiveCard.getByRole("button", { name: /Guardian · Selecciona tu preferencia/u })).toBeDisabled();
+  await expect(inactiveCard.getByRole("button", { name: /Guardián · Selecciona tu preferencia/u })).toBeDisabled();
   await inactiveCard.evaluate(element => element.dispatchEvent(new DragEvent("dragstart", {
     bubbles: true, dataTransfer: new DataTransfer(),
   })));
@@ -825,9 +825,9 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   await expect(dialog.getByRole("button", { name: "Guardar y planificar" })).toBeDisabled();
   const roleCards = characterCard.locator(".planner-preference-spec");
   await expect(roleCards).toHaveCount(4);
-  await expect(roleCards.nth(0).getByRole("button")).toHaveAccessibleName(/Guardian/u);
-  await expect(roleCards.nth(1).getByRole("button")).toHaveAccessibleName(/Restoration/u);
-  await expect(roleCards.nth(2).getByRole("button")).toHaveAccessibleName(/Balance/u);
+  await expect(roleCards.nth(0).getByRole("button")).toHaveAccessibleName(/Guardián/u);
+  await expect(roleCards.nth(1).getByRole("button")).toHaveAccessibleName(/Restauración/u);
+  await expect(roleCards.nth(2).getByRole("button")).toHaveAccessibleName(/Equilibrio/u);
   await expect(roleCards.nth(3).getByRole("button")).toHaveAccessibleName(/Feral/u);
   const cardTops = await roleCards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
   expect(Math.max(...cardTops) - Math.min(...cardTops)).toBeLessThan(1);
@@ -851,13 +851,13 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   await lootButton.click();
   const lootDialog = dialog.locator(".planner-loot-config-popover");
   await expect(lootDialog).toBeVisible();
-  const initialNoInterest = lootDialog.getByRole("button", { name: /· none$/u });
+  const initialNoInterest = lootDialog.getByRole("button", { name: /· sin interés$/u });
   await expect(initialNoInterest).toHaveCount(4);
   for (const option of await initialNoInterest.all()) await expect(option).toHaveAttribute("aria-pressed", "true");
   const availabilityGuide = page.locator(".planner-config-guide").filter({ hasText: "2. Indica qué quieres jugar" });
   await expect(availabilityGuide).toBeHidden();
-  const guardianPrimary = lootDialog.getByRole("button", { name: "Guardian · primary" });
-  const balancePrimary = lootDialog.getByRole("button", { name: "Balance · primary" });
+  const guardianPrimary = lootDialog.getByRole("button", { name: "Guardián · primaria" });
+  const balancePrimary = lootDialog.getByRole("button", { name: "Equilibrio · primaria" });
   await guardianPrimary.click();
   const matrixToggleBounds = await guardianPrimary.evaluate(element => {
     const bounds = element.getBoundingClientRect(); return { width: bounds.width, height: bounds.height };
@@ -870,8 +870,8 @@ test("reviews the blocking Planner character configuration", async ({ page }) =>
   await primaryError.getByRole("button", { name: "Entendido" }).click();
   await guardianPrimary.click();
   await balancePrimary.click();
-  await lootDialog.getByRole("button", { name: "Guardian · secondary" }).click();
-  await expect(lootDialog.getByRole("button", { name: "Guardian · secondary" })).toHaveAttribute("aria-pressed", "true");
+  await lootDialog.getByRole("button", { name: "Guardián · secundaria" }).click();
+  await expect(lootDialog.getByRole("button", { name: "Guardián · secundaria" })).toHaveAttribute("aria-pressed", "true");
   await capture(page, "18-planner-loot.png");
   await lootDialog.getByRole("button", { name: "Listo" }).click();
   await expect(availabilityGuide).toBeVisible();
@@ -899,10 +899,10 @@ test("reviews lifecycle stability, themed empty prompt, cached navigation and ra
     await expect(promptIcon).toHaveAttribute("src", new RegExp(theme === "poison" ? "app-badge" : "app-icon"));
     await capture(page, `15-${theme}-empty-prompt.png`);
 
-    await page.getByRole("button", { name: "Configuracion" }).click();
+    await page.getByRole("button", { name: "Configuración" }).click();
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
     await capture(page, `16-${theme}-settings-open.png`);
-    await page.getByRole("button", { name: "Cerrar configuracion" }).click();
+    await page.getByRole("button", { name: "Cerrar configuración" }).click();
     await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
     await capture(page, `17-${theme}-settings-closed-stable.png`);
 
@@ -912,10 +912,10 @@ test("reviews lifecycle stability, themed empty prompt, cached navigation and ra
     await capture(page, `18-${theme}-team-picker.png`);
 
     await openTeams(page, "teams-selector-full", "es", theme);
-    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
     await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
-    await page.getByRole("button", { name: /Temple of Sethraliss/u }).click();
-    await page.getByRole("button", { name: /Ruby Life Pools/u }).click();
+    await page.getByRole("button", { name: /Templo de Sethraliss/u }).click();
+    await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
     await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
     await capture(page, `19-${theme}-cached-dungeon.png`);
 

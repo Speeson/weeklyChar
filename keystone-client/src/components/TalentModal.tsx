@@ -12,7 +12,7 @@ function TalentIcon({ entry, region }: { entry?: TalentEntrySnapshot; region: st
   return icon && !failed ? <img alt="" onError={() => setFailed(true)} src={icon} /> : <b>{(entry?.name ?? "?").slice(0, 1)}</b>;
 }
 
-function TalentTree({ tree, level, region, compact = false }: { tree?: TalentTreeSnapshot; level?: number | null; region: string; compact?: boolean }) {
+function TalentTree({ tree, level, region, language, compact = false }: { tree?: TalentTreeSnapshot; level?: number | null; region: string; language: "es" | "en"; compact?: boolean }) {
   const geometry = useMemo(() => {
     const nodes = tree?.nodes ?? [];
     const xs = nodes.map(node => node.posX);
@@ -30,7 +30,7 @@ function TalentTree({ tree, level, region, compact = false }: { tree?: TalentTre
     return { nodes, locate, byId: new Map(nodes.map(node => [node.nodeId, node])) };
   }, [compact, tree]);
 
-  if (!tree || geometry.nodes.length === 0) return <div className="ks-talent-tree ks-talent-tree--empty">Sin datos</div>;
+  if (!tree || geometry.nodes.length === 0) return <div className="ks-talent-tree ks-talent-tree--empty">{language === "es" ? "Sin datos" : "No data"}</div>;
   return (
     <div className={`ks-talent-tree${compact ? " ks-talent-tree--compact" : ""}`} data-tree-type={tree.type}>
       <svg aria-hidden="true" className="ks-talent-tree__edges" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -44,7 +44,7 @@ function TalentTree({ tree, level, region, compact = false }: { tree?: TalentTre
         const entry = activeTalentEntry(node); const point = geometry.locate(node); const spellId = talentTooltipSpellId(entry?.spellId, entry?.overriddenSpellId); const purchasedRanks = talentPurchasedRanks(node);
         const content = (
           <span
-            aria-label={`${entry?.name ?? `Nodo ${node.nodeId}`}, ${purchasedRanks}/${node.maxRanks}`}
+            aria-label={`${language === "es" ? "Talento" : "Talent"} ${node.nodeId}, ${purchasedRanks}/${node.maxRanks}`}
             className={`ks-talent-node${purchasedRanks > 0 ? " is-selected" : ""}${node.entries.length > 1 ? " is-choice" : ""}`}
             style={{ left: `${point.x}%`, top: `${point.y}%` }}
           >
@@ -53,7 +53,7 @@ function TalentTree({ tree, level, region, compact = false }: { tree?: TalentTre
             {node.entries.length > 1 ? <i aria-hidden="true">◆</i> : null}
           </span>
         );
-        return spellId ? <WowheadTooltip id={spellId} key={node.nodeId} label={entry?.description || entry?.name} options={{ lvl: level }} type="spell">{content}</WowheadTooltip> : <span key={node.nodeId} title={entry?.description || entry?.name || undefined}>{content}</span>;
+        return spellId ? <WowheadTooltip id={spellId} key={node.nodeId} label={`${language === "es" ? "Talento" : "Talent"} ${node.nodeId}`} options={{ lvl: level }} type="spell">{content}</WowheadTooltip> : <span key={node.nodeId}>{content}</span>;
       })}
     </div>
   );
@@ -68,7 +68,7 @@ export function TalentModal({ character, onClose }: { character: Character; onCl
     ?? talents?.trees.find(tree => tree.type === "hero");
   const specTree = talents?.trees.find(tree => tree.type === "spec");
   const omnium = character.omniumFolio?.trees[0];
-  const labels = language === "es" ? { class: "CLASE", hero: "TALENTOS HEROICOS", spec: "ESPECIALIZACIÓN", omnium: "FOLIO ÓMNIUM", close: "Cerrar", copy: "Copiar build", copied: "Build copiada" }
+  const labels = language === "es" ? { class: "CLASE", hero: "TALENTOS HEROICOS", spec: "ESPECIALIZACIÓN", omnium: "FOLIO ÓMNIUM", close: "Cerrar", copy: "Copiar configuración", copied: "Configuración copiada" }
     : { class: "CLASS", hero: "HERO TALENTS", spec: "SPEC", omnium: "OMNIUM FOLIO", close: "Close", copy: "Copy build", copied: "Build copied" };
   const copy = async () => {
     if (!talents?.importString) return;
@@ -86,10 +86,10 @@ export function TalentModal({ character, onClose }: { character: Character; onCl
         <header><h2 className="ks-talent-modal__identity" id="talent-modal-title">{identity}</h2><button aria-label={labels.close} onClick={onClose} type="button">×</button></header>
         <div className="ks-talent-modal__content"><div className="ks-talent-modal__trees">
           {[[labels.class, classTree], [localizedHero ?? labels.hero, heroTree], [labels.spec, specTree]].map(([label, tree]) => (
-            <section key={String(label)}><h3>{String(label)}</h3><TalentTree level={talents?.characterLevel} region={character.region} tree={tree as TalentTreeSnapshot | undefined} /></section>
+            <section key={String(label)}><h3>{String(label)}</h3><TalentTree language={language} level={talents?.characterLevel} region={character.region} tree={tree as TalentTreeSnapshot | undefined} /></section>
           ))}
         </div>
-          <section className="ks-talent-modal__omnium"><h3>{labels.omnium.split(" ").map(part => <span key={part}>{part}</span>)}</h3><TalentTree compact level={talents?.characterLevel} region={character.region} tree={omnium} /></section>
+          <section className="ks-talent-modal__omnium"><h3>{labels.omnium.split(" ").map(part => <span key={part}>{part}</span>)}</h3><TalentTree compact language={language} level={talents?.characterLevel} region={character.region} tree={omnium} /></section>
         </div>
         <footer><button disabled={!talents?.importString} onClick={() => void copy()} type="button">{copied ? labels.copied : labels.copy}</button></footer>
       </div>

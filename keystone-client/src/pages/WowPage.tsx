@@ -2,8 +2,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { ThemedIcon } from "../components/ThemedIcon";
 import { detectWow, selectWowAccounts, selectWowInstall } from "../core/wow";
-import type { AddonStatus, CoreError, WowState } from "../core/types";
+import type { AddonStatus, WowState } from "../core/types";
 import { useI18n, type TranslationKey } from "../core/i18n";
+import { localizedCoreErrorMessage } from "../core/errorDisplay";
 
 type WowPageProps = {
   addonStatus?: AddonStatus;
@@ -13,14 +14,6 @@ type WowPageProps = {
 };
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
-
-function formatWowError(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as CoreError).message);
-  }
-
-  return fallback;
-}
 
 function formatModifiedAt(value: number | null, language: "es" | "en", t: Translate): string {
   if (value === null) {
@@ -45,7 +38,14 @@ function formatAddonStatus(addonStatus: AddonStatus | undefined, t: Translate): 
     return t("wow.addonUpdate", { version });
   }
 
-  return t("wow.addonInstalled", { version, status: addonStatus.message || addonStatus.state });
+  const status = {
+    "local-newer": t("addon.localNewer"),
+    "offline-cache": t("addon.offlineCache"),
+    unavailable: t("common.notAvailable"),
+    error: t("common.error"),
+    "not-installed": t("addon.notInstalled"),
+  }[addonStatus.state];
+  return t("wow.addonInstalled", { version, status });
 }
 
 export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: WowPageProps) {
@@ -82,7 +82,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
       applyWow(nextWow);
       setMessage(success);
     } catch (caught) {
-      setError(formatWowError(caught, t("wow.error")));
+      setError(localizedCoreErrorMessage(caught, language, t("wow.error")));
     } finally {
       setLoading(false);
     }
