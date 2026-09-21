@@ -59,6 +59,55 @@ function TierSummary({ counts }: { counts: KeystoneSelectorTierCounts }) {
   </span>;
 }
 
+function StoneOwnerChips({ detail, stones }: { detail: ClientTeamDetail | null; stones: KeystoneSelectorStone[] }) {
+  const classByCharacterId = new Map(
+    detail?.members.flatMap(member => member.characters.map(character => [character.characterId, character.wowClass] as const)) ?? [],
+  );
+  return <div className="teams-stone-owner-chips">
+    {stones.map(stone => <span
+      className="teams-stone-owner-chip"
+      key={stone.characterId}
+      style={{ "--teams-owner-color": classColor(classByCharacterId.get(stone.characterId) ?? null) } as React.CSSProperties}
+    >
+      <strong>{stone.characterName}</strong>
+      <span className="teams-stone-owner-chip__level">+{stone.level}</span>
+      <small>({stone.ownerUsername})</small>
+    </span>)}
+  </div>;
+}
+
+const EMPTY_SELECTOR_TIERS: KeystoneSelectorTierCounts = {
+  bestInSlot: 0, mustHave: 0, niceToHave: 0, catalyst: 0, transmog: 0, other: 0,
+};
+
+function filterSelectorByMembers(selector: KeystoneSelectorResponse, selectedUsers: Set<number>): KeystoneSelectorResponse {
+  const selectorUserIds = new Set([
+    ...selector.characters.map(character => character.userId),
+    ...selector.availability.stones.map(stone => stone.ownerUserId),
+  ]);
+  if ([...selectorUserIds].every(userId => selectedUsers.has(userId))) return selector;
+  const characters = selector.characters.filter(character => selectedUsers.has(character.userId));
+  const stones = selector.availability.stones.filter(stone => selectedUsers.has(stone.ownerUserId));
+  const tiers = characters.reduce<KeystoneSelectorTierCounts>((total, character) => ({
+    bestInSlot: total.bestInSlot + character.tierCounts.bestInSlot,
+    mustHave: total.mustHave + character.tierCounts.mustHave,
+    niceToHave: total.niceToHave + character.tierCounts.niceToHave,
+    catalyst: total.catalyst + character.tierCounts.catalyst,
+    transmog: total.transmog + character.tierCounts.transmog,
+    other: total.other + character.tierCounts.other,
+  }), { ...EMPTY_SELECTOR_TIERS });
+  return {
+    ...selector,
+    availability: { stoneCount: stones.length, stones },
+    summary: {
+      charactersWithObjectives: characters.filter(character => character.totalObjectives > 0).length,
+      totalObjectives: characters.reduce((total, character) => total + character.totalObjectives, 0),
+      tiers,
+    },
+    characters,
+  };
+}
+
 const PLANNER_COPY = {
   es: {
     noObjectives: "Sin objetivos", owner: "Dueño de la piedra", ownerTitle: "Dueño de la piedra · líder",
@@ -837,14 +886,14 @@ function ObjectiveGroups({ character, specId }: { character: KeystoneSelectorCha
   </div>;
 }
 
-function SelectorCharacterRow({ character, muted, rank }: { character: KeystoneSelectorCharacter; muted: boolean; rank: number }) {
+function SelectorCharacterRow({ character, rank }: { character: KeystoneSelectorCharacter; rank: number }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [specId, setSpecId] = useState<number | null>(null);
   const controls = `teams-character-${character.characterId}`;
   const oneSpec = character.specs.length === 1 ? character.specs[0] : null;
   const specLabel = character.specs.map(spec => specName(spec.specId)).join(" / ");
-  return <article className="teams-character-row" data-emphasis={muted ? "muted" : "full"} data-expanded={expanded} data-owner-id={character.userId} data-testid="selector-character">
+  return <article className="teams-character-row" data-emphasis="full" data-expanded={expanded} data-owner-id={character.userId} data-testid="selector-character">
     <button aria-controls={controls} aria-expanded={expanded} aria-label={`${expanded ? t("teams.hideItems") : t("teams.showItems")} · ${character.characterName}`} className="teams-character-row__summary" onClick={() => setExpanded(value => !value)} type="button">
       <span className="teams-rank" aria-label={t("teams.rank", { rank })}>#{rank}</span>
       <Portrait avatarUrl={character.avatarUrl} name={character.characterName} wowClass={character.wowClass} />
@@ -902,6 +951,9 @@ function MemberStrip({ detail, mode, onClear, onToggle, ownerUserId, selected }:
   onToggle: (userId: number) => void; ownerUserId: number | null; selected: Set<number>;
 }) {
   const { t } = useI18n();
+  const memberCount = detail?.members.length ?? 0;
+  const showSelection = mode === "objectives" ? memberCount > 0 : selected.size > 0;
+  const showClear = mode === "objectives" ? selected.size < memberCount : selected.size > 0;
   return <div className="teams-member-area">
     <div aria-label={t("teams.memberFilters")} className="teams-member-strip">
       {detail?.members.map(member => {
@@ -915,9 +967,9 @@ function MemberStrip({ detail, mode, onClear, onToggle, ownerUserId, selected }:
       </button>;
       })}
     </div>
-    {selected.size > 0 ? <div className="teams-active-filters">
+    {showSelection ? <div className="teams-active-filters">
       <span>{t(selected.size === 1 ? "teams.selectedMember" : "teams.selectedMembers", { count: selected.size })}</span>
-      <button aria-label={t("teams.clearFilters")} className="teams-clear-filters" onClick={onClear} type="button"><X aria-hidden="true" />{t("teams.clearShort")}</button>
+      {showClear ? <button aria-label={t("teams.clearFilters")} className="teams-clear-filters" onClick={onClear} type="button"><X aria-hidden="true" />{t("teams.clearShort")}</button> : null}
     </div> : null}
   </div>;
 }
@@ -938,7 +990,10 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const [teams, setTeams] = useState<ClientTeamSummary[] | null>(initialSession.teams);
   const [teamId, setTeamId] = useState<number | null>(initialSession.teamId);
   const [detail, setDetail] = useState<ClientTeamDetail | null>(initialSession.detail);
-  const [selectedUsers, setSelectedUsers] = useState<Set<number>>(() => new Set());
+  const [objectiveSelectedUsers, setObjectiveSelectedUsers] = useState<Set<number>>(
+    () => new Set(initialSession.detail?.members.map(member => member.userId) ?? []),
+  );
+  const [plannerSelectedUsers, setPlannerSelectedUsers] = useState<Set<number>>(() => new Set());
   const [activeFeature, setActiveFeature] = useState<"objectives" | "planner">("objectives");
   const [plannerOwnerUserId, setPlannerOwnerUserId] = useState<number | null>(null);
   const [plannerPreferences, setPlannerPreferences] = useState<ClientPlannerPreferences | null>(null);
@@ -1006,16 +1061,22 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   useEffect(() => {
     const generation = ++detailGeneration.current;
     selectorGeneration.current += 1;
-    setSelectedUsers(new Set()); setDungeonId(null); setSelector(null); setSelectorError(null); setActiveFeature("objectives"); setPlannerOwnerUserId(null);
+    setPlannerSelectedUsers(new Set()); setDungeonId(null); setSelector(null); setSelectorError(null); setActiveFeature("objectives"); setPlannerOwnerUserId(null);
     setPlannerPreferences(null); setPreferencesOpen(false); setPreferencesError(null);
-    if (teamId === null) { setDetail(null); return; }
+    if (teamId === null) { setDetail(null); setObjectiveSelectedUsers(new Set()); return; }
     const cached = getCachedTeamDetail(teamId);
     setDetail(cached);
+    const cachedMemberIds = new Set(cached?.members.map(member => member.userId) ?? []);
+    setObjectiveSelectedUsers(cachedMemberIds);
     if (cached) hasRevealedTeam.current = true;
     loadTeamDetail(dataSource, teamId).then(result => {
       if (generation !== detailGeneration.current) return;
       setTeamError(null);
       setDetail(result);
+      const resultMemberIds = new Set(result.members.map(member => member.userId));
+      setObjectiveSelectedUsers(current => cached
+        ? new Set([...resultMemberIds].filter(userId => !cachedMemberIds.has(userId) || current.has(userId)))
+        : resultMemberIds);
       hasRevealedTeam.current = true;
     }).catch(caught => {
       if (generation !== detailGeneration.current) return;
@@ -1049,16 +1110,26 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
 
   const closeSelector = () => { selectorGeneration.current += 1; setDungeonId(null); setSelector(null); setSelectorError(null); setSelectorLoading(false); setActiveFeature("objectives"); setPlannerOwnerUserId(null); };
   const readyCharacterIds = new Set(plannerPreferences?.lootPreferences.map(preference => preference.characterId) ?? []);
-  const toggleUser = (userId: number) => setSelectedUsers(current => {
+  const toggleUser = (userId: number) => {
+    if (activeFeature === "objectives") {
+      setObjectiveSelectedUsers(current => {
+        const next = new Set(current);
+        if (next.has(userId)) next.delete(userId); else next.add(userId);
+        return next;
+      });
+      return;
+    }
+    setPlannerSelectedUsers(current => {
     const member = detail?.members.find(item => item.userId === userId);
     const configuredLocally = member?.characters.some(character => readyCharacterIds.has(character.characterId)
       && plannerPreferences?.preferences.some(preference => preference.characterId === character.characterId && preference.playPreference !== "disabled")) ?? false;
-    if (activeFeature === "planner" && member?.plannerConfigured === false && !configuredLocally) return current;
+    if (member?.plannerConfigured === false && !configuredLocally) return current;
     const next = new Set(current);
-    if (next.has(userId)) { if (activeFeature !== "planner" || userId !== plannerOwnerUserId) next.delete(userId); }
-    else if (activeFeature !== "planner" || next.size < 5) next.add(userId);
+    if (next.has(userId)) { if (userId !== plannerOwnerUserId) next.delete(userId); }
+    else if (next.size < 5) next.add(userId);
     return next;
-  });
+    });
+  };
   const ownMember = detail?.members.find(member => member.username.toLocaleLowerCase() === currentUsername.toLocaleLowerCase())
     ?? detail?.members.find(member => member.characters.some(character => plannerPreferences?.preferences.some(preference => preference.characterId === character.characterId)))
     ?? null;
@@ -1086,7 +1157,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   }, [dataSource, language, onSessionExpired, ownMember?.userId]);
   const enterPlanner = () => {
     setActiveFeature("planner"); setPlannerOwnerUserId(null);
-    setSelectedUsers(current => new Set([...current]
+    setPlannerSelectedUsers(current => new Set([...current]
       .filter(userId => plannerDetail?.members.find(member => member.userId === userId)?.plannerConfigured)
       .slice(0, 5)));
     void loadOwnPreferences(true);
@@ -1108,12 +1179,22 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       if (parsed.code === "SESSION_EXPIRED") onSessionExpired(); else setPreferencesError(parsed.message);
     } finally { setPreferencesSaving(false); }
   };
-  const counts = detail ? teamStoneCounts(detail) : new Map<number, number>();
-  const selectedDungeon = MIDNIGHT_SEASON_2_DUNGEONS.find(dungeon => dungeon.id === dungeonId);
+  const stoneCountDetail = detail && activeFeature === "objectives"
+    ? { ...detail, members: detail.members.filter(member => objectiveSelectedUsers.has(member.userId)) }
+    : detail;
+  const counts = stoneCountDetail ? teamStoneCounts(stoneCountDetail) : new Map<number, number>();
   const coldLoading = teams === null
     || Boolean(teams.length > 0 && !hasRevealedTeam.current && (teamId === null || detail?.id !== teamId));
   const detailLoading = !coldLoading && teamId !== null && detail?.id !== teamId;
   const plannerAccessChecking = activeFeature === "planner" && preferencesLoading;
+  const selectedUsers = activeFeature === "objectives" ? objectiveSelectedUsers : plannerSelectedUsers;
+  const objectiveSelector = selector ? filterSelectorByMembers(selector, objectiveSelectedUsers) : null;
+  const summarySelector = activeFeature === "objectives" ? objectiveSelector : selector;
+  const summaryCharacters = summarySelector?.summary.charactersWithObjectives ?? 0;
+  const summaryObjectives = summarySelector?.summary.totalObjectives ?? 0;
+  const globalSummaryKey = summaryCharacters === 1
+    ? summaryObjectives === 1 ? "teams.globalSummaryOne" : "teams.globalSummaryCharacterOne"
+    : summaryObjectives === 1 ? "teams.globalSummaryObjectiveOne" : "teams.globalSummary";
 
   if (coldLoading && !teamError) return <section className="teams-page teams-page--loading">
     <div aria-label={t("teams.loading")} className="teams-loading-veil" role="status">
@@ -1131,7 +1212,16 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
         setTeamId(nextTeamId);
         setDetail(getCachedTeamDetail(nextTeamId));
       }} teams={teams ?? []} />
-      <MemberStrip detail={activeFeature === "planner" ? plannerDetail : detail} mode={activeFeature} onClear={() => setSelectedUsers(plannerOwnerUserId === null ? new Set() : new Set([plannerOwnerUserId]))} onToggle={toggleUser} ownerUserId={plannerOwnerUserId} selected={selectedUsers} />
+      <MemberStrip
+        detail={activeFeature === "planner" ? plannerDetail : detail}
+        mode={activeFeature}
+        onClear={() => activeFeature === "objectives"
+          ? setObjectiveSelectedUsers(new Set(detail?.members.map(member => member.userId) ?? []))
+          : setPlannerSelectedUsers(plannerOwnerUserId === null ? new Set() : new Set([plannerOwnerUserId]))}
+        onToggle={toggleUser}
+        ownerUserId={plannerOwnerUserId}
+        selected={selectedUsers}
+      />
     </div>
     <div className="teams-selector">
       {detailLoading ? <div aria-label={t("teams.loadingTeam")} className="teams-detail-loading" role="status">
@@ -1140,7 +1230,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
       <nav aria-label={t("teams.dungeons")} className="teams-dungeon-rail">
         {MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => {
           const count = counts.get(dungeon.id) ?? 0; const selected = dungeonId === dungeon.id;
-          return <button aria-label={t("teams.selectDungeon", { name: dungeon.name, count })} aria-pressed={selected} className="teams-dungeon" data-available={count > 0} disabled={!detail} key={dungeon.id} onClick={() => selectDungeon(dungeon.id)} title={dungeon.name} type="button">
+          return <button aria-label={t(count === 1 ? "teams.selectDungeonOne" : "teams.selectDungeon", { name: dungeon.name, count })} aria-pressed={selected} className="teams-dungeon" data-available={count > 0} disabled={!detail} key={dungeon.id} onClick={() => selectDungeon(dungeon.id)} title={dungeon.name} type="button">
             <img alt="" aria-hidden="true" className="teams-dungeon__art" src={dungeon.teleportIconUrl} />
             <span>{dungeon.name}</span><b>{count}</b>
           </button>;
@@ -1154,10 +1244,12 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
               <button aria-pressed={activeFeature === "planner"} onClick={enterPlanner} type="button">{t("teams.planStone")}</button>
             </div>
             <div className="teams-dungeon-summary">
-              <div className="teams-dungeon-context"><strong>{selectedDungeon?.name}</strong>{selector ? <span className="teams-stone-owners">{selector.availability.stoneCount === 0 ? t("teams.noStones") : t(selector.availability.stoneCount === 1 ? "teams.stoneOwner" : "teams.stoneOwners", { count: selector.availability.stoneCount, owners: selector.availability.stones.map(stone => stone.characterName).join(" + ") })}</span> : null}</div>
-              {selector ? <>
-                <span className="teams-summary-total">{t("teams.globalSummary", { characters: selector.summary.charactersWithObjectives, objectives: selector.summary.totalObjectives })}</span>
-                <TierSummary counts={selector.summary.tiers} />
+              {summarySelector ? <StoneOwnerChips detail={detail} stones={summarySelector.availability.stones} /> : null}
+              {summarySelector ? <>
+                <div className="teams-dungeon-metrics">
+                  <span className="teams-summary-total">{t(globalSummaryKey, { characters: summaryCharacters, objectives: summaryObjectives })}</span>
+                  <TierSummary counts={summarySelector.summary.tiers} />
+                </div>
               </> : null}
             </div>
             <button aria-label={t("teams.closeSelector")} className="teams-selector-panel__close" onClick={closeSelector} type="button"><X aria-hidden="true" /></button>
@@ -1166,10 +1258,10 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
             {selectorLoading ? <div aria-label={t("teams.loadingObjectives")} className="teams-selector-loading"><i /><i /><i /></div> : null}
             {selectorError ? <p className="error teams-selector-error" role="alert">{selectorError}</p> : null}
             {selector && !selectorLoading && plannerAccessChecking ? <div aria-label={PLANNER_COPY[language].loadingPreferences} className="teams-selector-loading" role="status"><i /><i /><i /></div> : null}
-            {selector && !selectorLoading && activeFeature === "planner" && !plannerAccessChecking && dungeonId !== null ? <KeystonePlannerPanel dataSource={dataSource} detail={plannerDetail} dungeonId={dungeonId} onConfigure={openPreferences} onOwnerChange={setPlannerOwnerUserId} onSessionExpired={onSessionExpired} selectedUsers={selectedUsers} selector={selector} setSelectedUsers={setSelectedUsers} teamId={teamId} /> : null}
-            {selector && !selectorLoading && activeFeature === "objectives" ? selector.characters.length === 0
-              ? <div className="teams-selector-empty"><Gem aria-hidden="true" /><p>{t("teams.noObjectives")}</p>{selector.availability.stoneCount === 0 ? <small>{t("teams.noObjectivesNoStone")}</small> : null}</div>
-              : <div className="teams-character-list">{selector.characters.map((character, index) => <SelectorCharacterRow character={character} key={character.characterId} muted={selectedUsers.size > 0 && !selectedUsers.has(character.userId)} rank={index + 1} />)}</div>
+            {selector && !selectorLoading && activeFeature === "planner" && !plannerAccessChecking && dungeonId !== null ? <KeystonePlannerPanel dataSource={dataSource} detail={plannerDetail} dungeonId={dungeonId} onConfigure={openPreferences} onOwnerChange={setPlannerOwnerUserId} onSessionExpired={onSessionExpired} selectedUsers={plannerSelectedUsers} selector={selector} setSelectedUsers={setPlannerSelectedUsers} teamId={teamId} /> : null}
+            {objectiveSelector && !selectorLoading && activeFeature === "objectives" ? objectiveSelector.characters.length === 0
+              ? <div className="teams-selector-empty"><Gem aria-hidden="true" /><p>{t("teams.noObjectives")}</p>{objectiveSelector.availability.stoneCount === 0 ? <small>{t("teams.noObjectivesNoStone")}</small> : null}</div>
+              : <div className="teams-character-list">{objectiveSelector.characters.map((character, index) => <SelectorCharacterRow character={character} key={character.characterId} rank={index + 1} />)}</div>
               : null}
           </div>
         </>}

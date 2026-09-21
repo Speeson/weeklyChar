@@ -609,17 +609,17 @@ function App() {
                     <ThemedIcon name="close" size={20} />
                   </button>
                 </div>
-                <div className="ks-modal__content">
-                  <SettingsPage
-                    appVersion={packageJson.version}
-                    initialSettings={settings}
-                    onCheckUpdates={checkForUpdates}
-                    onOpenReleases={() => void runNativeAction(openReleases)}
-                    onOpenUpdate={() => setUpdateModalOpen(true)}
-                    onSettingsChanged={handleSettingsChanged}
-                    preview={previewMode}
-                    updater={updater}
-                  />
+                <SettingsPage
+                  appVersion={packageJson.version}
+                  initialSettings={settings}
+                  onCheckUpdates={checkForUpdates}
+                  onClose={() => setSettingsOpen(false)}
+                  onOpenReleases={() => void runNativeAction(openReleases)}
+                  onOpenUpdate={() => setUpdateModalOpen(true)}
+                  onSettingsChanged={handleSettingsChanged}
+                  preview={previewMode}
+                  updater={updater}
+                >
                   <WowPage
                     addonStatus={addon}
                     initialWow={wow}
@@ -629,10 +629,7 @@ function App() {
                     }}
                     onWowChanged={handleWowChanged}
                   />
-                  <div className="ks-modal__footer">
-                    <button onClick={() => setSettingsOpen(false)} type="button">{t("common.close")}</button>
-                  </div>
-                </div>
+                </SettingsPage>
               </div>
             </div>
           ) : null}

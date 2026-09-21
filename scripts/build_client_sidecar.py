@@ -216,6 +216,8 @@ def smoke_sidecar(binary_path: Path) -> dict[str, Any]:
                 "minimizeOnClose": False,
                 "closeBehavior": "ask",
                 "lockWindowAspectRatio": False,
+                "overlayEnabled": False,
+                "overlayShortcut": "Ctrl+Shift+K",
                 "lang": "es",
             },
             "wow": {

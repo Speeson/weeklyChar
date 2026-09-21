@@ -1,0 +1,11 @@
+{
+  "components": ["client"],
+  "type": "minor",
+  "category": "added",
+  "summary": "Los miembros del equipo se pueden filtrar directamente en Objetivos.",
+  "details": [
+    "Objetivos muestra sólo los personajes, piedras y totales de los miembros seleccionados.",
+    "Las selecciones de Objetivos y Planificar piedra son independientes y las tarjetas activas tienen mayor contraste.",
+    "La cabecera muestra cada piedra en un chip con color de clase, nivel naranja y propietario, y resalta en verde los miembros seleccionados."
+  ]
+}

@@ -210,6 +210,7 @@ test.describe("Void visual states", () => {
     await expect(trigger.locator('img[src$="dropdown-icon.png"]')).toBeVisible();
     await trigger.click();
     await expect(page.getByRole("menu")).toBeVisible();
+    await expectImagesReady(page);
     await expectVoidScreenshot(page, "void-user-menu.png");
   });
 

@@ -12,6 +12,8 @@ const initialSettings = {
   startMinimized: false,
   minimizeOnClose: false,
   closeBehavior: "ask" as const,
+  overlayEnabled: true,
+  overlayShortcut: "Ctrl+Shift+K",
   lang: "es" as const,
 };
 
@@ -64,6 +66,12 @@ describe("Settings theme integration", () => {
     await user.tab();
     await user.tab();
     expect(screen.getByLabelText("Bloquear proporción al cambiar el tamaño")).toHaveFocus();
+    await user.tab();
+    expect(screen.getByLabelText("Activar overlay")).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Restaurar" })).toHaveFocus();
     await user.tab();
     expect(selector).toHaveFocus();
 

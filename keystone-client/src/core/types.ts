@@ -74,6 +74,8 @@ export type ClientSettings = {
   minimizeOnClose: boolean;
   closeBehavior: "ask" | "minimize" | "exit";
   lockWindowAspectRatio?: boolean;
+  overlayEnabled?: boolean;
+  overlayShortcut?: string;
   lang: "es" | "en";
 };
 
