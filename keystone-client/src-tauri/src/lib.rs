@@ -90,8 +90,8 @@ fn get_overlay_shortcut_status() -> overlay::OverlayShortcutStatus {
 }
 
 #[tauri::command]
-fn begin_overlay_shortcut_capture() {
-    overlay::begin_shortcut_capture();
+fn begin_overlay_shortcut_capture(app: tauri::AppHandle) -> Result<(), String> {
+    overlay::begin_shortcut_capture(&app)
 }
 
 #[tauri::command]
@@ -100,8 +100,13 @@ fn validate_overlay_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<
 }
 
 #[tauri::command]
-fn end_overlay_shortcut_capture() {
-    overlay::end_shortcut_capture();
+fn poll_overlay_shortcut_capture() -> Option<String> {
+    overlay::poll_shortcut_capture()
+}
+
+#[tauri::command]
+fn end_overlay_shortcut_capture(app: tauri::AppHandle) -> Result<(), String> {
+    overlay::end_shortcut_capture(&app)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -148,6 +153,7 @@ pub fn run() {
             configure_overlay_shortcut,
             get_overlay_shortcut_status,
             begin_overlay_shortcut_capture,
+            poll_overlay_shortcut_capture,
             validate_overlay_shortcut,
             end_overlay_shortcut_capture
         ])

@@ -9,6 +9,7 @@ import {
   configureOverlayShortcut,
   endOverlayShortcutCapture,
   getOverlayShortcutStatus,
+  pollOverlayShortcutCapture,
   validateOverlayShortcut,
 } from "../core/native";
 import { getSettings, updateSettings } from "../core/settings";
@@ -301,6 +302,7 @@ export function SettingsPage({
               setOverlayError(null);
               setSettings((current) => ({ ...current, overlayShortcut }));
             }}
+            onPoll={pollOverlayShortcutCapture}
             onRecordingStart={async () => {
               setOverlayError(null);
               await beginOverlayShortcutCapture();

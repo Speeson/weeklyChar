@@ -86,6 +86,79 @@ describe("OverlayShortcutRecorder", () => {
     expect(onRecordingStop).not.toHaveBeenCalled();
   });
 
+  it("reports a shortcut detected natively when Windows consumes its keydown", async () => {
+    const user = userEvent.setup();
+    const onValidate = vi.fn(() => Promise.reject("Shortcut already registered"));
+    const onPoll = vi.fn()
+      .mockResolvedValueOnce("Ctrl+Shift+KeyJ")
+      .mockResolvedValue(null);
+    render(
+      <OverlayShortcutRecorder
+        onChange={vi.fn()}
+        onPoll={onPoll}
+        onRecordingStart={() => Promise.resolve()}
+        onRecordingStop={() => Promise.resolve()}
+        onRestore={vi.fn()}
+        onValidate={onValidate}
+        value="Ctrl+Shift+K"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Shortcut already registered");
+    expect(onValidate).toHaveBeenCalledWith("Ctrl+Shift+KeyJ");
+  });
+
+  it("does not announce recording until native suspension succeeds and restores on unmount", async () => {
+    const user = userEvent.setup();
+    let resolveStart!: () => void;
+    const start = new Promise<void>((resolve) => { resolveStart = resolve; });
+    const onRecordingStop = vi.fn(() => Promise.resolve());
+    const view = render(
+      <OverlayShortcutRecorder
+        onChange={vi.fn()}
+        onRecordingStart={() => start}
+        onRecordingStop={onRecordingStop}
+        onRestore={vi.fn()}
+        value="Ctrl+Shift+K"
+      />,
+    );
+
+    const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
+    await user.click(recorder);
+    expect(recorder).toHaveAttribute("aria-pressed", "false");
+
+    resolveStart();
+    await waitFor(() => expect(recorder).toHaveAttribute("aria-pressed", "true"));
+    view.unmount();
+    await waitFor(() => expect(onRecordingStop).toHaveBeenCalledOnce());
+  });
+
+  it("restores a pending native suspension when focus leaves before startup completes", async () => {
+    const user = userEvent.setup();
+    let resolveStart!: () => void;
+    const start = new Promise<void>((resolve) => { resolveStart = resolve; });
+    const onRecordingStop = vi.fn(() => Promise.resolve());
+    render(
+      <OverlayShortcutRecorder
+        onChange={vi.fn()}
+        onRecordingStart={() => start}
+        onRecordingStop={onRecordingStop}
+        onRestore={vi.fn()}
+        value="Ctrl+Shift+K"
+      />,
+    );
+
+    const recorder = screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" });
+    await user.click(recorder);
+    fireEvent.blur(recorder);
+    resolveStart();
+
+    await waitFor(() => expect(onRecordingStop).toHaveBeenCalledOnce());
+    expect(recorder).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("validates only one candidate at a time and ignores a result after focus leaves", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

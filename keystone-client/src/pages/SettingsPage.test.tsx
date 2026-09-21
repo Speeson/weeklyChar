@@ -10,6 +10,7 @@ import {
   configureOverlayShortcut,
   endOverlayShortcutCapture,
   getOverlayShortcutStatus,
+  pollOverlayShortcutCapture,
   validateOverlayShortcut,
 } from "../core/native";
 import type { ClientSettings } from "../core/types";
@@ -29,6 +30,7 @@ vi.mock("../core/native", () => ({
   configureOverlayShortcut: vi.fn(),
   endOverlayShortcutCapture: vi.fn(),
   getOverlayShortcutStatus: vi.fn(),
+  pollOverlayShortcutCapture: vi.fn(),
   validateOverlayShortcut: vi.fn(),
 }));
 
@@ -41,6 +43,7 @@ const getOverlayShortcutStatusMock = vi.mocked(getOverlayShortcutStatus);
 const beginOverlayShortcutCaptureMock = vi.mocked(beginOverlayShortcutCapture);
 const endOverlayShortcutCaptureMock = vi.mocked(endOverlayShortcutCapture);
 const validateOverlayShortcutMock = vi.mocked(validateOverlayShortcut);
+const pollOverlayShortcutCaptureMock = vi.mocked(pollOverlayShortcutCapture);
 
 const initialSettings = {
   startMinimized: false,
@@ -64,6 +67,7 @@ describe("SettingsPage", () => {
     beginOverlayShortcutCaptureMock.mockReset();
     endOverlayShortcutCaptureMock.mockReset();
     validateOverlayShortcutMock.mockReset();
+    pollOverlayShortcutCaptureMock.mockReset();
     getAutostartEnabledMock.mockResolvedValue(false);
     setAutostartEnabledMock.mockImplementation(async (enabled) => enabled);
     configureOverlayShortcutMock.mockImplementation(async (enabled, shortcut) => ({
@@ -81,6 +85,7 @@ describe("SettingsPage", () => {
     beginOverlayShortcutCaptureMock.mockResolvedValue();
     endOverlayShortcutCaptureMock.mockResolvedValue();
     validateOverlayShortcutMock.mockResolvedValue();
+    pollOverlayShortcutCaptureMock.mockResolvedValue(null);
   });
 
   it("renders the canonical selectable themes in Settings", () => {

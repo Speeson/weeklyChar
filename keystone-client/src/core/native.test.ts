@@ -11,6 +11,7 @@ import {
   openBattleNetAuthorization,
   openForgotPassword,
   startWindowDragging,
+  pollOverlayShortcutCapture,
   validateOverlayShortcut,
 } from "./native";
 
@@ -94,13 +95,15 @@ describe("native window actions", () => {
     invokeMock.mockResolvedValue(undefined);
 
     await beginOverlayShortcutCapture();
+    await pollOverlayShortcutCapture();
     await validateOverlayShortcut("Ctrl+Shift+KeyJ");
     await endOverlayShortcutCapture();
 
     expect(invokeMock).toHaveBeenNthCalledWith(1, "begin_overlay_shortcut_capture");
-    expect(invokeMock).toHaveBeenNthCalledWith(2, "validate_overlay_shortcut", {
+    expect(invokeMock).toHaveBeenNthCalledWith(2, "poll_overlay_shortcut_capture");
+    expect(invokeMock).toHaveBeenNthCalledWith(3, "validate_overlay_shortcut", {
       shortcut: "Ctrl+Shift+KeyJ",
     });
-    expect(invokeMock).toHaveBeenNthCalledWith(3, "end_overlay_shortcut_capture");
+    expect(invokeMock).toHaveBeenNthCalledWith(4, "end_overlay_shortcut_capture");
   });
 });

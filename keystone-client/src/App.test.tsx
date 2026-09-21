@@ -76,6 +76,7 @@ vi.mock("./core/native", () => ({
   minimizeToTray: vi.fn(() => Promise.resolve()),
   minimizeWindow: vi.fn(() => Promise.resolve()),
   openWeb: vi.fn(() => Promise.resolve()),
+  pollOverlayShortcutCapture: vi.fn(() => Promise.resolve(null)),
   validateOverlayShortcut: vi.fn(() => Promise.resolve()),
 }));
 

@@ -55,6 +55,10 @@ export function beginOverlayShortcutCapture(): Promise<void> {
   return invoke<void>("begin_overlay_shortcut_capture");
 }
 
+export function pollOverlayShortcutCapture(): Promise<string | null> {
+  return invoke<string | null>("poll_overlay_shortcut_capture");
+}
+
 export function validateOverlayShortcut(shortcut: string): Promise<void> {
   return invoke<void>("validate_overlay_shortcut", { shortcut });
 }
