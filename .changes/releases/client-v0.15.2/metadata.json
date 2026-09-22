@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.1",
+  "version": "0.15.2",
+  "bump": "patch",
+  "tag": "client-v0.15.2",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-overlay-first-keypress.json"
+  ]
+}
