@@ -32,7 +32,7 @@ export function openRaiderIoCharacter(region: string, realm: string, name: strin
 }
 
 export function minimizeWindow(): Promise<void> {
-  return getCurrentWindow().minimize();
+  return invoke<void>("minimize_window");
 }
 
 export function startWindowDragging(): Promise<void> {

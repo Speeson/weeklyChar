@@ -54,13 +54,13 @@ describe("native window actions", () => {
     });
   });
 
-  it("keeps taskbar minimization on the current native window", async () => {
-    const minimize = vi.fn(() => Promise.resolve());
-    getCurrentWindowMock.mockReturnValueOnce({ minimize } as never);
+  it("routes taskbar minimization through Rust so overlay state stays synchronized", async () => {
+    invokeMock.mockResolvedValueOnce(undefined);
 
     await minimizeWindow();
 
-    expect(minimize).toHaveBeenCalledOnce();
+    expect(invokeMock).toHaveBeenCalledWith("minimize_window");
+    expect(getCurrentWindowMock).not.toHaveBeenCalled();
   });
 
   it("starts dragging through the current native window", async () => {
