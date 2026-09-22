@@ -96,7 +96,9 @@ fn register(app: &tauri::AppHandle, shortcut: Shortcut) -> Result<(), String> {
     app.global_shortcut()
         .on_shortcut(shortcut, |app, _shortcut, event| {
             if should_toggle_for_shortcut_event(event.state) {
-                let _ = toggle(app);
+                if let Err(error) = toggle(app) {
+                    eprintln!("Could not toggle the overlay: {error}");
+                }
             }
         })
         .map_err(|error| format!("Could not register the overlay shortcut: {error}"))
@@ -377,18 +379,27 @@ pub fn enable(app: &tauri::AppHandle) -> Result<(), String> {
         .ok_or_else(|| "main window unavailable".to_string())?;
     let flags = overlay_window_flags();
 
-    window.unminimize().map_err(|error| error.to_string())?;
-    window
-        .set_focusable(false)
-        .map_err(|error| error.to_string())?;
-    window
-        .set_always_on_top(flags.always_on_top)
-        .map_err(|error| error.to_string())?;
-    window
-        .set_skip_taskbar(flags.skip_taskbar)
-        .map_err(|error| error.to_string())?;
-    debug_assert!(!flags.request_focus);
-    window.show().map_err(|error| error.to_string())?;
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
+    let presentation = (|| {
+        window.unminimize().map_err(|error| error.to_string())?;
+        window
+            .set_focusable(false)
+            .map_err(|error| error.to_string())?;
+        window
+            .set_always_on_top(flags.always_on_top)
+            .map_err(|error| error.to_string())?;
+        debug_assert!(!flags.request_focus);
+        window.show().map_err(|error| error.to_string())?;
+        if let Err(error) = window.set_skip_taskbar(flags.skip_taskbar) {
+            eprintln!("Could not remove the active overlay from the taskbar: {error}");
+        }
+        force_overlay_z_order(&window)
+    })();
+    if let Err(error) = presentation {
+        let _ = window.hide();
+        let _ = reset_window_flags(&window);
+        return Err(error);
+    }
 
     OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
     Ok(())
@@ -400,10 +411,22 @@ pub fn disable(app: &tauri::AppHandle) -> Result<(), String> {
         .ok_or_else(|| "main window unavailable".to_string())?;
 
     window.hide().map_err(|error| error.to_string())?;
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
     reset_window_flags(&window)?;
 
-    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
     Ok(())
+}
+
+pub fn prepare_for_window_action(app: &tauri::AppHandle) -> Result<(), String> {
+    if !is_active() {
+        return Ok(());
+    }
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window unavailable".to_string())?;
+
+    OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
+    reset_window_flags(&window)
 }
 
 fn restore_normal_window(app: &tauri::AppHandle) -> Result<(), String> {
@@ -423,13 +446,90 @@ fn reset_window_flags(window: &tauri::WebviewWindow) -> Result<(), String> {
     window
         .set_always_on_top(false)
         .map_err(|error| error.to_string())?;
+    reset_normal_z_order(window)?;
     window
         .set_skip_taskbar(false)
         .map_err(|error| error.to_string())
 }
 
+#[cfg(windows)]
+fn force_overlay_z_order(window: &tauri::WebviewWindow) -> Result<(), String> {
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+    };
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let result = unsafe {
+        SetWindowPos(
+            hwnd.0,
+            HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        )
+    };
+    if result == 0 {
+        return Err(format!(
+            "Could not present the overlay above the foreground window (Windows error {}).",
+            unsafe { GetLastError() }
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn force_overlay_z_order(_window: &tauri::WebviewWindow) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(windows)]
+fn reset_normal_z_order(window: &tauri::WebviewWindow) -> Result<(), String> {
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, HWND_NOTOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    };
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let result = unsafe {
+        SetWindowPos(
+            hwnd.0,
+            HWND_NOTOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+    };
+    if result == 0 {
+        return Err(format!(
+            "Could not restore the normal window Z-order (Windows error {}).",
+            unsafe { GetLastError() }
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn reset_normal_z_order(_window: &tauri::WebviewWindow) -> Result<(), String> {
+    Ok(())
+}
+
+fn should_disable_overlay(active: bool, visible: bool, minimized: bool) -> bool {
+    active && visible && !minimized
+}
+
 pub fn toggle(app: &tauri::AppHandle) -> Result<(), String> {
-    if is_active() {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window unavailable".to_string())?;
+    let visible = window.is_visible().unwrap_or(false);
+    let minimized = window.is_minimized().unwrap_or(true);
+
+    if should_disable_overlay(is_active(), visible, minimized) {
         disable(app)
     } else {
         enable(app)
@@ -440,8 +540,8 @@ pub fn toggle(app: &tauri::AppHandle) -> Result<(), String> {
 mod tests {
     use super::{
         detected_pressed_shortcut, is_active, overlay_window_flags, parse_shortcut,
-        registration_state, should_toggle_for_shortcut_event, status, Modifiers, Ordering,
-        ShortcutState, OVERLAY_ACTIVE, SHORTCUT_CAPTURE_ACTIVE,
+        registration_state, should_disable_overlay, should_toggle_for_shortcut_event, status,
+        Modifiers, Ordering, ShortcutState, OVERLAY_ACTIVE, SHORTCUT_CAPTURE_ACTIVE,
     };
 
     #[test]
@@ -489,6 +589,14 @@ mod tests {
         OVERLAY_ACTIVE.store(true, Ordering::SeqCst);
 
         assert!(is_active());
+    }
+
+    #[test]
+    fn hidden_or_minimized_overlay_is_reactivated_by_the_next_shortcut() {
+        assert!(!should_disable_overlay(true, false, false));
+        assert!(!should_disable_overlay(true, true, true));
+        assert!(should_disable_overlay(true, true, false));
+        assert!(!should_disable_overlay(false, true, false));
     }
 
     #[test]

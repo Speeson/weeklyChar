@@ -30,9 +30,28 @@ pub fn hide_to_tray(app: &AppHandle) -> Result<(), CoreBridgeError> {
         code: "WINDOW_NOT_FOUND".to_string(),
         message: "The KeystoneClient window is unavailable.".to_string(),
     })?;
+    overlay::prepare_for_window_action(app).map_err(|_| CoreBridgeError {
+        code: "WINDOW_HIDE_FAILED".to_string(),
+        message: "KeystoneClient could not be minimized to the tray.".to_string(),
+    })?;
     window.hide().map_err(|_| CoreBridgeError {
         code: "WINDOW_HIDE_FAILED".to_string(),
         message: "KeystoneClient could not be minimized to the tray.".to_string(),
+    })
+}
+
+pub fn minimize(app: &AppHandle) -> Result<(), CoreBridgeError> {
+    let window = main_window(app).ok_or_else(|| CoreBridgeError {
+        code: "WINDOW_NOT_FOUND".to_string(),
+        message: "The KeystoneClient window is unavailable.".to_string(),
+    })?;
+    overlay::prepare_for_window_action(app).map_err(|_| CoreBridgeError {
+        code: "WINDOW_MINIMIZE_FAILED".to_string(),
+        message: "KeystoneClient could not be minimized.".to_string(),
+    })?;
+    window.minimize().map_err(|_| CoreBridgeError {
+        code: "WINDOW_MINIMIZE_FAILED".to_string(),
+        message: "KeystoneClient could not be minimized.".to_string(),
     })
 }
 

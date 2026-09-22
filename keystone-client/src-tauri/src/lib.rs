@@ -71,6 +71,11 @@ fn hide_to_tray(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
 }
 
 #[tauri::command]
+fn minimize_window(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
+    window::minimize(&app)
+}
+
+#[tauri::command]
 fn set_window_aspect_lock(app: tauri::AppHandle, enabled: bool) -> Result<(), CoreBridgeError> {
     window_sizing::set_aspect_lock(&app, enabled)
 }
@@ -149,6 +154,7 @@ pub fn run() {
             open_raiderio_character,
             exit_app,
             hide_to_tray,
+            minimize_window,
             set_window_aspect_lock,
             configure_overlay_shortcut,
             get_overlay_shortcut_status,
