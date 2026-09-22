@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, ChevronDown, CircleHelp, Crown, Gem, Settings2, Users, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Crown, Gem, Settings2, Users, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import battleRezIcon from "../assets/planner/battle-rez.jpg";
@@ -61,19 +61,99 @@ function TierSummary({ counts }: { counts: KeystoneSelectorTierCounts }) {
 }
 
 function StoneOwnerChips({ detail, stones }: { detail: ClientTeamDetail | null; stones: KeystoneSelectorStone[] }) {
+  const { language } = useI18n();
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ pointerId: number; startScrollLeft: number; startX: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [scrollState, setScrollState] = useState({ backward: false, forward: false });
   const classByCharacterId = new Map(
     detail?.members.flatMap(member => member.characters.map(character => [character.characterId, character.wowClass] as const)) ?? [],
   );
-  return <div className="teams-stone-owner-chips">
-    {stones.map(stone => <span
-      className="teams-stone-owner-chip"
-      key={stone.characterId}
-      style={{ "--teams-owner-color": classColor(classByCharacterId.get(stone.characterId) ?? null) } as React.CSSProperties}
+  const updateScrollState = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const maximum = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const next = { backward: scroller.scrollLeft > 1, forward: scroller.scrollLeft < maximum - 1 };
+    setScrollState(current => current.backward === next.backward && current.forward === next.forward ? current : next);
+  }, []);
+
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    updateScrollState();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateScrollState);
+    observer?.observe(scroller);
+    scroller.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      observer?.disconnect();
+      scroller.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [stones, updateScrollState]);
+
+  const scroll = (direction: -1 | 1) => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    scroller.scrollBy({ behavior: "smooth", left: direction * Math.max(180, scroller.clientWidth * 0.72) });
+  };
+  const finishDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    dragRef.current = null;
+    setDragging(false);
+    updateScrollState();
+  };
+  const labels = language === "es"
+    ? { region: "Piedras disponibles", previous: "Ver piedras anteriores", next: "Ver más piedras" }
+    : { region: "Available keystones", previous: "Show previous keystones", next: "Show more keystones" };
+
+  return <div
+    className="teams-stone-owner-carousel"
+    data-can-scroll-backward={scrollState.backward}
+    data-can-scroll-forward={scrollState.forward}
+  >
+    <button aria-label={labels.previous} className="teams-stone-owner-scroll teams-stone-owner-scroll--previous" hidden={!scrollState.backward} onClick={() => scroll(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
+    <div
+      aria-label={labels.region}
+      className="teams-stone-owner-chips"
+      data-dragging={dragging}
+      onKeyDown={event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        scroll(event.key === "ArrowLeft" ? -1 : 1);
+      }}
+      onPointerCancel={finishDrag}
+      onPointerDown={event => {
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        dragRef.current = { pointerId: event.pointerId, startScrollLeft: event.currentTarget.scrollLeft, startX: event.clientX };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={event => {
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        const delta = event.clientX - drag.startX;
+        if (Math.abs(delta) > 2) event.preventDefault();
+        event.currentTarget.scrollLeft = drag.startScrollLeft - delta;
+        updateScrollState();
+      }}
+      onPointerUp={finishDrag}
+      ref={scrollerRef}
+      role="region"
+      tabIndex={0}
     >
-      <strong>{stone.characterName}</strong>
-      <span className="teams-stone-owner-chip__level">+{stone.level}</span>
-      <small>({stone.ownerUsername})</small>
-    </span>)}
+      {stones.map(stone => <span
+        className="teams-stone-owner-chip"
+        key={stone.characterId}
+        style={{ "--teams-owner-color": classColor(classByCharacterId.get(stone.characterId) ?? null) } as React.CSSProperties}
+      >
+        <strong>{stone.characterName}</strong>
+        <span className="teams-stone-owner-chip__level">+{stone.level}</span>
+        <small>({stone.ownerUsername})</small>
+      </span>)}
+    </div>
+    <button aria-label={labels.next} className="teams-stone-owner-scroll teams-stone-owner-scroll--next" hidden={!scrollState.forward} onClick={() => scroll(1)} type="button"><ChevronRight aria-hidden="true" /></button>
   </div>;
 }
 
