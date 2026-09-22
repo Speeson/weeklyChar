@@ -1,0 +1,13 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Las piedras de la cabecera de Equipos se pueden recorrer cuando no caben en pantalla.",
+  "details": [
+    "Añade flechas contextuales, navegación con teclado y desplazamiento mediante arrastre o trackpad a la fila de piedras disponibles."
+  ],
+  "summaryEn": "Team header keystones can now be browsed when they do not fit on screen.",
+  "detailsEn": [
+    "Adds contextual arrows, keyboard navigation, and drag or trackpad scrolling to the available keystone row."
+  ]
+}

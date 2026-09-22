@@ -619,6 +619,42 @@ describe("TeamsPage compact ranking", () => {
     expect(rows[0]).toHaveAttribute("data-expanded", "true");
   });
 
+  it("reveals overflowing stone chips with buttons, keyboard navigation and pointer dragging", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await selectRuby(user);
+    const scroller = screen.getByRole("region", { name: "Piedras disponibles" });
+    Object.defineProperties(scroller, {
+      clientWidth: { configurable: true, value: 200 },
+      scrollLeft: { configurable: true, value: 0, writable: true },
+      scrollWidth: { configurable: true, value: 600 },
+    });
+    const scrollBy = vi.fn(({ left }: ScrollToOptions) => {
+      scroller.scrollLeft = Math.max(0, Math.min(400, scroller.scrollLeft + (left ?? 0)));
+      fireEvent.scroll(scroller);
+    });
+    Object.defineProperty(scroller, "scrollBy", { configurable: true, value: scrollBy });
+
+    fireEvent.resize(window);
+    const next = await screen.findByRole("button", { name: "Ver más piedras" });
+    expect(next).toHaveClass("teams-stone-owner-scroll--next");
+    expect(screen.queryByRole("button", { name: "Ver piedras anteriores" })).not.toBeInTheDocument();
+    await user.click(next);
+    expect(scrollBy).toHaveBeenCalledWith({ behavior: "smooth", left: 180 });
+    expect(await screen.findByRole("button", { name: "Ver piedras anteriores" })).toBeInTheDocument();
+
+    scroller.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(scrollBy).toHaveBeenLastCalledWith({ behavior: "smooth", left: 180 });
+
+    scroller.scrollLeft = 0;
+    fireEvent.pointerDown(scroller, { button: 0, clientX: 160, pointerId: 7, pointerType: "mouse" });
+    fireEvent.pointerMove(scroller, { clientX: 80, pointerId: 7, pointerType: "mouse" });
+    expect(scroller.scrollLeft).toBe(80);
+    fireEvent.pointerUp(scroller, { clientX: 80, pointerId: 7, pointerType: "mouse" });
+    expect(scroller).toHaveAttribute("data-dragging", "false");
+  });
+
   it("plans the Top 5 for the selected exact stone and marks its owner with the leader crown", async () => {
     const user = userEvent.setup();
     const planned = plannerResponse();

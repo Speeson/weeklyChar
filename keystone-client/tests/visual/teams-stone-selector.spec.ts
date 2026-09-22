@@ -111,6 +111,24 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await expect(ownerChips.nth(1)).toContainText("Auralisdelaluzeterna+9(GuardianaDeLosSecretosDelVacío)");
   await expect(ownerChips.first().locator(".teams-stone-owner-chip__level")).toHaveCSS("color", "rgb(255, 159, 67)");
   await expect(page.locator(".teams-dungeon-context")).toHaveCount(0);
+  const nextStoneButton = page.getByRole("button", { name: "Ver más piedras" });
+  await expect(nextStoneButton).toBeVisible();
+  const stoneNavigationGeometry = await nextStoneButton.evaluate(element => {
+    const button = element.getBoundingClientRect();
+    const carousel = element.closest(".teams-stone-owner-carousel")!.getBoundingClientRect();
+    return {
+      buttonLeft: button.left,
+      buttonRight: button.right,
+      buttonWidth: button.width,
+      carouselLeft: carousel.left,
+      carouselRight: carousel.right,
+      gridColumn: getComputedStyle(element).gridColumnStart,
+    };
+  });
+  expect(stoneNavigationGeometry.gridColumn).toBe("3");
+  expect(stoneNavigationGeometry.buttonWidth).toBeGreaterThanOrEqual(26);
+  expect(stoneNavigationGeometry.buttonLeft).toBeGreaterThanOrEqual(stoneNavigationGeometry.carouselLeft);
+  expect(stoneNavigationGeometry.buttonRight).toBeLessThanOrEqual(stoneNavigationGeometry.carouselRight);
   const headerGeometry = await page.locator(".teams-dungeon-summary").evaluate(element => {
     const summary = element.getBoundingClientRect();
     const metrics = element.querySelector(".teams-dungeon-metrics")!.getBoundingClientRect();
