@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.2",
+  "version": "0.15.3",
+  "bump": "patch",
+  "tag": "client-v0.15.3",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-team-stone-chip-scroll.json"
+  ]
+}
