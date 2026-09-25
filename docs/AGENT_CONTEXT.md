@@ -87,7 +87,8 @@ Main implementation points:
   direct Web icon resolver is currently part of the public contract.
 - KeystoneClient Teams owns one page-local minimum-keystone-level filter in the shared Team/member
   header. It filters local dungeon counts, selected-dungeon keystone chips, and exact Planner stone
-  choices while leaving dungeon objective cards and objective/tier totals unchanged.
+  choices while leaving dungeon objective cards and objective/tier totals unchanged. The control
+  defaults to `+10` and appears as a self-contained framed card rather than a separated header column.
 - `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, and `keystone-web/app/teams/[id]/page.tsx`: consume character and team character data.
 
 ## Current versions
@@ -338,7 +339,8 @@ required by WebView2 on Windows for frontend HTML5 drag and drop. Planner prefer
 therefore move between active/inactive zones in the packaged client, with 50 % opacity and a subtle
 blur while dragging. The Characters rail uses the same interaction and stores inactive character
 IDs in versioned local client storage. Character inactivity is presentation-only: it does not stop
-synchronization, delete data, or alter the addon/Worker/D1/Web contract.
+synchronization, delete data, or alter the addon/Worker/D1/Web contract. The Synchronization page
+uses the same local IDs to omit inactive characters from its table and visible-character count.
 The Characters rail groups account and realm selection into one hierarchical account-to-realms
 menu. Account/realm and Characters are independently collapsible, while Inactive is a compact
 closed drop tray whose content opens upward in normal layout flow. Rounded section headers are

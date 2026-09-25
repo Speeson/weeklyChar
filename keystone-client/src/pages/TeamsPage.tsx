@@ -1146,7 +1146,7 @@ function MemberStrip({ detail, mode, onClear, onToggle, ownerUserId, selected }:
 function MinimumStoneLevelFilter({ minimumLevel, onChange }: { minimumLevel: number; onChange: (level: number) => void }) {
   const { t } = useI18n();
   return <label className="teams-minimum-level" htmlFor="teams-minimum-stone-level">
-    <span><strong>{t("teams.minimumStoneLevel")}</strong><output htmlFor="teams-minimum-stone-level">+{minimumLevel}</output></span>
+    <span className="teams-minimum-level__heading"><strong>{t("teams.minimumStoneLevel")}</strong><output htmlFor="teams-minimum-stone-level">+{minimumLevel}</output></span>
     <input id="teams-minimum-stone-level" max="20" min="1" onChange={event => onChange(Number(event.currentTarget.value))} type="range" value={minimumLevel} />
   </label>;
 }
@@ -1173,7 +1173,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const [plannerSelectedUsers, setPlannerSelectedUsers] = useState<Set<number>>(() => new Set());
   const [activeFeature, setActiveFeature] = useState<"objectives" | "planner">("objectives");
   const [plannerOwnerUserId, setPlannerOwnerUserId] = useState<number | null>(null);
-  const [minimumStoneLevel, setMinimumStoneLevel] = useState(1);
+  const [minimumStoneLevel, setMinimumStoneLevel] = useState(10);
   const [plannerPreferences, setPlannerPreferences] = useState<ClientPlannerPreferences | null>(null);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [preferencesLoading, setPreferencesLoading] = useState(false);

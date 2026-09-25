@@ -21,7 +21,7 @@ test("reviews the default, multiple-Team, empty and scaled shell states", async 
   await openTeams(page, "teams-default");
   await expect(page.getByRole("button", { name: "Mythiqueros 2.0" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Seleccionar/u })).toHaveCount(8);
-  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras/u })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra/u })).toBeEnabled();
   await expect(page.getByRole("button", { name: /Reposo de los Reyes.*0 piedras/u })).toBeEnabled();
   await expect(page.getByText(/GuardianaDeLosSecretos/u)).toBeVisible();
   await expect(page.getByText("Selecciona una mazmorra para ver los objetivos del equipo.")).toBeVisible();
@@ -60,7 +60,7 @@ test("reviews the default, multiple-Team, empty and scaled shell states", async 
 
 test("reviews populated, multi-spec, item grouping and tooltip states", async ({ page }) => {
   await openTeams(page, "teams-selector-full");
-  const ruby = page.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras/u });
+  const ruby = page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra/u });
   await ruby.click();
   await expect(ruby).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
@@ -100,7 +100,7 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await memberFilters.first().click();
   await expect(memberFilters.first()).toHaveAttribute("aria-pressed", "false");
   expect(await page.getByTestId("selector-character").count()).toBeLessThan(8);
-  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*0 piedras$/u })).toHaveAttribute("data-available", "false");
   const deselectedMemberVisual = await memberFilters.first().evaluate(element => {
     const style = getComputedStyle(element);
     return { background: style.backgroundImage, border: style.borderColor, shadow: style.boxShadow };
@@ -109,16 +109,46 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   expect(deselectedMemberVisual.shadow).not.toContain("rgb(49, 233, 129)");
   await memberFilters.first().click();
   await expect(page.getByTestId("selector-character")).toHaveCount(8);
-  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras$/u })).toHaveAttribute("data-available", "true");
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
   const ownerChips = page.locator(".teams-stone-owner-chip");
-  await expect(ownerChips).toHaveCount(2);
+  await expect(ownerChips).toHaveCount(1);
   await expect(ownerChips.first()).toContainText("Bakuhatsu+12(Speeson)");
-  await expect(ownerChips.nth(1)).toContainText("Auralisdelaluzeterna+9(GuardianaDeLosSecretosDelVacío)");
   await expect(ownerChips.first().locator(".teams-stone-owner-chip__level")).toHaveCSS("color", "rgb(255, 159, 67)");
   const minimumLevel = page.getByRole("slider", { name: /Nivel mínimo de piedras/u });
-  await expect(minimumLevel).toHaveValue("1");
+  await expect(minimumLevel).toHaveValue("10");
+  const minimumLevelCard = page.locator(".teams-minimum-level");
+  const minimumLevelCardVisual = await minimumLevelCard.evaluate(element => {
+    const style = getComputedStyle(element);
+    const headingElement = element.querySelector<HTMLElement>(".teams-minimum-level__heading")!;
+    const inputElement = element.querySelector<HTMLInputElement>("input")!;
+    const heading = getComputedStyle(headingElement);
+    const cardBounds = element.getBoundingClientRect();
+    const headingBounds = headingElement.getBoundingClientRect();
+    const inputBounds = inputElement.getBoundingClientRect();
+    return {
+      background: style.backgroundImage,
+      borderBottomWidth: style.borderBottomWidth,
+      borderLeftWidth: style.borderLeftWidth,
+      borderRadius: Number.parseFloat(style.borderRadius),
+      borderTopWidth: style.borderTopWidth,
+      headingSeparator: heading.borderBottomWidth,
+      headingTopInset: headingBounds.top - cardBounds.top,
+      inputBottomInset: cardBounds.bottom - inputBounds.bottom,
+      titleToSliderGap: inputBounds.top - headingBounds.bottom,
+    };
+  });
+  expect(minimumLevelCardVisual.background).not.toBe("none");
+  expect(minimumLevelCardVisual.borderLeftWidth).toBe(minimumLevelCardVisual.borderTopWidth);
+  expect(minimumLevelCardVisual.borderBottomWidth).toBe(minimumLevelCardVisual.borderTopWidth);
+  expect(minimumLevelCardVisual.borderRadius).toBeGreaterThan(0);
+  expect(minimumLevelCardVisual.headingSeparator).not.toBe("0px");
+  expect(minimumLevelCardVisual.headingTopInset).toBeGreaterThanOrEqual(5);
+  expect(minimumLevelCardVisual.inputBottomInset).toBeGreaterThanOrEqual(0);
+  expect(minimumLevelCardVisual.titleToSliderGap).toBeLessThanOrEqual(3);
   await minimumLevel.focus();
   await minimumLevel.press("Home");
+  await expect(ownerChips).toHaveCount(2);
+  await expect(ownerChips.nth(1)).toContainText("Auralisdelaluzeterna+9(GuardianaDeLosSecretosDelVacío)");
   for (let level = 1; level < 10; level += 1) await minimumLevel.press("ArrowRight");
   await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
   await expect(ownerChips).toHaveCount(1);
@@ -732,6 +762,7 @@ test("reviews exact-stone Planner previews, owner crown, accordion and minimum v
 test("centers incomplete Planner previews and same-row detail pairs", async ({ page }) => {
   const openIncompletePair = async (stoneName: RegExp, teammateName: string) => {
     await openTeams(page, "teams-planner");
+    await page.getByRole("slider", { name: /Nivel mínimo de piedras/u }).fill("1");
     await page.getByRole("button", { name: /Estanques de Vida Rubí/u }).click();
     await page.getByRole("button", { name: "Planificar piedra" }).click();
     await page.getByRole("button", { name: stoneName }).click();

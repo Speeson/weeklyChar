@@ -1,0 +1,17 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "La pestaña Sincronizar oculta los personajes marcados como inactivos.",
+  "details": [
+    "Reutiliza la preferencia local de Personajes para filtrar la tabla de Sincronizar.",
+    "Actualiza el contador visible y muestra un estado vacío específico cuando todos están inactivos.",
+    "Mantiene la inactividad como una preferencia de presentación sin detener la sincronización."
+  ],
+  "summaryEn": "The Sync tab now hides characters marked as inactive.",
+  "detailsEn": [
+    "Reuses the local Characters preference to filter the Sync table.",
+    "Updates the visible count and shows a dedicated empty state when every character is inactive.",
+    "Keeps inactivity as a presentation preference without stopping synchronization."
+  ]
+}

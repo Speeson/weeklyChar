@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
 import { openRaiderIoCharacter } from "../core/native";
+import { saveInactiveCharacterIds } from "../core/characterTracking";
 import type { AddonStatus, CharacterState, CoreEvent, SyncStatus, WowState } from "../core/types";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { SyncPage } from "./SyncPage";
@@ -175,6 +176,20 @@ describe("SyncPage", () => {
     expect(screen.getByText("Versión de la aplicación")).toBeInTheDocument();
     expect(screen.getByText("v0.1.0")).toBeInTheDocument();
     expect(screen.getByText("Detectados")).toBeInTheDocument();
+  });
+
+  it("hides locally inactive characters from the synchronization list and visible count", () => {
+    saveInactiveCharacterIds(["low"]);
+    const { rerender } = render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={characterState} initialSync={idleStatus} initialWow={wowState} />);
+
+    expect(screen.queryByText("Alpha")).not.toBeInTheDocument();
+    expect(screen.getByText("Zulu")).toBeInTheDocument();
+    expect(screen.getByLabelText("Personajes: 1")).toBeInTheDocument();
+
+    saveInactiveCharacterIds(["low", "high"]);
+    rerender(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={{ ...characterState, characters: [...characterState.characters] }} initialSync={idleStatus} initialWow={wowState} />);
+    expect(screen.getByText("No hay personajes activos para mostrar.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Personajes: 0")).toBeInTheDocument();
   });
 
   it("sorts by Raider.IO descending by default and toggles headers", async () => {

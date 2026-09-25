@@ -3509,7 +3509,7 @@ select {
   z-index: 20;
   min-width: 0;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 210px;
+  grid-template-columns: 260px minmax(0, 1fr) 240px;
   align-items: stretch;
   gap: 10px;
   padding: 9px;
@@ -3603,11 +3603,24 @@ select {
 .teams-active-filters { display: grid; justify-items: end; gap: 1px; color: var(--theme-text-muted); font-size: 9px; white-space: nowrap; }
 .teams-clear-filters { min-width: auto; min-height: 25px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-color: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-border)); color: var(--theme-text-accent); background: color-mix(in srgb, var(--theme-surface-1) 88%, transparent); font-size: 10px; }
 .teams-clear-filters svg { width: 12px; }
-.teams-minimum-level { min-width: 0; height: 50px; display: grid; grid-template-rows: auto 1fr; align-content: center; gap: 3px; padding-left: 13px; border-left: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--theme-divider)); }
-.teams-minimum-level > span { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; transform: translateY(2px); }
-.teams-minimum-level strong { overflow: hidden; color: var(--theme-text); font-size: 12px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
-.teams-minimum-level output { min-width: 36px; padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--theme-accent) 38%, var(--theme-border)); border-radius: 10px; color: var(--theme-accent); font-size: 13px; font-weight: 850; line-height: 1.15; text-align: center; }
-.teams-minimum-level input { width: 100%; margin: 0; accent-color: var(--theme-accent); }
+.teams-minimum-level {
+  min-width: 0;
+  height: 50px;
+  display: grid;
+  grid-template-rows: 18px 16px;
+  align-content: start;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 5px 10px 3px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, var(--theme-border));
+  border-radius: 9px;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-1)), color-mix(in srgb, var(--theme-surface-2) 94%, transparent));
+  box-shadow: inset 0 1px color-mix(in srgb, var(--theme-accent) 13%, transparent), 0 3px 10px rgb(0 0 0 / 20%);
+}
+.teams-minimum-level__heading { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 1px; border-bottom: 1px solid color-mix(in srgb, var(--theme-accent) 24%, var(--theme-divider)); }
+.teams-minimum-level strong { overflow: hidden; color: var(--theme-text-bright); font-size: 12px; font-weight: 850; line-height: 1.1; letter-spacing: 0.015em; text-overflow: ellipsis; white-space: nowrap; }
+.teams-minimum-level output { min-width: 36px; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--theme-accent) 45%, var(--theme-border)); border-radius: 10px; color: var(--theme-accent); background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface-2)); font-size: 13px; font-weight: 900; line-height: 1; text-align: center; box-shadow: 0 0 8px color-mix(in srgb, var(--theme-accent) 10%, transparent); }
+.teams-minimum-level input { width: 100%; min-height: 0; height: 16px; align-self: center; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; accent-color: var(--theme-accent); }
 
 /* Planner V1: automatic roster planning and WoW-native visual language. */
 .teams-member-filter { height: 50px; }
@@ -4077,11 +4090,11 @@ select {
 
 @media (max-width: 1000px) {
   .teams-page { grid-template-rows: 62px minmax(0, 1fr); gap: 6px; }
-  .teams-top-row { grid-template-columns: 220px minmax(0, 1fr) 180px; gap: 6px; padding: 6px; }
+  .teams-top-row { grid-template-columns: 220px minmax(0, 1fr) 220px; gap: 6px; padding: 6px; }
   .teams-picker__trigger { height: 48px; font-size: 13px; }
   .teams-member-carousel, .teams-member-strip { height: 48px; }
   .teams-member-filter { width: 156px; min-width: 156px; height: 48px; }
-  .teams-minimum-level { height: 48px; padding-left: 8px; }
+  .teams-minimum-level { height: 48px; padding-inline: 8px; }
   .teams-minimum-level strong { font-size: 11px; }
   .teams-minimum-level output { min-width: 34px; font-size: 12px; }
   .teams-selector { grid-template-columns: 106px minmax(0, 1fr); }

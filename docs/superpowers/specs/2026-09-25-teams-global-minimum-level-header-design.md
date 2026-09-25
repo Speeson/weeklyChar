@@ -9,10 +9,11 @@ the Team picker.
 
 ## Approved Design
 
-- The far-right side of the Team/member header contains a vertical separator followed by a compact
-  two-row control: `Nivel mínimo de piedras` and the current `+N` value above the range input.
-- The minimum level remains in the `1` to `20` range and is shared while Teams stays mounted,
-  independently of the selected Team, dungeon, or Objectives/Planner tab.
+- The far-right side of the Team/member header contains a compact framed two-row card, without a
+  standalone vertical separator. Its emphasized title row contains `Nivel mínimo de piedras` and
+  the current `+N` value above the range input.
+- The minimum level defaults to `+10`, remains in the `1` to `20` range, and is shared while Teams
+  stays mounted, independently of the selected Team, dungeon, or Objectives/Planner tab.
 - Dungeon-rail counts, selected-dungeon owner chips, and Planner stone cards include only keystones
   whose level is at least the selected minimum. Objectives and their item totals are not removed by
   the level control because they describe dungeon loot, not a particular keystone level.

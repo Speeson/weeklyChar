@@ -19,7 +19,8 @@
 - Wrap the existing member strip with contextual previous/next controls.
 - Add keyboard, pointer-drag, trackpad/native scrolling, resize observation, and accessible labels.
 - Preserve member-card dimensions and selected/unavailable/pinned presentation.
-- Add the vertical separator and compact two-row minimum-level control at the far right.
+- Add a framed two-row minimum-level card at the far right, with an emphasized title row and no
+  standalone vertical separator; initialize its range at `+10`.
 - Remove the member strip's vertical offset so cards align with the Team picker.
 
 ## Task 4: Validate and document release impact

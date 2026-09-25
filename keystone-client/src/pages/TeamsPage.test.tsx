@@ -270,7 +270,7 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByText("2 personajes")).toBeInTheDocument();
     expect(screen.getByText("1 personaje")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Seleccionar/u })).toHaveLength(8);
-    const ruby = screen.getByRole("button", { name: /Estanques de Vida Rubí.*2 piedras/u });
+    const ruby = screen.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra/u });
     expect(ruby).toHaveTextContent("Estanques de Vida Rubí");
     expect(ruby.querySelector(".teams-dungeon__art")).toHaveAttribute("src", expect.stringContaining("ruby-life-pools"));
     expect(screen.getByRole("button", { name: /Arena Lacravacua.*0 piedras/u })).toBeEnabled();
@@ -285,14 +285,12 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     const level = await screen.findByRole("slider", { name: /Nivel mínimo de piedras/u });
-    expect(level).toHaveValue("1");
-    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(level).toHaveValue("10");
+    expect(screen.getByText("+10")).toBeInTheDocument();
+    expect(screen.getByText("Nivel mínimo de piedras").closest(".teams-minimum-level__heading")).toContainElement(screen.getByText("+10"));
     await selectRuby(user);
     expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
 
-    fireEvent.change(level, { target: { value: "10" } });
-    expect(level).toHaveValue("10");
-    expect(screen.getByText("+10")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
     expect(document.querySelectorAll(".teams-stone-owner-chip")).toHaveLength(1);
     expect(document.querySelector(".teams-stone-owner-chip")).toHaveTextContent("Bakuhatsu+12(Speeson)");
@@ -483,6 +481,7 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     await selectRuby(user);
+    fireEvent.change(screen.getByRole("slider", { name: /Nivel mínimo de piedras/u }), { target: { value: "1" } });
     const speeson = screen.getByRole("button", { name: /Filtrar por Speeson/u });
     const ana = screen.getByRole("button", { name: /Filtrar por Ana/u });
     expect(speeson).toHaveAttribute("aria-pressed", "true");
@@ -527,6 +526,7 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     await selectRuby(user);
+    fireEvent.change(screen.getByRole("slider", { name: /Nivel mínimo de piedras/u }), { target: { value: "1" } });
     const speeson = screen.getByRole("button", { name: /Filtrar por Speeson/u });
     await user.click(speeson);
     expect(speeson).toHaveAttribute("aria-pressed", "false");
@@ -648,6 +648,7 @@ describe("TeamsPage compact ranking", () => {
     const user = userEvent.setup();
     renderPage();
     const rows = await selectRuby(user);
+    fireEvent.change(screen.getByRole("slider", { name: /Nivel mínimo de piedras/u }), { target: { value: "1" } });
     expect(screen.getAllByText("Estanques de Vida Rubí")).toHaveLength(1);
     expect(document.querySelector(".teams-dungeon-context")).not.toBeInTheDocument();
     expect(screen.queryByText("2 piedras · Bakuhatsu + Spee")).not.toBeInTheDocument();

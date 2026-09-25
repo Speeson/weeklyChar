@@ -12,6 +12,7 @@ import {
   type CharacterSortKey,
   type SortDirection,
 } from "../core/characterDisplay";
+import { loadInactiveCharacterIds } from "../core/characterTracking";
 import { openRaiderIoCharacter } from "../core/native";
 import { useI18n, type TranslationKey } from "../core/i18n";
 import { localizedCoreErrorMessage } from "../core/errorDisplay";
@@ -236,7 +237,11 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
   };
   const lastSyncAt = sync.lastSuccessAt ?? sync.lastSyncAt;
   const accountCount = preview ? 8 : sync.selectedAccounts || wow.selectedAccounts.length;
-  const characterCount = characterState.characters.length;
+  const displayedCharacters = useMemo(() => {
+    const inactiveCharacterIds = loadInactiveCharacterIds();
+    return characterState.characters.filter(character => !inactiveCharacterIds.has(character.id));
+  }, [characterState.characters]);
+  const characterCount = displayedCharacters.length;
   const syncing = sync.state === "syncing";
   const busy = busyAction !== null;
   const forceDisabled = busy || syncing || sync.selectedAccounts === 0;
@@ -253,7 +258,8 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
           language={language}
         />
         <CharactersTable
-          characters={characterState.characters}
+          characters={displayedCharacters}
+          emptyMessage={characterState.characters.length > 0 && displayedCharacters.length === 0 ? t("sync.noActiveCharacters") : null}
           error={characterState.lastError ? t("sync.characterError") : null}
           loading={characterState.refreshing}
           onOpenError={(caught) => setError(localizedCoreErrorMessage(caught, language, t("sync.errorGeneric")))}
@@ -327,12 +333,13 @@ function SummaryCard({ detail, frame, icon, label, tone, value }: SummaryCardPro
 
 type CharactersTableProps = {
   characters: Character[];
+  emptyMessage: string | null;
   error: string | null;
   loading: boolean;
   onOpenError: (error: unknown) => void;
 };
 
-function CharactersTable({ characters, error, loading, onOpenError }: CharactersTableProps) {
+function CharactersTable({ characters, emptyMessage, error, loading, onOpenError }: CharactersTableProps) {
   const { language, t } = useI18n();
   const tableFrame = useThemeAsset("sync-table-frame");
   const columns: Array<{ key: CharacterSortKey; label: string }> = [
@@ -381,7 +388,7 @@ function CharactersTable({ characters, error, loading, onOpenError }: Characters
         </div>
         {rows.length === 0 ? (
           <p className="sync-table__empty" role={error ? "alert" : "status"}>
-            {loading ? t("sync.loadingCharacters") : error ?? t("sync.noCharacters")}
+            {loading ? t("sync.loadingCharacters") : error ?? emptyMessage ?? t("sync.noCharacters")}
           </p>
         ) : (
           <div className="sync-table__body" role="rowgroup">
