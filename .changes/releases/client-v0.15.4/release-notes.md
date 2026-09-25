@@ -1,0 +1,19 @@
+<!-- lang:es -->
+# KeystoneClient 0.15.4
+
+## Cambios
+
+- La cabecera de Equipos centraliza el nivel mínimo de piedras y permite recorrer las tarjetas de miembros.
+  - Mueve el filtro de nivel mínimo desde Planificar piedra a la cabecera compartida y lo aplica a los conteos, las piedras disponibles y las piedras seleccionables del Planner.
+  - Añade flechas contextuales, teclado y desplazamiento mediante arrastre o trackpad a las tarjetas de miembros.
+  - Alinea las tarjetas de miembros con el selector de equipo y mejora la legibilidad del nivel mínimo sin cambiar el tamaño ni el aspecto de las tarjetas.
+
+<!-- lang:en -->
+# KeystoneClient 0.15.4
+
+## Changes
+
+- The Teams header now centralizes the minimum keystone level and makes member cards browsable.
+  - Moves the minimum-level filter from Plan Keystone into the shared header and applies it to counts, available keystones, and Planner stone choices.
+  - Adds contextual arrows, keyboard navigation, and drag or trackpad scrolling to member cards.
+  - Aligns member cards with the Team picker and improves minimum-level readability without changing card size or appearance.

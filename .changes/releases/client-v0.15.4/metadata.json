@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.3",
+  "version": "0.15.4",
+  "bump": "patch",
+  "tag": "client-v0.15.4",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-teams-global-minimum-level.json"
+  ]
+}
