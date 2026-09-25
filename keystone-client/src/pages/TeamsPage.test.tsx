@@ -281,6 +281,69 @@ describe("TeamsPage compact ranking", () => {
     expect(dataSource.getKeystoneSelector).not.toHaveBeenCalled();
   });
 
+  it("shares the minimum keystone level across Objectives counts, header chips and Planner stones", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const level = await screen.findByRole("slider", { name: /Nivel mínimo de piedras/u });
+    expect(level).toHaveValue("1");
+    expect(screen.getByText("+1")).toBeInTheDocument();
+    await selectRuby(user);
+    expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
+
+    fireEvent.change(level, { target: { value: "10" } });
+    expect(level).toHaveValue("10");
+    expect(screen.getByText("+10")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
+    expect(document.querySelectorAll(".teams-stone-owner-chip")).toHaveLength(1);
+    expect(document.querySelector(".teams-stone-owner-chip")).toHaveTextContent("Bakuhatsu+12(Speeson)");
+    expect(screen.getAllByTestId("selector-character")).toHaveLength(2);
+    expect(screen.getByText("2 personajes · 7 objetivos")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Planificar piedra" }));
+    await waitFor(() => expect(screen.queryByRole("status", { name: /Cargando configuración/u })).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /\+8.*Spee.*Ana/u })).not.toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: /Nivel mínimo de piedras/u })).toHaveValue("10");
+
+    await user.click(screen.getByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u }));
+    expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("data-pinned", "true");
+    fireEvent.change(level, { target: { value: "13" } });
+    expect(screen.queryByRole("button", { name: /\+12.*Bakuhatsu.*Speeson/u })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Filtrar por Speeson/u })).toHaveAttribute("data-pinned", "false"));
+    expect(screen.getByRole("button", { name: "Calcular Top 5" })).toBeDisabled();
+  });
+
+  it("scrolls and drags overflowing member cards without changing a card selection", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const scroller = await screen.findByRole("region", { name: "Filtros de miembros" });
+    Object.defineProperties(scroller, {
+      clientWidth: { configurable: true, value: 180 },
+      scrollLeft: { configurable: true, value: 0, writable: true },
+      scrollWidth: { configurable: true, value: 540 },
+    });
+    const scrollBy = vi.fn(({ left }: ScrollToOptions) => {
+      scroller.scrollLeft = Math.max(0, Math.min(360, scroller.scrollLeft + (left ?? 0)));
+      fireEvent.scroll(scroller);
+    });
+    Object.defineProperty(scroller, "scrollBy", { configurable: true, value: scrollBy });
+    fireEvent.resize(window);
+
+    const next = await screen.findByRole("button", { name: "Ver más miembros" });
+    await user.click(next);
+    expect(scrollBy).toHaveBeenCalledWith({ behavior: "smooth", left: 180 });
+    expect(await screen.findByRole("button", { name: "Ver miembros anteriores" })).toBeInTheDocument();
+
+    const member = screen.getByRole("button", { name: /Filtrar por Speeson/u });
+    scroller.scrollLeft = 0;
+    fireEvent.pointerDown(member, { button: 0, clientX: 160, pointerId: 9, pointerType: "mouse" });
+    fireEvent.pointerMove(scroller, { clientX: 80, pointerId: 9, pointerType: "mouse" });
+    fireEvent.pointerUp(scroller, { clientX: 80, pointerId: 9, pointerType: "mouse" });
+    fireEvent.click(member);
+    expect(scroller.scrollLeft).toBe(80);
+    expect(member).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps rendered Teams data stable across unrelated parent rerenders", async () => {
     const dataSource = source();
     const onSessionExpired = vi.fn();
@@ -767,7 +830,7 @@ describe("TeamsPage compact ranking", () => {
     expect(screen.getByRole("button", { name: "Recalcular Top 5" })).toBeInTheDocument();
   });
 
-  it("defaults to Quick, places the 50/50 mode selector before level, and preserves Advanced switches in memory", async () => {
+  it("defaults to Quick and preserves Advanced switches in memory after removing the local level control", async () => {
     const user = userEvent.setup();
     renderPage();
     await selectRuby(user);
@@ -776,11 +839,11 @@ describe("TeamsPage compact ranking", () => {
     const configure = screen.getByRole("button", { name: "Configurar mis personajes" });
     const fill = screen.getByRole("checkbox", { name: "Rellenar la composición" });
     const mode = screen.getByRole("group", { name: "Modo de recomendación" });
-    const level = screen.getByRole("slider", { name: /Nivel mínimo/u });
     expect(configure.compareDocumentPosition(fill) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(fill.compareDocumentPosition(mode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(fill).toBeChecked();
-    expect(mode.compareDocumentPosition(level) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole("slider", { name: /Nivel mínimo de piedras/u })).toHaveLength(1);
+    expect(document.querySelector(".keystone-planner .planner-level-filter")).not.toBeInTheDocument();
     expect(within(mode).getByRole("button", { name: "Rápido · Clases" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getAllByRole("checkbox").map(control => control.getAttribute("aria-label"))).toEqual([
       "Rellenar la composición",
@@ -1158,7 +1221,8 @@ describe("TeamsPage compact ranking", () => {
     await user.click(await screen.findByRole("button", { name: /Ruby Life Pools/u }));
     await user.click(screen.getByRole("button", { name: "Plan keystone" }));
     expect(screen.getByRole("button", { name: "Configure my characters" })).toBeInTheDocument();
-    expect(screen.getByText("The slider only filters available keystones.")).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: /Minimum keystone level/u })).toBeInTheDocument();
+    expect(screen.queryByText("The slider only filters available keystones.")).not.toBeInTheDocument();
   });
 
   it("blocks Planner configuration until the current user enables a specialization", async () => {

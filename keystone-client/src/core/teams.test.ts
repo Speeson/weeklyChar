@@ -161,6 +161,11 @@ describe("Teams core bridge", () => {
     ] }] });
     expect(counts.get(399)).toBe(2);
     expect(counts.get(585)).toBeUndefined();
+    const filteredCounts = teamStoneCounts({ id: 7, name: "Raid", members: [{ userId: 1, username: "one", plannerConfigured: false, characters: [
+      { characterId: 1, name: "A", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 10, challengeMapId: 399, dungeon: null } },
+      { characterId: 2, name: "B", realm: "R", region: "eu", wowClass: null, avatarUrl: null, ilvl: null, rioScore: null, currentKeystone: { level: 8, challengeMapId: 399, dungeon: null } },
+    ] }] }, 9);
+    expect(filteredCounts.get(399)).toBe(1);
   });
 
   it("filters specs and keeps completed or owned objectives in their original tier groups", () => {

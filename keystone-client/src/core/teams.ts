@@ -32,10 +32,11 @@ const OBJECTIVE_GROUPS: ReadonlyArray<Omit<SelectorObjectiveGroup, "objectives">
   { key: "catalyst", tier: 5 }, { key: "transmog", tier: 4 }, { key: "other", tier: null },
 ];
 
-export function teamStoneCounts(team: ClientTeamDetail): Map<number, number> {
+export function teamStoneCounts(team: ClientTeamDetail, minimumLevel = 1): Map<number, number> {
   const counts = new Map<number, number>();
   for (const member of team.members) for (const character of member.characters) {
-    const id = character.currentKeystone?.challengeMapId;
+    const keystone = character.currentKeystone;
+    const id = keystone?.level && keystone.level >= minimumLevel ? keystone.challengeMapId : null;
     if (positive(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   return counts;

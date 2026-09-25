@@ -189,6 +189,12 @@ function filterSelectorByMembers(selector: KeystoneSelectorResponse, selectedUse
   };
 }
 
+function filterSelectorByMinimumLevel(selector: KeystoneSelectorResponse, minimumLevel: number): KeystoneSelectorResponse {
+  const stones = selector.availability.stones.filter(stone => stone.level >= minimumLevel);
+  if (stones.length === selector.availability.stones.length) return selector;
+  return { ...selector, availability: { stoneCount: stones.length, stones } };
+}
+
 const PLANNER_COPY = {
   es: {
     noObjectives: "Sin objetivos", owner: "Dueño de la piedra", ownerTitle: "Dueño de la piedra · líder",
@@ -197,8 +203,7 @@ const PLANNER_COPY = {
     damage: "Daño", vacancies: "huecos", bloodlust: "Ansia de sangre", battleRez: "Resurrección en combate",
     composition: "Composición", utilities: "Utilidades", partyEssentials: "Esenciales del grupo", capabilitySummary: "Buffs / Defensivos / Utilidades", externalPlayers: "Número de jugadores externos", objectiveSummary: "Objetivos", preferenceSummary: "Preferidos",
     lootBreakdown: "Desglose de objetivos", moreLoot: "Ver todos los objetivos", closeLoot: "Cerrar desglose",
-    minimum: "Nivel mínimo",
-    filterHelp: "La barra solo filtra las piedras disponibles.", stones: "Piedras disponibles",
+    stones: "Piedras disponibles",
     noStones: "No hay piedras visibles con este filtro.", options: "Prioridades del grupo", configure: "Configurar mis personajes",
     loadingPreferences: "Cargando configuración del Planner…",
     quick: "Rápido · Clases", advanced: "Avanzado · Especializaciones", recommendationMode: "Modo de recomendación",
@@ -231,8 +236,7 @@ const PLANNER_COPY = {
     damage: "Damage", vacancies: "vacancies", bloodlust: "Bloodlust", battleRez: "Battle Resurrection",
     composition: "Composition", utilities: "Utilities", partyEssentials: "Party Essentials", capabilitySummary: "Buffs / Defensives / Utilities", externalPlayers: "Number of external players", objectiveSummary: "Objectives", preferenceSummary: "Preferred",
     lootBreakdown: "Objective breakdown", moreLoot: "View all objectives", closeLoot: "Close breakdown",
-    minimum: "Minimum level",
-    filterHelp: "The slider only filters available keystones.", stones: "Available keystones",
+    stones: "Available keystones",
     noStones: "No keystones are visible with this filter.", options: "Group priorities", configure: "Configure my characters",
     loadingPreferences: "Loading Planner configuration…",
     quick: "Quick · Classes", advanced: "Advanced · Specs", recommendationMode: "Recommendation mode",
@@ -790,14 +794,14 @@ function PlannerRecommendationCard({ avatarUrls, centerIncompletePreview, expand
   </article>;
 }
 
-function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOwnerChange, onSessionExpired, selectedUsers, selector, setSelectedUsers, teamId }: {
+function KeystonePlannerPanel({ dataSource, detail, dungeonId, minimumLevel, onConfigure, onOwnerChange, onSessionExpired, selectedUsers, selector, setSelectedUsers, teamId }: {
   dataSource: TeamsDataSource; detail: ClientTeamDetail | null; dungeonId: number; onOwnerChange: (userId: number | null) => void;
+  minimumLevel: number;
   onConfigure: () => void; onSessionExpired: () => void; selectedUsers: Set<number>; selector: KeystoneSelectorResponse | null;
   setSelectedUsers: React.Dispatch<React.SetStateAction<Set<number>>>; teamId: number | null;
 }) {
   const copy = usePlannerCopy();
   const { language } = useI18n();
-  const [minimumLevel, setMinimumLevel] = useState(1);
   const [selectedStoneId, setSelectedStoneId] = useState<number | null>(null);
   const [response, setResponse] = useState<KeystonePlannerResponse | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -918,9 +922,6 @@ function KeystonePlannerPanel({ dataSource, detail, dungeonId, onConfigure, onOw
           setOptions(current => ({ ...current, recommendationMode: mode }));
         }} type="button">{mode === "quick" ? copy.quick : copy.advanced}</button>)}
       </div>
-      <label className="planner-level-filter" htmlFor="planner-minimum-level"><span>{copy.minimum}</span><output>+{minimumLevel}</output></label>
-      <input id="planner-minimum-level" max="20" min="1" onChange={event => setMinimumLevel(Number(event.currentTarget.value))} type="range" value={minimumLevel} />
-      <p className="planner-filter-help">{copy.filterHelp}</p>
       <div className="planner-stones" role="group" aria-label={copy.stones}>
         {visibleStones.map(stone => {
           const ownerReady = detail?.members.find(member => member.userId === stone.ownerUserId)?.plannerConfigured ?? false;
@@ -1039,27 +1040,115 @@ function MemberStrip({ detail, mode, onClear, onToggle, ownerUserId, selected }:
   onToggle: (userId: number) => void; ownerUserId: number | null; selected: Set<number>;
 }) {
   const { language, t } = useI18n();
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ moved: boolean; pointerId: number; startScrollLeft: number; startX: number } | null>(null);
+  const suppressClickRef = useRef(false);
+  const [dragging, setDragging] = useState(false);
+  const [scrollState, setScrollState] = useState({ backward: false, forward: false });
   const memberCount = detail?.members.length ?? 0;
   const showSelection = mode === "objectives" ? memberCount > 0 : selected.size > 0;
   const showClear = mode === "objectives" ? selected.size < memberCount : selected.size > 0;
+  const updateScrollState = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const maximum = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const next = { backward: scroller.scrollLeft > 1, forward: scroller.scrollLeft < maximum - 1 };
+    setScrollState(current => current.backward === next.backward && current.forward === next.forward ? current : next);
+  }, []);
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    updateScrollState();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateScrollState);
+    observer?.observe(scroller);
+    scroller.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      observer?.disconnect();
+      scroller.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [detail?.members, mode, updateScrollState]);
+  const scroll = (direction: -1 | 1) => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    scroller.scrollBy({ behavior: "smooth", left: direction * Math.max(180, scroller.clientWidth * 0.72) });
+  };
+  const finishDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    suppressClickRef.current = drag.moved;
+    if (drag.moved) window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+    dragRef.current = null;
+    setDragging(false);
+    updateScrollState();
+  };
   return <div className="teams-member-area">
-    <div aria-label={t("teams.memberFilters")} className="teams-member-strip">
+    <div className="teams-member-carousel" data-can-scroll-backward={scrollState.backward} data-can-scroll-forward={scrollState.forward}>
+      <button aria-label={t("teams.previousMembers")} className="teams-member-scroll teams-member-scroll--previous" hidden={!scrollState.backward} onClick={() => scroll(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
+      <div
+        aria-label={t("teams.memberFilters")}
+        className="teams-member-strip"
+        data-dragging={dragging}
+        onKeyDown={event => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          scroll(event.key === "ArrowLeft" ? -1 : 1);
+        }}
+        onPointerCancel={finishDrag}
+        onPointerDown={event => {
+          if (event.pointerType === "mouse" && event.button !== 0) return;
+          dragRef.current = { moved: false, pointerId: event.pointerId, startScrollLeft: event.currentTarget.scrollLeft, startX: event.clientX };
+          setDragging(true);
+        }}
+        onPointerMove={event => {
+          const drag = dragRef.current;
+          if (!drag || drag.pointerId !== event.pointerId) return;
+          const delta = event.clientX - drag.startX;
+          if (Math.abs(delta) > 3) {
+            if (!drag.moved) event.currentTarget.setPointerCapture?.(event.pointerId);
+            drag.moved = true;
+            event.preventDefault();
+          }
+          event.currentTarget.scrollLeft = drag.startScrollLeft - delta;
+          updateScrollState();
+        }}
+        onPointerUp={finishDrag}
+        onScroll={updateScrollState}
+        ref={scrollerRef}
+        role="region"
+        tabIndex={0}
+      >
       {detail?.members.map(member => {
         const unavailable = mode === "planner" && !member.plannerConfigured;
         const pinned = mode === "planner" && member.userId === ownerUserId;
-        return <button aria-label={t(member.characters.length === 1 ? "teams.memberFilterOne" : "teams.memberFilter", { name: member.username, count: member.characters.length })} aria-pressed={selected.has(member.userId)} className="teams-member-filter" data-pinned={pinned} data-unavailable={unavailable} disabled={unavailable} key={member.userId} onClick={() => onToggle(member.userId)} title={unavailable ? (language === "es" ? "Planificador sin configurar" : "Planner not configured") : undefined} type="button">
+        return <button aria-label={t(member.characters.length === 1 ? "teams.memberFilterOne" : "teams.memberFilter", { name: member.username, count: member.characters.length })} aria-pressed={selected.has(member.userId)} className="teams-member-filter" data-pinned={pinned} data-unavailable={unavailable} disabled={unavailable} key={member.userId} onClick={() => {
+          if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+          onToggle(member.userId);
+        }} title={unavailable ? (language === "es" ? "Planificador sin configurar" : "Planner not configured") : undefined} type="button">
         <span className="teams-member-filter__avatars">{member.characters.slice(0, 3).map(character => <Portrait avatarUrl={character.avatarUrl} key={character.characterId} name={character.name} wowClass={character.wowClass} />)}</span>
         <span><strong>{member.username}</strong><small>{unavailable ? (language === "es" ? "Sin configurar" : "Not configured") : t(member.characters.length === 1 ? "teams.characterCountOne" : "teams.characterCount", { count: member.characters.length })}</small></span>
         {pinned ? <Crown aria-hidden="true" className="teams-member-filter__owner" /> : null}
         <Check aria-hidden="true" className="teams-member-filter__check" />
       </button>;
       })}
+      </div>
+      <button aria-label={t("teams.nextMembers")} className="teams-member-scroll teams-member-scroll--next" hidden={!scrollState.forward} onClick={() => scroll(1)} type="button"><ChevronRight aria-hidden="true" /></button>
     </div>
     {showSelection ? <div className="teams-active-filters">
       <span>{t(selected.size === 1 ? "teams.selectedMember" : "teams.selectedMembers", { count: selected.size })}</span>
       {showClear ? <button aria-label={t("teams.clearFilters")} className="teams-clear-filters" onClick={onClear} type="button"><X aria-hidden="true" />{t("teams.clearShort")}</button> : null}
     </div> : null}
   </div>;
+}
+
+function MinimumStoneLevelFilter({ minimumLevel, onChange }: { minimumLevel: number; onChange: (level: number) => void }) {
+  const { t } = useI18n();
+  return <label className="teams-minimum-level" htmlFor="teams-minimum-stone-level">
+    <span><strong>{t("teams.minimumStoneLevel")}</strong><output htmlFor="teams-minimum-stone-level">+{minimumLevel}</output></span>
+    <input id="teams-minimum-stone-level" max="20" min="1" onChange={event => onChange(Number(event.currentTarget.value))} type="range" value={minimumLevel} />
+  </label>;
 }
 
 export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSource, onOpenWeb, onSessionExpired }: TeamsPageProps) {
@@ -1084,6 +1173,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const [plannerSelectedUsers, setPlannerSelectedUsers] = useState<Set<number>>(() => new Set());
   const [activeFeature, setActiveFeature] = useState<"objectives" | "planner">("objectives");
   const [plannerOwnerUserId, setPlannerOwnerUserId] = useState<number | null>(null);
+  const [minimumStoneLevel, setMinimumStoneLevel] = useState(1);
   const [plannerPreferences, setPlannerPreferences] = useState<ClientPlannerPreferences | null>(null);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [preferencesLoading, setPreferencesLoading] = useState(false);
@@ -1270,14 +1360,17 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
   const stoneCountDetail = detail && activeFeature === "objectives"
     ? { ...detail, members: detail.members.filter(member => objectiveSelectedUsers.has(member.userId)) }
     : detail;
-  const counts = stoneCountDetail ? teamStoneCounts(stoneCountDetail) : new Map<number, number>();
+  const counts = stoneCountDetail ? teamStoneCounts(stoneCountDetail, minimumStoneLevel) : new Map<number, number>();
   const coldLoading = teams === null
     || Boolean(teams.length > 0 && !hasRevealedTeam.current && (teamId === null || detail?.id !== teamId));
   const detailLoading = !coldLoading && teamId !== null && detail?.id !== teamId;
   const plannerAccessChecking = activeFeature === "planner" && preferencesLoading;
   const selectedUsers = activeFeature === "objectives" ? objectiveSelectedUsers : plannerSelectedUsers;
-  const objectiveSelector = selector ? filterSelectorByMembers(selector, objectiveSelectedUsers) : null;
-  const summarySelector = activeFeature === "objectives" ? objectiveSelector : selector;
+  const levelSelector = selector ? filterSelectorByMinimumLevel(selector, minimumStoneLevel) : null;
+  const objectiveSelector = selector
+    ? filterSelectorByMinimumLevel(filterSelectorByMembers(selector, objectiveSelectedUsers), minimumStoneLevel)
+    : null;
+  const summarySelector = activeFeature === "objectives" ? objectiveSelector : levelSelector;
   const summaryCharacters = summarySelector?.summary.charactersWithObjectives ?? 0;
   const summaryObjectives = summarySelector?.summary.totalObjectives ?? 0;
   const globalSummaryKey = summaryCharacters === 1
@@ -1310,6 +1403,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
         ownerUserId={plannerOwnerUserId}
         selected={selectedUsers}
       />
+      <MinimumStoneLevelFilter minimumLevel={minimumStoneLevel} onChange={setMinimumStoneLevel} />
     </div>
     <div className="teams-selector">
       {detailLoading ? <div aria-label={t("teams.loadingTeam")} className="teams-detail-loading" role="status">
@@ -1347,7 +1441,7 @@ export function TeamsPage({ currentUsername = "", dataSource = liveTeamsDataSour
             {selectorLoading ? <div aria-label={t("teams.loadingObjectives")} className="teams-selector-loading"><i /><i /><i /></div> : null}
             {selectorError ? <p className="error teams-selector-error" role="alert">{selectorError}</p> : null}
             {selector && !selectorLoading && plannerAccessChecking ? <div aria-label={PLANNER_COPY[language].loadingPreferences} className="teams-selector-loading" role="status"><i /><i /><i /></div> : null}
-            {selector && !selectorLoading && activeFeature === "planner" && !plannerAccessChecking && dungeonId !== null ? <KeystonePlannerPanel dataSource={dataSource} detail={plannerDetail} dungeonId={dungeonId} onConfigure={openPreferences} onOwnerChange={setPlannerOwnerUserId} onSessionExpired={onSessionExpired} selectedUsers={plannerSelectedUsers} selector={selector} setSelectedUsers={setPlannerSelectedUsers} teamId={teamId} /> : null}
+            {selector && !selectorLoading && activeFeature === "planner" && !plannerAccessChecking && dungeonId !== null ? <KeystonePlannerPanel dataSource={dataSource} detail={plannerDetail} dungeonId={dungeonId} minimumLevel={minimumStoneLevel} onConfigure={openPreferences} onOwnerChange={setPlannerOwnerUserId} onSessionExpired={onSessionExpired} selectedUsers={plannerSelectedUsers} selector={selector} setSelectedUsers={setPlannerSelectedUsers} teamId={teamId} /> : null}
             {objectiveSelector && !selectorLoading && activeFeature === "objectives" ? objectiveSelector.characters.length === 0
               ? <div className="teams-selector-empty"><Gem aria-hidden="true" /><p>{t("teams.noObjectives")}</p>{objectiveSelector.availability.stoneCount === 0 ? <small>{t("teams.noObjectivesNoStone")}</small> : null}</div>
               : <div className="teams-character-list">{objectiveSelector.characters.map((character, index) => <SelectorCharacterRow character={character} key={character.characterId} rank={index + 1} />)}</div>

@@ -79,7 +79,9 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
       cardBottom: card.bottom,
       cardHeight: card.height,
       cardTop: card.top,
+      pickerBottom: picker.bottom,
       pickerHeight: picker.height,
+      pickerTop: picker.top,
       shadow: style.boxShadow,
       stripBottom: strip.bottom,
       stripHeight: strip.height,
@@ -88,10 +90,13 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   });
   expect(selectedMemberVisual.background).not.toBe("none");
   expect(selectedMemberVisual.cardHeight).toBe(selectedMemberVisual.pickerHeight);
-  expect(selectedMemberVisual.stripHeight).toBeGreaterThan(selectedMemberVisual.cardHeight);
-  expect(selectedMemberVisual.cardTop).toBeGreaterThanOrEqual(selectedMemberVisual.stripTop);
-  expect(selectedMemberVisual.cardBottom).toBeLessThanOrEqual(selectedMemberVisual.stripBottom);
+  expect(selectedMemberVisual.stripHeight).toBe(selectedMemberVisual.cardHeight);
+  expect(selectedMemberVisual.cardTop).toBe(selectedMemberVisual.pickerTop);
+  expect(selectedMemberVisual.cardBottom).toBe(selectedMemberVisual.pickerBottom);
+  expect(selectedMemberVisual.stripTop).toBe(selectedMemberVisual.pickerTop);
+  expect(selectedMemberVisual.stripBottom).toBe(selectedMemberVisual.pickerBottom);
   expect(selectedMemberVisual.shadow).toContain("rgb(49, 233, 129)");
+  await expect(page.getByRole("button", { name: "Ver más miembros" })).toBeVisible();
   await memberFilters.first().click();
   await expect(memberFilters.first()).toHaveAttribute("aria-pressed", "false");
   expect(await page.getByTestId("selector-character").count()).toBeLessThan(8);
@@ -110,6 +115,16 @@ test("reviews populated, multi-spec, item grouping and tooltip states", async ({
   await expect(ownerChips.first()).toContainText("Bakuhatsu+12(Speeson)");
   await expect(ownerChips.nth(1)).toContainText("Auralisdelaluzeterna+9(GuardianaDeLosSecretosDelVacío)");
   await expect(ownerChips.first().locator(".teams-stone-owner-chip__level")).toHaveCSS("color", "rgb(255, 159, 67)");
+  const minimumLevel = page.getByRole("slider", { name: /Nivel mínimo de piedras/u });
+  await expect(minimumLevel).toHaveValue("1");
+  await minimumLevel.focus();
+  await minimumLevel.press("Home");
+  for (let level = 1; level < 10; level += 1) await minimumLevel.press("ArrowRight");
+  await expect(page.getByRole("button", { name: /Estanques de Vida Rubí.*1 piedra$/u })).toHaveAttribute("data-available", "true");
+  await expect(ownerChips).toHaveCount(1);
+  await expect(page.getByText(/8 personajes.*28 objetivos/u)).toBeVisible();
+  await minimumLevel.press("Home");
+  await expect(ownerChips).toHaveCount(2);
   await expect(page.locator(".teams-dungeon-context")).toHaveCount(0);
   const nextStoneButton = page.getByRole("button", { name: "Ver más piedras" });
   await expect(nextStoneButton).toBeVisible();

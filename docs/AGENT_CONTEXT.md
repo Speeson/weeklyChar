@@ -85,6 +85,9 @@ Main implementation points:
   `PlannerPreferencesDialog`. React does not reproduce solver, privacy, role, capability, or
   scoring rules. Capability spell IDs are shown with accessible text badges because no reliable
   direct Web icon resolver is currently part of the public contract.
+- KeystoneClient Teams owns one page-local minimum-keystone-level filter in the shared Team/member
+  header. It filters local dungeon counts, selected-dungeon keystone chips, and exact Planner stone
+  choices while leaving dungeon objective cards and objective/tier totals unchanged.
 - `keystone-web/app/dashboard/page.tsx`, `keystone-web/app/characters/page.tsx`, `keystone-web/app/summary/page.tsx`, and `keystone-web/app/teams/[id]/page.tsx`: consume character and team character data.
 
 ## Current versions
