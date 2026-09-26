@@ -1,0 +1,12 @@
+{
+  "component": "client",
+  "current_version": "0.15.4",
+  "version": "0.15.5",
+  "bump": "patch",
+  "tag": "client-v0.15.5",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-sync-hide-inactive-characters.json",
+    "client-teams-minimum-level-card.json"
+  ]
+}
