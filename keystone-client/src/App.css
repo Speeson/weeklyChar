@@ -497,6 +497,29 @@ h2 {
   padding: 24px 26px 20px;
 }
 
+.ks-page-error {
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.ks-page-error > div {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 28px;
+  border: 1px solid var(--status-danger-border);
+  border-radius: 12px;
+  color: var(--theme-text);
+  background: var(--theme-surface-1);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 38%);
+  text-align: center;
+}
+
+.ks-page-error strong { color: var(--status-danger); font-size: 20px; }
+.ks-page-error p { margin: 0; color: var(--theme-text-muted); }
+.ks-page-error button { justify-self: center; padding: 8px 18px; border: 1px solid var(--theme-accent); border-radius: 7px; color: var(--theme-accent); background: var(--theme-button-secondary); }
+
 @media (prefers-reduced-motion: reduce) {
   .ks-user-dropdown,
   .ks-user-menu__dropdown-icon,

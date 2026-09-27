@@ -11,8 +11,9 @@ import { UpgradeTrackIcon } from "../components/UpgradeTrackIcon";
 import { classColor } from "../core/characterDisplay";
 import { loadInactiveCharacterIds, saveInactiveCharacterIds } from "../core/characterTracking";
 import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor, trovehunterStatus } from "../core/characterSnapshots";
+import { snapshotRecords } from "../core/snapshotSafety";
 import { dungeonName, MIDNIGHT_SEASON_2_DUNGEONS } from "../core/season2";
-import type { Character, CharacterCurrency, CharacterState, EquipmentItem, TalentTreeSnapshot } from "../core/types";
+import type { Character, CharacterCurrency, CharacterState, EquipmentGem, EquipmentItem, TalentEntrySnapshot, TalentNodeSnapshot, TalentTreeSnapshot } from "../core/types";
 import { blizzardIconUrl } from "../core/wowhead";
 import { useI18n } from "../core/i18n";
 import { activeTalentEntry, localizedClassName, localizedHeroTreeName, localizedSpecName, talentPurchasedRanks } from "../core/talentDisplay";
@@ -44,8 +45,9 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
 const ENCHANT_ICON_FALLBACK = 463531;
 
 function treeIdentity(tree: TalentTreeSnapshot | undefined, region: string) {
-  const entry = tree?.nodes.flatMap(node => node.entries).find(candidate => candidate.selected)
-    ?? tree?.nodes[0]?.entries[0];
+  const nodes = snapshotRecords<TalentNodeSnapshot>(tree?.nodes);
+  const entries = nodes.flatMap(node => snapshotRecords<TalentEntrySnapshot>(node.entries));
+  const entry = entries.find(candidate => candidate.selected) ?? entries[0];
   const treeIcon = safeImage(tree?.iconPath) ?? blizzardIconUrl(tree?.iconPath, region, tree?.iconFileID);
   const entryIcon = safeImage(entry?.iconPath) ?? blizzardIconUrl(entry?.iconPath, region, entry?.iconFileID);
   // Atlas file IDs are sprite sheets, not standalone CDN icons. The selected
@@ -140,8 +142,11 @@ function AccountRealmSelect({ account, label, onChange, options, realm }: {
 
 function GearItem({ item, character, language }: { item: EquipmentItem; character: Character; language: "es" | "en" }) {
   const [iconFailed, setIconFailed] = useState(false);
-  const stackGems = item.gems.length > 1 && !item.enchant;
-  const setItems = item.setId ? character.equipment?.items.filter(candidate => candidate.setId === item.setId).map(candidate => candidate.itemId) : [];
+  const gems = snapshotRecords<EquipmentGem>(item.gems);
+  const equipmentItems = snapshotRecords<EquipmentItem>(character.equipment?.items);
+  const slotName = typeof item.slotName === "string" ? item.slotName : "";
+  const stackGems = gems.length > 1 && !item.enchant;
+  const setItems = item.setId ? equipmentItems.filter(candidate => candidate.setId === item.setId).map(candidate => candidate.itemId) : [];
   const icon = safeImage(item.iconPath) ?? blizzardIconUrl(item.iconPath, character.region, item.iconFileID);
   const enchantIcon = item.enchant ? blizzardIconUrl(
     item.enchant.spellId ? item.enchant.iconPath : null,
@@ -149,19 +154,19 @@ function GearItem({ item, character, language }: { item: EquipmentItem; characte
     item.enchant.spellId ? item.enchant.iconFileID : ENCHANT_ICON_FALLBACK,
   ) : null;
   return <span className="gear-item" style={{ "--quality": qualityColors[item.quality ?? 0] ?? qualityColors[0] } as CSSProperties}>
-    <WowheadTooltip className="gear-item__piece" id={item.itemId} label={`${item.itemName ?? item.slotName} · ${item.itemLevel ?? "?"}`} options={{ ench: item.enchant?.enchantId, gems: item.gems.map(gem => gem.itemId), bonus: item.bonusIds, ilvl: item.itemLevel, lvl: character.talents?.characterLevel, pcs: setItems, spec: character.talents?.specId }} type="item"><span className="gear-item__base">
-      {icon && !iconFailed ? <img alt="" onError={() => setIconFailed(true)} src={icon} /> : <b>{item.slotName.slice(0, 2)}</b>}
+    <WowheadTooltip className="gear-item__piece" id={item.itemId} label={`${item.itemName ?? slotName} · ${item.itemLevel ?? "?"}`} options={{ ench: item.enchant?.enchantId, gems: gems.map(gem => gem.itemId), bonus: Array.isArray(item.bonusIds) ? item.bonusIds : [], ilvl: item.itemLevel, lvl: character.talents?.characterLevel, pcs: setItems, spec: character.talents?.specId }} type="item"><span className="gear-item__base">
+      {icon && !iconFailed ? <img alt="" onError={() => setIconFailed(true)} src={icon} /> : <b>{slotName.slice(0, 2)}</b>}
       <UpgradeTrackIcon track={item.upgrade?.track} className="upgrade-track-icon--badge" />
       <strong>{item.itemLevel ?? "—"}</strong>
     </span></WowheadTooltip>
-    <span className="gear-item__extras"><span className={`gear-item__gems${stackGems ? " gear-item__gems--stacked" : ""}`}>{item.gems.map((gem, index) => { const gemIcon = blizzardIconUrl(gem.iconPath, character.region, gem.iconFileID); return <WowheadTooltip className="gear-item__gem" id={gem.itemId} key={`${gem.itemId}-${index}`} label={gem.name} type="item">{gemIcon ? <img alt="" src={gemIcon}/> : <i>◆</i>}</WowheadTooltip>; })}</span>
+    <span className="gear-item__extras"><span className={`gear-item__gems${stackGems ? " gear-item__gems--stacked" : ""}`}>{gems.map((gem, index) => { const gemIcon = blizzardIconUrl(gem.iconPath, character.region, gem.iconFileID); return <WowheadTooltip className="gear-item__gem" id={gem.itemId} key={`${gem.itemId}-${index}`} label={gem.name} type="item">{gemIcon ? <img alt="" src={gemIcon}/> : <i>◆</i>}</WowheadTooltip>; })}</span>
       {item.enchant ? item.enchant.spellId ? <WowheadTooltip className="gear-item__enchant" id={item.enchant.spellId} label={item.enchant.name} type="spell">{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</WowheadTooltip> : <FloatingTooltip className="gear-item__enchant" label={item.enchant.name ?? characterCopy(language).enchantment}>{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</FloatingTooltip> : null}
     </span>
   </span>;
 }
 
 function TalentPreview({ tree, label, level, region, language }: { tree?: TalentTreeSnapshot; label: string; level?: number | null; region: string; language: "es" | "en" }) {
-  const nodes = tree?.nodes.slice(0, 6) ?? [];
+  const nodes = snapshotRecords<TalentNodeSnapshot>(tree?.nodes).slice(0, 6);
   return <div className="talent-preview"><small>{label}</small><div>{nodes.map(node => {
     const entry = activeTalentEntry(node);
     const icon = safeImage(entry?.iconPath) ?? blizzardIconUrl(entry?.iconPath, region, entry?.iconFileID);
@@ -316,12 +321,14 @@ export function CharactersPage({ state }: { state: CharacterState }) {
       type="button"
     >{active ? <PowerOff aria-hidden="true"/> : <Power aria-hidden="true"/>}</button>
   </article>;
-  const runs = character.mythicPlusSeason?.dungeons ?? [];
+  const runs = snapshotRecords<Record<string, unknown>>(character.mythicPlusSeason?.dungeons);
   const seasonRating = number(character.mythicPlusSeason?.rating, -1);
   const totalRating = seasonRating > 0 ? seasonRating : number(character.rioScore, -1);
-  const tierSummary = character.equipment?.tierPieces?.filter(value => Number.isInteger(value?.tier) && value.tier > 0 && Number.isInteger(value?.count) && value.count > 0)
+  const tierSummary = snapshotRecords<{ tier: number; count: number }>(character.equipment?.tierPieces).filter(value => Number.isInteger(value?.tier) && value.tier > 0 && Number.isInteger(value?.count) && value.count > 0)
     .map(value => `${value.count} ${copy.setPieces} (T${value.tier})`).join(" · ");
-  const trees = character.talents?.trees ?? [];
+  const equipmentItems = snapshotRecords<EquipmentItem>(character.equipment?.items);
+  const setPieces = snapshotRecords<{ count: number }>(character.equipment?.setPieces);
+  const trees = snapshotRecords<TalentTreeSnapshot>(character.talents?.trees);
   const heroTree = trees.find(tree => tree.type === "hero" && tree.active) ?? trees.find(tree => tree.type === "hero");
   const specIdentity = treeIdentity(trees.find(tree => tree.type === "spec"), character.region);
   const heroIdentity = treeIdentity(heroTree, character.region);
@@ -357,8 +364,8 @@ export function CharactersPage({ state }: { state: CharacterState }) {
     </aside>
     <div className="characters-dashboard">
       <div className="characters-top">
-        <section className="characters-panel gear-panel"><h2>{copy.gear} <span>{character.equipment?.averageItemLevel ?? character.ilvl ?? "—"} {copy.itemLevel}</span><span>{tierSummary || `${character.equipment?.setPieces?.reduce((sum, set) => sum + set.count, 0) ?? 0} ${copy.setPieces}`}</span></h2>{character.equipment?.items.length ? <div className="gear-row">{character.equipment.items.map(item => <GearItem character={character} item={item} key={`${character.id}-${item.slotId}-${item.itemId}`} language={language}/>)}</div> : <p>{copy.noGear}</p>}</section>
-        <section className="characters-panel talents-panel"><h2>{copy.talents}</h2><div className="talents-panel__content"><div className="talents-panel__identity"><span>{specIcon ? <img alt="" src={specIcon}/> : null}<strong>{specName ?? "—"}</strong></span><span>{heroIdentity.icon ? <img alt="" src={heroIdentity.icon}/> : null}<strong>{heroName ?? "—"}</strong></span></div><div className="talents-panel__previews"><TalentPreview label={copy.classTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "class")}/><TalentPreview label={copy.heroTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={heroTree}/><TalentPreview label={copy.specTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "spec")}/></div><button aria-label={copy.showTalents} disabled={!character.talents?.trees.length} onClick={() => setTalentsOpen(true)} type="button">{copy.showTalents}</button></div></section>
+        <section className="characters-panel gear-panel"><h2>{copy.gear} <span>{character.equipment?.averageItemLevel ?? character.ilvl ?? "—"} {copy.itemLevel}</span><span>{tierSummary || `${setPieces.reduce((sum, set) => sum + number(set.count), 0)} ${copy.setPieces}`}</span></h2>{equipmentItems.length ? <div className="gear-row">{equipmentItems.map((item, index) => <GearItem character={character} item={item} key={`${character.id}-${item.slotId ?? "slot"}-${item.itemId ?? index}`} language={language}/>)}</div> : <p>{copy.noGear}</p>}</section>
+        <section className="characters-panel talents-panel"><h2>{copy.talents}</h2><div className="talents-panel__content"><div className="talents-panel__identity"><span>{specIcon ? <img alt="" src={specIcon}/> : null}<strong>{specName ?? "—"}</strong></span><span>{heroIdentity.icon ? <img alt="" src={heroIdentity.icon}/> : null}<strong>{heroName ?? "—"}</strong></span></div><div className="talents-panel__previews"><TalentPreview label={copy.classTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "class")}/><TalentPreview label={copy.heroTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={heroTree}/><TalentPreview label={copy.specTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "spec")}/></div><button aria-label={copy.showTalents} disabled={!trees.length} onClick={() => setTalentsOpen(true)} type="button">{copy.showTalents}</button></div></section>
       </div>
       <div className="characters-content"><div className="characters-main-column"><section className="characters-panel dungeons-panel"><h2>{copy.dungeons}<span className="dungeons-panel__rating"><small>{copy.totalRating}</small><strong>{totalRating > 0 ? Math.round(totalRating).toLocaleString(language === "es" ? "es-ES" : "en-US") : "—"}</strong></span></h2><div className="dungeon-grid">{MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => { const run = runs.find(value => number(value.challengeMapId) === dungeon.id); const level = number(run?.level); const upgrade = Math.min(number(run?.upgradeLevel), 3); const rating = estimatedDungeonRating(run); return <article key={dungeon.id}><img alt="" src={dungeon.teleportIconUrl}/><div><span>{dungeonName(dungeon, language)}</span><section><strong style={{ color: keystoneColor(level) }}>+{level || "—"}</strong>{upgrade > 0 ? <img alt={`+${upgrade}`} className="dungeon-medal" src={medals[upgrade]}/> : null}</section></div><b>{rating || "—"}<small>{copy.rating}</small></b></article>; })}</div></section>
         <section className="characters-panel currencies-panel"><h2>{copy.currencies}</h2><div className="currencies-grid">{regularCurrencies.map(meta => <CurrencyCard currencyKey={meta} info={character.currencies?.[meta.key]} key={meta.key} language={language} region={character.region}/>)}<CurrencyCard currencyKey={bounty} info={character.currencies?.[bounty.key]} language={language} region={character.region}/></div></section></div>

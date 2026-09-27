@@ -5,16 +5,19 @@ import { WowheadTooltip } from "./WowheadTooltip";
 import { blizzardIconUrl, talentTooltipSpellId } from "../core/wowhead";
 import { classColor } from "../core/characterDisplay";
 import { activeTalentEntry, localizedClassName, localizedHeroTreeName, localizedSpecName, talentPurchasedRanks } from "../core/talentDisplay";
+import { snapshotRecords } from "../core/snapshotSafety";
 
 function TalentIcon({ entry, region }: { entry?: TalentEntrySnapshot; region: string }) {
   const [failed, setFailed] = useState(false);
-  const icon = entry?.iconPath?.startsWith("/") ? entry.iconPath : blizzardIconUrl(entry?.iconPath, region, entry?.iconFileID);
-  return icon && !failed ? <img alt="" onError={() => setFailed(true)} src={icon} /> : <b>{(entry?.name ?? "?").slice(0, 1)}</b>;
+  const iconPath = typeof entry?.iconPath === "string" ? entry.iconPath : null;
+  const icon = iconPath?.startsWith("/") ? iconPath : blizzardIconUrl(iconPath, region, entry?.iconFileID);
+  const name = typeof entry?.name === "string" ? entry.name : "?";
+  return icon && !failed ? <img alt="" onError={() => setFailed(true)} src={icon} /> : <b>{name.slice(0, 1)}</b>;
 }
 
 function TalentTree({ tree, level, region, language, compact = false }: { tree?: TalentTreeSnapshot; level?: number | null; region: string; language: "es" | "en"; compact?: boolean }) {
   const geometry = useMemo(() => {
-    const nodes = tree?.nodes ?? [];
+    const nodes = snapshotRecords<TalentNodeSnapshot>(tree?.nodes);
     const xs = nodes.map(node => node.posX);
     const ys = nodes.map(node => node.posY);
     const minX = Math.min(...xs); const maxX = Math.max(...xs);
@@ -34,7 +37,7 @@ function TalentTree({ tree, level, region, language, compact = false }: { tree?:
   return (
     <div className={`ks-talent-tree${compact ? " ks-talent-tree--compact" : ""}`} data-tree-type={tree.type}>
       <svg aria-hidden="true" className="ks-talent-tree__edges" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {geometry.nodes.flatMap(node => node.visibleEdges.map((edge, index) => {
+        {geometry.nodes.flatMap(node => snapshotRecords<NonNullable<TalentNodeSnapshot["visibleEdges"]>[number]>(node.visibleEdges).map((edge, index) => {
           const target = geometry.byId.get(edge.targetNodeId); if (!target) return null;
           const from = geometry.locate(node); const to = geometry.locate(target);
           return <line className={edge.active ? "is-active" : ""} key={`${node.nodeId}-${edge.targetNodeId}-${index}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} />;
@@ -42,15 +45,16 @@ function TalentTree({ tree, level, region, language, compact = false }: { tree?:
       </svg>
       {geometry.nodes.map(node => {
         const entry = activeTalentEntry(node); const point = geometry.locate(node); const spellId = talentTooltipSpellId(entry?.spellId, entry?.overriddenSpellId); const purchasedRanks = talentPurchasedRanks(node);
+        const entries = snapshotRecords<TalentEntrySnapshot>(node.entries);
         const content = (
           <span
             aria-label={`${language === "es" ? "Talento" : "Talent"} ${node.nodeId}, ${purchasedRanks}/${node.maxRanks}`}
-            className={`ks-talent-node${purchasedRanks > 0 ? " is-selected" : ""}${node.entries.length > 1 ? " is-choice" : ""}`}
+            className={`ks-talent-node${purchasedRanks > 0 ? " is-selected" : ""}${entries.length > 1 ? " is-choice" : ""}`}
             style={{ left: `${point.x}%`, top: `${point.y}%` }}
           >
             <TalentIcon entry={entry} region={region} />
             {node.maxRanks > 1 ? <em>{purchasedRanks}/{node.maxRanks}</em> : null}
-            {node.entries.length > 1 ? <i aria-hidden="true">◆</i> : null}
+            {entries.length > 1 ? <i aria-hidden="true">◆</i> : null}
           </span>
         );
         return spellId ? <WowheadTooltip id={spellId} key={node.nodeId} label={`${language === "es" ? "Talento" : "Talent"} ${node.nodeId}`} options={{ lvl: level }} type="spell">{content}</WowheadTooltip> : <span key={node.nodeId}>{content}</span>;
@@ -63,15 +67,16 @@ export function TalentModal({ character, onClose }: { character: Character; onCl
   const { language } = useI18n();
   const [copied, setCopied] = useState(false);
   const talents = character.talents;
-  const classTree = talents?.trees.find(tree => tree.type === "class");
-  const heroTree = talents?.trees.find(tree => tree.type === "hero" && tree.active)
-    ?? talents?.trees.find(tree => tree.type === "hero");
-  const specTree = talents?.trees.find(tree => tree.type === "spec");
-  const omnium = character.omniumFolio?.trees[0];
+  const trees = snapshotRecords<TalentTreeSnapshot>(talents?.trees);
+  const classTree = trees.find(tree => tree.type === "class");
+  const heroTree = trees.find(tree => tree.type === "hero" && tree.active)
+    ?? trees.find(tree => tree.type === "hero");
+  const specTree = trees.find(tree => tree.type === "spec");
+  const omnium = snapshotRecords<TalentTreeSnapshot>(character.omniumFolio?.trees)[0];
   const labels = language === "es" ? { class: "CLASE", hero: "TALENTOS HEROICOS", spec: "ESPECIALIZACIÓN", omnium: "FOLIO ÓMNIUM", close: "Cerrar", copy: "Copiar configuración", copied: "Configuración copiada" }
     : { class: "CLASS", hero: "HERO TALENTS", spec: "SPEC", omnium: "OMNIUM FOLIO", close: "Close", copy: "Copy build", copied: "Build copied" };
   const copy = async () => {
-    if (!talents?.importString) return;
+    if (typeof talents?.importString !== "string" || !talents.importString) return;
     await navigator.clipboard.writeText(talents.importString);
     setCopied(true);
   };

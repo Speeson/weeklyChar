@@ -1,4 +1,5 @@
 import type { TalentEntrySnapshot, TalentNodeSnapshot, TalentTreeSnapshot } from "./types";
+import { snapshotRecords } from "./snapshotSafety";
 import { specName, wowClassName } from "./wowSpecs";
 
 const spanishHeroTrees: Record<number, string> = {
@@ -27,7 +28,8 @@ const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u0
 const HERO_BY_ALIAS = new Map(HERO_TREES.flatMap(([en, es, aliases = []]) => [en, es, ...aliases].map(alias => [normalize(alias), { en, es }] as const)));
 
 export function activeTalentEntry(node: TalentNodeSnapshot): TalentEntrySnapshot | undefined {
-  return node.entries.find(entry => entry.entryId === node.activeEntryId) ?? node.entries[0];
+  const entries = snapshotRecords<TalentEntrySnapshot>(node.entries);
+  return entries.find(entry => entry.entryId === node.activeEntryId) ?? entries[0];
 }
 
 export function talentPurchasedRanks(node: TalentNodeSnapshot): number {

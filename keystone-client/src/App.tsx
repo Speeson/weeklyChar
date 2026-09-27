@@ -6,6 +6,7 @@ import { ThemedIcon } from "./components/ThemedIcon";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
 import { ChangelogModal } from "./components/ChangelogModal";
 import { ClientContextMenu } from "./components/ClientContextMenu";
+import { PageErrorBoundary } from "./components/PageErrorBoundary";
 import { RemoteAvatar } from "./components/RemoteAvatar";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
@@ -560,32 +561,40 @@ function App() {
             y={contextMenu.y}
           /> : null}
           {error ? <p className="error ks-global-error" role="alert">{error}</p> : null}
-          {currentView === "sync" ? (
-            <SyncPage
-              appVersion={packageJson.version}
-              initialAddon={addon}
-              initialCharacters={characters}
-              initialSync={sync}
-              initialWow={wow}
-              preview={previewMode}
-            />
-          ) : currentView === "characters" ? (
-            <CharactersPage state={characters} />
-          ) : currentView === "teams" ? (
-            <TeamsPage
-              currentUsername={auth.username ?? ""}
-              dataSource={teamsDataSource}
-              onOpenWeb={() => void runNativeAction(openWeb)}
-              onSessionExpired={handleSessionExpired}
-            />
-          ) : (
-            <AddonPage
-              initialAddon={addon}
-              initialWow={wow}
-              onWowChanged={setWow}
-              preview={previewMode}
-            />
-          )}
+          <PageErrorBoundary
+            detail={language === "es" ? "La pestaña no ha podido mostrar estos datos. Puedes volver a Sincronizar y seguir usando el cliente." : "The tab could not display this data. You can return to Sync and keep using the client."}
+            onRecover={() => setCurrentView("sync")}
+            recoverLabel={language === "es" ? "Volver a Sincronizar" : "Return to Sync"}
+            resetKey={currentView}
+            title={language === "es" ? "No se pudo abrir la pestaña" : "The tab could not be opened"}
+          >
+            {currentView === "sync" ? (
+              <SyncPage
+                appVersion={packageJson.version}
+                initialAddon={addon}
+                initialCharacters={characters}
+                initialSync={sync}
+                initialWow={wow}
+                preview={previewMode}
+              />
+            ) : currentView === "characters" ? (
+              <CharactersPage state={characters} />
+            ) : currentView === "teams" ? (
+              <TeamsPage
+                currentUsername={auth.username ?? ""}
+                dataSource={teamsDataSource}
+                onOpenWeb={() => void runNativeAction(openWeb)}
+                onSessionExpired={handleSessionExpired}
+              />
+            ) : (
+              <AddonPage
+                initialAddon={addon}
+                initialWow={wow}
+                onWowChanged={setWow}
+                preview={previewMode}
+              />
+            )}
+          </PageErrorBoundary>
           {settingsOpen ? (
             <div aria-labelledby="settings-modal-title" aria-modal="true" className="ks-modal" role="dialog">
               <div className="ks-modal__panel">

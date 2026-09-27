@@ -15,6 +15,19 @@ function renderPage(characterState = state) {
 describe("CharactersPage", () => {
   beforeEach(() => localStorage.clear());
 
+  it.each([
+    ["equipment without items", { equipment: {} }],
+    ["equipment item without gems", { equipment: { items: [{ itemId: 123, bonusIds: [2001, 2002] }] } }],
+    ["talents without trees", { talents: {} }],
+    ["talent node without entries", { talents: { trees: [{ treeId: 1, type: "spec", nodes: [{ nodeId: 2 }] }] } }],
+  ])("renders partial legacy snapshots safely: %s", (_label, snapshot) => {
+    const characters = charactersPreview();
+    Object.assign(characters[0], snapshot);
+
+    expect(() => renderPage({ ...state, characters })).not.toThrow();
+    expect(screen.getByRole("heading", { name: /EQUIPO/ })).toBeVisible();
+  });
+
   it("renders the PNG structure with one-row gear, eight dungeons and ten currencies", () => {
     const { container } = renderPage();
     expect(container.querySelectorAll(".gear-item")).toHaveLength(16);
