@@ -2067,7 +2067,7 @@ dependencies = [
 
 [[package]]
 name = "keystone-client"
-version = "0.15.5"
+version = "0.15.6"
 dependencies = [
  "base64 0.22.1",
  "minisign-verify",
