@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.8",
+  "version": "0.15.9",
+  "bump": "patch",
+  "tag": "client-v0.15.9",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-resize-preview.json"
+  ]
+}
