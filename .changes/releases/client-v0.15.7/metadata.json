@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.6",
+  "version": "0.15.7",
+  "bump": "patch",
+  "tag": "client-v0.15.7",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-official-hero-talent-icons.json"
+  ]
+}
