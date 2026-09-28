@@ -1,0 +1,17 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "El resumen de talentos muestra ahora el icono oficial de la especialización heroica.",
+  "details": [
+    "Usa el atlas oficial de Blizzard asociado al Hero Talent activo.",
+    "Mantiene compatibilidad con capturas antiguas que solo incluyen el identificador del subárbol.",
+    "Conserva el icono del primer talento únicamente como fallback para especializaciones futuras desconocidas."
+  ],
+  "summaryEn": "The talent summary now displays the official Hero Talent specialization icon.",
+  "detailsEn": [
+    "Uses Blizzard's official atlas art for the active Hero Talent.",
+    "Supports older snapshots that only include the Hero subtree identifier.",
+    "Keeps the first talent icon only as a fallback for unknown future specializations."
+  ]
+}

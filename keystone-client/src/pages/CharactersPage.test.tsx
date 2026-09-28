@@ -177,9 +177,10 @@ describe("CharactersPage", () => {
     expect(container.querySelectorAll(".talent-preview a[data-wowhead]").length).toBeGreaterThan(0);
     expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Equilibrio");
     expect(container.querySelector(".talents-panel__identity")).toHaveTextContent("Elección de Elune");
-    expect(container.querySelectorAll(".talents-panel__identity img")).toHaveLength(2);
-    expect(container.querySelectorAll<HTMLImageElement>(".talents-panel__identity img")[0].src).toContain("136096");
-    expect(container.querySelectorAll<HTMLImageElement>(".talents-panel__identity img")[1].src).toContain("dungeon-teleports");
+    expect(container.querySelectorAll(".talents-panel__identity img")).toHaveLength(1);
+    expect(container.querySelector<HTMLImageElement>(".talents-panel__identity img")?.src).toContain("136096");
+    expect(container.querySelector(".talents-panel__identity .hero-talent-icon"))
+      .toHaveAttribute("data-hero-talent-atlas", "talents-heroclass-druid-eluneschosen");
     expect(screen.getByRole("button", { name: "Mostrar configuración completa" })).toBeVisible();
   });
 
@@ -376,7 +377,7 @@ describe("CharactersPage", () => {
     expect(omnium?.querySelector(".ks-talent-node")).toHaveStyle("left: 50%");
   });
 
-  it("uses renderable entry and generic enchant icons instead of atlas sprite sheets", () => {
+  it("uses the official Hero Talent atlas icon and a generic enchant icon", () => {
     const characters = charactersPreview();
     const hero = characters[0].talents!.trees.find(tree => tree.type === "hero")!;
     hero.iconFileID = 5740021;
@@ -386,7 +387,9 @@ describe("CharactersPage", () => {
     characters[0].equipment!.items[0].enchant!.spellId = null;
     characters[0].equipment!.items[0].enchant!.iconFileID = 7487371;
     const { container } = renderPage({ ...state, characters });
-    expect(container.querySelector(".talents-panel__identity > span:last-child img")).toHaveAttribute("src", expect.stringContaining("135919.jpg"));
+    expect(container.querySelector(".talents-panel__identity .hero-talent-icon"))
+      .toHaveAttribute("data-hero-talent-atlas", "talents-heroclass-druid-eluneschosen");
+    expect(container.querySelector(".talents-panel__identity > span:last-child img")).not.toBeInTheDocument();
     expect(container.querySelector(".gear-item__enchant img")).toHaveAttribute("src", expect.stringContaining("463531.jpg"));
   });
 });
