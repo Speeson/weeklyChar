@@ -89,10 +89,22 @@ use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 #[cfg(windows)]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER, WMSZ_BOTTOM,
-    WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT, WMSZ_RIGHT, WMSZ_TOP, WMSZ_TOPLEFT,
-    WMSZ_TOPRIGHT, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_SIZING,
+    CreateWindowExW, DestroyWindow, GetClientRect, GetWindowRect, SetLayeredWindowAttributes,
+    SetWindowPos, HWND_TOP, LWA_ALPHA, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
+    SWP_SHOWWINDOW, WMSZ_BOTTOM, WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT, WMSZ_RIGHT,
+    WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WM_CANCELMODE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE,
+    WM_NCDESTROY, WM_SIZING, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+    WS_POPUP,
 };
+
+#[cfg(windows)]
+const PREVIEW_BORDER_DIP: f64 = 3.0;
+#[cfg(windows)]
+const PREVIEW_ALPHA: u8 = 210;
+#[cfg(windows)]
+const STATIC_WHITE_RECT_STYLE: u32 = 0x0000_0006;
+#[cfg(windows)]
+const STATIC_CLASS_NAME: [u16; 7] = [83, 84, 65, 84, 73, 67, 0];
 
 #[cfg(windows)]
 static ASPECT_LOCKED: AtomicBool = AtomicBool::new(false);
@@ -100,6 +112,8 @@ static ASPECT_LOCKED: AtomicBool = AtomicBool::new(false);
 static HOOK_INSTALLED: AtomicBool = AtomicBool::new(false);
 #[cfg(windows)]
 static PENDING_RESIZE: Mutex<Option<RECT>> = Mutex::new(None);
+#[cfg(windows)]
+static PREVIEW_WINDOWS: Mutex<Option<[isize; 4]>> = Mutex::new(None);
 
 #[cfg(windows)]
 fn install_sizing_hook(window: &tauri::WebviewWindow) {
@@ -121,9 +135,9 @@ unsafe extern "system" fn sizing_proc(
     if message == WM_NCDESTROY {
         RemoveWindowSubclass(hwnd, Some(sizing_proc), subclass_id);
         HOOK_INSTALLED.store(false, std::sync::atomic::Ordering::Relaxed);
-        clear_pending_resize();
-    } else if message == WM_ENTERSIZEMOVE {
-        clear_pending_resize();
+        clear_resize_session();
+    } else if message == WM_ENTERSIZEMOVE || message == WM_CANCELMODE {
+        clear_resize_session();
     } else if message == WM_SIZING
         && ASPECT_LOCKED.load(std::sync::atomic::Ordering::Relaxed)
         && lparam != 0
@@ -137,23 +151,34 @@ unsafe extern "system" fn sizing_proc(
             if let Ok(mut pending) = PENDING_RESIZE.lock() {
                 *pending = Some(target);
             }
+            show_resize_preview(hwnd, &target, dpi);
             return 1;
         }
-    } else if message == WM_EXITSIZEMOVE && ASPECT_LOCKED.load(std::sync::atomic::Ordering::Relaxed)
-    {
-        if let Some(target) = take_pending_resize() {
-            SetWindowPos(
-                hwnd,
-                std::ptr::null_mut(),
-                target.left,
-                target.top,
-                target.right - target.left,
-                target.bottom - target.top,
-                SWP_NOACTIVATE | SWP_NOZORDER,
-            );
+    } else if message == WM_EXITSIZEMOVE {
+        destroy_resize_preview();
+        if ASPECT_LOCKED.load(std::sync::atomic::Ordering::Relaxed) {
+            if let Some(target) = take_pending_resize() {
+                SetWindowPos(
+                    hwnd,
+                    std::ptr::null_mut(),
+                    target.left,
+                    target.top,
+                    target.right - target.left,
+                    target.bottom - target.top,
+                    SWP_NOACTIVATE | SWP_NOZORDER,
+                );
+            }
+        } else {
+            clear_pending_resize();
         }
     }
     DefSubclassProc(hwnd, message, edge, lparam)
+}
+
+#[cfg(windows)]
+fn clear_resize_session() {
+    clear_pending_resize();
+    destroy_resize_preview();
 }
 
 #[cfg(windows)]
@@ -166,6 +191,109 @@ fn clear_pending_resize() {
 #[cfg(windows)]
 fn take_pending_resize() -> Option<RECT> {
     PENDING_RESIZE.lock().ok()?.take()
+}
+
+#[cfg(windows)]
+unsafe fn show_resize_preview(owner: HWND, target: &RECT, scale: f64) {
+    let Ok(mut preview) = PREVIEW_WINDOWS.lock() else {
+        return;
+    };
+    if preview.is_none() {
+        *preview = create_resize_preview(owner);
+    }
+    let Some(handles) = preview.as_ref() else {
+        return;
+    };
+    let thickness = (PREVIEW_BORDER_DIP * scale).round().max(2.0) as i32;
+    for (handle, rect) in handles.iter().zip(preview_edge_rects(target, thickness)) {
+        SetWindowPos(
+            *handle as HWND,
+            HWND_TOP,
+            rect.left,
+            rect.top,
+            rect.right - rect.left,
+            rect.bottom - rect.top,
+            SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_SHOWWINDOW,
+        );
+    }
+}
+
+#[cfg(windows)]
+unsafe fn create_resize_preview(owner: HWND) -> Option<[isize; 4]> {
+    let mut handles = [0isize; 4];
+    for (index, slot) in handles.iter_mut().enumerate() {
+        let handle = CreateWindowExW(
+            WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT,
+            STATIC_CLASS_NAME.as_ptr(),
+            std::ptr::null(),
+            WS_POPUP | STATIC_WHITE_RECT_STYLE,
+            0,
+            0,
+            0,
+            0,
+            owner,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null(),
+        );
+        if handle.is_null() || SetLayeredWindowAttributes(handle, 0, PREVIEW_ALPHA, LWA_ALPHA) == 0
+        {
+            if !handle.is_null() {
+                DestroyWindow(handle);
+            }
+            for created in handles[..index].iter().copied() {
+                DestroyWindow(created as HWND);
+            }
+            return None;
+        }
+        *slot = handle as isize;
+    }
+    Some(handles)
+}
+
+#[cfg(windows)]
+fn destroy_resize_preview() {
+    let Ok(mut preview) = PREVIEW_WINDOWS.lock() else {
+        return;
+    };
+    if let Some(handles) = preview.take() {
+        for handle in handles {
+            unsafe {
+                DestroyWindow(handle as HWND);
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+fn preview_edge_rects(target: &RECT, thickness: i32) -> [RECT; 4] {
+    let thickness = thickness.max(1);
+    [
+        RECT {
+            left: target.left,
+            top: target.top,
+            right: target.right,
+            bottom: (target.top + thickness).min(target.bottom),
+        },
+        RECT {
+            left: target.left,
+            top: (target.bottom - thickness).max(target.top),
+            right: target.right,
+            bottom: target.bottom,
+        },
+        RECT {
+            left: target.left,
+            top: (target.top + thickness).min(target.bottom),
+            right: (target.left + thickness).min(target.right),
+            bottom: (target.bottom - thickness).max(target.top),
+        },
+        RECT {
+            left: (target.right - thickness).max(target.left),
+            top: (target.top + thickness).min(target.bottom),
+            right: target.right,
+            bottom: (target.bottom - thickness).max(target.top),
+        },
+    ]
 }
 
 #[cfg(windows)]
@@ -356,5 +484,29 @@ mod tests {
         assert_eq!(target.left, current.left);
         assert_eq!(target.right, 1500);
         assert_eq!(target.bottom - target.top, 788);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn resize_preview_is_a_thin_outline_around_the_pending_rect() {
+        let target = RECT {
+            left: 100,
+            top: 200,
+            right: 1500,
+            bottom: 988,
+        };
+
+        let edges = preview_edge_rects(&target, 3);
+
+        let coordinates = edges.map(|rect| (rect.left, rect.top, rect.right, rect.bottom));
+        assert_eq!(
+            coordinates,
+            [
+                (100, 200, 1500, 203),
+                (100, 985, 1500, 988),
+                (100, 203, 103, 985),
+                (1497, 203, 1500, 985),
+            ]
+        );
     }
 }
