@@ -2073,6 +2073,7 @@ dependencies = [
  "minisign-verify",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
@@ -2083,6 +2084,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "url",
  "windows-sys 0.61.2",
 ]
 

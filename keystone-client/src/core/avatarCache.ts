@@ -1,3 +1,5 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
+
 const AVATAR_CACHE_NAME = "keystone-client-avatars-v1";
 const PROFILE_AVATAR_CACHE_NAME = "keystone-client-profile-avatar-v1";
 const MAX_AVATAR_BYTES = 256 * 1024;
@@ -22,6 +24,25 @@ async function openAvatarCache(name = AVATAR_CACHE_NAME): Promise<Cache | null> 
     return await globalThis.caches.open(name);
   } catch {
     return null;
+  }
+}
+
+async function loadNativeAvatar(url: string): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    return await invoke<string | null>("load_cached_avatar", { url });
+  } catch {
+    return null;
+  }
+}
+
+async function storeNativeAvatar(url: string, dataUrl: string, profile = false): Promise<boolean> {
+  if (!isTauri()) return false;
+  try {
+    await invoke<void>("store_cached_avatar", { dataUrl, profile, url });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -53,21 +74,30 @@ async function trimAvatarCache(cache: Cache): Promise<void> {
 }
 
 async function resolveAvatar(url: string): Promise<string | null> {
-  const cache = await openAvatarCache();
-  if (cache === null) return null;
+  const native = await loadNativeAvatar(url);
+  if (native) return native;
 
-  const cached = await cache.match(url);
+  const cache = await openAvatarCache();
+  const cached = await cache?.match(url);
   if (cached) {
     const blob = await validatedBlob(cached);
-    if (blob) return blobDataUrl(blob);
-    await cache.delete(url);
+    if (blob) {
+      const source = await blobDataUrl(blob);
+      if (source) await storeNativeAvatar(url, source);
+      return source;
+    }
+    await cache?.delete(url);
   }
 
   const profileCache = await openAvatarCache(PROFILE_AVATAR_CACHE_NAME);
   const profileAvatar = await profileCache?.match(url);
   if (profileAvatar) {
     const blob = await validatedBlob(profileAvatar);
-    if (blob) return blobDataUrl(blob);
+    if (blob) {
+      const source = await blobDataUrl(blob);
+      if (source) await storeNativeAvatar(url, source, true);
+      return source;
+    }
     await profileCache?.delete(url);
   }
 
@@ -80,7 +110,7 @@ async function resolveAvatar(url: string): Promise<string | null> {
     });
     const blob = await validatedBlob(response);
     if (!blob) return null;
-    try {
+    if (cache) try {
       await cache.put(url, new Response(blob, {
         headers: { "content-length": String(blob.size), "content-type": blob.type },
         status: 200,
@@ -89,7 +119,9 @@ async function resolveAvatar(url: string): Promise<string | null> {
     } catch {
       // A full or unavailable persistent cache must not block the live image.
     }
-    return blobDataUrl(blob);
+    const source = await blobDataUrl(blob);
+    if (source) await storeNativeAvatar(url, source);
+    return source;
   } catch {
     return null;
   }
@@ -111,15 +143,18 @@ export async function cacheProfileAvatar(value: string): Promise<boolean> {
   const source = await getCachedAvatarSource(url);
   if (source === null) return false;
 
+  const nativeRequired = isTauri();
+  const nativeStored = await storeNativeAvatar(url, source, true);
+
   const [avatarCache, profileCache] = await Promise.all([
     openAvatarCache(),
     openAvatarCache(PROFILE_AVATAR_CACHE_NAME),
   ]);
-  if (!avatarCache || !profileCache) return false;
+  if (!avatarCache || !profileCache) return nativeStored;
   const response = await avatarCache.match(url) ?? await profileCache.match(url);
-  if (!response) return false;
+  if (!response) return nativeStored;
   const blob = await validatedBlob(response);
-  if (!blob) return false;
+  if (!blob) return nativeStored;
   try {
     const existing = await profileCache.keys();
     await Promise.all(existing.map(key => profileCache.delete(key)));
@@ -127,26 +162,39 @@ export async function cacheProfileAvatar(value: string): Promise<boolean> {
       headers: { "content-length": String(blob.size), "content-type": blob.type },
       status: 200,
     }));
-    return true;
+    return nativeRequired ? nativeStored : true;
   } catch {
-    return false;
+    return nativeStored;
   }
 }
 
 export async function removeCachedAvatar(value: string): Promise<void> {
   const url = normalizeAvatarUrl(value);
   if (!url) return;
+  const nativeCleanup = isTauri()
+    ? invoke<void>("remove_cached_avatar", { url }).catch(() => undefined)
+    : Promise.resolve();
   const cachesToClean = await Promise.all([
     openAvatarCache(),
     openAvatarCache(PROFILE_AVATAR_CACHE_NAME),
   ]);
-  await Promise.allSettled(cachesToClean.map(cache => cache?.delete(url)));
+  await Promise.allSettled([
+    nativeCleanup,
+    ...cachesToClean.map(cache => cache?.delete(url)),
+  ]);
 }
 
 export async function clearAvatarCache(): Promise<void> {
   inFlight.clear();
-  if (typeof globalThis.caches === "undefined") return;
+  const nativeCleanup = isTauri()
+    ? invoke<void>("clear_cached_avatars").catch(() => undefined)
+    : Promise.resolve();
+  if (typeof globalThis.caches === "undefined") {
+    await nativeCleanup;
+    return;
+  }
   await Promise.allSettled([
+    nativeCleanup,
     globalThis.caches.delete(AVATAR_CACHE_NAME),
     globalThis.caches.delete(PROFILE_AVATAR_CACHE_NAME),
   ]);

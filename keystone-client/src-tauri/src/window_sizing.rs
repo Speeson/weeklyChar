@@ -80,7 +80,7 @@ fn window_error() -> CoreBridgeError {
 }
 
 #[cfg(windows)]
-use std::sync::atomic::AtomicBool;
+use std::sync::{atomic::AtomicBool, Mutex};
 #[cfg(windows)]
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 #[cfg(windows)]
@@ -89,14 +89,17 @@ use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 #[cfg(windows)]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, GetWindowRect, WMSZ_BOTTOM, WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT,
-    WMSZ_RIGHT, WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WM_NCDESTROY, WM_SIZING,
+    GetClientRect, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER, WMSZ_BOTTOM,
+    WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT, WMSZ_RIGHT, WMSZ_TOP, WMSZ_TOPLEFT,
+    WMSZ_TOPRIGHT, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_SIZING,
 };
 
 #[cfg(windows)]
 static ASPECT_LOCKED: AtomicBool = AtomicBool::new(false);
 #[cfg(windows)]
 static HOOK_INSTALLED: AtomicBool = AtomicBool::new(false);
+#[cfg(windows)]
+static PENDING_RESIZE: Mutex<Option<RECT>> = Mutex::new(None);
 
 #[cfg(windows)]
 fn install_sizing_hook(window: &tauri::WebviewWindow) {
@@ -118,6 +121,9 @@ unsafe extern "system" fn sizing_proc(
     if message == WM_NCDESTROY {
         RemoveWindowSubclass(hwnd, Some(sizing_proc), subclass_id);
         HOOK_INSTALLED.store(false, std::sync::atomic::Ordering::Relaxed);
+        clear_pending_resize();
+    } else if message == WM_ENTERSIZEMOVE {
+        clear_pending_resize();
     } else if message == WM_SIZING
         && ASPECT_LOCKED.load(std::sync::atomic::Ordering::Relaxed)
         && lparam != 0
@@ -127,11 +133,53 @@ unsafe extern "system" fn sizing_proc(
         let mut client = RECT::default();
         if GetWindowRect(hwnd, &mut current) != 0 && GetClientRect(hwnd, &mut client) != 0 {
             let dpi = GetDpiForWindow(hwnd).max(1) as f64 / 96.0;
-            constrain_rect(proposed, &current, &client, edge as u32, dpi);
+            let target = deferred_rect(proposed, &current, &client, edge as u32, dpi);
+            if let Ok(mut pending) = PENDING_RESIZE.lock() {
+                *pending = Some(target);
+            }
             return 1;
+        }
+    } else if message == WM_EXITSIZEMOVE && ASPECT_LOCKED.load(std::sync::atomic::Ordering::Relaxed)
+    {
+        if let Some(target) = take_pending_resize() {
+            SetWindowPos(
+                hwnd,
+                std::ptr::null_mut(),
+                target.left,
+                target.top,
+                target.right - target.left,
+                target.bottom - target.top,
+                SWP_NOACTIVATE | SWP_NOZORDER,
+            );
         }
     }
     DefSubclassProc(hwnd, message, edge, lparam)
+}
+
+#[cfg(windows)]
+fn clear_pending_resize() {
+    if let Ok(mut pending) = PENDING_RESIZE.lock() {
+        *pending = None;
+    }
+}
+
+#[cfg(windows)]
+fn take_pending_resize() -> Option<RECT> {
+    PENDING_RESIZE.lock().ok()?.take()
+}
+
+#[cfg(windows)]
+fn deferred_rect(
+    proposed: &mut RECT,
+    current: &RECT,
+    client: &RECT,
+    edge: u32,
+    scale: f64,
+) -> RECT {
+    let mut target = *proposed;
+    constrain_rect(&mut target, current, client, edge, scale);
+    *proposed = *current;
+    target
 }
 
 #[cfg(windows)]
@@ -275,5 +323,38 @@ mod tests {
                 .abs()
                 < 0.002
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn locked_drag_keeps_current_rect_until_the_pending_resize_is_committed() {
+        let current = RECT {
+            left: 100,
+            top: 100,
+            right: 1772,
+            bottom: 1041,
+        };
+        let client = RECT {
+            left: 0,
+            top: 0,
+            right: 1672,
+            bottom: 941,
+        };
+        let mut proposed = RECT {
+            left: 100,
+            top: 100,
+            right: 1500,
+            bottom: 1041,
+        };
+
+        let target = deferred_rect(&mut proposed, &current, &client, WMSZ_RIGHT, 1.0);
+
+        assert_eq!(proposed.left, current.left);
+        assert_eq!(proposed.top, current.top);
+        assert_eq!(proposed.right, current.right);
+        assert_eq!(proposed.bottom, current.bottom);
+        assert_eq!(target.left, current.left);
+        assert_eq!(target.right, 1500);
+        assert_eq!(target.bottom - target.top, 788);
     }
 }

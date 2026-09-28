@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   avatarCacheLimits,
   cacheProfileAvatar,
@@ -7,6 +8,11 @@ import {
   normalizeAvatarUrl,
   removeCachedAvatar,
 } from "./avatarCache";
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(),
+  isTauri: vi.fn(() => false),
+}));
 
 class MemoryCache {
   readonly entries = new Map<string, Response>();
@@ -63,6 +69,9 @@ beforeEach(() => {
     )),
   });
   vi.stubGlobal("fetch", vi.fn());
+  vi.mocked(invoke).mockReset();
+  vi.mocked(isTauri).mockReset();
+  vi.mocked(isTauri).mockReturnValue(false);
   if (!supportsBlobResponse) {
     vi.stubGlobal("FileReader", class {
       result: string | null = null;
@@ -117,6 +126,51 @@ describe("avatar cache", () => {
     await expect(getCachedAvatarSource(url)).resolves.toMatch(/^data:image\/jpeg;base64,/u);
     expect(profileCache.entries.has(url)).toBe(true);
     expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("loads an avatar from native storage before consulting WebView storage or the network", async () => {
+    const url = "https://img.test/native-profile.jpg";
+    const source = "data:image/jpeg;base64,bmF0aXZlLXByb2ZpbGU=";
+    vi.mocked(isTauri).mockReturnValue(true);
+    vi.mocked(invoke).mockResolvedValueOnce(source);
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+
+    await expect(getCachedAvatarSource(url)).resolves.toBe(source);
+
+    expect(invoke).toHaveBeenCalledWith("load_cached_avatar", { url });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(cache.entries).toHaveLength(0);
+  });
+
+  it("accepts the native profile copy when WebView storage has no matching response", async () => {
+    const url = "https://img.test/native-profile.jpg";
+    const source = "data:image/jpeg;base64,bmF0aXZlLXByb2ZpbGU=";
+    vi.mocked(isTauri).mockReturnValue(true);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(source)
+      .mockResolvedValueOnce(undefined);
+
+    await expect(cacheProfileAvatar(url)).resolves.toBe(true);
+
+    expect(invoke).toHaveBeenNthCalledWith(1, "load_cached_avatar", { url });
+    expect(invoke).toHaveBeenNthCalledWith(2, "store_cached_avatar", {
+      dataUrl: source,
+      profile: true,
+      url,
+    });
+  });
+
+  it("does not treat WebView-only storage as persistent in the packaged client", async () => {
+    const url = "https://img.test/profile.jpg";
+    vi.mocked(isTauri).mockReturnValue(true);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new Error("native storage unavailable"))
+      .mockRejectedValueOnce(new Error("native storage unavailable"));
+    cache.entries.set(url, imageResponse("profile"));
+
+    await expect(cacheProfileAvatar(url)).resolves.toBe(false);
+    expect(profileCache.entries.has(url)).toBe(true);
   });
 
   it("removes a corrupt avatar from both general and profile storage", async () => {

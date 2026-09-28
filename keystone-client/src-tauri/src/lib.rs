@@ -1,3 +1,4 @@
+mod avatar_cache;
 mod bridge;
 mod overlay;
 mod state;
@@ -81,6 +82,56 @@ fn set_window_aspect_lock(app: tauri::AppHandle, enabled: bool) -> Result<(), Co
 }
 
 #[tauri::command]
+async fn load_cached_avatar(
+    app: tauri::AppHandle,
+    url: String,
+) -> Result<Option<String>, CoreBridgeError> {
+    tauri::async_runtime::spawn_blocking(move || avatar_cache::load(&app, &url))
+        .await
+        .map_err(|_| CoreBridgeError {
+            code: "AVATAR_CACHE_FAILED".to_string(),
+            message: "KeystoneClient could not access the local avatar cache.".to_string(),
+        })?
+}
+
+#[tauri::command]
+async fn store_cached_avatar(
+    app: tauri::AppHandle,
+    url: String,
+    data_url: String,
+    profile: bool,
+) -> Result<(), CoreBridgeError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        avatar_cache::store(&app, &url, &data_url, profile)
+    })
+    .await
+    .map_err(|_| CoreBridgeError {
+        code: "AVATAR_CACHE_FAILED".to_string(),
+        message: "KeystoneClient could not access the local avatar cache.".to_string(),
+    })?
+}
+
+#[tauri::command]
+async fn remove_cached_avatar(app: tauri::AppHandle, url: String) -> Result<(), CoreBridgeError> {
+    tauri::async_runtime::spawn_blocking(move || avatar_cache::remove(&app, &url))
+        .await
+        .map_err(|_| CoreBridgeError {
+            code: "AVATAR_CACHE_FAILED".to_string(),
+            message: "KeystoneClient could not access the local avatar cache.".to_string(),
+        })?
+}
+
+#[tauri::command]
+async fn clear_cached_avatars(app: tauri::AppHandle) -> Result<(), CoreBridgeError> {
+    tauri::async_runtime::spawn_blocking(move || avatar_cache::clear(&app))
+        .await
+        .map_err(|_| CoreBridgeError {
+            code: "AVATAR_CACHE_FAILED".to_string(),
+            message: "KeystoneClient could not access the local avatar cache.".to_string(),
+        })?
+}
+
+#[tauri::command]
 fn configure_overlay_shortcut(
     app: tauri::AppHandle,
     enabled: bool,
@@ -156,6 +207,10 @@ pub fn run() {
             hide_to_tray,
             minimize_window,
             set_window_aspect_lock,
+            load_cached_avatar,
+            store_cached_avatar,
+            remove_cached_avatar,
+            clear_cached_avatars,
             configure_overlay_shortcut,
             get_overlay_shortcut_status,
             begin_overlay_shortcut_capture,

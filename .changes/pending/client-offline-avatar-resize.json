@@ -1,0 +1,15 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Corrige la persistencia sin conexión del avatar y estabiliza el cambio de tamaño con proporción bloqueada.",
+  "details": [
+    "Guarda los avatares validados en el almacenamiento persistente de KeystoneClient para recuperarlos después de reiniciar sin conexión.",
+    "Mantiene la ventana inmóvil durante el arrastre con la proporción bloqueada y aplica el tamaño final al soltar el ratón."
+  ],
+  "summaryEn": "Fixes offline avatar persistence and stabilizes resizing with locked proportions.",
+  "detailsEn": [
+    "Stores validated avatars in KeystoneClient persistent storage so they remain available after an offline restart.",
+    "Keeps the window still while dragging with locked proportions and applies the final size when the mouse is released."
+  ]
+}
