@@ -381,10 +381,10 @@ pub fn enable(app: &tauri::AppHandle) -> Result<(), String> {
 
     OVERLAY_ACTIVE.store(false, Ordering::SeqCst);
     let presentation = (|| {
-        window.unminimize().map_err(|error| error.to_string())?;
         window
             .set_focusable(false)
             .map_err(|error| error.to_string())?;
+        window.unminimize().map_err(|error| error.to_string())?;
         window
             .set_always_on_top(flags.always_on_top)
             .map_err(|error| error.to_string())?;
