@@ -11,6 +11,7 @@ import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 import WeeklyReset from '@/app/components/WeeklyReset'
 import { formatVaultReward } from '@/lib/vaultRewards'
 import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
+import { loadHiddenCharacterIds } from '@/lib/hiddenCharacters'
 import {
   compactKeystoneLabel,
   DUNGEON_ABBR_BY_ID,
@@ -459,6 +460,7 @@ function TeamCard({
 export default function DashboardPage() {
   const router = useRouter()
   const [characters, setCharacters] = useState<Character[]>([])
+  const [hiddenCharacterIds, setHiddenCharacterIds] = useState<Set<number>>(new Set())
   const [teams, setTeams] = useState<TeamDetail[]>([])
   const [currentUsername, setCurrentUsername] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
@@ -476,6 +478,7 @@ export default function DashboardPage() {
 
     queueMicrotask(() => {
       setCurrentUsername(getUsername())
+      setHiddenCharacterIds(loadHiddenCharacterIds())
       setCollapsedTeams(loadCollapsedTeams())
       setCollapsedMembers(loadCollapsedMembers())
       setTeamOrder(loadTeamOrder())
@@ -508,15 +511,19 @@ export default function DashboardPage() {
     loadDashboard().catch(() => setLoading(false))
   }, [router])
 
+  const displayableOwnCharacters = useMemo(
+    () => characters.filter(char => !hiddenCharacterIds.has(char.id)),
+    [characters, hiddenCharacterIds],
+  )
   const visibleOwnCharacters = useMemo(
-    () => characters.filter(char => matchesFilter(char, filter)),
-    [characters, filter],
+    () => displayableOwnCharacters.filter(char => matchesFilter(char, filter)),
+    [displayableOwnCharacters, filter],
   )
 
   const dungeonStats = useMemo(() => {
     const counts = new Map<string, number>()
     const allChars = [
-      ...characters,
+      ...displayableOwnCharacters,
       ...teams.flatMap(team => team.members.filter(member => member.username !== currentUsername).flatMap(member => member.characters)),
     ]
     for (const char of allChars) {
@@ -526,7 +533,7 @@ export default function DashboardPage() {
       counts.set(abbr, (counts.get(abbr) ?? 0) + 1)
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
-  }, [characters, teams, currentUsername])
+  }, [displayableOwnCharacters, teams, currentUsername])
 
   const orderedTeams = useMemo(() => {
     function teamVisibleCount(team: TeamDetail) {

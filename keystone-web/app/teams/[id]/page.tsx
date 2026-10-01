@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { apiFetch, getToken } from '@/lib/auth'
+import { loadHiddenCharacterIds } from '@/lib/hiddenCharacters'
 import { keystoneColor, wowClassColor } from '@/lib/colors'
 import { DUNGEON_ABBR_BY_ID, DUNGEON_ABBR_BY_NAME, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
 import Navbar from '@/app/components/Navbar'
@@ -288,6 +289,7 @@ export default function TeamDetailPage() {
   const router = useRouter()
   const params = useParams()
   const [team, setTeam] = useState<TeamDetail | null>(null)
+  const [hiddenCharacterIds, setHiddenCharacterIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -313,6 +315,7 @@ export default function TeamDetailPage() {
       router.push('/login')
       return
     }
+    queueMicrotask(() => setHiddenCharacterIds(loadHiddenCharacterIds()))
     apiFetch(`/api/teams/${params.id}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -350,8 +353,11 @@ export default function TeamDetailPage() {
 
   if (!team) return null
 
-  const allCharacters = team.members.flatMap(member => member.characters)
-  const visibleCount = team.members.reduce(
+  const visibleMembers = team.members.map(member => member.userId === team.currentUserId
+    ? { ...member, characters: member.characters.filter(char => !hiddenCharacterIds.has(char.id)) }
+    : member)
+  const allCharacters = visibleMembers.flatMap(member => member.characters)
+  const visibleCount = visibleMembers.reduce(
     (total, member) => total + member.characters.filter(char => matchesDungeon(char, query, selectedDungeons)).length,
     0,
   )
@@ -568,13 +574,13 @@ export default function TeamDetailPage() {
             <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{teamActionError}</p>
           )}
 
-          <StoneSelector key={team.id} teamId={team.id} members={team.members} currentUserId={team.currentUserId} />
+          <StoneSelector key={team.id} teamId={team.id} members={visibleMembers} currentUserId={team.currentUserId} />
 
           {allCharacters.length === 0 ? (
             <p className="mt-8 text-sm text-gray-500">Ningun miembro tiene personajes registrados todavia.</p>
           ) : (
             <div className={viewMode === 'grid' ? 'mt-6 columns-1 gap-5 xl:columns-2' : 'mt-6 space-y-5'}>
-              {team.members.map(member => (
+              {visibleMembers.map(member => (
                 <MemberCard
                   key={member.userId}
                   member={member}

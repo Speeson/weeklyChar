@@ -8,6 +8,7 @@ import { apiFetch, getToken } from '@/lib/auth'
 import Navbar from '@/app/components/Navbar'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 import { keystoneColor } from '@/lib/colors'
+import { loadHiddenCharacterIds, saveHiddenCharacterIds } from '@/lib/hiddenCharacters'
 import KeystoneLootObjectivesDrawer from './KeystoneLootObjectivesDrawer'
 
 interface Keystone {
@@ -77,19 +78,6 @@ function formatDate(unix: number | null): string {
   })
 }
 
-const HIDDEN_KEY = 'ks_hidden_chars'
-
-function getHidden(): Set<number> {
-  try {
-    const raw = localStorage.getItem(HIDDEN_KEY)
-    return raw ? new Set(JSON.parse(raw) as number[]) : new Set()
-  } catch { return new Set() }
-}
-
-function saveHidden(h: Set<number>) {
-  localStorage.setItem(HIDDEN_KEY, JSON.stringify([...h]))
-}
-
 export default function Dashboard() {
   const router = useRouter()
   const [characters, setCharacters] = useState<Character[]>([])
@@ -102,7 +90,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!getToken()) { router.push('/login'); return }
-    queueMicrotask(() => setHidden(getHidden()))
+    queueMicrotask(() => setHidden(loadHiddenCharacterIds()))
     apiFetch('/api/me/characters')
       .then(r => {
         if (r.status === 401) { router.push('/login'); return [] }
@@ -120,7 +108,7 @@ export default function Dashboard() {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      saveHidden(next)
+      saveHiddenCharacterIds(next)
       return next
     })
   }

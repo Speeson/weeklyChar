@@ -12,6 +12,7 @@ import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
 import { currencyCapState, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, trovehunterStatus, type TrovehunterDetail, wowheadHref } from '@/lib/season2Currencies'
 import { formatSparkQuantity } from '@/lib/sparkQuantity'
 import { formatVaultReward } from '@/lib/vaultRewards'
+import { loadHiddenCharacterIds } from '@/lib/hiddenCharacters'
 import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 
 interface Keystone {
@@ -549,6 +550,7 @@ function SectionToggleRow({
 export default function SummaryPage() {
   const router = useRouter()
   const [characters, setCharacters] = useState<Character[]>([])
+  const [hiddenCharacterIds, setHiddenCharacterIds] = useState<Set<number>>(new Set())
   const [selectedAccount, setSelectedAccount] = useState(ALL_ACCOUNTS)
   const [collapsedSections, setCollapsedSections] = useState<CollapsedSections>(loadCollapsedSections)
   const [summaryBlocks, setSummaryBlocks] = useState<Record<string, boolean>>({})
@@ -569,6 +571,7 @@ export default function SummaryPage() {
       return
     }
     queueMicrotask(() => {
+      setHiddenCharacterIds(loadHiddenCharacterIds())
       setSummaryBlocks(loadSummaryBlockVisibility())
       setSummaryCurrencies(loadSummaryCurrencyVisibility())
     })
@@ -593,7 +596,7 @@ export default function SummaryPage() {
   }, [characters, selectedAccount, collapsedSections])
 
   const accounts = accountOptions(characters)
-  const visibleCharacters = filterByAccount(characters, selectedAccount)
+  const visibleCharacters = filterByAccount(characters, selectedAccount).filter(c => !hiddenCharacterIds.has(c.id))
 
   return (
     <>

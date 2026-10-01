@@ -1,4 +1,4 @@
-import { CheckCircle2, ChevronDown, ChevronRight, CircleX, Gift, GripVertical, Package, Power, PowerOff, Zap } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleX, Eye, EyeOff, Gift, GripVertical, Package, Zap } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import medal1 from "../assets/medals/tier1.avif";
 import medal2 from "../assets/medals/tier2.avif";
@@ -209,22 +209,81 @@ function TrovehunterStatus({ info, language }: { info?: CharacterCurrency; langu
   </div>;
 }
 
-function CurrencyCard({ currencyKey, info, language, region }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; language: "es" | "en"; region: string }) {
+function FluteCountBadge({ info, bounty, language, region }: { info?: CharacterCurrency; bounty?: CharacterCurrency; language: "es" | "en"; region: string }) {
+  const status = trovehunterStatus(bounty);
+  const icon = blizzardIconUrl(info?.iconPath ?? "Interface/Icons/inv_12_delves_heraldflute", region, info?.iconFileID ?? 1928595);
+  const count = number(info?.bagCount) + (info?.personalBankKnown ? number(info.personalBankCount) : 0) + (info?.warbandBankKnown ? number(info.warbandBankCount) : 0);
+  const countLabel = String(count);
+  const [fluteHovered, setFluteHovered] = useState(false);
+  const [detailsPosition, setDetailsPosition] = useState<CSSProperties | null>(null);
+  const detailsRef = useRef<HTMLSpanElement>(null);
+  if (!status.known || status.obtained) return null;
+  const placeDetails = () => {
+    const tooltip = [...document.querySelectorAll<HTMLElement>(".wowhead-tooltip")].find(element => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0 && rect.left > -1000;
+    });
+    const tooltipRect = tooltip?.getBoundingClientRect();
+    if (!tooltipRect || tooltipRect.width <= 0) return false;
+    const panelWidth = 168;
+    const panelHeight = detailsRef.current?.getBoundingClientRect().height || 92;
+    const left = tooltipRect.right + panelWidth <= window.innerWidth
+      ? Math.round(tooltipRect.right - 1)
+      : Math.max(0, Math.round(tooltipRect.left - panelWidth + 1));
+    const top = Math.max(8, Math.min(Math.round(tooltipRect.top), window.innerHeight - panelHeight - 8));
+    setDetailsPosition({ position: "fixed", left, top, zIndex: 10001 });
+    return true;
+  };
+  const handleFluteEnter = () => {
+    setFluteHovered(true);
+    setDetailsPosition(null);
+    let attempts = 0;
+    const update = () => {
+      const hasWowheadTooltip = placeDetails();
+      if (!hasWowheadTooltip && attempts < 20) {
+        attempts += 1;
+        window.requestAnimationFrame(update);
+      }
+    };
+    window.requestAnimationFrame(update);
+  };
+  const quantity = <span aria-label={`${countLabel} Scalebound Herald's Flute`} className="currency-card__flute-icon">
+    {icon ? <img alt="" src={icon}/> : null}<b>{countLabel}</b>
+  </span>;
+  return <span className="currency-card__flute" onMouseEnter={handleFluteEnter} onMouseLeave={() => { setFluteHovered(false); setDetailsPosition(null); }} onMouseMove={placeDetails}>
+    <WowheadTooltip className="currency-card__flute-link" id={275910} label="Scalebound Herald's Flute" type="item">{quantity}</WowheadTooltip>
+    <span aria-label={language === "es" ? "Lugar de las flautas" : "Flute locations"} className="currency-card__flute-details" ref={detailsRef} role="tooltip" style={{ ...detailsPosition, display: fluteHovered && detailsPosition ? "grid" : "none" }}>
+      <strong>Scalebound Herald's Flute</strong>
+      <span><em>{language === "es" ? "Bolsas" : "Bags"}</em><b>{number(info?.bagCount)}</b></span>
+      <span><em>{language === "es" ? "Banco personal" : "Personal bank"}</em><b>{info?.personalBankKnown ? number(info.personalBankCount) : "—"}</b></span>
+      <span><em>{language === "es" ? "Banco de guerra" : "Warband Bank"}</em><b>{info?.warbandBankKnown ? number(info.warbandBankCount) : "—"}</b></span>
+    </span>
+  </span>;
+}
+
+function CurrencyCard({ currencyKey, info, fluteInfo, language, region }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; fluteInfo?: CharacterCurrency; language: "es" | "en"; region: string }) {
   const copy = characterCopy(language);
   const caps = currencyCapState(info);
-  const value = currencyKey.key === "sparksOfTides" ? number(info?.itemQuantity, number(info?.quantity)) : number(info?.quantity);
+  const sparkTotal = number(info?.itemQuantity, number(info?.quantity));
+  const value = currencyKey.key === "sparksOfTides" && info?.bankQuantityKnown && number(info.bankQuantity) > 0
+    ? `${sparkTotal} (${number(info.bankQuantity)} ${language === "es" ? "en el banco" : "in bank"})`
+    : currencyKey.key === "sparksOfTides" ? String(sparkTotal) : String(number(info?.quantity));
   const isBounty = currencyKey.key === "trovehuntersBounty";
   const hasCap = number(info?.maxWeeklyQuantity) > 0 || number(info?.maxQuantity) > 0;
   const label = language === "es" ? currencyKey.labelEs : currencyKey.label;
-  return <WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}>
-    <article className={`currency-card${caps.isMaxed ? " is-maxed" : ""}`} data-currency={currencyKey.key}>
+  const card = <article className={`currency-card${caps.isMaxed ? " is-maxed" : ""}`} data-currency={currencyKey.key}>
       <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <TrovehunterStatus info={info} language={language}/> : <div className="currency-card__values"><strong>{value}</strong><footer>
         {!hasCap ? <span>{copy.noCap}</span> : null}
         {number(info?.maxWeeklyQuantity) > 0 ? <span className={caps.isWeeklyMaxed ? "is-maxed" : ""}>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
         {number(info?.maxQuantity) > 0 ? <span className={caps.isSeasonMaxed || caps.isTotalMaxed ? "is-maxed" : ""}>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {number(info?.maxQuantity)}</span> : null}
       </footer></div>}</div>
-    </article>
-  </WowheadTooltip>;
+    </article>;
+  if (isBounty) return <div className="currency-card-wrap">
+    <WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}>{card}</WowheadTooltip>
+    <FluteCountBadge bounty={info} info={fluteInfo} language={language} region={region}/>
+  </div>;
+  return <WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}>{card}</WowheadTooltip>;
 }
 
 function ProgressPanels({ character, language }: { character: Character; language: "es" | "en" }) {
@@ -330,7 +389,7 @@ export function CharactersPage({ state }: { state: CharacterState }) {
       onClick={() => moveCharacter(value.id, !active)}
       title={active ? (language === "es" ? "Mover a inactivos" : "Move to inactive") : (language === "es" ? "Mover a activos" : "Move to active")}
       type="button"
-    >{active ? <PowerOff aria-hidden="true"/> : <Power aria-hidden="true"/>}</button>
+    >{active ? <EyeOff aria-hidden="true"/> : <Eye aria-hidden="true"/>}</button>
   </article>;
   const runs = snapshotRecords<Record<string, unknown>>(character.mythicPlusSeason?.dungeons);
   const seasonRating = number(character.mythicPlusSeason?.rating, -1);
@@ -379,7 +438,7 @@ export function CharactersPage({ state }: { state: CharacterState }) {
         <section className="characters-panel talents-panel"><h2>{copy.talents}</h2><div className="talents-panel__content"><div className="talents-panel__identity"><span>{specIcon ? <img alt="" src={specIcon}/> : null}<strong>{specName ?? "—"}</strong></span><span><HeroTalentIdentityIcon fallback={heroIdentity.icon} tree={heroTree}/><strong>{heroName ?? "—"}</strong></span></div><div className="talents-panel__previews"><TalentPreview label={copy.classTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "class")}/><TalentPreview label={copy.heroTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={heroTree}/><TalentPreview label={copy.specTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "spec")}/></div><button aria-label={copy.showTalents} disabled={!trees.length} onClick={() => setTalentsOpen(true)} type="button">{copy.showTalents}</button></div></section>
       </div>
       <div className="characters-content"><div className="characters-main-column"><section className="characters-panel dungeons-panel"><h2>{copy.dungeons}<span className="dungeons-panel__rating"><small>{copy.totalRating}</small><strong>{totalRating > 0 ? Math.round(totalRating).toLocaleString(language === "es" ? "es-ES" : "en-US") : "—"}</strong></span></h2><div className="dungeon-grid">{MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => { const run = runs.find(value => number(value.challengeMapId) === dungeon.id); const level = number(run?.level); const upgrade = Math.min(number(run?.upgradeLevel), 3); const rating = estimatedDungeonRating(run); return <article key={dungeon.id}><img alt="" src={dungeon.teleportIconUrl}/><div><span>{dungeonName(dungeon, language)}</span><section><strong style={{ color: keystoneColor(level) }}>+{level || "—"}</strong>{upgrade > 0 ? <img alt={`+${upgrade}`} className="dungeon-medal" src={medals[upgrade]}/> : null}</section></div><b>{rating || "—"}<small>{copy.rating}</small></b></article>; })}</div></section>
-        <section className="characters-panel currencies-panel"><h2>{copy.currencies}</h2><div className="currencies-grid">{regularCurrencies.map(meta => <CurrencyCard currencyKey={meta} info={character.currencies?.[meta.key]} key={meta.key} language={language} region={character.region}/>)}<CurrencyCard currencyKey={bounty} info={character.currencies?.[bounty.key]} language={language} region={character.region}/></div></section></div>
+        <section className="characters-panel currencies-panel"><h2>{copy.currencies}</h2><div className="currencies-grid">{regularCurrencies.map(meta => <CurrencyCard currencyKey={meta} info={character.currencies?.[meta.key]} key={meta.key} language={language} region={character.region}/>)}<CurrencyCard currencyKey={bounty} fluteInfo={character.currencies?.scaleboundHeraldFlute} info={character.currencies?.[bounty.key]} language={language} region={character.region}/></div></section></div>
         <div className="characters-sidebar"><ProgressPanels character={character} language={language}/><section className="characters-panel money-card"><h2>{copy.gold}</h2><span className="money-card__icon">{goldIcon ? <img alt="" src={goldIcon}/> : "◉"}</span><div><span><strong>{number(character.money?.gold).toLocaleString(language === "es" ? "es-ES" : "en-US")}</strong><i className="money-coin money-coin--gold"/></span><span><b className="money-card__silver">{number(character.money?.silver)}</b><i className="money-coin money-coin--silver"/></span><span><b className="money-card__copper">{number(character.money?.copperOnly, number(character.money?.copper) % 100)}</b><i className="money-coin money-coin--copper"/></span></div></section></div></div>
     </div>
     {talentsOpen ? <TalentModal character={character} onClose={() => setTalentsOpen(false)}/> : null}

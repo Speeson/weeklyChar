@@ -1599,9 +1599,9 @@ h2 {
 .characters-card__select strong { overflow: hidden; color: var(--class-color); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .characters-card__select small { overflow: hidden; color: var(--theme-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .characters-card__select > b { color: var(--theme-accent); font-size: 21px; }
-.characters-card__move { width: 23px; height: 23px; display: grid; place-items: center; padding: 0; border: 1px solid color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border)); border-radius: 7px; color: var(--theme-accent); background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-2)); cursor: pointer; }
+.characters-card__move { width: 25px; min-height: 25px; height: 25px; aspect-ratio: 1; display: grid; place-items: center; padding: 0; border: 1px solid color-mix(in srgb, #d9b85b 72%, var(--theme-border)); border-radius: 6px; color: #f0cf69; background: color-mix(in srgb, #d9b85b 16%, var(--theme-surface-2)); cursor: pointer; }
 .characters-card__move svg { width: 12px; height: 12px; }
-.characters-card.is-inactive .characters-card__move { border-color: color-mix(in srgb, #62d98b 48%, var(--theme-border)); color: #62d98b; }
+.characters-card.is-inactive .characters-card__move { border-color: color-mix(in srgb, #d9b85b 48%, var(--theme-border)); color: #d9b85b; }
 .characters-portrait { --class-color: var(--theme-accent); position: relative; width: 44px; height: 44px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--class-color); border-radius: 50%; color: var(--theme-text); background: color-mix(in srgb, var(--class-color) 18%, #03100c); font-size: 18px; }
 .characters-card .characters-portrait { width: 38px; height: 38px; }
 .characters-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -1689,17 +1689,31 @@ h2 {
 .vault-panel > div:first-of-type, .prey-panel > div:first-of-type { margin-top: auto; }
 .vault-panel > div:last-child, .prey-panel > div:last-child { margin-bottom: auto; }
 .prey-panel > div { grid-template-columns: 1fr auto !important; }
-.currencies-panel { padding: 8px 10px; }
+.currencies-panel { position: relative; z-index: 2; overflow: visible; padding: 8px 10px; }
 .currencies-grid { height: calc(100% - 26px); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 7px; }
-.currency-card-link { min-width: 0; min-height: 0; color: inherit; text-decoration: none; }
+.currency-card-link { display: block; min-width: 0; min-height: 0; height: 100%; color: inherit; text-decoration: none; }
+.currency-card-wrap { position: relative; min-width: 0; min-height: 0; height: 100%; }
 .currency-card { position: relative; height: 100%; display: grid; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: 32px minmax(0, 1fr); gap: 2px 8px; padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--theme-surface-1) 78%, transparent); }
 .currency-card.is-maxed { border-color: #c22b2b; }
 .currency-card__icon { grid-column: 1; grid-row: 2; align-self: end; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--theme-accent); border-radius: 8px; color: var(--theme-accent); background: color-mix(in srgb, var(--theme-accent) 15%, #041312); font-size: 26px; }
 .currency-card__icon img { width: 100%; height: 100%; border-radius: 7px; object-fit: cover; }
+.currency-card__flute { position: absolute; z-index: 5; top: 5px; right: 7px; }
+.currency-card__flute-link { display: block; color: inherit; text-decoration: none; }
+.currency-card__flute-icon { position: relative; display: block; width: 40px; height: 40px; border: 1px solid #d9bd65; border-radius: 5px; background: #16130c; box-shadow: 0 0 6px rgb(255 218 115 / 58%), 0 0 13px rgb(255 218 115 / 27%); }
+.currency-card__flute-icon img { width: 100%; height: 100%; border-radius: 3px; object-fit: cover; }
+.currency-card__flute-icon b { position: absolute; right: 2px; bottom: 1px; min-width: 0; padding: 0; border: 0; border-radius: 0; color: #fff; background: transparent; font-size: 14px; line-height: 14px; text-align: right; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+.currency-card__flute-details { position: fixed; z-index: 10001; width: 168px; display: none; gap: 4px; padding: 8px 9px; border: 1px solid #b68b2c; border-radius: 7px; color: #f4f4f4; background: rgb(8 8 8 / 98%); box-shadow: 0 8px 22px rgb(0 0 0 / 65%); font-size: 10px; pointer-events: none; }
+.currency-card__flute-details strong { padding-bottom: 3px; border-bottom: 1px solid #393329; font-size: 10px; }
+.currency-card__flute-details > span { display: flex; justify-content: space-between; gap: 8px; }
+.currency-card__flute-details em { color: #b9b5ac; font-style: normal; }
+.currency-card__flute-details b { color: #f0cf69; }
+.currency-card__flute:hover .currency-card__flute-details, .currency-card__flute:focus-within .currency-card__flute-details { display: grid; }
 .currency-card__content { min-width: 0; display: contents; text-align: left; }
 .currency-card__content > small { grid-column: 1 / -1; grid-row: 1; align-self: start; display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 13px; font-weight: 800; line-height: 15px; }
+.currency-card[data-currency="trovehuntersBounty"] .currency-card__content > small { padding-right: 45px; }
 .currency-card__values { min-width: 0; grid-column: 2; grid-row: 2; display: grid; grid-template-rows: minmax(0, 1fr) auto; align-items: center; }
 .currency-card__values > strong { align-self: center; font-size: 24px; line-height: 26px; }
+.currency-card[data-currency="sparksOfTides"] .currency-card__values > strong { font-size: 18px; line-height: 21px; }
 .currency-card footer { min-width: 0; display: grid; justify-items: end; color: var(--theme-text-muted); font-size: 11px; font-weight: 700; line-height: 14px; white-space: nowrap; }
 .currency-card footer span.is-maxed, .currency-card.is-maxed .currency-card__values > strong { color: #ff3b3b; }
 .currency-card__unknown { grid-column: 2; grid-row: 2; align-self: center; color: var(--theme-text-muted); font-size: 20px; }

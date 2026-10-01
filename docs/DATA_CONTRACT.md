@@ -129,6 +129,7 @@ The addon writes the canonical Midnight Season 2 keys:
 - `untaintedManaCrystals` (currency ID `3356`)
 - `nebulousVoidcore`
 - `sparksOfTides`
+- `scaleboundHeraldFlute`
 - `trovehuntersBounty`
 
 Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `useTotalEarnedForMaxQty`, `canEarnPerWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyMaxed`, `isSeasonMaxed`, `isTotalMaxed`, and `isMaxed`. Caps always come from the WoW API: weekly progress is independent of owned quantity, seasonal caps compare `totalEarned`, and ordinary total caps compare `quantity`.
@@ -156,6 +157,20 @@ bank access; it is never copied between characters. Tidal Spark Dust
 
 Web Summary renders the known total directly and appends a bank hint only for a
 known positive bank amount, for example `6 (3 en el banco)`.
+
+`scaleboundHeraldFlute` tracks Scalebound Herald's Flute (`itemID = 275910`, icon
+file ID `1928595`) as an additive item snapshot. `bagCount` and `bagCountKnown` are refreshed from the
+character's bags. `personalBankCount` and `warbandBankCount` are separate cached
+counts with `personalBankKnown` and `warbandBankKnown` flags; the personal-bank
+count includes the Reagent Bank. Each stored bank count is replaced only by a
+trustworthy capture while that bank is accessible, so a closed or unavailable
+bank does not erase the last known count. Optional `bagsUpdatedAt`,
+`personalBankUpdatedAt`, and `warbandBankUpdatedAt` timestamps identify the last
+successful captures. The entire entry travels inside the existing `currencies`
+JSON block, requires no Worker validation or D1 schema change, and is exposed by
+the existing character read API. KeystoneClient shows the icon and total only
+when the Trovehunter's Bounty state is known and unobtained, with a per-location
+tooltip. Web receives the additive snapshot but does not render a flute count.
 
 `trovehuntersBounty` includes `itemID`, `bagCount`, `hasBuff`, `questCompleted`, `iconFileID`, `iconPath`, and `weekKey`; same-week completed quest state is preserved across transient incomplete reads.
 
