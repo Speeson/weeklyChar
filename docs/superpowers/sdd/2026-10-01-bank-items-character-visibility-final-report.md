@@ -20,14 +20,18 @@
 - `npm run build` in `keystone-client`: passed.
 - `npm run lint` in `keystone-web`: passed.
 - `npm run build` in `keystone-web`: passed.
+- `npm test -- --run src/pages/CharactersPage.test.tsx` in `keystone-client`: passed (32 tests).
 - `python scripts/package_addon.py validate --version 0.5.0` in `KeystoneSync`: passed.
 - `python scripts/release_changes.py validate` in `KeystoneSync`: passed.
+- Addon runtime, deployment-impact and release suites: passed (84, 10 and 30 tests).
 - Client changeset validation and `git diff --check`: passed.
 - Strict Deployment Impact: Web, Client build/release, and addon build/release are true; Worker and
   DB are false. No unknown paths.
+- After push, Web CI passed. The initial addon and Client release workflows each found a stale test;
+  the addon tests now pass and its follow-up CI packaged a build-only artifact. No addon or Client
+  release was published by these workflows.
 
 ## Limitations
 
-- No automated tests were added or run in this task.
 - In-game capture behavior still needs manual validation in WoW with both bank types open.
-- No repository push, addon release, Client release, or Web deployment was performed.
+- Source commits were pushed to both `main` branches. No manual release or deployment was run.

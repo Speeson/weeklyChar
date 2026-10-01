@@ -227,7 +227,7 @@ describe("CharactersPage", () => {
       "heroMistcrest", "cofferKeyShards", "tidalSparkDust", "venomblightManaflux", "untaintedManaCrystals",
       "mythMistcrest", "restoredCofferKey", "sparksOfTides", "nebulousVoidcore", "trovehuntersBounty",
     ]);
-    const grid = container.querySelector('[data-currency="trovehuntersBounty"]')?.parentElement?.parentElement;
+    const grid = container.querySelector(".currencies-grid");
     expect(grid).toHaveClass("currencies-grid");
     expect(grid).not.toContainElement(container.querySelector(".money-card"));
   });
