@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.15.10",
+  "version": "0.16.0",
+  "bump": "minor",
+  "tag": "client-v0.16.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-10-01-character-bank-items.json"
+  ]
+}
