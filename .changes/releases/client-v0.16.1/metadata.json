@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.16.0",
+  "version": "0.16.1",
+  "bump": "patch",
+  "tag": "client-v0.16.1",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-10-03-client-tab-glow.json"
+  ]
+}
