@@ -41,6 +41,8 @@ function ThemeProbe({ onMount }: { onMount?: () => void }) {
       <button onClick={() => setTheme("keystone")} type="button">Keystone</button>
       <button onClick={() => setTheme("poison")} type="button">Poison</button>
       <button onClick={() => setTheme("void")} type="button">Void</button>
+      <button onClick={() => setTheme("frost")} type="button">Frost</button>
+      <button onClick={() => setTheme("heaven")} type="button">Heaven</button>
     </>
   );
 }
@@ -59,20 +61,26 @@ describe("theme engine", () => {
     document.documentElement.removeAttribute("style");
   });
 
-  it("defines the stable Keystone, Poison, and Void theme IDs", () => {
-    expect(THEMES.map(({ id }) => id)).toEqual(["keystone", "poison", "void"]);
+  it("defines the stable theme IDs", () => {
+    expect(THEMES.map(({ id }) => id)).toEqual(["keystone", "poison", "void", "frost", "heaven"]);
     expect(isThemeId("keystone")).toBe(true);
     expect(isThemeId("poison")).toBe(true);
     expect(isThemeId("void")).toBe(true);
+    expect(isThemeId("frost")).toBe(true);
+    expect(isThemeId("heaven")).toBe(true);
     expect(resolveThemeId("poison")).toBe("poison");
     expect(resolveThemeId("void")).toBe("void");
+    expect(resolveThemeId("frost")).toBe("frost");
+    expect(resolveThemeId("heaven")).toBe("heaven");
   });
 
   it("offers only themes marked selectable by the registry", () => {
-    expect(getSelectableThemes(THEMES).map(({ id }) => id)).toEqual(["keystone", "poison", "void"]);
+    expect(getSelectableThemes(THEMES).map(({ id }) => id)).toEqual(["keystone", "poison", "void", "frost", "heaven"]);
     expect(THEMES.find(({ id }) => id === "keystone")).toMatchObject({ selectable: true });
     expect(THEMES.find(({ id }) => id === "poison")).toMatchObject({ selectable: true });
     expect(THEMES.find(({ id }) => id === "void")).toMatchObject({ selectable: true });
+    expect(THEMES.find(({ id }) => id === "frost")).toMatchObject({ selectable: true });
+    expect(THEMES.find(({ id }) => id === "heaven")).toMatchObject({ selectable: true });
   });
 
   it("uses Keystone as the default when no theme preference is stored", () => {
@@ -161,7 +169,7 @@ describe("theme engine", () => {
     );
 
     expect(screen.getByTestId("theme")).toHaveTextContent("keystone");
-    expect(screen.getByTestId("themes")).toHaveTextContent("keystone,poison,void");
+    expect(screen.getByTestId("themes")).toHaveTextContent("keystone,poison,void,frost,heaven");
     expect(onMount).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: "Void" }));
@@ -174,6 +182,17 @@ describe("theme engine", () => {
     expect(screen.getByTestId("theme")).toHaveTextContent("poison");
     expect(document.documentElement.dataset.theme).toBe("poison");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("poison");
+    expect(onMount).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Frost" }));
+    expect(screen.getByTestId("theme")).toHaveTextContent("frost");
+    expect(document.documentElement.dataset.theme).toBe("frost");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("frost");
+
+    await user.click(screen.getByRole("button", { name: "Heaven" }));
+    expect(screen.getByTestId("theme")).toHaveTextContent("heaven");
+    expect(document.documentElement.dataset.theme).toBe("heaven");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("heaven");
     expect(onMount).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: "Keystone" }));

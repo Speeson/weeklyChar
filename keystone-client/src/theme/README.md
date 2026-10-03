@@ -1,6 +1,6 @@
 # KeystoneClient static theme authoring
 
-KeystoneClient themes are static frontend skins. A theme may change visual presentation, but it must reuse the same pages, navigation, accessibility semantics, application state, and Client/sidecar behavior. Keystone is the safe default; Poison and Void are selectable alternate skins.
+KeystoneClient themes are static frontend skins. A theme may change visual presentation, but it must reuse the same pages, navigation, accessibility semantics, application state, and Client/sidecar behavior. Keystone is the safe default; Poison, Void, Frost, and Heaven are selectable alternate skins.
 
 ## Add a static theme
 
@@ -18,7 +18,7 @@ A new theme must not copy pages, edit Sync/Addon/WoW logic, scatter `if (theme =
 
 ## Required CSS token contract
 
-Every static theme defines all 150 properties below inside its own `html[data-theme="<theme>"]` rule. `keystone.css`, `poison.css`, and the palette Playwright test are the current executable references.
+Every static theme defines all 150 properties below inside its own `html[data-theme="<theme>"]` rule. The theme CSS files and the palette Playwright test are the current executable references.
 
 ```text
 --theme-accent

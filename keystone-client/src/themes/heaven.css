@@ -1,0 +1,242 @@
+html[data-theme="heaven"] {
+  --theme-bg: #05070b;
+  --theme-bg-secondary: rgb(15 20 29 / 82%);
+  --theme-bg-image: none;
+  --theme-bg-overlay: linear-gradient(180deg, rgb(13 19 30 / 78%), rgb(13 19 30 / 86%));
+  --theme-ambient-primary: radial-gradient(circle at 50% 24%, rgb(213 180 119 / 20%), transparent 34%);
+  --theme-ambient-secondary: radial-gradient(circle at 82% 28%, rgb(207 169 98 / 14%), transparent 30%);
+  --theme-surface-1: rgb(21 28 41 / 76%);
+  --theme-surface-2: rgb(20 27 38 / 88%);
+  --theme-surface-3: rgb(40 53 75 / 72%);
+  --theme-surface-hover: rgb(199 166 104 / 12%);
+  --theme-surface-active: rgb(222 196 148 / 4%);
+  --theme-border: rgb(218 188 133 / 42%);
+  --theme-border-strong: rgb(221 195 146 / 72%);
+  --theme-border-active: rgb(219 191 138 / 68%);
+  --theme-divider: rgb(220 192 141 / 24%);
+  --theme-text: #fbf8f3;
+  --theme-text-muted: #cdc4b2;
+  --theme-text-accent: #e8e1d3;
+  --theme-accent: #e3cca2;
+  --theme-accent-strong: #ead9b9;
+  --theme-accent-soft: rgb(222 196 148 / 10%);
+  --theme-accent-contrast: #0b0e14;
+  --theme-button-primary: #e3cca2;
+  --theme-button-primary-hover: #e3cca2;
+  --theme-button-primary-active: #e3cca2;
+  --theme-button-secondary: rgb(26 35 50 / 84%);
+  --theme-button-secondary-hover: rgb(44 57 80 / 92%);
+  --theme-focus-ring: rgb(222 196 147 / 92%);
+  --theme-glow-soft: 0 0 16px rgb(222 196 148 / 18%);
+  --theme-glow-medium: 0 0 24px rgb(218 189 136 / 34%);
+  --theme-glow-strong: 0 0 24px rgb(222 196 148 / 36%);
+  --theme-shadow-panel: 0 20px 60px rgb(3 4 6 / 38%), inset 0 1px 0 rgb(255 242 255 / 8%);
+  --theme-shadow-elevated: 0 18px 42px rgb(3 4 6 / 62%), 0 0 24px rgb(186 154 94 / 24%), inset 0 1px 0 rgb(224 199 153 / 12%);
+  --theme-icon: #e4cfa7;
+  --theme-icon-muted: #d4cdbf;
+  --theme-icon-active: #dbbf8c;
+  --theme-icon-glow: drop-shadow(0 0 18px rgb(222 196 148 / 34%));
+  --theme-card-texture: none;
+  --theme-card-highlight: none;
+  --theme-card-overlay: none;
+  --theme-modal-backdrop: rgb(3 4 6 / 58%);
+  --theme-scrollbar: rgb(208 175 112 / 72%);
+  --theme-scrollbar-hover: rgb(208 175 112 / 72%);
+  --theme-motion-fast: 140ms ease;
+  --theme-motion-normal: 160ms ease;
+  --theme-motion-ambient: 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --theme-frame-border: rgb(219 191 138 / 38%);
+  --theme-frame-shadow: inset 0 0 0 1px rgb(255 242 255 / 3%), inset 0 0 34px rgb(191 158 96 / 7%);
+  --theme-header-border: rgb(218 188 133 / 40%);
+  --theme-header-background: linear-gradient(180deg, rgb(12 16 24 / 86%), rgb(16 22 32 / 72%));
+  --theme-header-shadow: 0 12px 34px rgb(3 4 6 / 34%);
+  --theme-header-divider: rgb(191 160 102 / 36%);
+  --theme-brand-glow: drop-shadow(0 0 18px rgb(222 196 148 / 34%));
+  --theme-tab-border: rgb(191 160 102 / 28%);
+  --theme-tab-text: rgb(245 237 223 / 78%);
+  --theme-tab-selected-text: #f7f0e4;
+  --theme-tab-glow-rgb: 220 186 119;
+  --theme-tab-glow-opacity: 0.72;
+  --theme-tab-edge-opacity: 0.64;
+  --theme-tab-hover-border: rgb(220 192 141 / 42%);
+  --theme-tab-hover-text: rgb(227 205 164 / 96%);
+  --theme-tab-hover-shadow: inset 0 0 32px rgb(221 194 143 / 18%), inset 0 -2px 0 rgb(223 197 149 / 26%);
+  --theme-tab-hover-glow: 0 0 14px rgb(223 197 150 / 44%);
+  --theme-tab-active-shadow: inset 0 0 34px rgb(222 196 148 / 10%), inset 0 -1px 0 rgb(226 203 161 / 18%);
+  --theme-control-border: rgb(219 190 136 / 50%);
+  --theme-control-background: rgb(21 29 42 / 62%);
+  --theme-control-shadow: inset 0 0 18px rgb(216 186 129 / 10%);
+  --theme-menu-text: rgb(249 245 237 / 94%);
+  --theme-dropdown-background: linear-gradient(145deg, rgb(32 43 61 / 98%), rgb(16 22 32 / 98%)), rgb(19 26 37 / 98%);
+  --theme-dropdown-item-border: rgb(218 188 133 / 18%);
+  --theme-dropdown-item-text: rgb(248 243 234 / 92%);
+  --theme-dropdown-item-background: rgb(42 56 80 / 44%);
+  --theme-dropdown-hover-border: rgb(226 203 161 / 44%);
+  --theme-dropdown-hover-text: #fff;
+  --theme-dropdown-hover-background: rgb(186 154 94 / 36%);
+  --theme-summary-background: linear-gradient(125deg, rgb(29 39 56 / 78%), rgb(22 30 43 / 58%)), radial-gradient(circle at 20% 20%, rgb(220 192 141 / 26%), transparent 58%);
+  --theme-card-inner-border: rgb(220 192 141 / 12%);
+  --theme-summary-icon-glow: drop-shadow(0 0 16px rgb(220 192 139 / 40%));
+  --theme-summary-label: rgb(247 242 231 / 94%);
+  --theme-summary-value: #fcf9f2;
+  --theme-summary-detail: rgb(231 223 208 / 82%);
+  --theme-table-background: linear-gradient(180deg, rgb(23 31 46 / 74%), rgb(17 24 35 / 64%)), radial-gradient(circle at 45% 55%, rgb(213 181 120 / 16%), transparent 45%);
+  --theme-scrollbar-track: rgb(19 26 37 / 52%);
+  --theme-table-divider: rgb(220 192 139 / 22%);
+  --theme-table-heading: rgb(240 233 220 / 90%);
+  --theme-table-sort-icon: rgb(220 192 139 / 72%);
+  --theme-table-row-text: rgb(234 227 214 / 92%);
+  --theme-table-row-hover: rgb(213 181 120 / 10%);
+  --theme-table-row-marker: rgb(224 199 154 / 68%);
+  --theme-avatar-border: rgb(255 242 255 / 32%);
+  --theme-avatar-background: #977a45;
+  --theme-avatar-glow: 0 0 14px rgb(217 186 130 / 35%);
+  --theme-sidebar-background: linear-gradient(155deg, rgb(24 33 49 / 86%), rgb(17 24 35 / 70%)), radial-gradient(circle at 48% 34%, rgb(210 175 109 / 24%), transparent 48%);
+  --theme-emblem-glow: drop-shadow(0 0 22px rgb(222 196 148 / 36%));
+  --theme-version-border: rgb(218 189 136 / 42%);
+  --theme-version-background: rgb(21 28 41 / 76%);
+  --theme-version-shadow: inset 0 0 14px rgb(214 182 122 / 10%);
+  --theme-text-bright: white;
+  --theme-panel-divider: rgb(220 192 140 / 18%);
+  --theme-sync-action-border: rgb(226 203 161 / 90%);
+  --theme-sync-action-text: #262133;
+  --theme-sync-action-background: linear-gradient(180deg, rgb(169 145 101 / 80%), rgb(59 71 93 / 76%)), radial-gradient(circle at 50% 0%, rgb(226 203 161 / 36%), transparent 70%);
+  --theme-sync-action-shadow: 0 0 0 1px rgb(75 91 119 / 80%), 0 0 28px rgb(222 196 148 / 32%), inset 0 1px 0 rgb(226 203 161 / 28%);
+  --theme-addon-border: rgb(222 196 147 / 24%);
+  --theme-addon-text: #f8f5ef;
+  --theme-addon-background: linear-gradient(120deg, rgb(21 28 41 / 68%), rgb(16 21 31 / 74%)), radial-gradient(circle at 47% 43%, rgb(72 93 129 / 24%), transparent 38%);
+  --theme-addon-shadow: 0 18px 70px rgb(3 4 6 / 35%);
+  --theme-addon-inner-border: rgb(220 192 141 / 10%);
+  --theme-addon-icon-glow: drop-shadow(0 0 18px rgb(222 196 148 / 32%));
+  --theme-addon-eyebrow: rgb(223 197 150 / 84%);
+  --theme-addon-description: #dbd4c8;
+  --theme-addon-border-strong: rgb(222 196 147 / 34%);
+  --theme-addon-card-background: rgb(21 28 40 / 82%);
+  --theme-addon-card-highlight: inset 0 1px 0 rgb(255 242 255 / 4%);
+  --theme-addon-field-border: rgb(222 196 147 / 30%);
+  --theme-addon-field-text: #e4ded3;
+  --theme-addon-field-background: rgb(16 21 30 / 82%);
+  --theme-addon-icon-muted: #d1cabc;
+  --theme-addon-button-text: #f6f2eb;
+  --theme-addon-button-background: rgb(33 44 62 / 84%);
+  --theme-addon-button-hover-border: rgb(223 197 150 / 72%);
+  --theme-addon-primary-text: #0b0e13;
+  --theme-addon-primary-background: linear-gradient(105deg, #d5b77e, #e6d2ad 50%, #b49760), #dbbf8c;
+  --theme-addon-primary-shadow: 0 0 0 2px rgb(59 71 93 / 75%), 0 12px 30px rgb(3 4 6 / 24%);
+  --theme-addon-column-divider: rgb(222 196 147 / 28%);
+  --theme-addon-card-border: rgb(222 196 147 / 44%);
+  --theme-addon-status-background: rgb(19 26 37 / 90%);
+  --theme-addon-status-shadow: inset 0 0 28px rgb(157 129 77 / 7%);
+  --theme-addon-divider: rgb(255 242 255 / 15%);
+  --theme-addon-label: #d8d1c4;
+  --theme-addon-value: #f5f2eb;
+  --theme-addon-secondary-background: #181f2c;
+  --theme-footer-border: rgb(188 155 94 / 24%);
+  --theme-footer-background: linear-gradient(180deg, rgb(12 17 25 / 35%), rgb(10 13 19 / 72%));
+  --theme-footer-action-border: rgb(219 191 139 / 56%);
+  --theme-footer-action-text: #29263a;
+  --theme-footer-action-background: rgb(24 32 45 / 76%);
+  --theme-footer-action-shadow: inset 0 0 18px rgb(217 188 133 / 12%);
+  --theme-footer-accent-border: rgb(222 196 148 / 70%);
+  --theme-footer-web-hover-filter: brightness(1.14);
+  --theme-footer-web-active-filter: brightness(0.92);
+  --theme-auth-background: linear-gradient(155deg, rgb(29 39 57 / 96%), rgb(17 24 35 / 96%)), var(--theme-surface-2);
+  --theme-auth-shadow: var(--theme-shadow-panel), 0 0 38px rgb(207 172 106 / 18%);
+  --theme-auth-register-border: rgb(215 183 123 / 35%);
+  --theme-auth-register-background: rgb(40 53 76 / 62%);
+  --theme-update-modal-divider: rgb(220 192 141 / 18%);
+  --theme-onboarding-background: linear-gradient(155deg, rgb(29 39 57 / 97%), rgb(17 24 35 / 97%));
+  --theme-onboarding-account-background: rgb(26 35 51 / 74%);
+  --theme-accent-border-soft: rgb(222 196 148 / 28%);
+  --theme-accent-surface-soft: rgb(222 196 148 / 6%);
+  --theme-choice-border: rgb(214 182 123 / 28%);
+  --theme-choice-background: rgb(30 40 58 / 72%);
+  --theme-choice-portrait-border: rgb(218 188 133 / 55%);
+  --theme-choice-check-text: #0a0e14;
+}
+
+
+
+html[data-theme="heaven"] .shell::before {
+  opacity: 0.18;
+}
+
+html[data-theme="heaven"] .ks-user-menu__name {
+  color: #252238;
+  text-shadow: 0 1px 1px rgb(255 255 255 / 45%);
+  transform: translate(-5px, -2px);
+}
+
+html[data-theme="heaven"] .ks-app-frame {
+  border-color: rgb(194 166 115 / 46%);
+}
+
+html[data-theme="heaven"] .sync-emblem-panel__frame {
+  opacity: 0.76;
+  object-fit: cover;
+  filter: url("#theme-remove-black");
+}
+
+html[data-theme="heaven"] .ks-brand__icon,
+html[data-theme="heaven"] .sync-emblem-panel__icon,
+html[data-theme="heaven"] .teams-loading__mark {
+  border-radius: 50%;
+}
+
+html[data-theme="heaven"] .ks-user-menu__shell {
+  object-fit: fill;
+}
+
+html[data-theme="heaven"] .ks-window-button--minimize img {
+  width: 125.5%;
+  height: 125.5%;
+}
+
+html[data-theme="heaven"] .ks-footer-action {
+  position: relative;
+  isolation: isolate;
+  width: 298px;
+  height: 64px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+html[data-theme="heaven"] .ks-footer-action span {
+  position: absolute;
+  inset: 0 12px 0 76px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  transform: translateY(-3px);
+  color: #242436;
+  text-shadow: 0 1px 1px rgb(255 255 255 / 60%);
+}
+
+html[data-theme="heaven"] .ks-footer-action--web span,
+html[data-theme="heaven"] .ks-footer-action--tray[data-language="en"] span {
+  transform: translate(-4px, -3px);
+}
+
+html[data-theme="heaven"] .ks-footer-action--web[data-language="en"] span {
+  transform: translate(-8px, -3px);
+}
+
+html[data-theme="heaven"] .ks-footer-action__asset {
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="heaven"] *,
+  html[data-theme="heaven"] *::before,
+  html[data-theme="heaven"] *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

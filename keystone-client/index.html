@@ -7,6 +7,16 @@
   </head>
 
   <body>
+    <svg aria-hidden="true" height="0" style="position: absolute" width="0" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="theme-remove-black" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  .2126 .7152 .0722 0 0" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="8" intercept="-0.15" />
+          </feComponentTransfer>
+        </filter>
+      </defs>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

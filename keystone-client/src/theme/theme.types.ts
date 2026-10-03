@@ -1,4 +1,4 @@
-export const THEME_IDS = ["keystone", "poison", "void"] as const;
+export const THEME_IDS = ["keystone", "poison", "void", "frost", "heaven"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export type ThemeDefinition = {

@@ -24,6 +24,18 @@ export const THEMES: readonly ThemeDefinition[] = [
     description: "A dark cosmic skin with restrained violet and indigo energy.",
     selectable: true,
   },
+  {
+    id: "frost",
+    label: "Frost",
+    description: "A quiet glacial skin with deep blue surfaces and soft ice highlights.",
+    selectable: true,
+  },
+  {
+    id: "heaven",
+    label: "Heaven",
+    description: "A warm celestial skin with muted gold light and readable dark surfaces.",
+    selectable: true,
+  },
 ];
 
 export function getSelectableThemes(

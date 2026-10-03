@@ -107,6 +107,8 @@ describe("SettingsPage", () => {
       "Keystone",
       "Poison",
       "Void",
+      "Frost",
+      "Heaven",
     ]);
   });
 

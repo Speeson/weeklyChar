@@ -83,6 +83,48 @@ import voidSyncIcon from "../themes/assets/void/icons/sync.png";
 import voidVersionIcon from "../themes/assets/void/icons/version.png";
 import voidWarningIcon from "../themes/assets/void/icons/warning.png";
 import voidActiveTab from "../themes/assets/void/navigation/active-tab-indicator.png";
+import frostBackground from "../themes/assets/frost/backgrounds/background-main.png";
+import frostOverlay from "../themes/assets/frost/backgrounds/overlay.png";
+import frostAppIconHd from "../themes/assets/frost/branding/app-icon-hd.png";
+import frostCloseButton from "../themes/assets/frost/frames/buttons/close-button.png";
+import frostMinimizeButton from "../themes/assets/frost/frames/buttons/minimize-button.png";
+import frostSettingsButton from "../themes/assets/frost/frames/buttons/settings-button.png";
+import frostTrayButton from "../themes/assets/frost/frames/buttons/tray-button.png";
+import frostWebButton from "../themes/assets/frost/frames/buttons/web-button.png";
+import frostAvatarFrame from "../themes/assets/frost/frames/profile/avatar-frame.png";
+import frostUserPanelFrame from "../themes/assets/frost/frames/profile/user-panel-frame.png";
+import frostRightHeroPanelFrame from "../themes/assets/frost/frames/right-hero-panel-frame.png";
+import frostAccountsIcon from "../themes/assets/frost/icons/accounts.png";
+import frostCharactersIcon from "../themes/assets/frost/icons/characters.png";
+import frostDropdownIcon from "../themes/assets/frost/icons/dropdown-icon.png";
+import frostErrorIcon from "../themes/assets/frost/icons/error.png";
+import frostInfoIcon from "../themes/assets/frost/icons/info.png";
+import frostLastSyncIcon from "../themes/assets/frost/icons/last-sync.png";
+import frostStatusSuccessIcon from "../themes/assets/frost/icons/status-success.png";
+import frostSyncIcon from "../themes/assets/frost/icons/sync.png";
+import frostVersionIcon from "../themes/assets/frost/icons/version.png";
+import frostWarningIcon from "../themes/assets/frost/icons/warning.png";
+import heavenBackground from "../themes/assets/heaven/backgrounds/background-main.png";
+import heavenOverlay from "../themes/assets/heaven/backgrounds/overlay.png";
+import heavenAppIconHd from "../themes/assets/heaven/branding/app-icon-hd.png";
+import heavenCloseButton from "../themes/assets/heaven/frames/buttons/close-button.png";
+import heavenMinimizeButton from "../themes/assets/heaven/frames/buttons/minimize-button.png";
+import heavenSettingsButton from "../themes/assets/heaven/frames/buttons/settings-button.png";
+import heavenTrayButton from "../themes/assets/heaven/frames/buttons/tray-button.png";
+import heavenWebButton from "../themes/assets/heaven/frames/buttons/web-button.png";
+import heavenAvatarFrame from "../themes/assets/heaven/frames/profile/avatar-frame.png";
+import heavenUserPanelFrame from "../themes/assets/heaven/frames/profile/user-panel-frame.png";
+import heavenRightHeroPanelFrame from "../themes/assets/heaven/frames/right-hero-panel-frame.png";
+import heavenAccountsIcon from "../themes/assets/heaven/icons/accounts.png";
+import heavenCharactersIcon from "../themes/assets/heaven/icons/characters.png";
+import heavenDropdownIcon from "../themes/assets/heaven/icons/dropdown-icon.png";
+import heavenErrorIcon from "../themes/assets/heaven/icons/error.png";
+import heavenInfoIcon from "../themes/assets/heaven/icons/info.png";
+import heavenLastSyncIcon from "../themes/assets/heaven/icons/last-sync.png";
+import heavenStatusSuccessIcon from "../themes/assets/heaven/icons/status-success.png";
+import heavenSyncIcon from "../themes/assets/heaven/icons/sync.png";
+import heavenVersionIcon from "../themes/assets/heaven/icons/version.png";
+import heavenWarningIcon from "../themes/assets/heaven/icons/warning.png";
 import type { ThemeId } from "./theme.types";
 
 export const KEYSTONE_THEME_ASSETS = {
@@ -245,6 +287,72 @@ export const THEME_ASSET_OVERRIDES: ThemeAssetOverrides = {
     "sync-summary-characters": voidCharactersIcon,
     "sync-summary-last": voidLastSyncIcon,
     "sync-version": voidVersionIcon,
+  },
+  frost: {
+    "addon-status-current": frostStatusSuccessIcon,
+    "addon-status-error": frostErrorIcon,
+    "addon-status-local-newer": frostInfoIcon,
+    "addon-status-not-installed": frostErrorIcon,
+    "addon-status-offline-cache": frostInfoIcon,
+    "addon-status-operation": frostSyncIcon,
+    "addon-status-unavailable": frostErrorIcon,
+    "addon-status-update": frostWarningIcon,
+    "artwork-background": frostBackground,
+    "artwork-overlay": frostOverlay,
+    "brand-emblem": frostAppIconHd,
+    "brand-mark": frostAppIconHd,
+    "teams-loading-mark": frostAppIconHd,
+    "shell-avatar-frame": frostAvatarFrame,
+    "shell-footer-tray": frostTrayButton,
+    "shell-footer-web": frostWebButton,
+    "shell-settings": frostSettingsButton,
+    "shell-user-dropdown": frostDropdownIcon,
+    "shell-user-panel": frostUserPanelFrame,
+    "shell-window-close": frostCloseButton,
+    "shell-window-minimize": frostMinimizeButton,
+    "sync-hero-frame": frostRightHeroPanelFrame,
+    "sync-status-error": frostErrorIcon,
+    "sync-status-info": frostInfoIcon,
+    "sync-status-success": frostStatusSuccessIcon,
+    "sync-status-syncing": frostSyncIcon,
+    "sync-status-warning": frostWarningIcon,
+    "sync-summary-accounts": frostAccountsIcon,
+    "sync-summary-characters": frostCharactersIcon,
+    "sync-summary-last": frostLastSyncIcon,
+    "sync-version": frostVersionIcon,
+  },
+  heaven: {
+    "addon-status-current": heavenStatusSuccessIcon,
+    "addon-status-error": heavenErrorIcon,
+    "addon-status-local-newer": heavenInfoIcon,
+    "addon-status-not-installed": heavenErrorIcon,
+    "addon-status-offline-cache": heavenInfoIcon,
+    "addon-status-operation": heavenSyncIcon,
+    "addon-status-unavailable": heavenErrorIcon,
+    "addon-status-update": heavenWarningIcon,
+    "artwork-background": heavenBackground,
+    "artwork-overlay": heavenOverlay,
+    "brand-emblem": heavenAppIconHd,
+    "brand-mark": heavenAppIconHd,
+    "teams-loading-mark": heavenAppIconHd,
+    "shell-avatar-frame": heavenAvatarFrame,
+    "shell-footer-tray": heavenTrayButton,
+    "shell-footer-web": heavenWebButton,
+    "shell-settings": heavenSettingsButton,
+    "shell-user-dropdown": heavenDropdownIcon,
+    "shell-user-panel": heavenUserPanelFrame,
+    "shell-window-close": heavenCloseButton,
+    "shell-window-minimize": heavenMinimizeButton,
+    "sync-hero-frame": heavenRightHeroPanelFrame,
+    "sync-status-error": heavenErrorIcon,
+    "sync-status-info": heavenInfoIcon,
+    "sync-status-success": heavenStatusSuccessIcon,
+    "sync-status-syncing": heavenSyncIcon,
+    "sync-status-warning": heavenWarningIcon,
+    "sync-summary-accounts": heavenAccountsIcon,
+    "sync-summary-characters": heavenCharactersIcon,
+    "sync-summary-last": heavenLastSyncIcon,
+    "sync-version": heavenVersionIcon,
   },
 };
 

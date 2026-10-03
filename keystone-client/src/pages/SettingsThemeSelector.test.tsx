@@ -57,6 +57,8 @@ describe("Settings theme integration", () => {
       "Keystone",
       "Poison",
       "Void",
+      "Frost",
+      "Heaven",
     ]);
     expect(screen.getByTestId("application-theme")).toHaveTextContent("keystone");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);

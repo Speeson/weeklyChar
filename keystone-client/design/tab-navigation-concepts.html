@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KeystoneClient · propuestas de pestañas</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Segoe UI", Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 1120px;
+      color: #e6ebdc;
+      background: #071009;
+    }
+    main { width: min(1480px, calc(100% - 48px)); margin: 26px auto 42px; }
+    h1 { margin: 0 0 5px; color: #f0f3df; font-size: 25px; font-weight: 650; }
+    .intro { margin: 0 0 22px; color: #aab9a5; font-size: 14px; }
+    .concept { margin: 0 0 24px; }
+    .concept-heading { display: flex; align-items: baseline; gap: 16px; margin: 0 0 9px; }
+    .concept-heading h2 { margin: 0; color: #d9edac; font-size: 17px; font-weight: 650; }
+    .concept-heading p { margin: 0; color: #a5b7a0; font-size: 13px; }
+    .preview {
+      height: 172px;
+      overflow: hidden;
+      border: 1px solid #64552b;
+      background: #071009 url("../src/themes/assets/poison/backgrounds/background-main.png") center 35% / cover no-repeat;
+      box-shadow: inset 0 0 0 1px #c3ad6e12, 0 14px 28px #0008;
+    }
+    .app-header {
+      position: relative;
+      z-index: 1;
+      height: 96px;
+      display: grid;
+      grid-template-columns: 354px minmax(0, 1fr) 245px;
+      align-items: center;
+      border-bottom: 1px solid #a5853c88;
+      background: linear-gradient(180deg, #061008f7, #0b1b0de5);
+      box-shadow: 0 10px 26px #000a, inset 0 -1px #c3ff5814;
+    }
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; height: 100%; padding-left: 26px; }
+    .brand img { width: 68px; height: 68px; object-fit: contain; filter: drop-shadow(0 0 10px #a6ff3f26); }
+    .brand span { color: #e1e9cb; font-family: Georgia, serif; font-size: 28px; white-space: nowrap; text-shadow: 0 1px #000, 0 0 12px #a6ff3f25; }
+    .tabs { display: flex; align-items: center; justify-content: center; gap: 4px; height: 100%; padding: 0 12px; }
+    .tab {
+      position: relative;
+      flex: 1 1 0;
+      height: 68px;
+      min-width: 0;
+      padding: 0 8px 7px;
+      border: 0;
+      color: #ccd3be;
+      background: none;
+      font: 600 19px Georgia, serif;
+      cursor: pointer;
+      transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .tab span { position: relative; z-index: 2; }
+    .tab[aria-current="page"] { color: #e6f4c8; }
+    .tab:focus-visible { outline: 2px solid #d2ff77; outline-offset: 2px; }
+    .indicator {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      bottom: -29px;
+      width: 210px;
+      height: 70px;
+      object-fit: contain;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-right: 20px; }
+    .actions img { width: 54px; height: 54px; object-fit: contain; }
+    .actions .profile { width: 86px; height: 43px; display: flex; align-items: center; justify-content: center; border: 1px solid #9d824b7a; color: #ebe7ca; background: #0e1d10dc; font: 17px Georgia, serif; }
+    .content-hint { display: flex; gap: 13px; padding: 20px 27px; }
+    .content-hint i { width: 23%; height: 45px; border: 1px solid #a1844760; background: linear-gradient(140deg, #193319a8, #081409db); box-shadow: inset 0 1px #e7cf8820; }
+
+    /* 1: labels integrated into the header. */
+    .concept--text .tabs { gap: 0; }
+    .concept--text .tab { color: #aeb7a9; font: 500 20px "Segoe UI", Arial, sans-serif; }
+    .concept--text .tab:hover { color: #eff6df; background: linear-gradient(180deg, transparent 45%, #91d24a0c); }
+    .concept--text .tab[aria-current="page"] {
+      color: #f0f6dc;
+      font-weight: 650;
+      background: radial-gradient(ellipse at 50% 90%, #a6ff3f16, transparent 67%);
+    }
+
+    /* 2: quiet individual plates. */
+    .concept--plates .tabs { gap: 9px; }
+    .concept--plates .tab {
+      height: 62px;
+      border: 1px solid #8f824c64;
+      border-radius: 7px;
+      color: #d0d4c2;
+      background: linear-gradient(180deg, #192519b5, #0b160dd9);
+      box-shadow: inset 0 1px #e4d7a515, 0 3px 10px #0004;
+    }
+    .concept--plates .tab:hover { color: #f2f7e6; border-color: #acc864a3; background: linear-gradient(180deg, #24331fac, #112013e8); }
+    .concept--plates .tab[aria-current="page"] {
+      color: #f1f8dc;
+      border-color: #b6b5799c;
+      background: linear-gradient(180deg, #2a3b1cdd, #152512f0);
+      box-shadow: inset 0 1px #d7eeaa42, inset 0 -2px #9de13d36, 0 5px 12px #0007;
+    }
+    .concept--plates .indicator { bottom: -31px; }
+
+    /* 3: carved stone, with light confined to the selected surface. */
+    .concept--stone .tabs { gap: 6px; }
+    .concept--stone .tab {
+      height: 68px;
+      border: 1px solid #8671438c;
+      border-radius: 2px 2px 0 0;
+      color: #c9c9ad;
+      background: linear-gradient(135deg, #35402a7a 0 2%, transparent 2% 98%, #54482599 98%), linear-gradient(180deg, #22251aeb, #0b120de8);
+      box-shadow: inset 0 0 0 2px #020703, inset 0 1px #d0b46c36, 0 4px 12px #0009;
+      text-shadow: 0 1px #000;
+    }
+    .concept--stone .tab::before, .concept--stone .tab::after {
+      position: absolute;
+      top: 7px;
+      width: 7px;
+      height: 7px;
+      border-top: 1px solid #ba9f5b9c;
+      content: "";
+    }
+    .concept--stone .tab::before { left: 7px; border-left: 1px solid #ba9f5b9c; }
+    .concept--stone .tab::after { right: 7px; border-right: 1px solid #ba9f5b9c; }
+    .concept--stone .tab:hover { color: #f1f2d5; border-color: #b3a263; background-color: #1e2e17; }
+    .concept--stone .tab[aria-current="page"] {
+      color: #f3f6d5;
+      border-color: #c4aa68;
+      background: radial-gradient(ellipse at 50% 100%, #92cf3b2e, transparent 67%), linear-gradient(180deg, #333922, #101b10);
+      box-shadow: inset 0 0 0 2px #030903, inset 0 1px #ecdd9e70, inset 0 -2px #b9f35636, 0 4px 13px #000a;
+    }
+    .concept--stone .indicator { bottom: -29px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>KeystoneClient · tres propuestas para la navegación superior</h1>
+    <p class="intro">Tema Poison · haz clic en cualquier pestaña para comparar su estado activo · el indicador es el recurso original del cliente.</p>
+    <section class="concept concept--text" aria-label="Modelo 1, texto limpio">
+      <div class="concept-heading"><h2>01 · Texto limpio</h2><p>Sin placa · el indicador y la tipografía marcan la selección</p></div>
+      <div class="preview"></div>
+    </section>
+    <section class="concept concept--plates" aria-label="Modelo 2, placas discretas">
+      <div class="concept-heading"><h2>02 · Placas discretas</h2><p>Botones separados · relieve suave · brillo concentrado</p></div>
+      <div class="preview"></div>
+    </section>
+    <section class="concept concept--stone" aria-label="Modelo 3, piedra grabada">
+      <div class="concept-heading"><h2>03 · Piedra grabada</h2><p>Bordes ornamentales · superficie oscura · acento contenido</p></div>
+      <div class="preview"></div>
+    </section>
+  </main>
+  <template id="preview-template">
+    <div class="app-header">
+      <div class="brand">
+        <img alt="" src="../src/themes/assets/poison/branding/app-badge.png">
+        <span>KeystoneClient</span>
+      </div>
+      <nav class="tabs" aria-label="Navegación principal">
+        <button class="tab" type="button" aria-current="page"><span>Sync</span><img class="indicator" alt="" src="../src/themes/assets/poison/navigation/tab-active-decoration.png"></button>
+        <button class="tab" type="button"><span>Characters</span></button>
+        <button class="tab" type="button"><span>Teams</span></button>
+        <button class="tab" type="button"><span>Addon</span></button>
+      </nav>
+      <div class="actions" aria-hidden="true">
+        <img src="../src/themes/assets/poison/frames/buttons/settings-button.png" alt="">
+        <div class="profile">Spee</div>
+        <img src="../src/themes/assets/poison/frames/buttons/minimize-button.png" alt="">
+        <img src="../src/themes/assets/poison/frames/buttons/close-button.png" alt="">
+      </div>
+    </div>
+    <div class="content-hint" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </template>
+  <script>
+    const template = document.querySelector("#preview-template");
+    for (const preview of document.querySelectorAll(".preview")) {
+      preview.append(template.content.cloneNode(true));
+      const tabs = preview.querySelectorAll(".tab");
+      for (const tab of tabs) {
+        tab.addEventListener("click", () => {
+          for (const other of tabs) {
+            other.removeAttribute("aria-current");
+            other.querySelector(".indicator")?.remove();
+          }
+          tab.setAttribute("aria-current", "page");
+          const indicator = document.createElement("img");
+          indicator.className = "indicator";
+          indicator.alt = "";
+          indicator.src = "../src/themes/assets/poison/navigation/tab-active-decoration.png";
+          tab.append(indicator);
+        });
+      }
+    }
+  </script>
+</body>
+</html>

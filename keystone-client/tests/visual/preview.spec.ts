@@ -132,7 +132,7 @@ test.describe("preview states", () => {
     await expect(page.getByRole("heading", { name: "Apariencia" })).toBeVisible();
     const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
     await expect(themeSelector).toHaveValue("keystone");
-    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison", "Void"]);
+    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison", "Void", "Frost", "Heaven"]);
     await expect(page.getByRole("heading", { name: "Selección de cuentas" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Aplicación" })).toBeVisible();
     await expectStableReleaseScreenshot(page, "settings-theme-selector.png");

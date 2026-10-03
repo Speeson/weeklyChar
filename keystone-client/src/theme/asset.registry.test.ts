@@ -175,6 +175,41 @@ describe("theme asset resolution", () => {
     expect(Object.values(THEME_ASSET_OVERRIDES.void ?? {}).some((asset) => asset.endsWith("empty-button.png"))).toBe(false);
   });
 
+  it.each(["frost", "heaven"] as const)("maps %s production assets without the retired tab indicator", (theme) => {
+    const expectedFiles: Partial<Record<ThemeAssetRole, string>> = {
+      "artwork-background": "backgrounds/background-main.png",
+      "artwork-overlay": "backgrounds/overlay.png",
+      "brand-emblem": "branding/app-icon-hd.png",
+      "brand-mark": "branding/app-icon-hd.png",
+      "teams-loading-mark": "branding/app-icon-hd.png",
+      "shell-avatar-frame": "frames/profile/avatar-frame.png",
+      "shell-footer-tray": "frames/buttons/tray-button.png",
+      "shell-footer-web": "frames/buttons/web-button.png",
+      "shell-settings": "frames/buttons/settings-button.png",
+      "shell-user-dropdown": "icons/dropdown-icon.png",
+      "shell-user-panel": "frames/profile/user-panel-frame.png",
+      "shell-window-close": "frames/buttons/close-button.png",
+      "shell-window-minimize": "frames/buttons/minimize-button.png",
+      "sync-hero-frame": "frames/right-hero-panel-frame.png",
+      "sync-summary-accounts": "icons/accounts.png",
+      "sync-summary-characters": "icons/characters.png",
+      "sync-summary-last": "icons/last-sync.png",
+      "sync-version": "icons/version.png",
+      "sync-status-success": "icons/status-success.png",
+      "sync-status-warning": "icons/warning.png",
+      "sync-status-error": "icons/error.png",
+      "sync-status-info": "icons/info.png",
+      "sync-status-syncing": "icons/sync.png",
+    };
+    for (const [role, file] of Object.entries(expectedFiles)) {
+      expect(resolveThemeAsset(theme, role as RequiredThemeAssetRole)).toMatch(
+        new RegExp(`/themes/assets/${theme}/${file.replace(/\./g, "\\.")}$`),
+      );
+    }
+    expect(THEME_ASSET_OVERRIDES[theme]).not.toHaveProperty("shell-active-tab");
+    expect(resolveThemeAsset(theme, "shell-inactive-tab")).toBeUndefined();
+  });
+
   it("keeps required-role fallback deterministic when an override set omits an asset", () => {
     const overrides: ThemeAssetOverrides = { poison: {} };
 

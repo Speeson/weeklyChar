@@ -2,6 +2,8 @@
 @import "../themes/keystone.css";
 @import "../themes/poison.css";
 @import "../themes/void.css";
+@import "../themes/frost.css";
+@import "../themes/heaven.css";
 
 @theme {
   --color-background: var(--theme-bg);

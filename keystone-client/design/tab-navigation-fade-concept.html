@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KeystoneClient · luz inferior difuminada</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 1120px; color: #edf0e9; background: #080b11; font-family: "Segoe UI", Arial, sans-serif; }
+    main { width: min(1480px, calc(100% - 48px)); margin: 25px auto 38px; }
+    h1 { margin: 0 0 6px; font-size: 25px; font-weight: 650; }
+    .intro { margin: 0 0 21px; color: #aeb5ae; font-size: 14px; }
+    .theme { margin-bottom: 22px; }
+    .theme h2 { margin: 0 0 9px; color: var(--title); font-size: 17px; font-weight: 650; }
+    .theme h2 span { margin-left: 12px; color: #adb5ac; font-size: 13px; font-weight: 400; }
+    .theme--keystone {
+      --light: 244 183 42;
+      --title: #f3c85f;
+      --text: #f6e7bd;
+      --muted: #bfc4cc;
+      --header: linear-gradient(180deg, #030b1af2, #07172ee9);
+      --background: url("../src/assets/keystone-ui/bg.jpg");
+      --frame: #498cce70;
+      --brand: #f1bb3d;
+    }
+    .theme--poison {
+      --light: 166 255 63;
+      --title: #d5ef9c;
+      --text: #e9f6d0;
+      --muted: #c2cbbb;
+      --header: linear-gradient(180deg, #061008f5, #0b1b0dea);
+      --background: url("../src/themes/assets/poison/backgrounds/background-main.png");
+      --frame: #a587477a;
+      --brand: #e1e9cb;
+    }
+    .theme--void {
+      --light: 166 126 244;
+      --title: #c7b4ed;
+      --text: #e7dcff;
+      --muted: #bcb3d2;
+      --header: linear-gradient(180deg, #10091cf2, #1a1033e8);
+      --background: url("../src/themes/assets/void/backgrounds/background-main.png");
+      --frame: #a16be779;
+      --brand: #dfd2f8;
+    }
+    .preview {
+      height: 178px;
+      overflow: hidden;
+      border: 1px solid var(--frame);
+      background: linear-gradient(#0008, #0008), var(--background) center 40% / cover no-repeat;
+      box-shadow: 0 12px 25px #0008;
+    }
+    .app-header {
+      position: relative;
+      z-index: 1;
+      height: 96px;
+      display: grid;
+      grid-template-columns: 355px minmax(0, 1fr) 245px;
+      align-items: stretch;
+      border-bottom: 1px solid var(--frame);
+      background: var(--header);
+      box-shadow: 0 9px 23px #0009;
+    }
+    .brand { display: flex; align-items: center; gap: 13px; padding-left: 27px; }
+    .brand img { width: 68px; height: 68px; object-fit: contain; }
+    .brand span { color: var(--brand); font-size: 27px; font-weight: 650; white-space: nowrap; }
+    .theme--poison .brand span { font-family: Georgia, serif; font-weight: 400; }
+    .tabs { display: flex; align-items: stretch; min-width: 0; padding: 0 12px; }
+    .tab {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      height: 95px;
+      padding: 0 10px 4px;
+      border: 0;
+      border-radius: 0;
+      color: var(--muted);
+      background: transparent;
+      font: 500 21px "Segoe UI", Arial, sans-serif;
+      cursor: pointer;
+      transition: color 160ms ease;
+    }
+    .theme--poison .tab { font-family: Georgia, serif; font-size: 21px; }
+    .tab span { position: relative; z-index: 2; }
+    .tab:hover { color: var(--text); }
+    .tab:focus-visible { outline: 2px solid rgb(var(--light) / 75%); outline-offset: -5px; }
+    .tab[aria-current="page"] { color: var(--text); font-weight: 650; text-shadow: 0 0 12px rgb(var(--light) / 28%); }
+    .tab[aria-current="page"]::before {
+      position: absolute;
+      inset: 5px 1px 0;
+      border-radius: 17px 17px 11px 11px;
+      background:
+        radial-gradient(ellipse 80% 20% at 50% 100%, rgb(var(--light) / 30%), transparent 100%),
+        linear-gradient(to top, rgb(var(--light) / 24%) 0%, rgb(var(--light) / 15%) 28%, rgb(var(--light) / 5%) 56%, transparent 84%);
+      mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+      content: "";
+      pointer-events: none;
+    }
+    .tab[aria-current="page"]::after {
+      position: absolute;
+      right: 16%;
+      bottom: 0;
+      left: 16%;
+      height: 7px;
+      border-radius: 50%;
+      background: rgb(var(--light) / 52%);
+      filter: blur(6px);
+      content: "";
+      pointer-events: none;
+    }
+    .theme--void .tab[aria-current="page"]::before { opacity: .83; }
+    .theme--void .tab[aria-current="page"]::after { opacity: .78; }
+    .actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-right: 20px; }
+    .actions img { width: 54px; height: 54px; object-fit: contain; }
+    .profile { width: 86px; height: 43px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--frame); color: #eae9e5; background: #0b101b9c; font-size: 16px; }
+    .content-hint { display: flex; gap: 13px; padding: 19px 27px; }
+    .content-hint i { width: 23%; height: 48px; border: 1px solid var(--frame); background: #081016ad; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>KeystoneClient · luz que se desvanece hacia arriba</h1>
+    <p class="intro">Pestañas sin cuadros ni bordes · «Characters» activa en las tres vistas · pulsa otra pestaña para comparar.</p>
+    <section class="theme theme--keystone" aria-label="Tema Keystone">
+      <h2>Keystone · dorado <span>Luz suave desde el borde inferior</span></h2>
+      <div class="preview"></div>
+    </section>
+    <section class="theme theme--poison" aria-label="Tema Poison">
+      <h2>Poison · verde lima <span>La misma forma, adaptada al tema</span></h2>
+      <div class="preview"></div>
+    </section>
+    <section class="theme theme--void" aria-label="Tema Void">
+      <h2>Void · morado tenue <span>Menos intensidad para mantenerlo discreto</span></h2>
+      <div class="preview"></div>
+    </section>
+  </main>
+  <template id="preview-template">
+    <div class="app-header">
+      <div class="brand"><img alt=""><span>KeystoneClient</span></div>
+      <nav class="tabs" aria-label="Navegación principal">
+        <button class="tab" type="button"><span>Sync</span></button>
+        <button class="tab" type="button" aria-current="page"><span>Characters</span></button>
+        <button class="tab" type="button"><span>Teams</span></button>
+        <button class="tab" type="button"><span>Addon</span></button>
+      </nav>
+      <div class="actions" aria-hidden="true"><img alt=""><div class="profile">Spee</div><img alt=""><img alt=""></div>
+    </div>
+    <div class="content-hint" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </template>
+  <script>
+    const assets = {
+      keystone: ["../src/assets/keystone-ui/app-icon.png", "../src/assets/keystone-ui/03-settings-button.png.png", "../src/assets/keystone-ui/15-window-minimize-button.png.png", "../src/assets/keystone-ui/16-window-close-button.png.png"],
+      poison: ["../src/themes/assets/poison/branding/app-badge.png", "../src/themes/assets/poison/frames/buttons/settings-button.png", "../src/themes/assets/poison/frames/buttons/minimize-button.png", "../src/themes/assets/poison/frames/buttons/close-button.png"],
+      void: ["../src/themes/assets/void/branding/app-icon.png", "../src/themes/assets/void/frames/buttons/settings-button.png", "../src/themes/assets/void/frames/buttons/minimize-button.png", "../src/themes/assets/void/frames/buttons/close-button.png"]
+    };
+    const template = document.querySelector("#preview-template");
+    for (const [theme, images] of Object.entries(assets)) {
+      const preview = document.querySelector(`.theme--${theme} .preview`);
+      preview.append(template.content.cloneNode(true));
+      preview.querySelector(".brand img").src = images[0];
+      preview.querySelectorAll(".actions img").forEach((image, index) => { image.src = images[index + 1]; });
+      const tabs = preview.querySelectorAll(".tab");
+      for (const tab of tabs) {
+        tab.addEventListener("click", () => {
+          tabs.forEach(other => other.removeAttribute("aria-current"));
+          tab.setAttribute("aria-current", "page");
+        });
+      }
+    }
+  </script>
+</body>
+</html>

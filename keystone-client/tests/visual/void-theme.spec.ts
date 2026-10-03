@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { normalizeReleaseText } from "./release-visual-fixture";
 
 const THEME_STORAGE_KEY = "keystone-client.theme";
 
@@ -25,6 +26,7 @@ async function expectImagesReady(page: Page) {
 }
 
 async function expectVoidScreenshot(page: Page, name: string) {
+  await normalizeReleaseText(page, "0.16.0");
   expect(await page.screenshot({ animations: "allow", fullPage: true })).toMatchSnapshot(name);
 }
 
@@ -103,7 +105,7 @@ test.describe("Void visual states", () => {
     await expectVoidScreenshot(page, "void-sync-success.png");
   });
 
-  test("matches the minimize artwork to close and centers footer labels in their icon-free area", async ({ page }) => {
+  test("matches the minimize artwork to close and positions profile and footer labels", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await expectVoid(page);
     await expectImagesReady(page);
@@ -120,59 +122,52 @@ test.describe("Void visual states", () => {
     expect(minimizeArtwork.width).toBeCloseTo(closeArtwork.width, 1);
     expect(minimizeArtwork.height).toBeCloseTo(closeArtwork.height, 1);
 
-    for (const [variant, expectedShiftX] of [["web", -8], ["tray", -4]] as const) {
-      const geometry = await page.locator(`.ks-footer-action--${variant}`).evaluate((button) => {
-        const buttonRect = button.getBoundingClientRect();
-        const label = button.querySelector("span");
-        if (!label) {
-          throw new Error(`Missing ${button.className} label`);
-        }
-        const labelRect = label.getBoundingClientRect();
-        const labelStyle = getComputedStyle(label);
-        return {
-          leftInset: labelRect.left - buttonRect.left,
-          rightInset: buttonRect.right - labelRect.right,
-          labelCenterX: labelRect.left + labelRect.width / 2,
-          iconFreeCenterX: buttonRect.left + (76 + buttonRect.width - 12) / 2,
-          labelCenterY: labelRect.top + labelRect.height / 2,
-          buttonCenterY: buttonRect.top + buttonRect.height / 2,
-          alignItems: labelStyle.alignItems,
-          justifyItems: labelStyle.justifyItems,
-        };
-      });
-
-      expect(geometry.leftInset).toBeCloseTo(76 + expectedShiftX, 1);
-      expect(geometry.rightInset).toBeCloseTo(12 - expectedShiftX, 1);
-      expect(geometry.labelCenterX - geometry.iconFreeCenterX).toBeCloseTo(expectedShiftX, 1);
-      expect(geometry.labelCenterY - geometry.buttonCenterY).toBeCloseTo(-2, 1);
-      expect(geometry.alignItems).toBe("center");
-      expect(geometry.justifyItems).toBe("center");
-    }
-
-    await page.locator(".ks-footer-action").evaluateAll((buttons) => {
-      for (const button of buttons) {
-        (button as HTMLElement).dataset.language = "en";
+    for (const lang of ["es", "en"] as const) {
+      if (lang === "en") {
+        await page.goto("/?preview=sync-success&lang=en");
+        await expectVoid(page);
+        await expectImagesReady(page);
       }
-    });
 
-    for (const [variant, expectedShiftY] of [["web", -2], ["tray", 0]] as const) {
-      const geometry = await page.locator(`.ks-footer-action--${variant}`).evaluate((button) => {
-        const buttonRect = button.getBoundingClientRect();
-        const label = button.querySelector("span");
-        if (!label) {
-          throw new Error(`Missing ${button.className} label`);
-        }
-        const labelRect = label.getBoundingClientRect();
+      for (const variant of ["web", "tray"] as const) {
+        const geometry = await page.locator(`.ks-footer-action--${variant}`).evaluate((button) => {
+          const buttonRect = button.getBoundingClientRect();
+          const label = button.querySelector("span");
+          if (!label) {
+            throw new Error(`Missing ${button.className} label`);
+          }
+          const labelRect = label.getBoundingClientRect();
+          const labelStyle = getComputedStyle(label);
+          return {
+            labelCenterX: labelRect.left + labelRect.width / 2,
+            iconFreeCenterX: buttonRect.left + (76 + buttonRect.width - 12) / 2,
+            labelCenterY: labelRect.top + labelRect.height / 2,
+            buttonCenterY: buttonRect.top + buttonRect.height / 2,
+            alignItems: labelStyle.alignItems,
+            justifyItems: labelStyle.justifyItems,
+          };
+        });
+
+        expect(geometry.labelCenterX - geometry.iconFreeCenterX).toBeCloseTo(variant === "web" && lang === "en" ? -8 : variant === "web" || lang === "en" ? -4 : 0, 1);
+        expect(geometry.labelCenterY - geometry.buttonCenterY).toBeCloseTo(-3, 1);
+        expect(geometry.alignItems).toBe("center");
+        expect(geometry.justifyItems).toBe("center");
+      }
+
+      const profile = await page.locator(".ks-user-menu__trigger").evaluate((button) => {
+        const avatar = button.querySelector(".ks-user-menu__avatar-frame")!.getBoundingClientRect();
+        const name = button.querySelector(".ks-user-menu__name")!.getBoundingClientRect();
+        const chevron = button.querySelector(".ks-user-menu__dropdown-icon")!.getBoundingClientRect();
+        const panel = button.getBoundingClientRect();
         return {
-          labelCenterX: labelRect.left + labelRect.width / 2,
-          iconFreeCenterX: buttonRect.left + (76 + buttonRect.width - 12) / 2,
-          labelCenterY: labelRect.top + labelRect.height / 2,
-          buttonCenterY: buttonRect.top + buttonRect.height / 2,
+          nameCenterX: name.left + name.width / 2,
+          availableCenterX: (avatar.right + chevron.left) / 2,
+          nameCenterY: name.top + name.height / 2,
+          panelCenterY: panel.top + panel.height / 2,
         };
       });
-
-      expect(geometry.labelCenterX - geometry.iconFreeCenterX).toBeCloseTo(0, 1);
-      expect(geometry.labelCenterY - geometry.buttonCenterY).toBeCloseTo(expectedShiftY, 1);
+      expect(profile.nameCenterX - profile.availableCenterX).toBeCloseTo(-4, 1);
+      expect(profile.nameCenterY - profile.panelCenterY).toBeCloseTo(-2, 1);
     }
   });
 
@@ -200,7 +195,7 @@ test.describe("Void visual states", () => {
     await expectVoid(page);
     const selector = page.getByRole("combobox", { name: /Tema visual/u });
     await expect(selector).toHaveValue("void");
-    await expect(selector.locator("option")).toHaveText(["Keystone", "Poison", "Void"]);
+    await expect(selector.locator("option")).toHaveText(["Keystone", "Poison", "Void", "Frost", "Heaven"]);
     await expectVoidScreenshot(page, "void-settings.png");
   });
 

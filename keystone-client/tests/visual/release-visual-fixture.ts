@@ -11,7 +11,7 @@ type ScreenshotOptions = {
 const VISUAL_CLIENT_VERSION = "0.6.5";
 const VISUAL_CHANGELOG_VERSION = "0.6.5";
 
-async function normalizeReleaseText(page: Page) {
+export async function normalizeReleaseText(page: Page, visualClientVersion = VISUAL_CLIENT_VERSION) {
   await page.evaluate(({ runtimeVersion, visualClientVersion, visualChangelogVersion }) => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node = walker.nextNode();
@@ -38,7 +38,7 @@ async function normalizeReleaseText(page: Page) {
     ].join("");
   }, {
     runtimeVersion: bundledRelease.version,
-    visualClientVersion: VISUAL_CLIENT_VERSION,
+    visualClientVersion,
     visualChangelogVersion: VISUAL_CHANGELOG_VERSION,
   });
   await page.evaluate(() => new Promise<void>((resolve) => {
