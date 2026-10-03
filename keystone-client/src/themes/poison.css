@@ -55,6 +55,8 @@ html[data-theme="poison"] {
   --theme-brand-glow: drop-shadow(0 0 16px rgb(191 239 88 / 28%));
   --theme-tab-border: rgb(142 115 53 / 38%);
   --theme-tab-text: rgb(227 229 205 / 82%);
+  --theme-tab-selected-text: #e9f6d0;
+  --theme-tab-glow-rgb: 166 255 63;
   --theme-tab-hover-border: rgb(169 229 77 / 56%);
   --theme-tab-hover-text: #f0f8dc;
   --theme-tab-hover-shadow: inset 0 0 32px rgb(117 200 45 / 16%), inset 0 -2px 0 rgb(190 246 81 / 30%);
@@ -253,43 +255,6 @@ html[data-theme="poison"] .ks-avatar-choice__check {
 html[data-theme="poison"] .ks-brand__name {
   color: var(--theme-text-accent);
   text-shadow: 0 1px 0 rgb(0 0 0 / 90%), 0 0 14px rgb(169 238 67 / 24%);
-}
-
-html[data-theme="poison"] .ks-tab {
-  overflow: visible;
-  border-radius: 0;
-}
-
-html[data-theme="poison"] .ks-tab[data-state="default"]:hover,
-html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible {
-  background:
-    linear-gradient(180deg, rgb(113 183 39 / 5%), rgb(132 219 44 / 13%)),
-    var(--theme-surface-hover);
-}
-
-html[data-theme="poison"] .ks-tab[data-state="selected"] {
-  color: var(--theme-accent-strong);
-  background:
-    radial-gradient(ellipse at 50% 100%, rgb(183 255 65 / 20%), transparent 62%),
-    linear-gradient(180deg, rgb(73 107 27 / 5%), rgb(122 206 39 / 13%));
-  text-shadow: 0 0 13px rgb(166 255 63 / 42%);
-}
-
-html[data-theme="poison"] .ks-tab[data-state="selected"]::after {
-  content: "";
-  position: absolute;
-  right: 18%;
-  bottom: -1px;
-  left: 18%;
-  height: 4px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgb(183 255 65 / 94%) 28% 72%, transparent);
-  box-shadow: 0 0 7px rgb(166 255 63 / 88%), 0 4px 20px rgb(139 235 42 / 62%);
-}
-
-html[data-theme="poison"] .ks-tab__indicator {
-  opacity: 0.2;
-  filter: sepia(1) hue-rotate(38deg) saturate(2.2) drop-shadow(0 4px 10px rgb(157 255 47 / 68%));
 }
 
 html[data-theme="poison"] :where(
@@ -1018,7 +983,6 @@ html[data-theme="poison"] :where(
   .theme-frame-artwork,
   .sync-emblem-panel__frame,
   .ks-user-menu__shell,
-  .ks-tab__decoration,
   .ks-footer-action__asset,
   .addon-artwork,
   .ks-brand__icon,
@@ -1056,9 +1020,6 @@ html[data-theme="poison"] .ks-brand__icon {
 }
 
 html[data-theme="poison"] .ks-tab {
-  isolation: isolate;
-  border-color: transparent;
-  background: transparent;
   box-shadow: none;
   font-family: var(--poison-font-display);
   font-size: 22px;
@@ -1066,78 +1027,8 @@ html[data-theme="poison"] .ks-tab {
   letter-spacing: 0.01em;
 }
 
-html[data-theme="poison"] .ks-tab::before {
-  content: "";
-  position: absolute;
-  inset: 18px 24px 12px;
-  z-index: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgb(166 255 63 / 30%), rgb(139 235 42 / 12%) 42%, transparent 74%);
-  filter: blur(14px);
-  transform: scale(0.9);
-  transition: opacity var(--theme-motion-normal), transform var(--theme-motion-normal);
-}
-
-html[data-theme="poison"] .ks-tab[data-state="default"]:hover,
-html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-html[data-theme="poison"] .ks-tab[data-state="default"]:hover::before,
-html[data-theme="poison"] .ks-tab[data-state="default"]:focus-visible::before {
-  opacity: 0.64;
-  transform: scale(1);
-}
-
-html[data-theme="poison"] .ks-tab__decoration {
-  --poison-artwork-brightness: 0.82;
-  position: absolute;
-  top: auto;
-  left: 50%;
-  bottom: -13px;
-  z-index: 1;
-  width: 212px;
-  height: 70px;
-  object-fit: contain;
-  object-position: center;
-  transform: translateX(-50%);
-}
-
-html[data-theme="poison"] .ks-tab__decoration--active {
-  --poison-artwork-brightness: 0.9;
-  opacity: 1;
-  filter: var(--poison-frame-filter);
-}
-
-html[data-theme="poison"] .ks-tab__decoration--inactive {
-  opacity: 0.46;
-  filter: brightness(0.5) saturate(0.58) contrast(1.08) drop-shadow(0 3px 5px rgb(0 0 0 / 55%));
-}
-
-html[data-theme="poison"] .ks-tab[data-state="selected"]::after {
-  display: none;
-}
-
 html[data-theme="poison"] .ks-tab[data-state="selected"] {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-html[data-theme="poison"] .ks-tab[data-state="selected"]::before {
-  opacity: 0.92;
-  background: radial-gradient(ellipse at 50% 60%, rgb(183 255 65 / 38%), rgb(139 235 42 / 16%) 44%, transparent 76%);
-  filter: blur(15px);
-  transform: scale(1);
-}
-
-html[data-theme="poison"] .ks-tab__label {
-  position: relative;
-  z-index: 2;
+  font-weight: 650;
 }
 
 html[data-theme="poison"] :is(

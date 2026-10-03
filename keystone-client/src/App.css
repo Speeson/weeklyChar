@@ -166,7 +166,6 @@ h2 {
   gap: 20px;
   min-width: 0;
   padding: 0 50px 0 38px;
-  border-right: 1px solid var(--theme-header-divider);
 }
 
 .ks-brand::after {
@@ -206,54 +205,80 @@ h2 {
 
 .ks-tab {
   position: relative;
+  isolation: isolate;
   min-width: 0;
   flex: 1 1 0;
   min-height: 90px;
   justify-content: center;
-  border-width: 0 1px 0 0;
-  border-color: var(--theme-tab-border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 0;
   color: var(--theme-tab-text);
   background: transparent;
   font-size: 23px;
   font-weight: 500;
   transition:
-    border-color var(--theme-motion-normal),
     color var(--theme-motion-normal),
-    background-color var(--theme-motion-normal),
-    box-shadow var(--theme-motion-normal),
     text-shadow var(--theme-motion-normal);
 }
 
-.ks-tab[data-state="default"]:hover,
-.ks-tab[data-state="default"]:focus-visible {
-  border-color: var(--theme-tab-hover-border);
+.ks-tab__label {
+  position: relative;
+  z-index: 2;
+}
+
+.ks-tab::before,
+.ks-tab::after {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  content: "";
+  transition: opacity var(--theme-motion-normal);
+}
+
+.ks-tab::before {
+  inset: 5px 1px 0;
+  z-index: 0;
+  border-radius: 17px 17px 11px 11px;
+  background:
+    radial-gradient(ellipse 80% 20% at 50% 100%, rgb(var(--theme-tab-glow-rgb) / 30%), transparent 100%),
+    linear-gradient(to top, rgb(var(--theme-tab-glow-rgb) / 24%) 0%, rgb(var(--theme-tab-glow-rgb) / 15%) 28%, rgb(var(--theme-tab-glow-rgb) / 5%) 56%, transparent 84%);
+  mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+}
+
+.ks-tab::after {
+  right: 16%;
+  bottom: 0;
+  left: 16%;
+  z-index: 1;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(var(--theme-tab-glow-rgb) / 52%);
+  filter: blur(6px);
+}
+
+.ks-tab[data-state="default"]:hover {
   color: var(--theme-tab-hover-text);
-  outline: none;
-  background: var(--theme-surface-hover);
-  box-shadow:
-    var(--theme-tab-hover-shadow);
-  text-shadow: var(--theme-tab-hover-glow);
+  text-shadow: 0 0 9px rgb(var(--theme-tab-glow-rgb) / 12%);
+}
+
+.ks-tab:focus-visible {
+  color: var(--theme-tab-hover-text);
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: -6px;
 }
 
 .ks-tab[data-state="selected"] {
-  color: var(--theme-accent);
-  background: var(--theme-surface-active);
-  box-shadow:
-    var(--theme-tab-active-shadow);
-  text-shadow: var(--theme-glow-strong);
+  color: var(--theme-tab-selected-text);
+  font-weight: 650;
+  text-shadow: 0 0 12px rgb(var(--theme-tab-glow-rgb) / 28%);
 }
 
-.ks-tab__indicator {
-  position: absolute;
-  left: 50%;
-  bottom: -19px;
-  width: 170px;
-  height: 38px;
-  object-fit: cover;
-  object-position: center bottom;
-  transform: translateX(-50%);
-  pointer-events: none;
+.ks-tab[data-state="selected"]::before {
+  opacity: var(--theme-tab-glow-opacity, 1);
+}
+
+.ks-tab[data-state="selected"]::after {
+  opacity: var(--theme-tab-edge-opacity, 1);
 }
 
 .ks-header-actions {

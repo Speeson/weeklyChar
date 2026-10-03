@@ -98,8 +98,8 @@ test.describe("Void visual states", () => {
     await expectVoid(page);
     await expect(page.getByText("Makabe")).toBeVisible();
     await expectImagesReady(page);
-    await expect(page.locator('.ks-tab__decoration--active[src$="active-tab-indicator.png"]')).toHaveCount(1);
-    await expect(page.locator(".ks-tab__decoration--inactive")).toHaveCount(0);
+    await expect(page.locator(".ks-tab__decoration")).toHaveCount(0);
+    expect(await page.locator('.ks-tab[data-state="selected"]').evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("0.83");
     await expectVoidScreenshot(page, "void-sync-success.png");
   });
 

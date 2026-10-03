@@ -55,6 +55,8 @@ html[data-theme="keystone"] {
   --theme-brand-glow: drop-shadow(0 0 18px rgb(244 183 42 / 34%));
   --theme-tab-border: rgb(95 136 190 / 28%);
   --theme-tab-text: rgb(226 225 233 / 78%);
+  --theme-tab-selected-text: #f6e7bd;
+  --theme-tab-glow-rgb: 244 183 42;
   --theme-tab-hover-border: rgb(92 174 255 / 42%);
   --theme-tab-hover-text: rgb(232 246 255 / 96%);
   --theme-tab-hover-shadow: inset 0 0 32px rgb(82 183 255 / 18%), inset 0 -2px 0 rgb(104 202 255 / 26%);

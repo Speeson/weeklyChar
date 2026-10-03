@@ -1,0 +1,15 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Rediseña las pestañas superiores del cliente con iluminación temática.",
+  "details": [
+    "Elimina el separador junto al título y los indicadores gráficos de las pestañas.",
+    "La pestaña activa muestra un brillo inferior difuminado en dorado, verde lima o morado según el tema."
+  ],
+  "summaryEn": "Redesigns the client header tabs with theme-specific lighting.",
+  "detailsEn": [
+    "Removes the divider beside the title and the tab indicator artwork.",
+    "The active tab has a bottom-up glow in gold, lime or purple according to the theme."
+  ]
+}

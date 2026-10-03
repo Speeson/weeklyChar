@@ -23,8 +23,7 @@ test("Poison production artwork resolves through registry slots without changing
     const emblemFrame = document.querySelector<HTMLImageElement>(".sync-emblem-panel__frame")!;
     const emblemIcon = document.querySelector<HTMLImageElement>(".sync-emblem-panel__icon")!;
     const profileFrame = document.querySelector<HTMLImageElement>(".ks-user-menu__shell")!;
-    const activeTab = document.querySelector<HTMLImageElement>(".ks-tab__decoration--active")!;
-    const inactiveTab = document.querySelector<HTMLImageElement>(".ks-tab__decoration--inactive")!;
+    const selectedTab = document.querySelector<HTMLElement>('.ks-tab[data-state="selected"]')!;
     const before = {
       card: cardElement.getBoundingClientRect().toJSON(),
       shell: shellElement.getBoundingClientRect().toJSON(),
@@ -45,13 +44,13 @@ test("Poison production artwork resolves through registry slots without changing
       },
       assets: {
         action: actionFrame.src,
-        activeTab: activeTab.src,
         card: cardFrame.src,
         emblem: emblemIcon.src,
         emblemFrame: emblemFrame.src,
-        inactiveTab: inactiveTab.src,
         profile: profileFrame.src,
       },
+      tabDecorations: document.querySelectorAll(".ks-tab__decoration").length,
+      tabGlow: getComputedStyle(selectedTab, "::before").backgroundImage,
       framePointerEvents: getComputedStyle(cardFrame).pointerEvents,
       overlayBackground: getComputedStyle(shellElement, "::before").backgroundImage,
     };
@@ -64,13 +63,13 @@ test("Poison production artwork resolves through registry slots without changing
   expect(result.ambientOpacity).toBe("0.14");
   expect(result.assets).toMatchObject({
     action: expect.stringMatching(/sync-button-frame(?:-[^/]+)?\.png$/),
-    activeTab: expect.stringMatching(/tab-active-decoration(?:-[^/]+)?\.png$/),
     card: expect.stringMatching(/summary-card-addon-frame(?:-[^/]+)?\.png$/),
     emblem: expect.stringMatching(/emblem(?:-[^/]+)?\.png$/),
     emblemFrame: expect.stringMatching(/emblem-panel-frame(?:-[^/]+)?\.png$/),
-    inactiveTab: expect.stringMatching(/tab-inactive-decoration(?:-[^/]+)?\.png$/),
     profile: expect.stringMatching(/profile-frame(?:-[^/]+)?\.png$/),
   });
+  expect(result.tabDecorations).toBe(0);
+  expect(result.tabGlow).toContain("linear-gradient");
   expect(result.framePointerEvents).toBe("none");
   expect(result.after).toEqual(result.before);
   await expect(brand).toBeVisible();

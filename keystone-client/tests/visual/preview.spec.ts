@@ -78,33 +78,29 @@ test.describe("preview states", () => {
     await expectStableReleaseScreenshot(page, "sync-success.png");
   });
 
-  test("keeps navigation hover blue and the selected tab softly gold", async ({ page }) => {
+  test("uses a bottom-up gold glow for the selected tab without a visible tab frame", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     const syncTab = page.getByRole("button", { name: "Sincronizar", exact: true });
     const addonTab = page.getByRole("button", { name: "Addon", exact: true });
 
     await expect(syncTab).toHaveAttribute("aria-current", "page");
-    await expect(syncTab.locator(".ks-tab__indicator")).toBeVisible();
-    await expect(syncTab).toHaveCSS("border-radius", "8px");
-    await expect(addonTab).toHaveCSS("border-radius", "8px");
-    expect(await syncTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-      "rgba(244, 183, 42, 0.04)",
-    );
+    await expect(page.locator(".ks-tab__decoration")).toHaveCount(0);
+    await expect(syncTab).toHaveCSS("border-top-width", "0px");
+    await expect(addonTab).toHaveCSS("border-radius", "0px");
+    expect(await syncTab.evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("1");
+    expect(await syncTab.evaluate((element) => getComputedStyle(element, "::before").backgroundImage)).toContain("linear-gradient");
+    expect(await addonTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
 
     await addonTab.hover();
     await page.waitForTimeout(220);
-    expect(await addonTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-      "rgba(37, 125, 224, 0.12)",
-    );
+    expect(await addonTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
 
     await addonTab.click();
     await page.mouse.move(800, 400);
     await page.waitForTimeout(220);
     await expect(addonTab).toHaveAttribute("aria-current", "page");
-    await expect(addonTab.locator(".ks-tab__indicator")).toBeVisible();
-    expect(await addonTab.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-      "rgba(244, 183, 42, 0.04)",
-    );
+    expect(await addonTab.evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("1");
+    expect(await syncTab.evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("0");
   });
 
   test("keeps the full composition at a reduced scale", async ({ page }) => {

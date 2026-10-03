@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("keystone-client.theme", "poison"));
 });
 
-test("Poison gives tabs, ritual surfaces and sync action distinct registered artwork", async ({ page }) => {
+test("Poison uses a lime tab glow while ritual surfaces and sync action retain artwork", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
   const selectedTab = page.locator('[data-ui="shell-tab"][data-state="selected"]');
@@ -19,24 +19,25 @@ test("Poison gives tabs, ritual surfaces and sync action distinct registered art
     const selected = document.querySelector<HTMLElement>('[data-ui="shell-tab"][data-state="selected"]')!;
     const surface = document.querySelector<HTMLElement>(".sync-summary-card")!;
     const action = document.querySelector<HTMLElement>(".sync-primary-action")!;
-    const activeDecoration = selected.querySelector<HTMLImageElement>(".ks-tab__decoration--active")!;
     const surfaceFrame = surface.querySelector<HTMLImageElement>(".sync-summary-card__frame")!;
     const actionFrame = action.querySelector<HTMLImageElement>(".sync-primary-action__frame")!;
 
     return {
       actionFrame: actionFrame.src,
       actionPointerEvents: getComputedStyle(actionFrame).pointerEvents,
-      activeDecoration: activeDecoration.src,
-      activePointerEvents: getComputedStyle(activeDecoration).pointerEvents,
+      tabDecorations: selected.querySelectorAll(".ks-tab__decoration").length,
+      tabGlow: getComputedStyle(selected, "::before").backgroundImage,
+      tabGlowOpacity: getComputedStyle(selected, "::before").opacity,
       surfaceFrame: surfaceFrame.src,
       surfacePointerEvents: getComputedStyle(surfaceFrame).pointerEvents,
     };
   });
 
-  expect(treatment.activeDecoration).toMatch(/tab-active-decoration(?:-[^/]+)?\.png$/);
+  expect(treatment.tabDecorations).toBe(0);
+  expect(treatment.tabGlow).toContain("166, 255, 63");
+  expect(treatment.tabGlowOpacity).toBe("1");
   expect(treatment.surfaceFrame).toMatch(/summary-card-addon-frame(?:-[^/]+)?\.png$/);
   expect(treatment.actionFrame).toMatch(/sync-button-frame(?:-[^/]+)?\.png$/);
-  expect(treatment.activePointerEvents).toBe("none");
   expect(treatment.surfacePointerEvents).toBe("none");
   expect(treatment.actionPointerEvents).toBe("none");
 });
@@ -75,31 +76,28 @@ test("Poison does not draw a legacy inset rectangle inside the client edge", asy
   expect(insetFrame.content).toBe("none");
 });
 
-test("Poison layers active tab artwork above its glow and below its label", async ({ page }) => {
+test("Poison layers the active tab glow below its label without artwork", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
   const selected = page.locator('[data-ui="shell-tab"][data-state="selected"]');
   await expect(selected.locator(".ks-tab__label")).toBeVisible();
   const layers = await selected.evaluate((element) => {
-    const decoration = element.querySelector<HTMLElement>(".ks-tab__decoration--active")!;
     const label = element.querySelector<HTMLElement>(".ks-tab__label")!;
     return {
-      decorationFilter: getComputedStyle(decoration).filter,
-      decorationOpacity: getComputedStyle(decoration).opacity,
-      decorationZ: Number(getComputedStyle(decoration).zIndex),
+      decorationCount: element.querySelectorAll(".ks-tab__decoration").length,
+      edgeZ: Number(getComputedStyle(element, "::after").zIndex),
       glowZ: Number(getComputedStyle(element, "::before").zIndex),
       labelZ: Number(getComputedStyle(label).zIndex),
     };
   });
 
   expect(layers.glowZ).toBe(0);
-  expect(layers.decorationZ).toBe(1);
+  expect(layers.edgeZ).toBe(1);
   expect(layers.labelZ).toBe(2);
-  expect(layers.decorationOpacity).toBe("1");
-  expect(layers.decorationFilter).not.toContain("sepia");
+  expect(layers.decorationCount).toBe(0);
 });
 
-test("Poison tabs use only a soft edgeless glow for selected and hover states", async ({ page }) => {
+test("Poison tabs keep a borderless surface with a selected glow and keyboard focus ring", async ({ page }) => {
   await page.goto("/?preview=sync-success");
 
   const selected = page.locator('[data-ui="shell-tab"][data-state="selected"]');
@@ -108,13 +106,14 @@ test("Poison tabs use only a soft edgeless glow for selected and hover states", 
   const readTreatment = (element: HTMLElement) => {
     const styles = getComputedStyle(element);
     const glow = getComputedStyle(element, "::before");
+    const edge = getComputedStyle(element, "::after");
     return {
       backgroundImage: styles.backgroundImage,
-      borderColor: styles.borderColor,
+      borderWidth: styles.borderTopWidth,
       boxShadow: styles.boxShadow,
       glowBackground: glow.backgroundImage,
-      glowBoxShadow: glow.boxShadow,
-      glowFilter: glow.filter,
+      glowOpacity: glow.opacity,
+      edgeFilter: edge.filter,
       outlineStyle: styles.outlineStyle,
     };
   };
@@ -128,13 +127,17 @@ test("Poison tabs use only a soft edgeless glow for selected and hover states", 
 
   for (const treatment of [selectedTreatment, hoverTreatment, focusTreatment]) {
     expect(treatment.backgroundImage).toBe("none");
-    expect(treatment.borderColor).toBe("rgba(0, 0, 0, 0)");
+    expect(treatment.borderWidth).toBe("0px");
     expect(treatment.boxShadow).toBe("none");
     expect(treatment.glowBackground).toContain("radial-gradient");
-    expect(treatment.glowBoxShadow).toBe("none");
-    expect(treatment.glowFilter).toContain("blur(");
-    expect(treatment.outlineStyle).toBe("none");
+    expect(treatment.edgeFilter).toContain("blur(");
   }
+  expect(selectedTreatment.glowOpacity).toBe("1");
+  expect(hoverTreatment.glowOpacity).toBe("0");
+  expect(focusTreatment.glowOpacity).toBe("0");
+  expect(selectedTreatment.outlineStyle).toBe("none");
+  expect(hoverTreatment.outlineStyle).toBe("none");
+  expect(focusTreatment.outlineStyle).toBe("solid");
 });
 
 test("Poison keeps the stationary table frame above a real scrolling viewport", async ({ page }) => {

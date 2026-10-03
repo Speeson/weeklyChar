@@ -53,8 +53,8 @@ describe("KeystoneShell profile menu", () => {
     );
 
     expect(document.querySelector('.ks-brand__icon[src$="app-badge.png"]')).toBeInTheDocument();
-    expect(document.querySelector('.ks-tab__decoration--active[src$="tab-active-decoration.png"]')).toBeInTheDocument();
-    expect(document.querySelector('.ks-tab__decoration--inactive[src$="tab-inactive-decoration.png"]')).toBeInTheDocument();
+    expect(document.querySelectorAll(".ks-tab__decoration")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Sincronizar" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Sincronizar" }).querySelector(".ks-tab__label")).toHaveTextContent("Sincronizar");
     expect(screen.getByRole("button", { name: "Personajes" }).querySelector(".ks-tab__label")).toHaveTextContent("Personajes");
     expect(screen.getByRole("button", { name: "Equipos" }).querySelector(".ks-tab__label")).toHaveTextContent("Equipos");
@@ -101,7 +101,7 @@ describe("KeystoneShell profile menu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("uses Void shell artwork and decorates only the active tab", () => {
+  it("uses Void shell artwork without tab indicator images", () => {
     localStorage.setItem("keystone-client.theme", "void");
     renderShell();
 
@@ -110,8 +110,8 @@ describe("KeystoneShell profile menu", () => {
     expect(document.querySelector('.ks-user-menu__dropdown-icon[src$="dropdown-icon.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-footer-action--web img[src$="web-button.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-footer-action--tray img[src$="tray-button.png"]')).toBeInTheDocument();
-    expect(document.querySelectorAll('.ks-tab__decoration--active[src$="active-tab-indicator.png"]')).toHaveLength(1);
-    expect(document.querySelectorAll(".ks-tab__decoration--inactive")).toHaveLength(0);
+    expect(document.querySelectorAll(".ks-tab__decoration")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Sincronizar" })).toHaveAttribute("aria-current", "page");
   });
 
   it("closes on outside click and Escape", async () => {

@@ -119,8 +119,6 @@ function KeystoneHeader({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
-  const activeTabIndicator = useThemeAsset("shell-active-tab");
-  const inactiveTabIndicator = useThemeAsset("shell-inactive-tab");
   const appIcon = useThemeAsset("brand-mark");
   const avatarFrame = useThemeAsset("shell-avatar-frame");
   const dropdownIcon = useThemeAsset("shell-user-dropdown");
@@ -184,11 +182,6 @@ function KeystoneHeader({
           type="button"
         >
           <span className="ks-tab__label">{t("shell.sync")}</span>
-          {currentView === "sync" ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
-          ) : inactiveTabIndicator ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
-          ) : null}
         </button>
         <button
           aria-current={currentView === "characters" ? "page" : undefined}
@@ -199,11 +192,6 @@ function KeystoneHeader({
           type="button"
         >
           <span className="ks-tab__label">{t("shell.characters")}</span>
-          {currentView === "characters" ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
-          ) : inactiveTabIndicator ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
-          ) : null}
         </button>
         <button
           aria-current={currentView === "teams" ? "page" : undefined}
@@ -214,11 +202,6 @@ function KeystoneHeader({
           type="button"
         >
           <span className="ks-tab__label">{t("shell.teams")}</span>
-          {currentView === "teams" ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
-          ) : inactiveTabIndicator ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
-          ) : null}
         </button>
         <button
           aria-current={currentView === "addon" ? "page" : undefined}
@@ -229,11 +212,6 @@ function KeystoneHeader({
           type="button"
         >
           <span className="ks-tab__label">Addon</span>
-          {currentView === "addon" ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--active ks-tab__indicator" src={activeTabIndicator} />
-          ) : inactiveTabIndicator ? (
-            <img alt="" className="ks-tab__decoration ks-tab__decoration--inactive" src={inactiveTabIndicator} />
-          ) : null}
         </button>
       </nav>
 
