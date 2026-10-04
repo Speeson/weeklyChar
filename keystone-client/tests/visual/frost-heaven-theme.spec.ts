@@ -50,9 +50,9 @@ for (const { id, glow } of themes) {
       await expectStableReleaseScreenshot(page, `${id}-teams-default.png`);
 
       await page.getByRole("button", { name: /Configuraci/u }).click();
-      const selector = page.getByRole("combobox", { name: /Tema visual/u });
-      await expect(selector).toHaveValue(id);
-      await expect(selector.locator("option")).toHaveText(["Keystone", "Poison", "Void", "Frost", "Heaven"]);
+      await page.getByRole("tab", { name: /Appearance/u }).click();
+      await expect(page.getByRole("button", { name: id === "frost" ? "Frost" : "Heaven", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator(".settings-theme-card")).toHaveCount(5);
       await expectStableReleaseScreenshot(page, `${id}-settings.png`);
     });
 

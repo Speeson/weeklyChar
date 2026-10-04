@@ -596,7 +596,7 @@ function App() {
             )}
           </PageErrorBoundary>
           {settingsOpen ? (
-            <div aria-labelledby="settings-modal-title" aria-modal="true" className="ks-modal" role="dialog">
+            <div aria-labelledby="settings-modal-title" aria-modal="true" className="ks-modal ks-settings-modal" role="dialog">
               <div className="ks-modal__panel">
                 <div className="ks-modal__header">
                   <div>

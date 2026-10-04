@@ -1007,6 +1007,7 @@ test("reviews lifecycle stability, themed empty prompt, cached navigation and ra
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Close settings" }).click();
     await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("tab", { name: "Application" }).click();
     await expect(page.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
     await capture(page, `24-${theme}-settings-english-reopened.png`);
   }

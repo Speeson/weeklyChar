@@ -132,8 +132,7 @@ export function WowPage({ addonStatus, initialWow, onGoAddon, onWowChanged }: Wo
   }
 
   return (
-    <section className="wow-panel settings-block" aria-labelledby="wow-title">
-      <h3 id="wow-title">{t("wow.title")}</h3>
+    <section aria-label={t("wow.title")} className="wow-panel settings-block">
 
       <div className="wow-path-label">
         <label htmlFor="wow-install-path">{t("wow.installPath")}</label>

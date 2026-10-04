@@ -2337,8 +2337,367 @@ h2 {
 .settings-modal-body {
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
+}
+
+.ks-settings-modal .ks-modal__panel {
+  height: min(780px, calc(100vh - 24px));
+}
+
+.settings-tabs {
+  display: flex;
+  min-width: 0;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--theme-divider);
+  background: var(--theme-header-background);
+}
+
+.settings-tab {
+  min-height: 76px;
+  padding: 7px 8px;
+  font-size: clamp(14px, 1.8vw, 19px);
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.settings-modal-body > .ks-modal__content {
+  display: flex;
+  padding: 22px 28px;
+}
+
+.settings-stage {
+  display: grid;
+  flex: 1 0 auto;
+  align-content: start;
+  width: 100%;
+  min-height: 100%;
+}
+
+.settings-stage > [hidden] {
+  display: none;
+}
+
+.settings-stage > :not([hidden]) {
+  width: 100%;
+}
+
+.settings-general {
+  gap: 26px;
+}
+
+.settings-general-group {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-general .settings-section-heading,
+.settings-application .settings-section-heading,
+.settings-appearance .settings-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.settings-section-heading::after {
+  flex: 1;
+  height: 1px;
+  background: var(--theme-divider);
+  content: "";
+}
+
+.settings-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.settings-toggle-card,
+.settings-close-card,
+.settings-shortcut-card,
+.settings-application .settings-version-row,
+.settings-account-panel .wow-path-label,
+.settings-account-panel .account-list,
+.settings-account-panel .wow-addon-status {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface-1)), var(--theme-surface-1));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-accent) 12%, transparent);
+}
+
+.settings-toggle-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  color: var(--theme-text-accent);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.settings-toggle-card input,
+.settings-close-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.settings-toggle-track {
+  display: flex;
+  align-items: center;
+  width: 54px;
+  height: 30px;
+  padding: 3px;
+  border: 1px solid var(--theme-control-border);
+  border-radius: 999px;
+  background: var(--theme-control-background);
+  box-shadow: var(--theme-control-shadow);
+  transition: border-color var(--theme-motion-fast), background var(--theme-motion-fast), box-shadow var(--theme-motion-fast);
+}
+
+.settings-toggle-track > span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--theme-text-muted);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+  transition: transform var(--theme-motion-fast), background var(--theme-motion-fast);
+}
+
+.settings-toggle-card input:checked + .settings-toggle-track {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-surface-1));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--theme-accent) 35%, transparent), inset 0 0 8px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+}
+
+.settings-toggle-card input:checked + .settings-toggle-track > span {
+  background: var(--theme-accent);
+  transform: translateX(24px);
+}
+
+.settings-toggle-card input:focus-visible + .settings-toggle-track,
+.settings-close-choice:has(input:focus-visible) {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 3px;
+}
+
+.settings-close-card {
+  display: grid;
+  gap: 12px;
+  color: var(--theme-text-accent);
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+.settings-close-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-close-choice {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 43px;
+  padding: 8px 12px;
+  border: 1px solid var(--theme-control-border);
+  border-radius: var(--radius-md);
+  color: var(--theme-text-muted);
+  background: var(--theme-control-background);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--theme-motion-fast), color var(--theme-motion-fast), box-shadow var(--theme-motion-fast);
+}
+
+.settings-close-choice:hover {
+  border-color: var(--theme-accent);
+  color: var(--theme-text);
+}
+
+.settings-close-choice:has(input:checked) {
+  border-color: var(--theme-accent);
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-control-background));
+  box-shadow: 0 0 15px color-mix(in srgb, var(--theme-accent) 30%, transparent), inset 0 0 12px color-mix(in srgb, var(--theme-accent) 10%, transparent);
+}
+
+.settings-shortcut-card {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 82px;
+  color: var(--theme-text-accent);
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+.settings-shortcut-card .settings-shortcut-recorder {
+  min-width: 0;
+}
+
+.settings-account-panel .wow-panel,
+.settings-appearance-panel .settings-appearance,
+.settings-application {
+  gap: 16px;
+}
+
+.settings-application-group {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-application {
+  gap: 26px;
+}
+
+.settings-segmented.settings-language-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.settings-segmented.settings-language-selector button {
+  min-width: 0;
+  min-height: 52px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.settings-account-panel .account-list {
+  max-height: 230px;
+  overflow: auto;
+}
+
+.settings-account-panel .wow-addon-status {
+  padding-block: 12px;
+}
+
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-theme-card {
+  --preview-accent: var(--theme-accent);
+  --preview-surface: var(--theme-surface-2);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-md);
+  color: var(--theme-text);
+  background: var(--theme-surface-1);
+  text-align: left;
+  transition: border-color var(--theme-motion-fast), box-shadow var(--theme-motion-fast), transform var(--theme-motion-fast);
+}
+
+.settings-theme-card:hover,
+.settings-theme-card:focus-visible {
+  border-color: var(--theme-border-strong);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--theme-accent) 22%, transparent);
+  transform: translateY(-2px);
+}
+
+.settings-theme-card[aria-pressed="true"] {
+  border-color: var(--status-success);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--status-success) 55%, transparent), inset 0 0 14px color-mix(in srgb, var(--status-success) 16%, transparent);
+}
+
+.settings-theme-card__preview {
+  position: relative;
+  display: grid;
+  grid-template-rows: 23% minmax(0, 1fr);
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--preview-accent, var(--theme-accent)) 50%, transparent);
+  border-radius: 5px;
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 28%)), var(--preview-background, var(--theme-bg-image)) center / cover, var(--preview-surface, var(--theme-surface-2));
+}
+
+.settings-theme-card__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 7px;
+  padding: 0 10%;
+  border-bottom: 1px solid color-mix(in srgb, var(--preview-accent) 44%, transparent);
+  background: color-mix(in srgb, var(--preview-surface) 83%, transparent);
+}
+
+.settings-theme-card__topbar i {
+  width: 25%;
+  height: 3px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--preview-accent) 60%, white);
+  opacity: .75;
+}
+
+.settings-theme-card__topbar i:first-child {
+  box-shadow: 0 0 12px var(--preview-accent);
+  opacity: 1;
+}
+
+.settings-theme-card__layout {
+  display: grid;
+  grid-template-columns: 22% 1fr;
+  gap: 7%;
+  padding: 7%;
+}
+
+.settings-theme-card__rail,
+.settings-theme-card__content {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.settings-theme-card__rail i,
+.settings-theme-card__content i {
+  height: 10px;
+  border: 1px solid color-mix(in srgb, var(--preview-accent) 34%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--preview-surface) 88%, transparent);
+}
+
+.settings-theme-card__rail i:first-child,
+.settings-theme-card__content i:first-child {
+  background: color-mix(in srgb, var(--preview-accent) 34%, var(--preview-surface));
+}
+
+.settings-theme-card__content i:first-child { height: 32px; }
+.settings-theme-card__content i:last-child { width: 75%; }
+
+.settings-theme-card__name {
+  font-size: 15px;
+  font-weight: 750;
+  text-align: center;
+}
+
+@media (max-width: 680px) {
+  .settings-modal-body > .ks-modal__content { padding: 16px; }
+  .settings-toggle-grid { grid-template-columns: 1fr; }
+  .settings-close-choices { grid-template-columns: 1fr; }
+  .settings-shortcut-card { grid-template-columns: 1fr; }
+  .settings-shortcut-card .settings-shortcut-recorder { grid-template-columns: minmax(0, 1fr) auto; }
+  .settings-shortcut-card .settings-shortcut-help { grid-column: 1 / -1; }
+  .settings-theme-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-tab { font-size: 13px; }
+  .settings-application .settings-version-row { align-items: stretch; flex-direction: column; }
 }
 
 .ks-modal__footer {
@@ -2363,15 +2722,6 @@ h2 {
 
 .settings-actions-feedback p {
   margin: 0;
-}
-
-.settings-language {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  color: var(--theme-text-accent);
-  font-size: 0.9rem;
-  font-weight: 650;
 }
 
 .settings-field {

@@ -45,6 +45,26 @@ const idleUpdater: UpdaterSnapshot = {
 };
 
 const DEFAULT_OVERLAY_SHORTCUT = "Ctrl+Shift+K";
+const settingsSections = ["general", "accounts", "appearance", "application"] as const;
+type SettingsSection = typeof settingsSections[number];
+
+function SettingsToggleCard({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="settings-toggle-card">
+      <span>{label}</span>
+      <input checked={checked} onChange={(event) => onChange(event.target.checked)} role="switch" type="checkbox" />
+      <span aria-hidden="true" className="settings-toggle-track"><span /></span>
+    </label>
+  );
+}
 
 function withOverlayDefaults(settings: ClientSettings): ClientSettings {
   if (settings.overlayEnabled !== undefined && settings.overlayShortcut !== undefined) {
@@ -72,6 +92,7 @@ export function SettingsPage({
   const { language, t } = useI18n();
   const { setTheme, theme, themes } = useTheme();
   const [settings, setSettings] = useState<ClientSettings>(() => withOverlayDefaults(initialSettings));
+  const [activeSection, setActiveSection] = useState<SettingsSection>("general");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -244,60 +265,85 @@ export function SettingsPage({
 
   return (
     <div className="settings-modal-body">
+      <nav aria-label={t("settings.title")} className="settings-tabs" role="tablist">
+        {settingsSections.map((section) => (
+          <button
+            aria-controls={`settings-panel-${section}`}
+            aria-selected={activeSection === section}
+            className="ks-tab settings-tab"
+            data-state={activeSection === section ? "selected" : "default"}
+            id={`settings-tab-${section}`}
+            key={section}
+            onClick={() => setActiveSection(section)}
+            onKeyDown={(event) => {
+              const index = settingsSections.indexOf(section);
+              const next = event.key === "ArrowRight" ? (index + 1) % settingsSections.length
+                : event.key === "ArrowLeft" ? (index - 1 + settingsSections.length) % settingsSections.length
+                  : event.key === "Home" ? 0 : event.key === "End" ? settingsSections.length - 1 : -1;
+              if (next < 0) return;
+              event.preventDefault();
+              const target = settingsSections[next];
+              setActiveSection(target);
+              document.getElementById(`settings-tab-${target}`)?.focus();
+            }}
+            role="tab"
+            tabIndex={activeSection === section ? 0 : -1}
+            type="button"
+          >
+            <span className="ks-tab__label">{section === "accounts" ? t("wow.title") : t(`settings.${section}`)}</span>
+          </button>
+        ))}
+      </nav>
       <div className="ks-modal__content">
-        <section className="settings-block settings-general" aria-labelledby="settings-general-title">
-          <h3 id="settings-general-title">{t("settings.general")}</h3>
+        <div className="settings-stage">
+        <section className="settings-block settings-general" aria-labelledby="settings-tab-general" hidden={activeSection !== "general"} id="settings-panel-general" role="tabpanel">
           {loading ? <p className="muted">{t("settings.loading")}</p> : null}
-          <label className="check-row">
-            <input checked={autostartEnabled} onChange={(event) => setAutostartState(event.target.checked)} type="checkbox" />
-            {t("settings.autostart")}
-          </label>
-          <label className="check-row">
-            <input
-              checked={settings.startMinimized}
-              type="checkbox"
-              onChange={(event) =>
-                setSettings((current) => ({ ...current, startMinimized: event.target.checked }))
-              }
-            />
-            {t("settings.startMinimized")}
-          </label>
-          <label className="settings-field">
-            <span>{t("settings.closeBehavior")}</span>
-            <select
-              aria-label={t("settings.closeBehavior")}
-              value={settings.closeBehavior}
-              onChange={(event) => setSettings((current) => ({
-                ...current,
-                closeBehavior: event.target.value as ClientSettings["closeBehavior"],
-              }))}
-            >
-              <option value="ask">{t("settings.closeAsk")}</option>
-              <option value="minimize">{t("settings.closeMinimize")}</option>
-              <option value="exit">{t("settings.closeExit")}</option>
-            </select>
-          </label>
-          <label className="check-row">
-            <input
-              checked={settings.lockWindowAspectRatio ?? false}
-              onChange={(event) => setSettings((current) => ({ ...current, lockWindowAspectRatio: event.target.checked }))}
-              type="checkbox"
-            />
-            {t("settings.lockWindowAspectRatio")}
-          </label>
-          <label className="check-row">
-            <input
-              checked={settings.overlayEnabled ?? false}
-              onChange={(event) => {
-                setOverlayError(null);
-                setSettings((current) => ({ ...current, overlayEnabled: event.target.checked }));
-              }}
-              type="checkbox"
-            />
-            {t("settings.overlayEnabled")}
-          </label>
-          {settings.overlayEnabled ? (
-            <div className="settings-field">
+          <section aria-labelledby="settings-start-behavior-title" className="settings-general-group">
+            <h3 className="settings-section-heading" id="settings-start-behavior-title">{t("settings.startBehavior")}</h3>
+            <div className="settings-toggle-grid">
+              <SettingsToggleCard checked={autostartEnabled} label={t("settings.autostart")} onChange={setAutostartState} />
+              <SettingsToggleCard
+                checked={settings.startMinimized}
+                label={t("settings.startMinimized")}
+                onChange={(startMinimized) => setSettings((current) => ({ ...current, startMinimized }))}
+              />
+            </div>
+            <div className="settings-close-card">
+              <span id="settings-close-behavior-label">{t("settings.closeBehavior")}</span>
+              <div aria-labelledby="settings-close-behavior-label" className="settings-close-choices" role="radiogroup">
+                {(["ask", "minimize", "exit"] as const).map((behavior) => (
+                  <label className="settings-close-choice" key={behavior}>
+                    <input
+                      checked={settings.closeBehavior === behavior}
+                      name="settings-close-behavior"
+                      onChange={() => setSettings((current) => ({ ...current, closeBehavior: behavior }))}
+                      type="radio"
+                      value={behavior}
+                    />
+                    <span>{t(behavior === "ask" ? "settings.closeAsk" : behavior === "minimize" ? "settings.closeMinimize" : "settings.closeExit")}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </section>
+          <section aria-labelledby="settings-overlay-window-title" className="settings-general-group">
+            <h3 className="settings-section-heading" id="settings-overlay-window-title">{t("settings.overlayAndWindow")}</h3>
+            <div className="settings-toggle-grid">
+              <SettingsToggleCard
+                checked={settings.lockWindowAspectRatio ?? false}
+                label={t("settings.lockWindowAspectRatio")}
+                onChange={(lockWindowAspectRatio) => setSettings((current) => ({ ...current, lockWindowAspectRatio }))}
+              />
+              <SettingsToggleCard
+                checked={settings.overlayEnabled ?? false}
+                label={t("settings.overlayEnabled")}
+                onChange={(overlayEnabled) => {
+                  setOverlayError(null);
+                  setSettings((current) => ({ ...current, overlayEnabled }));
+                }}
+              />
+            </div>
+            <div className="settings-shortcut-card">
               <span>{t("settings.overlayShortcut")}</span>
               <OverlayShortcutRecorder
                 disabled={loading || saving}
@@ -320,17 +366,20 @@ export function SettingsPage({
                 value={settings.overlayShortcut ?? DEFAULT_OVERLAY_SHORTCUT}
               />
             </div>
-          ) : null}
+          </section>
         </section>
 
-        {children}
-        <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />
+        <div aria-labelledby="settings-tab-accounts" className="settings-account-panel" hidden={activeSection !== "accounts"} id="settings-panel-accounts" role="tabpanel">
+          {children}
+        </div>
+        <div aria-labelledby="settings-tab-appearance" className="settings-appearance-panel" hidden={activeSection !== "appearance"} id="settings-panel-appearance" role="tabpanel">
+          <ThemeSelector onThemeChange={setTheme} theme={theme} themes={themes} />
+        </div>
 
-        <section className="settings-block settings-application" aria-labelledby="settings-application-title">
-          <h3 id="settings-application-title">{t("settings.application")}</h3>
-          <div className="settings-language" role="group" aria-label={t("settings.language")}>
-            <span>{t("settings.language")}</span>
-            <div className="settings-segmented">
+        <section className="settings-block settings-application" aria-labelledby="settings-tab-application" hidden={activeSection !== "application"} id="settings-panel-application" role="tabpanel">
+          <section aria-labelledby="settings-language-title" className="settings-application-group">
+            <h3 className="settings-section-heading" id="settings-language-title">{t("settings.language")}</h3>
+            <div aria-labelledby="settings-language-title" className="settings-segmented settings-language-selector" role="group">
               <button
                 aria-pressed={settings.lang === "es"}
                 onClick={() => persistLanguage("es")}
@@ -346,22 +395,26 @@ export function SettingsPage({
                 {t("settings.english")}
               </button>
             </div>
-          </div>
-          <div className="settings-version-row">
-            <div className="settings-version-copy">
-              <strong>{t("settings.clientVersion", { version: appVersion })}</strong>
-              {updateStatus ? <span>{updateStatus}</span> : null}
+          </section>
+          <section aria-labelledby="settings-client-version-title" className="settings-application-group">
+            <h3 className="settings-section-heading" id="settings-client-version-title">{t("settings.clientVersion")}</h3>
+            <div className="settings-version-row">
+              <div className="settings-version-copy">
+                <strong>{appVersion}</strong>
+                {updateStatus ? <span>{updateStatus}</span> : null}
+              </div>
+              <div className="actions">
+                <button disabled={!updateAvailable} onClick={onOpenUpdate} type="button">{t("settings.update")}</button>
+                <button onClick={onOpenReleases} type="button">{t("settings.releases")}</button>
+                <button disabled={checkingUpdate} onClick={onCheckUpdates} type="button">
+                  {checkingUpdate ? t("addon.checking") : t("settings.checkUpdates")}
+                </button>
+              </div>
             </div>
-            <div className="actions">
-              <button disabled={!updateAvailable} onClick={onOpenUpdate} type="button">{t("settings.update")}</button>
-              <button onClick={onOpenReleases} type="button">{t("settings.releases")}</button>
-              <button disabled={checkingUpdate} onClick={onCheckUpdates} type="button">
-                {checkingUpdate ? t("addon.checking") : t("settings.checkUpdates")}
-              </button>
-            </div>
-          </div>
-          <p className="muted settings-last-check">{lastCheck}</p>
+            <p className="muted settings-last-check">{lastCheck}</p>
+          </section>
         </section>
+        </div>
       </div>
       <div className="ks-modal__footer settings-actions-footer">
         <div className="settings-actions-feedback">

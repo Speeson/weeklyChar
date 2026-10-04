@@ -193,9 +193,9 @@ test.describe("Void visual states", () => {
     await page.goto("/?preview=sync-success");
     await page.getByRole("button", { name: /Configuraci/u }).click();
     await expectVoid(page);
-    const selector = page.getByRole("combobox", { name: /Tema visual/u });
-    await expect(selector).toHaveValue("void");
-    await expect(selector.locator("option")).toHaveText(["Keystone", "Poison", "Void", "Frost", "Heaven"]);
+    await page.getByRole("tab", { name: /Appearance/u }).click();
+    await expect(page.getByRole("button", { name: "Void", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".settings-theme-card")).toHaveCount(5);
     await expectVoidScreenshot(page, "void-settings.png");
   });
 
@@ -235,7 +235,8 @@ test.describe("Void visual states", () => {
 test("persists Void across reload", async ({ page }) => {
   await page.goto("/?preview=sync-success");
   await page.getByRole("button", { name: /Configuraci/u }).click();
-  await page.getByRole("combobox", { name: /Tema visual/u }).selectOption("void");
+  await page.getByRole("tab", { name: /Appearance/u }).click();
+  await page.getByRole("button", { name: "Void", exact: true }).click();
   await expectVoid(page);
   await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), THEME_STORAGE_KEY)).toBe("void");
 

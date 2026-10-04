@@ -47,7 +47,7 @@ function UnavailableThemeHarness() {
 }
 
 describe("ThemeSelector", () => {
-  it("renders the current registry option with a localized accessible name", () => {
+  it("renders the current registry themes as preview cards", () => {
     render(
       <I18nProvider language="en">
         <ThemeSelector
@@ -58,15 +58,13 @@ describe("ThemeSelector", () => {
       </I18nProvider>,
     );
 
-    const selector = screen.getByRole("combobox", { name: "Visual theme" });
-    expect(selector).toHaveValue("keystone");
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "Keystone",
-      "Poison",
-    ]);
+    expect(screen.getByRole("heading", { name: "Visual theme" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Visual theme" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Keystone" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Poison" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("is keyboard reachable through a native selector", async () => {
+  it("is keyboard reachable through the preview cards", async () => {
     const user = userEvent.setup();
     render(
       <I18nProvider language="es">
@@ -79,9 +77,7 @@ describe("ThemeSelector", () => {
     );
 
     await user.tab();
-    const selector = screen.getByRole("combobox", { name: "Tema visual" });
-    expect(selector).toHaveFocus();
-    expect(selector.tagName).toBe("SELECT");
+    expect(screen.getByRole("button", { name: "Keystone" })).toHaveFocus();
   });
 
   it("renders nothing until at least two themes are selectable", () => {
@@ -103,11 +99,10 @@ describe("ThemeSelector", () => {
     const user = userEvent.setup();
     render(<UnavailableThemeHarness />);
 
-    const selector = screen.getByRole("combobox", { name: "Visual theme" });
-    expect(selector).toHaveValue("poison");
-    expect(screen.getByRole("option", { name: "Poison (current theme unavailable)" })).toBeDisabled();
+    expect(screen.getByText("Poison (current theme unavailable)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Poison" })).not.toBeInTheDocument();
 
-    await user.selectOptions(selector, "keystone");
-    expect(selector).toHaveValue("keystone");
+    await user.click(screen.getByRole("button", { name: "Keystone" }));
+    expect(screen.getByRole("button", { name: "Keystone" })).toHaveAttribute("aria-pressed", "true");
   });
 });

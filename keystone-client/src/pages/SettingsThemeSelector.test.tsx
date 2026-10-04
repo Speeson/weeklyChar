@@ -49,54 +49,36 @@ describe("Settings theme integration", () => {
     const user = userEvent.setup();
     const onApplicationMount = vi.fn();
     const firstView = renderSettings(onApplicationMount);
-    const selector = screen.getByRole("combobox", { name: "Tema visual" });
+    await user.click(screen.getByRole("tab", { name: "Appearance" }));
 
-    expect(selector.tagName).toBe("SELECT");
-    expect(selector).toHaveValue("keystone");
-    expect(Array.from(selector.querySelectorAll("option")).map((option) => option.textContent)).toEqual([
-      "Keystone",
-      "Poison",
-      "Void",
-      "Frost",
-      "Heaven",
+    expect(screen.getByRole("button", { name: "Keystone" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByRole("button").filter((button) => button.classList.contains("settings-theme-card")).map((button) => button.textContent)).toEqual([
+      "Keystone", "Poison", "Void", "Frost", "Heaven",
     ]);
     expect(screen.getByTestId("application-theme")).toHaveTextContent("keystone");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
 
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    expect(screen.getByLabelText("Bloquear proporción al cambiar el tamaño")).toHaveFocus();
-    await user.tab();
-    expect(screen.getByLabelText("Activar overlay")).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("button", { name: "Atajo del overlay: Ctrl + Shift + K" })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("button", { name: "Restaurar" })).toHaveFocus();
-    await user.tab();
-    expect(selector).toHaveFocus();
-
-    await user.selectOptions(selector, "void");
-    expect(selector).toHaveValue("void");
+    await user.click(screen.getByRole("button", { name: "Void" }));
+    expect(screen.getByRole("button", { name: "Void" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("application-theme")).toHaveTextContent("void");
     expect(document.documentElement.dataset.theme).toBe("void");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("void");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
 
-    await user.selectOptions(selector, "keystone");
-    expect(selector).toHaveValue("keystone");
+    await user.click(screen.getByRole("button", { name: "Keystone" }));
+    expect(screen.getByRole("button", { name: "Keystone" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("application-theme")).toHaveTextContent("keystone");
     expect(document.documentElement.dataset.theme).toBe("keystone");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("keystone");
     expect(onApplicationMount).toHaveBeenCalledTimes(1);
 
-    await user.selectOptions(selector, "void");
+    await user.click(screen.getByRole("button", { name: "Void" }));
 
     firstView.unmount();
     document.documentElement.dataset.theme = "keystone";
     renderSettings(onApplicationMount);
-    expect(screen.getByRole("combobox", { name: "Tema visual" })).toHaveValue("void");
+    await user.click(screen.getByRole("tab", { name: "Appearance" }));
+    expect(screen.getByRole("button", { name: "Void" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("application-theme")).toHaveTextContent("void");
     expect(document.documentElement.dataset.theme).toBe("void");
     expect(onApplicationMount).toHaveBeenCalledTimes(2);

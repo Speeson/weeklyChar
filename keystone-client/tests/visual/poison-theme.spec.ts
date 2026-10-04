@@ -100,9 +100,9 @@ test.describe("Poison visual states", () => {
 
     await expectPoisonTheme(page);
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
-    const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
-    await expect(themeSelector).toHaveValue("poison");
-    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison", "Void", "Frost", "Heaven"]);
+    await page.getByRole("tab", { name: "Appearance" }).click();
+    await expect(page.getByRole("button", { name: "Poison", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".settings-theme-card")).toHaveCount(5);
     await expectStableReleaseScreenshot(page, "poison-settings-theme-selector.png");
   });
 
@@ -213,15 +213,16 @@ test.describe("theme behavior in the browser", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "keystone");
     await page.getByRole("button", { name: "Configuración" }).click();
 
-    const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
-    await themeSelector.selectOption("poison");
+    await page.getByRole("tab", { name: "Appearance" }).click();
+    await page.getByRole("button", { name: "Poison", exact: true }).click();
     await expectPoisonTheme(page);
     await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), THEME_STORAGE_KEY)).toBe("poison");
 
     await page.reload();
     await expectPoisonTheme(page);
     await page.getByRole("button", { name: "Configuración" }).click();
-    await expect(page.getByRole("combobox", { name: "Tema visual" })).toHaveValue("poison");
+    await page.getByRole("tab", { name: "Appearance" }).click();
+    await expect(page.getByRole("button", { name: "Poison", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("falls back safely to Keystone for an invalid stored theme", async ({ page }) => {
@@ -231,7 +232,8 @@ test.describe("theme behavior in the browser", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "keystone");
     await expect(page.getByText("Makabe")).toBeVisible();
     await page.getByRole("button", { name: "Configuración" }).click();
-    await expect(page.getByRole("combobox", { name: "Tema visual" })).toHaveValue("keystone");
+    await page.getByRole("tab", { name: "Appearance" }).click();
+    await expect(page.getByRole("button", { name: "Keystone", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("keeps Poison navigation and focus usable with reduced motion", async ({ page }) => {

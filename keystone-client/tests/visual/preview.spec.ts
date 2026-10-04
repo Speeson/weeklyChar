@@ -128,14 +128,26 @@ test.describe("preview states", () => {
     await page.getByRole("button", { name: "Configuración" }).click();
 
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Apariencia" })).toBeVisible();
-    const themeSelector = page.getByRole("combobox", { name: "Tema visual" });
-    await expect(themeSelector).toHaveValue("keystone");
-    await expect(themeSelector.locator("option")).toHaveText(["Keystone", "Poison", "Void", "Frost", "Heaven"]);
-    await expect(page.getByRole("heading", { name: "Selección de cuentas" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Aplicación" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "Appearance" }).click();
+    await expect(page.getByRole("tabpanel", { name: "Appearance" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tema visual" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Keystone", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".settings-theme-card")).toHaveCount(5);
+    await expect(page.getByRole("tab", { name: "Account selection" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Application" })).toBeVisible();
     await expectStableReleaseScreenshot(page, "settings-theme-selector.png");
+  });
+
+  test("renders the General settings controls", async ({ page }) => {
+    await page.goto("/?preview=sync-success");
+    await page.getByRole("button", { name: "Configuración" }).click();
+
+    await expect(page.getByRole("heading", { name: "Inicio y cierre" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overlay y ventana" })).toBeVisible();
+    await expect(page.getByRole("switch")).toHaveCount(4);
+    await expect(page.getByRole("radiogroup", { name: "Al cerrar la ventana" }).getByRole("radio")).toHaveCount(3);
+    await expectStableReleaseScreenshot(page, "settings-general.png");
   });
 
   test("keeps the window proportion option and save action usable at Full HD startup size", async ({ page }) => {
@@ -144,7 +156,7 @@ test.describe("preview states", () => {
     await page.getByRole("button", { name: "Configuración" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Ajustes" });
-    const lock = dialog.getByRole("checkbox", { name: "Bloquear proporción al cambiar el tamaño" });
+    const lock = dialog.getByRole("switch", { name: "Bloquear proporción al cambiar el tamaño" });
     await expect(lock).toBeInViewport();
     await lock.check();
     const save = dialog.getByRole("button", { name: "Guardar ajustes" });

@@ -61,6 +61,12 @@ for (const theme of themes) {
     expect(table.thumbBackground !== "rgba(0, 0, 0, 0)" || table.thumbImage !== "none").toBe(true);
 
     await page.getByRole("button", { name: "Configuración" }).click();
+    await page.getByRole("tab", { name: "Account selection" }).click();
+    await page.locator(".settings-account-panel").evaluate((element) => {
+      const spacer = document.createElement("div");
+      spacer.style.height = "1000px";
+      element.appendChild(spacer);
+    });
     const settings = await scrollbarColors(page, ".ks-modal__content");
     expect(settings.scrollHeight).toBeGreaterThan(settings.clientHeight);
     expect(settings.hasThemeTokens).toBe(true);

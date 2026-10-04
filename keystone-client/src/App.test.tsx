@@ -797,9 +797,13 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Configuración" }));
 
     expect(screen.getByRole("dialog", { name: "Ajustes" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "General" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Selección de cuentas" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Aplicación" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+    await user.click(screen.getByRole("tab", { name: "Account selection" }));
+    expect(screen.getByRole("tabpanel", { name: "Account selection" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Account selection" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Application" }));
+    expect(screen.getByRole("tabpanel", { name: "Application" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Application" })).not.toBeInTheDocument();
   });
 
   it("switches the whole shell language immediately from Settings", async () => {
@@ -811,11 +815,20 @@ describe("App", () => {
     render(<App />);
     await screen.findByText("player");
     await user.click(screen.getByRole("button", { name: "Configuración" }));
+    await user.click(screen.getByRole("tab", { name: "Application" }));
     await user.click(await screen.findByRole("button", { name: "English" }));
 
     expect(screen.getByRole("button", { name: "Sync" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Web" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Application" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("group", { name: "Language" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Account selection" }));
+    expect(screen.getByText("Installation folder path")).toBeInTheDocument();
+    expect(screen.getByText("Detected accounts")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Appearance" }));
+    expect(screen.getByRole("group", { name: "Visual theme" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Appearance" })).not.toBeInTheDocument();
   });
 
   it("logs out without exposing secrets", async () => {
