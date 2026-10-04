@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { findPostUpdateChangelog, markChangelogSeen, type VersionStorage } from "./changelog";
+import { findPostUpdateChangelog, isNewThemesAnnouncementDue, markChangelogSeen, markNewThemesSeen, type VersionStorage } from "./changelog";
 
 function memoryStorage(initial: string | null = null): VersionStorage {
-  let value = initial;
+  const values = new Map<string, string>();
+  if (initial !== null) values.set("keystoneclient.changelog.seenVersion", initial);
   return {
-    getItem: () => value,
-    setItem: (_key, next) => { value = next; },
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, next) => { values.set(key, next); },
   };
 }
 
@@ -14,6 +15,12 @@ describe("post-update changelog", () => {
     const storage = memoryStorage();
     expect(findPostUpdateChangelog(storage, "0.3.0", "Notas")).toBeNull();
     expect(storage.getItem("keystoneclient.changelog.seenVersion")).toBe("0.3.0");
+    expect(storage.getItem("keystoneclient.changelog.frostHeavenSeen")).toBe("true");
+    expect(findPostUpdateChangelog(storage, "0.4.0", "Novedades")).toEqual({
+      version: "0.4.0",
+      notes: "Novedades",
+      showNewThemes: false,
+    });
   });
 
   it("shows bundled notes once after the version changes", () => {
@@ -21,8 +28,17 @@ describe("post-update changelog", () => {
     expect(findPostUpdateChangelog(storage, "0.4.0", "Novedades")).toEqual({
       version: "0.4.0",
       notes: "Novedades",
+      showNewThemes: true,
     });
     markChangelogSeen(storage, "0.4.0");
     expect(findPostUpdateChangelog(storage, "0.4.0", "Novedades")).toBeNull();
+    expect(isNewThemesAnnouncementDue(storage)).toBe(true);
+    markNewThemesSeen(storage);
+    expect(isNewThemesAnnouncementDue(storage)).toBe(false);
+    expect(findPostUpdateChangelog(storage, "0.5.0", "Más novedades")).toEqual({
+      version: "0.5.0",
+      notes: "Más novedades",
+      showNewThemes: false,
+    });
   });
 });

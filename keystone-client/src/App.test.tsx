@@ -269,6 +269,27 @@ describe("App", () => {
     listenCoreEventsMock.mockResolvedValue(vi.fn());
   });
 
+  it("opens the one-time theme chooser after closing update notes", async () => {
+    const user = userEvent.setup();
+    localStorage.removeItem("keystoneclient.changelog.frostHeavenSeen");
+    window.history.pushState({}, "", "/?preview=sync-success&changelog=new-themes");
+
+    render(<App />);
+
+    const changelog = await screen.findByRole("dialog", { name: "Novedades de la actualización" });
+    expect(screen.queryByRole("dialog", { name: "Dos nuevos temas visuales" })).not.toBeInTheDocument();
+    await user.click(within(changelog).getByRole("button", { name: "Entendido" }));
+    expect(screen.queryByRole("dialog", { name: "Novedades de la actualización" })).not.toBeInTheDocument();
+    const announcement = screen.getByRole("dialog", { name: "Dos nuevos temas visuales" });
+    await waitFor(() => {
+      expect(localStorage.getItem("keystoneclient.changelog.frostHeavenSeen")).toBe("true");
+    });
+    await user.click(within(announcement).getByRole("button", { name: "Frost" }));
+    expect(document.documentElement.dataset.theme).toBe("frost");
+    await user.click(within(announcement).getByRole("button", { name: "Entendido" }));
+    expect(localStorage.getItem("keystoneclient.changelog.frostHeavenSeen")).toBe("true");
+  });
+
   it("renders the branded login shell and loads safe anonymous auth state", async () => {
     mockStartup();
 

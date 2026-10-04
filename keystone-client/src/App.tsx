@@ -5,13 +5,14 @@ import packageJson from "../package.json";
 import { ThemedIcon } from "./components/ThemedIcon";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
 import { ChangelogModal } from "./components/ChangelogModal";
+import { NewThemesModal } from "./components/NewThemesModal";
 import { ClientContextMenu } from "./components/ClientContextMenu";
 import { PageErrorBoundary } from "./components/PageErrorBoundary";
 import { RemoteAvatar } from "./components/RemoteAvatar";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
 import { cacheProfileAvatar, clearAvatarCache } from "./core/avatarCache";
-import { findPostUpdateChangelog, markChangelogSeen, type PostUpdateChangelog } from "./core/changelog";
+import { findPostUpdateChangelog, isNewThemesAnnouncementDue, markChangelogSeen, markNewThemesSeen, type PostUpdateChangelog } from "./core/changelog";
 import { coreRequest } from "./core/client";
 import { classColor } from "./core/characterDisplay";
 import { listenCoreEvents } from "./core/events";
@@ -73,6 +74,12 @@ const initialUpdater: UpdaterSnapshot = {
   error: null,
 };
 
+function isNewThemesTauriPreview(): boolean {
+  return import.meta.env.DEV
+    && isTauri()
+    && new URLSearchParams(window.location.search).get("changelog") === "new-themes";
+}
+
 function AvatarChoice({
   avatarUrl,
   name,
@@ -116,6 +123,7 @@ function App() {
   const [updater, setUpdater] = useState<UpdaterSnapshot>(initialUpdater);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [postUpdateChangelog, setPostUpdateChangelog] = useState<PostUpdateChangelog | null>(null);
+  const [newThemesOpen, setNewThemesOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const updaterController = useRef<UpdateController | null>(null);
   const teamsSessionOwner = useRef<string | null | undefined>(undefined);
@@ -224,6 +232,7 @@ function App() {
   }, [applySystemState]);
 
   useEffect(() => {
+    if (isNewThemesTauriPreview()) return;
     if (!isTauri()) {
       const previewParams = new URLSearchParams(window.location.search);
       if (import.meta.env.DEV && previewParams.get("updater") === "available") {
@@ -259,8 +268,12 @@ function App() {
         });
         setUpdateModalOpen(true);
       }
-      if (import.meta.env.DEV && previewParams.get("changelog") === "post-update") {
-        setPostUpdateChangelog({ version: bundledRelease.version, notes: bundledRelease.notes });
+      if (import.meta.env.DEV && ["post-update", "new-themes"].includes(previewParams.get("changelog") ?? "")) {
+        setPostUpdateChangelog({
+          version: bundledRelease.version,
+          notes: bundledRelease.notes,
+          showNewThemes: previewParams.get("changelog") === "new-themes",
+        });
       }
       return;
     }
@@ -285,14 +298,33 @@ function App() {
     if (!isTauri()) {
       return;
     }
+    if (isNewThemesTauriPreview()) {
+      setPostUpdateChangelog({
+        version: bundledRelease.version,
+        notes: bundledRelease.notes,
+        showNewThemes: true,
+      });
+      return;
+    }
     try {
-      setPostUpdateChangelog(
-        findPostUpdateChangelog(localStorage, bundledRelease.version, bundledRelease.notes),
-      );
+      const changelog = findPostUpdateChangelog(localStorage, bundledRelease.version, bundledRelease.notes);
+      setPostUpdateChangelog(changelog);
+      if (!changelog && isNewThemesAnnouncementDue(localStorage)) {
+        setNewThemesOpen(true);
+      }
     } catch {
       // A blocked WebView storage backend must not prevent client startup.
     }
   }, []);
+
+  useEffect(() => {
+    if (!newThemesOpen || postUpdateChangelog || isNewThemesTauriPreview()) return;
+    try {
+      markNewThemesSeen(localStorage);
+    } catch {
+      // A blocked storage backend must not prevent the announcement from opening.
+    }
+  }, [newThemesOpen, postUpdateChangelog]);
 
   useEffect(() => {
     let cancelled = false;
@@ -507,11 +539,18 @@ function App() {
 
   function closePostUpdateChangelog() {
     try {
-      markChangelogSeen(localStorage, bundledRelease.version);
+      if (!isNewThemesTauriPreview()) markChangelogSeen(localStorage, bundledRelease.version);
     } catch {
       // The changelog can still be dismissed for this process when storage is unavailable.
     }
+    if (postUpdateChangelog?.showNewThemes) {
+      setNewThemesOpen(true);
+    }
     setPostUpdateChangelog(null);
+  }
+
+  function closeNewThemes() {
+    setNewThemesOpen(false);
   }
 
   const usableSelectedAccounts = wow?.accounts.filter(
@@ -744,6 +783,7 @@ function App() {
           version={postUpdateChangelog.version}
         />
       ) : null}
+      {newThemesOpen && !postUpdateChangelog ? <NewThemesModal onClose={closeNewThemes} /> : null}
     </main>
     </I18nProvider>
   );

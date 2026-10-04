@@ -1,4 +1,5 @@
 const SEEN_VERSION_KEY = "keystoneclient.changelog.seenVersion";
+const SEEN_NEW_THEMES_KEY = "keystoneclient.changelog.frostHeavenSeen";
 
 export interface VersionStorage {
   getItem(key: string): string | null;
@@ -8,6 +9,7 @@ export interface VersionStorage {
 export type PostUpdateChangelog = {
   version: string;
   notes: string;
+  showNewThemes: boolean;
 };
 
 export function findPostUpdateChangelog(
@@ -17,15 +19,24 @@ export function findPostUpdateChangelog(
 ): PostUpdateChangelog | null {
   const seen = storage.getItem(SEEN_VERSION_KEY);
   if (seen === null) {
+    storage.setItem(SEEN_NEW_THEMES_KEY, "true");
     storage.setItem(SEEN_VERSION_KEY, version);
     return null;
   }
   if (seen === version) {
     return null;
   }
-  return { version, notes };
+  return { version, notes, showNewThemes: isNewThemesAnnouncementDue(storage) };
 }
 
 export function markChangelogSeen(storage: VersionStorage, version: string): void {
   storage.setItem(SEEN_VERSION_KEY, version);
+}
+
+export function isNewThemesAnnouncementDue(storage: VersionStorage): boolean {
+  return storage.getItem(SEEN_NEW_THEMES_KEY) !== "true";
+}
+
+export function markNewThemesSeen(storage: VersionStorage): void {
+  storage.setItem(SEEN_NEW_THEMES_KEY, "true");
 }

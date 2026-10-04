@@ -2834,6 +2834,25 @@ h2 {
   gap: 10px;
 }
 
+.new-themes-modal__panel {
+  width: min(100%, 760px);
+}
+
+.new-themes-modal__intro {
+  margin: 0;
+  color: var(--theme-text-muted);
+}
+
+.new-themes-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 520px) {
+  .new-themes-modal__grid { grid-template-columns: 1fr; }
+}
+
 .ks-update-modal__notes > h3,
 .release-notes-markdown :where(h1, h2, h3, p, ul, ol, pre) {
   margin: 0;

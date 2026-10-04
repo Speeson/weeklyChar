@@ -208,6 +208,21 @@ test.describe("preview states", () => {
     await expectStableReleaseScreenshot(page, "post-update-changelog.png");
   });
 
+  test("shows selectable Frost and Heaven after the post-update changelog", async ({ page }) => {
+    await page.goto("/?preview=sync-success&changelog=new-themes");
+
+    const changelog = page.getByRole("dialog", { name: "Novedades de la actualización" });
+    await changelog.getByRole("button", { name: "Entendido" }).click();
+    const modal = page.getByRole("dialog", { name: "Dos nuevos temas visuales" });
+    await expect(modal.locator(".settings-theme-card")).toHaveCount(2);
+    await modal.getByRole("button", { name: "Frost" }).click();
+    await expect(modal.getByRole("button", { name: "Frost" })).toHaveAttribute("aria-pressed", "true");
+    await modal.getByRole("button", { name: "Heaven" }).click();
+    await expect(modal.getByRole("button", { name: "Heaven" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "heaven");
+    await expectStableReleaseScreenshot(page, "post-update-new-themes.png");
+  });
+
   test("renders the user menu above the current view", async ({ page }) => {
     await page.goto("/?preview=sync-success");
     await page.getByRole("button", { name: "Menú de usuario de Spee" }).click();
