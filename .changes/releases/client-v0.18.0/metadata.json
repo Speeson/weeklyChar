@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.17.0",
+  "version": "0.18.0",
+  "bump": "minor",
+  "tag": "client-v0.18.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-10-04-client-settings-tabs.json"
+  ]
+}
