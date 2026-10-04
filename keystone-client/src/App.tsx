@@ -1,6 +1,6 @@
 import "./App.css";
 import { isTauri } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import packageJson from "../package.json";
 import { ThemedIcon } from "./components/ThemedIcon";
 import { KeystoneShell, type KeystoneView } from "./components/KeystoneShell";
@@ -141,7 +141,7 @@ function App() {
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const openContextMenu = (event: MouseEvent) => {
       event.preventDefault();
       if (auth?.authenticated) setContextMenu({ x: event.clientX, y: event.clientY });
