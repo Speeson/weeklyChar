@@ -11,7 +11,7 @@ import { PageErrorBoundary } from "./components/PageErrorBoundary";
 import { RemoteAvatar } from "./components/RemoteAvatar";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
-import { cacheProfileAvatar, clearAvatarCache } from "./core/avatarCache";
+import { cacheProfileAvatar, clearAvatarCache, getCachedAvatarSource } from "./core/avatarCache";
 import { findPostUpdateChangelog, isNewThemesAnnouncementDue, markChangelogSeen, markNewThemesSeen, type PostUpdateChangelog } from "./core/changelog";
 import { coreRequest } from "./core/client";
 import { classColor } from "./core/characterDisplay";
@@ -414,6 +414,25 @@ function App() {
       void cacheProfileAvatar(auth.avatarUrl);
     }
   }, [auth?.authenticated, auth?.avatarUrl]);
+
+  useEffect(() => {
+    if (!auth?.authenticated || !characters || previewMode) return;
+    let cancelled = false;
+    const urls = [...new Set(characters.characters.map(character => character.avatarUrl).filter((url): url is string => Boolean(url)))];
+    const prefetch = () => {
+      void (async () => {
+        for (let index = 0; index < urls.length && !cancelled; index += 4) {
+          await Promise.all(urls.slice(index, index + 4).map(getCachedAvatarSource));
+        }
+      })();
+    };
+    prefetch();
+    window.addEventListener("online", prefetch);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", prefetch);
+    };
+  }, [auth?.authenticated, characters, previewMode]);
 
   useEffect(() => {
     if (teamsSessionOwner.current === authenticatedUsername) return;

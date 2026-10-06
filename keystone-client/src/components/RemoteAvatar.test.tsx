@@ -19,34 +19,50 @@ afterEach(() => {
 });
 
 describe("RemoteAvatar", () => {
-  it("replaces the remote source with persistent cached bytes", async () => {
+  it("uses persistent cached bytes before requesting the remote source", async () => {
     vi.mocked(getCachedAvatarSource).mockResolvedValueOnce("data:image/jpeg;base64,YXZhdGFy");
     render(<RemoteAvatar alt="Jugador" url="https://img.test/avatar.jpg" />);
 
-    expect(screen.getByRole("img", { name: "Jugador" })).toHaveAttribute("src", "https://img.test/avatar.jpg");
+    expect(screen.queryByRole("img", { name: "Jugador" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("img", { name: "Jugador" })).toHaveAttribute(
       "src", "data:image/jpeg;base64,YXZhdGFy",
     ));
   });
 
+  it("shows the remote image while a cache lookup is slow", async () => {
+    let complete!: (source: string | null) => void;
+    vi.mocked(getCachedAvatarSource).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
+    render(<RemoteAvatar alt="Jugador" url="https://img.test/avatar.jpg" />);
+
+    await waitFor(() => expect(screen.getByRole("img", { name: "Jugador" }))
+      .toHaveAttribute("src", "https://img.test/avatar.jpg"));
+    complete(null);
+  });
+
   it("hides a failed request and retries the unchanged URL when connectivity returns", async () => {
     render(<RemoteAvatar alt="Jugador" url="https://img.test/avatar.jpg" />);
+    await waitFor(() => expect(screen.getByRole("img", { name: "Jugador" }))
+      .toHaveAttribute("src", "https://img.test/avatar.jpg"));
     fireEvent.error(screen.getByRole("img", { name: "Jugador" }));
     expect(screen.queryByRole("img", { name: "Jugador" })).not.toBeInTheDocument();
 
     await act(async () => window.dispatchEvent(new Event("online")));
 
-    expect(screen.getByRole("img", { name: "Jugador" })).toHaveAttribute("src", "https://img.test/avatar.jpg");
+    await waitFor(() => expect(screen.getByRole("img", { name: "Jugador" }))
+      .toHaveAttribute("src", "https://img.test/avatar.jpg"));
     expect(getCachedAvatarSource).toHaveBeenCalledTimes(2);
   });
 
-  it("resets a previous failure when the avatar URL changes", () => {
+  it("resets a previous failure when the avatar URL changes", async () => {
     const view = render(<RemoteAvatar alt="Jugador" url="https://img.test/old.jpg" />);
+    await waitFor(() => expect(screen.getByRole("img", { name: "Jugador" }))
+      .toHaveAttribute("src", "https://img.test/old.jpg"));
     fireEvent.error(screen.getByRole("img", { name: "Jugador" }));
 
     view.rerender(<RemoteAvatar alt="Jugador" url="https://img.test/new.jpg" />);
 
-    expect(screen.getByRole("img", { name: "Jugador" })).toHaveAttribute("src", "https://img.test/new.jpg");
+    await waitFor(() => expect(screen.getByRole("img", { name: "Jugador" }))
+      .toHaveAttribute("src", "https://img.test/new.jpg"));
   });
 
   it("discards a corrupt cached source after its image element fails", async () => {

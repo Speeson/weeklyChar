@@ -6,7 +6,7 @@ const MAX_AVATAR_BYTES = 256 * 1024;
 const MAX_AVATAR_ENTRIES = 100;
 const AVATAR_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const inFlight = new Map<string, Promise<string | null>>();
+const inFlight = new Map<string, { promise: Promise<string | null>; abort: () => void }>();
 
 export function normalizeAvatarUrl(value: string): string | null {
   try {
@@ -73,8 +73,9 @@ async function trimAvatarCache(cache: Cache): Promise<void> {
   if (excess > 0) await Promise.all(keys.slice(0, excess).map(key => cache.delete(key)));
 }
 
-async function resolveAvatar(url: string): Promise<string | null> {
+async function resolveAvatar(url: string, signal: AbortSignal): Promise<string | null> {
   const native = await loadNativeAvatar(url);
+  if (signal.aborted) return null;
   if (native) return native;
 
   const cache = await openAvatarCache();
@@ -83,6 +84,7 @@ async function resolveAvatar(url: string): Promise<string | null> {
     const blob = await validatedBlob(cached);
     if (blob) {
       const source = await blobDataUrl(blob);
+      if (signal.aborted) return null;
       if (source) await storeNativeAvatar(url, source);
       return source;
     }
@@ -95,21 +97,22 @@ async function resolveAvatar(url: string): Promise<string | null> {
     const blob = await validatedBlob(profileAvatar);
     if (blob) {
       const source = await blobDataUrl(blob);
+      if (signal.aborted) return null;
       if (source) await storeNativeAvatar(url, source, true);
       return source;
     }
     await profileCache?.delete(url);
   }
 
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
   try {
     const response = await fetch(url, {
       cache: "default",
       credentials: "omit",
       referrerPolicy: "no-referrer",
+      signal,
     });
     const blob = await validatedBlob(response);
-    if (!blob) return null;
+    if (!blob || signal.aborted) return null;
     if (cache) try {
       await cache.put(url, new Response(blob, {
         headers: { "content-length": String(blob.size), "content-type": blob.type },
@@ -120,6 +123,7 @@ async function resolveAvatar(url: string): Promise<string | null> {
       // A full or unavailable persistent cache must not block the live image.
     }
     const source = await blobDataUrl(blob);
+    if (signal.aborted) return null;
     if (source) await storeNativeAvatar(url, source);
     return source;
   } catch {
@@ -131,9 +135,12 @@ export function getCachedAvatarSource(value: string): Promise<string | null> {
   const url = normalizeAvatarUrl(value);
   if (url === null) return Promise.resolve(null);
   const current = inFlight.get(url);
-  if (current) return current;
-  const request = resolveAvatar(url).catch(() => null).finally(() => inFlight.delete(url));
-  inFlight.set(url, request);
+  if (current) return current.promise;
+  const controller = new AbortController();
+  const request = resolveAvatar(url, controller.signal).catch(() => null).finally(() => {
+    if (inFlight.get(url)?.promise === request) inFlight.delete(url);
+  });
+  inFlight.set(url, { promise: request, abort: () => controller.abort() });
   return request;
 }
 
@@ -185,6 +192,9 @@ export async function removeCachedAvatar(value: string): Promise<void> {
 }
 
 export async function clearAvatarCache(): Promise<void> {
+  const pending = [...inFlight.values()];
+  pending.forEach(entry => entry.abort());
+  await Promise.allSettled(pending.map(entry => entry.promise));
   inFlight.clear();
   const nativeCleanup = isTauri()
     ? invoke<void>("clear_cached_avatars").catch(() => undefined)

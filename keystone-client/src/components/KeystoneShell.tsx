@@ -236,6 +236,7 @@ function KeystoneHeader({
           >
             <img alt="" className="ks-user-menu__shell" src={userPanelFrame} />
             <span className="ks-user-menu__avatar">
+              <span aria-hidden="true" className="ks-user-menu__avatar-fallback">{username.slice(0, 1).toUpperCase()}</span>
               <RemoteAvatar className="ks-user-menu__avatar-image" url={auth.avatarUrl} />
               <img alt="" className="ks-user-menu__avatar-frame" src={avatarFrame} />
             </span>

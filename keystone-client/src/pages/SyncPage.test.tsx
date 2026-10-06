@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { forceSync, getSyncStatus, subscribeToSyncEvents } from "../core/sync";
@@ -14,6 +14,10 @@ vi.mock("../core/sync", () => ({
   subscribeToSyncEvents: vi.fn(),
 }));
 vi.mock("../core/native", () => ({ openRaiderIoCharacter: vi.fn() }));
+vi.mock("../core/avatarCache", async importOriginal => ({
+  ...await importOriginal<typeof import("../core/avatarCache")>(),
+  getCachedAvatarSource: vi.fn().mockResolvedValue(null),
+}));
 
 const forceSyncMock = vi.mocked(forceSync);
 const getSyncStatusMock = vi.mocked(getSyncStatus);
@@ -233,10 +237,13 @@ describe("SyncPage", () => {
     expect(openRaiderIoCharacterMock).toHaveBeenCalledWith("eu", "Ragnaros", "Zulu");
   });
 
-  it("replaces a failed remote avatar with the class-colored initial", () => {
+  it("replaces a failed remote avatar with the class-colored initial", async () => {
     const { container } = render(<SyncPage appVersion="0.1.0" initialAddon={addonStatus} initialCharacters={characterState} initialSync={idleStatus} initialWow={wowState} />);
-    const avatar = container.querySelector('img[src="https://example.test/avatar.jpg"]');
-    expect(avatar).toBeInTheDocument();
+    const avatar = await waitFor(() => {
+      const image = container.querySelector('img[src="https://example.test/avatar.jpg"]');
+      expect(image).toBeInTheDocument();
+      return image;
+    });
     fireEvent.error(avatar!);
     expect(container.querySelector('img[src="https://example.test/avatar.jpg"]')).not.toBeInTheDocument();
     expect(screen.getByRole("row", { name: "Abrir Zulu en Raider.IO" }).querySelector(".sync-avatar")).toHaveTextContent("Z");

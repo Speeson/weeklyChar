@@ -370,11 +370,25 @@ h2 {
 }
 
 .ks-user-menu__avatar-image {
+  position: relative;
+  z-index: 1;
   width: 34px;
   height: 34px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--theme-surface-3);
+}
+
+.ks-user-menu__avatar-fallback {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--theme-surface-3);
+  color: var(--theme-text);
+  font-weight: 700;
 }
 
 .ks-user-menu__avatar-frame {

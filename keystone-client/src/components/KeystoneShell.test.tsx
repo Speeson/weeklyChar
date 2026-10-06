@@ -1,8 +1,13 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithTheme as render } from "../test/renderWithTheme";
 import { KeystoneShell } from "./KeystoneShell";
+
+vi.mock("../core/avatarCache", async importOriginal => ({
+  ...await importOriginal<typeof import("../core/avatarCache")>(),
+  getCachedAvatarSource: vi.fn().mockResolvedValue(null),
+}));
 
 function renderShell(onChangeAvatar = vi.fn(), onStartWindowDrag = vi.fn(), onNavigate = vi.fn()) {
   render(
@@ -31,7 +36,14 @@ afterEach(() => {
 });
 
 describe("KeystoneShell profile menu", () => {
-  it("mounts Poison shell artwork around the existing interactive controls and real avatar", () => {
+  it("shows a profile initial when no avatar image is available", () => {
+    renderShell();
+
+    expect(document.querySelector(".ks-user-menu__avatar-fallback")).toHaveTextContent("P");
+    expect(document.querySelector(".ks-user-menu__avatar-image")).not.toBeInTheDocument();
+  });
+
+  it("mounts Poison shell artwork around the existing interactive controls and real avatar", async () => {
     localStorage.setItem("keystone-client.theme", "poison");
     render(
       <KeystoneShell
@@ -60,7 +72,7 @@ describe("KeystoneShell profile menu", () => {
     expect(screen.getByRole("button", { name: "Equipos" }).querySelector(".ks-tab__label")).toHaveTextContent("Equipos");
     expect(screen.getByRole("button", { name: "Addon" }).querySelector(".ks-tab__label")).toHaveTextContent("Addon");
     expect(document.querySelector('.ks-user-menu__shell[src$="profile-frame.png"]')).toBeInTheDocument();
-    expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/player.jpg"]')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('.ks-user-menu__avatar-image[src="https://img.test/player.jpg"]')).toBeInTheDocument());
     expect(document.querySelector('.ks-footer-action__asset[src$="web-button-frame.png"]')).toBeInTheDocument();
     expect(document.querySelector('.ks-footer-action__asset[src$="tray-button-frame.png"]')).toBeInTheDocument();
   });

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { login, logout } from "./core/auth";
-import { cacheProfileAvatar } from "./core/avatarCache";
+import { cacheProfileAvatar, getCachedAvatarSource } from "./core/avatarCache";
 import { coreRequest } from "./core/client";
 import { listenCoreEvents } from "./core/events";
 import { getSettings, updateSettings } from "./core/settings";
@@ -39,6 +39,7 @@ vi.mock("./core/avatarCache", async importOriginal => {
   return {
     ...original,
     cacheProfileAvatar: vi.fn().mockResolvedValue(true),
+    getCachedAvatarSource: vi.fn().mockResolvedValue(null),
   };
 });
 
@@ -181,6 +182,7 @@ const listenCoreEventsMock = vi.mocked(listenCoreEvents);
 const loginMock = vi.mocked(login);
 const logoutMock = vi.mocked(logout);
 const cacheProfileAvatarMock = vi.mocked(cacheProfileAvatar);
+const getCachedAvatarSourceMock = vi.mocked(getCachedAvatarSource);
 const getSettingsMock = vi.mocked(getSettings);
 const updateSettingsMock = vi.mocked(updateSettings);
 const exitApplicationMock = vi.mocked(exitApplication);
@@ -256,6 +258,8 @@ describe("App", () => {
     logoutMock.mockReset();
     cacheProfileAvatarMock.mockReset();
     cacheProfileAvatarMock.mockResolvedValue(true);
+    getCachedAvatarSourceMock.mockReset();
+    getCachedAvatarSourceMock.mockResolvedValue(null);
     getSettingsMock.mockReset();
     updateSettingsMock.mockReset();
     exitApplicationMock.mockClear();
@@ -735,6 +739,28 @@ describe("App", () => {
 
     await screen.findByText("player");
     await waitFor(() => expect(cacheProfileAvatarMock).toHaveBeenCalledWith(avatarUrl));
+  });
+
+  it("prepares every known character avatar for the next offline start", async () => {
+    const firstUrl = "https://img.test/auralis.jpg";
+    const secondUrl = "https://img.test/bakuhatsu.jpg";
+    mockStartup({
+      ...authenticatedState,
+      characters: {
+        ...authenticatedState.characters,
+        characters: [
+          { ...authenticatedState.characters.characters[0], avatarUrl: firstUrl },
+          { ...authenticatedState.characters.characters[0], name: "Bakuhatsu", avatarUrl: secondUrl },
+        ],
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(getCachedAvatarSourceMock).toHaveBeenCalledWith(firstUrl);
+      expect(getCachedAvatarSourceMock).toHaveBeenCalledWith(secondUrl);
+    });
   });
 
   it("replaces the WebView context menu with the four compact client actions", async () => {

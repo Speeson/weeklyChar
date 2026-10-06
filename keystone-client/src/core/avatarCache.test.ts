@@ -115,6 +115,15 @@ describe("avatar cache", () => {
     expect(cache.entries).toHaveLength(1);
   });
 
+  it("tries the network when the browser reports offline but the image is reachable", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    vi.mocked(fetch).mockResolvedValueOnce(imageResponse("portrait"));
+
+    await expect(getCachedAvatarSource("https://img.test/reachable.jpg"))
+      .resolves.toMatch(/^data:image\/jpeg;base64,/u);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("keeps a dedicated copy of the selected profile avatar for a later offline start", async () => {
     const url = "https://img.test/profile.jpg";
     vi.mocked(fetch).mockResolvedValueOnce(imageResponse("selected-profile"));
@@ -194,6 +203,19 @@ describe("avatar cache", () => {
 
     expect(await first).toBe(await second);
     expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("stops pending downloads before clearing avatars on logout", async () => {
+    vi.mocked(fetch).mockImplementationOnce((_url, options) => new Promise<Response>((_resolve, reject) => {
+      options?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    }));
+    const pending = getCachedAvatarSource("https://img.test/pending.jpg");
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+
+    await clearAvatarCache();
+
+    await expect(pending).resolves.toBeNull();
+    expect(cache.entries).toHaveLength(0);
   });
 
   it("rejects unsupported or oversized responses without caching them", async () => {

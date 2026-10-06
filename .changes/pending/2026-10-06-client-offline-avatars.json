@@ -1,0 +1,13 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Corrige la descarga y preparación sin conexión de los avatares de todos los personajes.",
+  "details": [
+    "Intenta descargar avatares aunque WebView indique erróneamente que no hay conexión, prepara los retratos de todos los personajes para futuros arranques sin conexión y muestra una inicial si falta la imagen del perfil."
+  ],
+  "summaryEn": "Fixes avatar downloads and offline preparation for every character.",
+  "detailsEn": [
+    "Attempts avatar downloads even when WebView incorrectly reports offline, prepares every character portrait for future offline starts, and shows an initial when the profile image is unavailable."
+  ]
+}
