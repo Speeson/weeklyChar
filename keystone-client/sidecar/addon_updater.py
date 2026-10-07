@@ -9,6 +9,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import urlsplit
 
 import requests
 
@@ -17,6 +18,7 @@ import addon_installer
 
 ADDON_REPO = "Speeson/KeystoneSync"
 GITHUB_API_URL = f"https://api.github.com/repos/{ADDON_REPO}/releases/latest"
+GITHUB_LATEST_URL = f"https://github.com/{ADDON_REPO}/releases/latest"
 ASSET_TEMPLATE = "KeystoneSync-v{version}.zip"
 MAX_ADDON_ZIP_BYTES = 25 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
@@ -146,6 +148,46 @@ def fetch_latest_release(session=requests, client_version: str | None = None) ->
     return parse_latest_release(payload)
 
 
+def fetch_latest_release_page(session=requests, client_version: str | None = None) -> ReleaseInfo:
+    """Resolve GitHub's stable-release redirect when the API is rate limited."""
+    try:
+        response = session.get(
+            GITHUB_LATEST_URL,
+            headers={"User-Agent": user_agent(client_version)},
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            stream=True,
+        )
+        try:
+            response.raise_for_status()
+            url = urlsplit(response.url)
+        finally:
+            response.close()
+
+        prefix = f"/{ADDON_REPO}/releases/tag/v"
+        if url.scheme != "https" or url.netloc != "github.com" or url.query or url.fragment or not url.path.startswith(prefix):
+            raise AddonUpdateError("Latest addon release redirect is invalid.")
+        version = version_text(url.path[len(prefix):])
+        tag = f"v{version}"
+        asset_name = ASSET_TEMPLATE.format(version=version)
+        download_url = f"https://github.com/{ADDON_REPO}/releases/download/{tag}/{asset_name}"
+
+        asset_response = session.get(
+            download_url,
+            headers={"User-Agent": user_agent(client_version)},
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            stream=True,
+        )
+        try:
+            asset_response.raise_for_status()
+        finally:
+            asset_response.close()
+        return ReleaseInfo(version, tag, asset_name, download_url, f"https://github.com{url.path}")
+    except AddonUpdateError:
+        raise
+    except Exception as exc:
+        raise AddonUpdateError("Unable to check addon releases.") from exc
+
+
 def cache_dir(cache_root: str | Path | None = None) -> Path:
     if cache_root:
         return Path(cache_root)
@@ -208,6 +250,10 @@ def check_for_update(
         release = fetch_latest_release(session=session, client_version=client_version)
     except AddonUpdateError as exc:
         remote_error = exc
+        try:
+            release = fetch_latest_release_page(session=session, client_version=client_version)
+        except AddonUpdateError:
+            pass
 
     latest_version = release.version if release else (cached.version if cached else None)
 

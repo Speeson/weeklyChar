@@ -64,8 +64,10 @@ def _state_from_check(check: addon_updater.UpdateCheck) -> str:
         return "offline-cache"
     if check.status in {"update_available", "update_available_cached"}:
         return "update-available"
-    if check.status in {"up_to_date", "up_to_date_cached"}:
+    if check.status == "up_to_date":
         return "current"
+    if check.status == "up_to_date_cached":
+        return "offline-cache"
     if check.status == "installed_newer":
         return "local-newer"
     if check.status == "offline_no_candidate":

@@ -90,11 +90,15 @@ def release_payload(version: str = "0.1.17", **overrides):
 
 
 class FakeJsonResponse:
-    def __init__(self, payload=None, *, error=None, json_error=None, status_code=200):
+    def __init__(self, payload=None, *, error=None, json_error=None, status_code=200, url=None):
         self.payload = payload
         self.error = error
         self.json_error = json_error
         self.status_code = status_code
+        self.url = url
+
+    def close(self):
+        pass
 
     def raise_for_status(self):
         if self.error:
@@ -111,6 +115,9 @@ class FakeDownloadResponse:
         self.chunks = chunks if isinstance(chunks, list) else [chunks]
         self.error = error
         self.headers = headers or {}
+
+    def close(self):
+        pass
 
     def raise_for_status(self):
         if self.error:
@@ -194,6 +201,42 @@ class AddonUpdaterTests(unittest.TestCase):
         call = session.calls[0]
         self.assertEqual(call["kwargs"]["timeout"], addon_updater.REQUEST_TIMEOUT_SECONDS)
         self.assertIn("KeystoneClient/0.2.1", call["kwargs"]["headers"]["User-Agent"])
+
+    def test_rate_limited_api_uses_stable_release_page_and_exact_asset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            addons = Path(tmp) / "AddOns"
+            addons.mkdir()
+            write_addon(addons, "0.6.0")
+            session = FakeSession([
+                FakeJsonResponse(error=requests.HTTPError("403")),
+                FakeJsonResponse(url="https://github.com/Speeson/KeystoneSync/releases/tag/v0.7.0"),
+                FakeDownloadResponse(b""),
+            ])
+            check = addon_updater.check_for_update(addons, session=session, cache_root=Path(tmp) / "cache")
+            self.assertEqual(check.status, "update_available")
+            self.assertEqual(check.installed_version, "0.6.0")
+            self.assertEqual(check.latest_version, "0.7.0")
+            self.assertEqual(check.release.asset_name, "KeystoneSync-v0.7.0.zip")
+            self.assertEqual(session.calls[2]["args"][0], check.release.download_url)
+            self.assertTrue(session.calls[2]["kwargs"]["stream"])
+
+    def test_release_page_fallback_rejects_invalid_redirect_and_missing_asset(self):
+        for page_url in (
+            "https://github.com/Speeson/KeystoneSync/releases/tag/v0.7.0-beta",
+            "https://github.com/Other/KeystoneSync/releases/tag/v0.7.0",
+            "https://example.test/Speeson/KeystoneSync/releases/tag/v0.7.0",
+        ):
+            with self.subTest(page_url=page_url):
+                session = FakeSession([FakeJsonResponse(url=page_url)])
+                with self.assertRaises(addon_updater.AddonUpdateError):
+                    addon_updater.fetch_latest_release_page(session=session)
+
+        session = FakeSession([
+            FakeJsonResponse(url="https://github.com/Speeson/KeystoneSync/releases/tag/v0.7.0"),
+            FakeDownloadResponse(b"", error=requests.HTTPError("404")),
+        ])
+        with self.assertRaises(addon_updater.AddonUpdateError):
+            addon_updater.fetch_latest_release_page(session=session)
 
     def test_installed_status_distinguishes_missing_valid_invalid_and_corrupt(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -453,6 +496,25 @@ class AddonServiceTests(unittest.TestCase):
                 client_version="0.2.1",
             )
             self.assertEqual(service.check(cfg)["state"], "unavailable")
+
+    def test_cached_installed_version_is_not_reported_current_when_remote_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = self._cfg_for(root / "World of Warcraft")
+            addons = root / "World of Warcraft" / "_retail_" / "Interface" / "AddOns"
+            write_addon(addons, "0.6.0")
+            cached_zip = root / "cached.zip"
+            cached_zip.write_bytes(addon_zip_bytes("0.6.0"))
+            addon_updater.store_validated_cache(cached_zip, "0.6.0", root / "cache")
+            service = addon_service.AddonService(
+                session=FakeSession(error=requests.Timeout("offline")),
+                cache_root=root / "cache",
+            )
+            status = service.check(cfg)
+            self.assertEqual(status["state"], "offline-cache")
+            self.assertEqual(status["installedVersion"], "0.6.0")
+            self.assertEqual(status["latestVersion"], "0.6.0")
+            self.assertEqual(status["source"], "cache")
 
     def test_offline_cache_install_and_events(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -298,7 +298,7 @@ export function AddonPage({
   }
 
   const busy = busyAction !== null || addon.operation !== null || folderBusy;
-  const canInstall = addon.state === "not-installed" || addon.state === "offline-cache";
+  const canInstall = !addon.installed && (addon.state === "not-installed" || addon.state === "offline-cache");
   const canUpdate = addon.state === "update-available";
   const canReinstall = addon.installed;
   const statusText = addon.operation ? ({ install: t("addon.installing"), update: t("addon.updating"), reinstall: t("addon.reinstalling") }[addon.operation.action]) : stateLabel(addon, t);
@@ -432,7 +432,7 @@ export function AddonPage({
               tone={addon.installed ? "good" : "bad"}
               badge
             />
-            <AddonStatusRow icon="status-version" label={t("addon.latest")} value={formatVersion(addon.latestVersion)} />
+            <AddonStatusRow icon="status-version" label={t(addon.source === "cache" ? "addon.cachedVersion" : "addon.latest")} value={formatVersion(addon.latestVersion)} />
             <AddonStatusRow icon="status-activity" label={t("addon.state")} value={statusText} tone={statusTextTone} />
             <AddonStatusRow icon="status-source" label={t("addon.source")} value={sourceLabel(addon.source, t)} />
             <AddonStatusRow

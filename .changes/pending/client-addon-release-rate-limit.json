@@ -1,0 +1,15 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Corrige la detección de actualizaciones del addon cuando GitHub limita la API.",
+  "details": [
+    "Consulta la página pública de la última release si la API no está disponible y comprueba que existe el ZIP del addon.",
+    "Distingue la versión en caché de la última versión verificada y evita mostrar un falso estado actualizado."
+  ],
+  "summaryEn": "Fix addon update detection when the GitHub API is rate limited.",
+  "detailsEn": [
+    "Use GitHub's public latest release page when the API is unavailable and verify the addon ZIP exists.",
+    "Distinguish a cached version from a verified latest version and avoid a false up-to-date status."
+  ]
+}

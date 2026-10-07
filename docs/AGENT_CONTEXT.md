@@ -46,6 +46,7 @@ Main implementation points:
 
 - Canonical addon source `Speeson/KeystoneSync`: `SaveCharacterData()` writes `KeystoneSyncDB`; `UpdateMythicPlusSeason()` writes the season block.
 - Addon distribution to users: `Speeson/KeystoneSync` GitHub Release -> `KeystoneSync-vX.Y.Z.zip` -> `keystone-client/sidecar/addon_updater.py` -> validated local cache -> WoW AddOns folder.
+- Addon update detection uses the GitHub Releases API first and falls back to the public `/releases/latest` redirect and exact ZIP URL when the API is unavailable. A cached version alone does not establish that the installed addon is current.
 - `keystone-client/sidecar/wow_path.py`: discovers `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
 - `keystone-client/sidecar/sync_worker.py`: `SyncWorker._sync()` parses SavedVariables with `slpp`, fetches Raider.IO enrichment, builds the payload, and posts to `/api/keystones/update`.
 - SavedVariables reset reconciliation uses addon top-level `savedVariablesInstanceId`, a private
