@@ -96,6 +96,21 @@ describe("CharactersPage", () => {
     expect(within(card as HTMLElement).queryByText("Misión completada")).not.toBeInTheDocument();
   });
 
+  it("uses the highest WoW spark dust cap observed on the same account and region", () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.tidalSparkDust = { quantity: 10, totalEarned: 10, maxQuantity: 10, useTotalEarnedForMaxQty: true };
+    characters[1].currencies = { tidalSparkDust: { quantity: 9, totalEarned: 9, maxQuantity: 11, useTotalEarnedForMaxQty: true } };
+    const { container, rerender } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="tidalSparkDust"]')!;
+    expect(card).not.toHaveClass("is-maxed");
+    expect(card).toHaveTextContent("10 / 11");
+
+    characters[0].currencies!.tidalSparkDust = { quantity: 9, totalEarned: 9, maxQuantity: 9, useTotalEarnedForMaxQty: true };
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(card).not.toHaveClass("is-maxed");
+    expect(card).toHaveTextContent("9 / 11");
+  });
+
   it("uses active-spec Wowhead item tooltips without the native title popup", () => {
     const { container } = renderPage();
     const item = container.querySelector<HTMLAnchorElement>(".gear-item__piece")!;

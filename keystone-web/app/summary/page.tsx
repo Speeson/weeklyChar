@@ -90,6 +90,7 @@ interface Character {
   name: string
   realm: string
   wowAccount?: string | null
+  region?: string
   rioScore: number | null
   wowClass: string | null
   ilvl: number | null
@@ -429,9 +430,11 @@ function TrovehunterStatus({ info }: { info: CurrencyInfo }) {
   </span>
 }
 
-function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRENCIES[number]) {
+function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRENCIES[number], tidalSparkDustMax: number) {
   const key = currency.key
-  const info = char.currencies?.[key]
+  const originalInfo = char.currencies?.[key]
+  const info = key === 'tidalSparkDust' && originalInfo && tidalSparkDustMax > (originalInfo.maxQuantity ?? 0)
+    ? { ...originalInfo, maxQuantity: tidalSparkDustMax } : originalInfo
   if (!info) return <span className="text-gray-600">—</span>
   if (currency.valueType === 'trovehunterStatus') {
     return (
@@ -449,7 +452,7 @@ function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRE
     ? formatSparkQuantity(info)
     : (info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0)
   const questCompleted = key === 'nebulousVoidcore' && voidcoreQuestCompleted(info)
-  const red = currencyCapState(info).isMaxed || (key === 'nebulousVoidcore' ? questCompleted : info.isWeeklyComplete || info.displayColor === 'red')
+  const red = currencyCapState(info).isMaxed || (key === 'nebulousVoidcore' ? questCompleted : key !== 'tidalSparkDust' && (info.isWeeklyComplete || info.displayColor === 'red'))
   return (
     <WowheadLink
       type={currency.wowheadType}
@@ -601,6 +604,12 @@ export default function SummaryPage() {
 
   const accounts = accountOptions(characters)
   const visibleCharacters = filterByAccount(characters, selectedAccount).filter(c => !hiddenCharacterIds.has(c.id))
+  const tidalSparkDustMaxByAccountRegion = new Map<string, number>()
+  for (const character of filterByAccount(characters, selectedAccount)) {
+    const scope = JSON.stringify([character.wowAccount, character.region])
+    const maximum = character.currencies?.tidalSparkDust?.maxQuantity ?? 0
+    tidalSparkDustMaxByAccountRegion.set(scope, Math.max(tidalSparkDustMaxByAccountRegion.get(scope) ?? 0, maximum))
+  }
 
   return (
     <>
@@ -723,7 +732,7 @@ export default function SummaryPage() {
                     >
                       {visibleCharacters.map(c => (
                         <Cell key={c.id} character={c} className={currency.color}>
-                          {currencyValue(c, currency)}
+                          {currencyValue(c, currency, tidalSparkDustMaxByAccountRegion.get(JSON.stringify([c.wowAccount, c.region])) ?? 0)}
                         </Cell>
                       ))}
                     </InfoRow>
