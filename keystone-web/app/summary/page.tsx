@@ -9,9 +9,10 @@ import { apiFetch, getToken } from '@/lib/auth'
 import AccountSelect, { ALL_ACCOUNTS, accountOptions, filterByAccount } from '@/app/components/AccountSelect'
 import { keystoneColor } from '@/lib/colors'
 import { DUNGEON_ABBR_BY_ID, MIDNIGHT_SEASON_2_DUNGEONS } from '@/lib/season2'
-import { currencyCapState, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, trovehunterStatus, type TrovehunterDetail, wowheadHref } from '@/lib/season2Currencies'
+import { currencyCapState, MIDNIGHT_SEASON_2_CURRENCIES, migrateSeason2CurrencyVisibility, trovehunterStatus, voidcoreQuestCompleted, type TrovehunterDetail, wowheadHref } from '@/lib/season2Currencies'
 import { formatSparkQuantity } from '@/lib/sparkQuantity'
 import { formatVaultReward } from '@/lib/vaultRewards'
+import { currentVault } from '@/lib/vaultWeek'
 import { loadHiddenCharacterIds } from '@/lib/hiddenCharacters'
 import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 
@@ -63,6 +64,7 @@ interface CurrencyInfo {
   bagCount?: number
   hasBuff?: boolean
   questCompleted?: boolean
+  weekKey?: string | null
 }
 
 interface MoneyInfo {
@@ -93,6 +95,7 @@ interface Character {
   ilvl: number | null
   currentKeystone: Keystone | null
   vault: {
+    weekKey?: string
     raid?: VaultBucket
     dungeons?: VaultBucket
     world?: VaultBucket
@@ -445,7 +448,8 @@ function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRE
   const value = key === 'sparksOfTides'
     ? formatSparkQuantity(info)
     : (info.quantity ?? info.trackedQuantity ?? info.totalEarned ?? 0)
-  const red = currencyCapState(info).isMaxed || info.isWeeklyComplete || info.displayColor === 'red'
+  const questCompleted = key === 'nebulousVoidcore' && voidcoreQuestCompleted(info)
+  const red = currencyCapState(info).isMaxed || (key === 'nebulousVoidcore' ? questCompleted : info.isWeeklyComplete || info.displayColor === 'red')
   return (
     <WowheadLink
       type={currency.wowheadType}
@@ -453,7 +457,7 @@ function currencyValue(char: Character, currency: typeof MIDNIGHT_SEASON_2_CURRE
       className={red ? 'font-bold text-red-400' : 'font-semibold text-gray-100'}
     >
       <WowheadIcon iconName={currency.iconName} />
-      {value}
+      <span className="inline-grid gap-0.5 text-left"><span>{value}</span>{questCompleted ? <small className="text-[11px]">Misión completada</small> : null}</span>
     </WowheadLink>
   )
 }
@@ -680,9 +684,9 @@ export default function SummaryPage() {
                   />
                   {!collapsedSections.greatVault && (
                     <>
-                      <InfoRow label="Raids">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={c.vault?.raid} maxProgress={6} /></Cell>)}</InfoRow>
-                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="text-green-400"><VaultProgress bucket={c.vault?.dungeons} dungeon maxProgress={8} /></Cell>)}</InfoRow>
-                      <InfoRow label="World">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={c.vault?.world} maxProgress={8} /></Cell>)}</InfoRow>
+                      <InfoRow label="Raids">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={currentVault(c.vault)?.raid} maxProgress={6} /></Cell>)}</InfoRow>
+                      <InfoRow label="Dungeons">{visibleCharacters.map(c => <Cell key={c.id} character={c} className="text-green-400"><VaultProgress bucket={currentVault(c.vault)?.dungeons} dungeon maxProgress={8} /></Cell>)}</InfoRow>
+                      <InfoRow label="World">{visibleCharacters.map(c => <Cell key={c.id} character={c}><VaultProgress bucket={currentVault(c.vault)?.world} maxProgress={8} /></Cell>)}</InfoRow>
                     </>
                   )}
 

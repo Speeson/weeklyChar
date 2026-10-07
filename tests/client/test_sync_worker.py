@@ -248,6 +248,8 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(currencies["venomblightManaflux"]["id"], 3465)
         self.assertEqual(currencies["tidalSparkDust"]["id"], 3509)
         self.assertEqual(currencies["nebulousVoidcore"]["id"], 3513)
+        self.assertTrue(currencies["nebulousVoidcore"]["questCompleted"])
+        self.assertEqual(currencies["nebulousVoidcore"]["weekKey"], "2026-08-26")
         self.assertEqual(currencies["sparksOfTides"]["itemID"], 274476)
         self.assertEqual(currencies["sparksOfTides"]["currencyID"], 3509)
         self.assertEqual(currencies["sparksOfTides"]["itemQuantity"], 6)

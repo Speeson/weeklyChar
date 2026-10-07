@@ -1,3 +1,5 @@
+import { currentVaultWeekKey } from './vaultWeek'
+
 export type Season2CurrencyKey =
   | 'heroMistcrest'
   | 'mythMistcrest'
@@ -81,6 +83,10 @@ export function currencyCapState(info: CurrencyCapInfo | null | undefined) {
   const isSeasonMaxed = info?.useTotalEarnedForMaxQty === true && max > 0 && (info?.totalEarned ?? 0) >= max
   const isTotalMaxed = info?.useTotalEarnedForMaxQty !== true && max > 0 && (info?.quantity ?? 0) >= max
   return { isWeeklyMaxed, isSeasonMaxed, isTotalMaxed, isMaxed: isWeeklyMaxed || isSeasonMaxed || isTotalMaxed }
+}
+
+export function voidcoreQuestCompleted(info: { questCompleted?: boolean; weekKey?: string | null } | null | undefined, nowMs = Date.now()): boolean {
+  return info?.questCompleted === true && info.weekKey === currentVaultWeekKey(nowMs)
 }
 
 const LEGACY_VISIBILITY_KEYS: Record<string, Season2CurrencyKey> = {

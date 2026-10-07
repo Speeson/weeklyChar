@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { charactersPreview } from "../core/charactersPreview";
+import { currentVaultWeekKey } from "../core/vaultWeek";
 import { I18nProvider } from "../core/i18n";
 import { renderWithTheme } from "../test/renderWithTheme";
 import { CharactersPage } from "./CharactersPage";
@@ -80,6 +81,21 @@ describe("CharactersPage", () => {
     expect(screen.queryByText("Hero Mistcrest")).not.toBeInTheDocument();
   });
 
+  it("marks Orin's current weekly Voidcore quest completed and ignores an expired completion", () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.nebulousVoidcore = { quantity: 1, questCompleted: true, weekKey: currentVaultWeekKey() };
+    const { container, rerender } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="nebulousVoidcore"]')!;
+    expect(card).toHaveClass("is-maxed");
+    expect(within(card as HTMLElement).getByText("Misión completada")).toBeVisible();
+    expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
+
+    characters[0].currencies!.nebulousVoidcore.weekKey = "2026-01-07";
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(card).not.toHaveClass("is-maxed");
+    expect(within(card as HTMLElement).queryByText("Misión completada")).not.toBeInTheDocument();
+  });
+
   it("uses active-spec Wowhead item tooltips without the native title popup", () => {
     const { container } = renderPage();
     const item = container.querySelector<HTMLAnchorElement>(".gear-item__piece")!;
@@ -113,6 +129,16 @@ describe("CharactersPage", () => {
     for (const row of categoryRows) {
       expect(row.querySelector(".vault-slot__reward .upgrade-track-icon")).toBeTruthy();
     }
+  });
+
+  it("hides last week's Vault progress until a current-week snapshot arrives", () => {
+    const characters = charactersPreview();
+    characters[0].vault = { ...characters[0].vault, weekKey: "2026-01-07" };
+    const { container, rerender } = renderPage({ ...state, characters });
+    expect(container.querySelector(".vault-panel .vault-slot__reward")).not.toBeInTheDocument();
+    characters[0].vault = { ...characters[0].vault, weekKey: currentVaultWeekKey() };
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(container.querySelector(".vault-panel .vault-slot__reward")).toBeInTheDocument();
   });
 
   it("shows real gem and enchant icons below equipped items", () => {

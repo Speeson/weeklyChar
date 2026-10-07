@@ -1,0 +1,15 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Actualiza el seguimiento semanal de la Gran Cámara y los Voidcores.",
+  "details": [
+    "El progreso antiguo de la Gran Cámara desaparece tras el reinicio del miércoles.",
+    "La tarjeta de Voidcore indica cuándo se completó la misión semanal de Orin Straylight."
+  ],
+  "summaryEn": "Update weekly Great Vault and Voidcore tracking.",
+  "detailsEn": [
+    "Old Great Vault progress clears after the Wednesday reset.",
+    "The Voidcore card indicates when Orin Straylight's weekly quest is complete."
+  ]
+}

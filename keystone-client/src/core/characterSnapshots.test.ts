@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHARACTER_CURRENCIES, currencyCapState, trovehunterStatus } from "./characterSnapshots";
+import { CHARACTER_CURRENCIES, currencyCapState, trovehunterStatus, voidcoreQuestCompleted } from "./characterSnapshots";
 
 describe("character currency semantics", () => {
   it("contains exactly the approved ten cards and only Hero/Myth Mistcrests", () => {
@@ -11,6 +11,13 @@ describe("character currency semantics", () => {
 
   it("marks Coffer maxed from weekly progress even with zero owned", () => {
     expect(currencyCapState({ quantity: 0, quantityEarnedThisWeek: 600, maxWeeklyQuantity: 600 }).isMaxed).toBe(true);
+  });
+
+  it("uses only the current week's Orin quest completion", () => {
+    const now = Date.parse("2026-10-07T04:00:00Z");
+    expect(voidcoreQuestCompleted({ questCompleted: true, weekKey: "2026-10-07" }, now)).toBe(true);
+    expect(voidcoreQuestCompleted({ questCompleted: true, weekKey: "2026-09-30" }, now)).toBe(false);
+    expect(voidcoreQuestCompleted({ questCompleted: true }, now)).toBe(false);
   });
 
   it("marks Untainted weekly maxed without marking its total cap", () => {

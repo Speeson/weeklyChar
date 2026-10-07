@@ -108,7 +108,7 @@ test('sync update persists character, current keystone, and contract JSON blocks
   assert.deepEqual(characters[0].mythicPlusSeason, payload.mythicPlusSeason)
 })
 
-test('Season 2 currencies and Trovehunter state round-trip through currencies JSON', async () => {
+test('Season 2 currencies, Orin quest, and Trovehunter state round-trip through currencies JSON', async () => {
   const env = makeEnv()
   const currencies = {
     adventurerMistcrest: { id: 3442, quantity: 40 },
@@ -120,7 +120,7 @@ test('Season 2 currencies and Trovehunter state round-trip through currencies JS
     tidalSparkDust: { id: 3509, quantity: 4, maxQuantity: 4 },
     cofferKeyShards: { id: 3310, quantity: 55 },
     restoredCofferKey: { id: 3028, quantity: 2 },
-    nebulousVoidcore: { id: 3513, quantity: 1 },
+    nebulousVoidcore: { id: 3513, quantity: 1, questCompleted: true, weekKey: '2026-10-07' },
     sparksOfTides: {
       itemID: 274476,
       currencyID: 3509,

@@ -102,6 +102,8 @@ Shape:
 - `dungeons.completedRuns` includes `heroic`, `mythic`, and `mythicPlus`; `dungeons.topRuns` contains the sorted current-week Mythic+ level, challenge map ID, and localized dungeon name used by Great Vault tooltips, independently of each slot's `rewardItemLevel`
 - `world.tierProgress` contains Blizzard's sorted activity tier, difficulty, and completion count used by Great Vault tooltips
 
+Client and Web show Vault progress only when `vault.weekKey` matches the current EU week, which begins Wednesday at 04:00 UTC. A missing key is treated as unknown and its progress is hidden. The addon preserves nonempty same-week details on transient API reads; an old week's details never carry into a new `weekKey`.
+
 ### `preyHunts`
 
 Shape:
@@ -133,6 +135,8 @@ The addon writes the canonical Midnight Season 2 keys:
 - `trovehuntersBounty`
 
 Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `useTotalEarnedForMaxQty`, `canEarnPerWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyMaxed`, `isSeasonMaxed`, `isTotalMaxed`, and `isMaxed`. Caps always come from the WoW API: weekly progress is independent of owned quantity, seasonal caps compare `totalEarned`, and ordinary total caps compare `quantity`.
+
+`currencies.nebulousVoidcore` additionally contains `questCompleted` (boolean) and `weekKey` (`YYYY-MM-DD`) for the current EU week. The addon checks Orin Straylight's Season 2 Gold (`98016`), Voidlight Marl (`98015`), and Veteran Mistcrest (`98012`) quests; any one completed quest marks the weekly state complete. A positive result survives transient false reads within the same week and expires at Wednesday 04:00 UTC. The client transports the nested fields unchanged through the existing `currencies` JSON block; Worker/D1 store and return them without a migration. Client and Web use the matching `weekKey` before showing the completion state.
 
 `sparksOfTides` tracks Spark of Tides (`itemID = 274476`) as a physical item
 owned by the current character. Its fields are:

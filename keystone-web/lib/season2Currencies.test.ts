@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   trovehunterStatus,
+  voidcoreQuestCompleted,
   currencyCapState,
   MIDNIGHT_SEASON_2_CURRENCIES,
   migrateSeason2CurrencyVisibility,
@@ -19,6 +20,13 @@ test('derives Trovehunter acquisition and lifecycle status', () => {
   assert.deepEqual(trovehunterStatus({}), { obtained: false, detail: null, known: false })
   assert.equal(trovehunterStatus({ questCompleted: false, bagCount: 1, hasBuff: false }).obtained, true)
   assert.equal(trovehunterStatus({ questCompleted: false, bagCount: 0, hasBuff: true }).obtained, true)
+})
+
+test('Orin Voidcore quest completion expires at the EU weekly reset', () => {
+  const now = Date.parse('2026-10-07T04:00:00Z')
+  assert.equal(voidcoreQuestCompleted({ questCompleted: true, weekKey: '2026-10-07' }, now), true)
+  assert.equal(voidcoreQuestCompleted({ questCompleted: true, weekKey: '2026-09-30' }, now), false)
+  assert.equal(voidcoreQuestCompleted({ questCompleted: true }, now), false)
 })
 
 test('builds direct Wowhead destinations for Season 2 tooltips', () => {

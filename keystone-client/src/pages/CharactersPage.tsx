@@ -10,7 +10,7 @@ import { WowheadTooltip } from "../components/WowheadTooltip";
 import { UpgradeTrackIcon } from "../components/UpgradeTrackIcon";
 import { classColor } from "../core/characterDisplay";
 import { loadInactiveCharacterIds, saveInactiveCharacterIds } from "../core/characterTracking";
-import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor, trovehunterStatus } from "../core/characterSnapshots";
+import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor, trovehunterStatus, voidcoreQuestCompleted } from "../core/characterSnapshots";
 import { snapshotRecords } from "../core/snapshotSafety";
 import { heroTalentIcon } from "../core/heroTalentIcons";
 import { dungeonName, MIDNIGHT_SEASON_2_DUNGEONS } from "../core/season2";
@@ -19,6 +19,7 @@ import { blizzardIconUrl } from "../core/wowhead";
 import { useI18n } from "../core/i18n";
 import { activeTalentEntry, localizedClassName, localizedHeroTreeName, localizedSpecName, talentPurchasedRanks } from "../core/talentDisplay";
 import { formatVaultReward } from "../core/vaultRewards";
+import { currentVault } from "../core/vaultWeek";
 
 const qualityColors = ["#9d9d9d", "#fff", "#1eff00", "#0070dd", "#a335ee", "#ff8000", "#e6cc80"];
 const medals = [medal1, medal1, medal2, medal3];
@@ -31,7 +32,7 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "TALENTOS DE CLASE", heroTalents: "TALENTOS HEROICOS", specTalents: "TALENTOS DE ESPECIALIZACIÓN",
   dungeons: "MAZMORRAS", greatVault: "GRAN CÁMARA", preyHunts: "CACERÍAS", currencies: "MONEDAS", gold: "ORO",
   raids: "Bandas", world: "Mundo", weekly: "Semanal", season: "Temporada", maximum: "Máximo",
-  noCap: "Sin límite relevante", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Puntuación total",
+  noCap: "Sin límite relevante", questCompleted: "Misión completada", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Puntuación total",
   noCharacters: "No hay personajes sincronizados.", noGear: "No hay datos de equipo. Entra con este personaje y sincroniza.", enchantment: "Encantamiento", rating: "puntuación", talentNode: "Talento",
 } : {
   account: "ACCOUNT", realm: "REALM", characters: "CHARACTERS",
@@ -39,7 +40,7 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "CLASS TALENTS", heroTalents: "HERO TALENTS", specTalents: "SPEC TALENTS",
   dungeons: "DUNGEONS", greatVault: "GREAT VAULT", preyHunts: "PREY HUNTS", currencies: "CURRENCIES", gold: "GOLD",
   raids: "Raids", world: "World", weekly: "Weekly", season: "Season", maximum: "Max",
-  noCap: "No relevant cap", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
+  noCap: "No relevant cap", questCompleted: "Quest completed", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
   noCharacters: "No synced characters.", noGear: "No gear data. Log in with this character and sync.", enchantment: "Enchantment", rating: "rating", talentNode: "Talent",
 };
 
@@ -265,6 +266,7 @@ function FluteCountBadge({ info, bounty, language, region }: { info?: CharacterC
 function CurrencyCard({ currencyKey, info, fluteInfo, language, region }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; fluteInfo?: CharacterCurrency; language: "es" | "en"; region: string }) {
   const copy = characterCopy(language);
   const caps = currencyCapState(info);
+  const questCompleted = currencyKey.key === "nebulousVoidcore" && voidcoreQuestCompleted(info);
   const sparkTotal = number(info?.itemQuantity, number(info?.quantity));
   const value = currencyKey.key === "sparksOfTides" && info?.bankQuantityKnown && number(info.bankQuantity) > 0
     ? `${sparkTotal} (${number(info.bankQuantity)} ${language === "es" ? "en el banco" : "in bank"})`
@@ -272,9 +274,9 @@ function CurrencyCard({ currencyKey, info, fluteInfo, language, region }: { curr
   const isBounty = currencyKey.key === "trovehuntersBounty";
   const hasCap = number(info?.maxWeeklyQuantity) > 0 || number(info?.maxQuantity) > 0;
   const label = language === "es" ? currencyKey.labelEs : currencyKey.label;
-  const card = <article className={`currency-card${caps.isMaxed ? " is-maxed" : ""}`} data-currency={currencyKey.key}>
+  const card = <article className={`currency-card${caps.isMaxed || questCompleted ? " is-maxed" : ""}`} data-currency={currencyKey.key}>
       <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <TrovehunterStatus info={info} language={language}/> : <div className="currency-card__values"><strong>{value}</strong><footer>
-        {!hasCap ? <span>{copy.noCap}</span> : null}
+        {questCompleted ? <span className="is-maxed">{copy.questCompleted}</span> : !hasCap ? <span>{copy.noCap}</span> : null}
         {number(info?.maxWeeklyQuantity) > 0 ? <span className={caps.isWeeklyMaxed ? "is-maxed" : ""}>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
         {number(info?.maxQuantity) > 0 ? <span className={caps.isSeasonMaxed || caps.isTotalMaxed ? "is-maxed" : ""}>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {number(info?.maxQuantity)}</span> : null}
       </footer></div>}</div>
@@ -288,7 +290,7 @@ function CurrencyCard({ currencyKey, info, fluteInfo, language, region }: { curr
 
 function ProgressPanels({ character, language }: { character: Character; language: "es" | "en" }) {
   const copy = characterCopy(language);
-  const vault = record(character.vault); const prey = record(character.preyHunts);
+  const vault = record(currentVault(character.vault)); const prey = record(character.preyHunts);
   const category = (name: string) => record(vault[name === "Raids" ? "raid" : name.toLowerCase()]);
   const vaultNames = [["Raids", copy.raids], ["Dungeons", copy.dungeons], ["World", copy.world]] as const;
   const preyNames = [["Normal", "Normal"], ["Hard", language === "es" ? "Difícil" : "Hard"], ["Nightmare", language === "es" ? "Pesadilla" : "Nightmare"]] as const;

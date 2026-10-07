@@ -21,7 +21,7 @@ KeystoneSyncDB = {
       ["tidalSparkDust"] = { ["id"] = 3509, ["quantity"] = 4, ["maxQuantity"] = 4 },
       ["cofferKeyShards"] = { ["id"] = 3310, ["quantity"] = 55 },
       ["restoredCofferKey"] = { ["id"] = 3028, ["quantity"] = 2 },
-      ["nebulousVoidcore"] = { ["id"] = 3513, ["quantity"] = 1 },
+      ["nebulousVoidcore"] = { ["id"] = 3513, ["quantity"] = 1, ["questCompleted"] = true, ["weekKey"] = "2026-08-26" },
       ["sparksOfTides"] = {
         ["itemID"] = 274476,
         ["currencyID"] = 3509,

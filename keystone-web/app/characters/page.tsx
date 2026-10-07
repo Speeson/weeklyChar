@@ -234,7 +234,7 @@ export default function Dashboard() {
 type SortKey = 'name' | 'realm' | 'dungeon' | 'level' | 'updatedAt'
 type SortDir = 'asc' | 'desc'
 
-export function CharacterTable({
+function CharacterTable({
   characters,
   onViewObjectives,
 }: {

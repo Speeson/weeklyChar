@@ -10,6 +10,8 @@ import Navbar from '@/app/components/Navbar'
 import WeeklyAffixes from '@/app/components/WeeklyAffixes'
 import WeeklyReset from '@/app/components/WeeklyReset'
 import { formatVaultReward } from '@/lib/vaultRewards'
+import { currentVault } from '@/lib/vaultWeek'
+import { voidcoreQuestCompleted } from '@/lib/season2Currencies'
 import UpgradeTrackIcon from '@/app/components/UpgradeTrackIcon'
 import { loadHiddenCharacterIds } from '@/lib/hiddenCharacters'
 import {
@@ -37,6 +39,7 @@ interface Character {
   wowClass?: string | null
   currentKeystone: Keystone | null
   vault?: {
+    weekKey?: string
     raid?: VaultBucket
     dungeons?: VaultBucket
     world?: VaultBucket
@@ -70,6 +73,8 @@ interface CurrencyInfo {
   maxQuantity?: number
   isWeeklyComplete?: boolean
   displayColor?: string | null
+  questCompleted?: boolean
+  weekKey?: string | null
 }
 
 interface Team {
@@ -205,13 +210,15 @@ function nebulousVoidcore(char: Character) {
 }
 
 function CharacterInfoTooltip({ char, id }: { char: Character; id: string }) {
-  const dungeons = char.vault?.dungeons
+  const vault = currentVault(char.vault)
+  const dungeons = vault?.dungeons
   const voidcore = nebulousVoidcore(char)
+  const voidcoreCompleted = voidcoreQuestCompleted(char.currencies?.nebulousVoidcore)
   const topRuns = (dungeons?.topRuns ?? []).slice(0, 8)
   const vaultCategories = [
-    ['Raids', char.vault?.raid, 6],
+    ['Raids', vault?.raid, 6],
     ['Dungeons', dungeons, 8],
-    ['World', char.vault?.world, 8],
+    ['World', vault?.world, 8],
   ] as const
 
   return (
@@ -235,7 +242,7 @@ function CharacterInfoTooltip({ char, id }: { char: Character; id: string }) {
             </div>
           )}
         </div>
-        <div className="mt-4 flex flex-shrink-0 items-center gap-2 rounded-lg bg-gray-900/80 px-3 py-2">
+        <div className={`mt-4 flex flex-shrink-0 items-center gap-2 rounded-lg bg-gray-900/80 px-3 py-2 ${voidcoreCompleted ? 'text-red-400' : ''}`}>
           <img
             src="https://wow.zamimg.com/images/wow/icons/small/inv_1205_voidforge_fluctuatingvoidcores_green.jpg"
             alt=""
@@ -244,7 +251,8 @@ function CharacterInfoTooltip({ char, id }: { char: Character; id: string }) {
             height={20}
             className="h-5 w-5 rounded border border-gray-700 bg-gray-950 object-cover"
           />
-          <span className="text-sm font-black text-violet-200">{voidcore}</span>
+          <span className={`text-sm font-black ${voidcoreCompleted ? 'text-red-400' : 'text-violet-200'}`}>{voidcore}</span>
+          {voidcoreCompleted ? <small className="text-[11px]">Misión completada</small> : null}
         </div>
       </div>
     </div>

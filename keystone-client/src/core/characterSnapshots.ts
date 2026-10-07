@@ -1,4 +1,5 @@
 import type { CharacterCurrency } from "./types";
+import { currentVaultWeekKey } from "./vaultWeek";
 
 export type CharacterCurrencyKey =
   | "heroMistcrest" | "mythMistcrest" | "venomblightManaflux" | "tidalSparkDust"
@@ -53,6 +54,10 @@ export function currencyCapState(currency: CharacterCurrency | null | undefined)
   const isSeasonMaxed = currency?.useTotalEarnedForMaxQty === true && maxQuantity > 0 && totalEarned >= maxQuantity;
   const isTotalMaxed = currency?.useTotalEarnedForMaxQty !== true && maxQuantity > 0 && quantity >= maxQuantity;
   return { isWeeklyMaxed, isSeasonMaxed, isTotalMaxed, isMaxed: isWeeklyMaxed || isSeasonMaxed || isTotalMaxed };
+}
+
+export function voidcoreQuestCompleted(currency: CharacterCurrency | null | undefined, nowMs = Date.now()): boolean {
+  return currency?.questCompleted === true && currency.weekKey === currentVaultWeekKey(nowMs);
 }
 
 export type TrovehunterDetail = "active" | "inBags" | "claimed";
