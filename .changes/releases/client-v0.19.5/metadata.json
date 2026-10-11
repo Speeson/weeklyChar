@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.19.4",
+  "version": "0.19.5",
+  "bump": "patch",
+  "tag": "client-v0.19.5",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-10-12-client-addon-update-notice.json"
+  ]
+}
