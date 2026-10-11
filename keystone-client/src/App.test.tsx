@@ -498,6 +498,78 @@ describe("App", () => {
     expect(await screen.findByLabelText("Addon: Actualizado")).toBeInTheDocument();
   });
 
+  it("shows the addon update notice before highlighting the card and tab", async () => {
+    const user = userEvent.setup();
+    let eventHandler: (event: CoreEvent) => void = () => undefined;
+    listenCoreEventsMock.mockImplementationOnce(async (handler) => {
+      eventHandler = handler;
+      return () => undefined;
+    });
+    mockStartup({
+      ...authenticatedState,
+      addon: { ...addonStatus, installed: true, installedVersion: "0.1.17", state: "current" },
+    });
+
+    render(<App />);
+    expect(await screen.findByLabelText("Addon: Actualizado")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Actualización del addon disponible" })).not.toBeInTheDocument();
+
+    act(() => eventHandler({
+      protocolVersion: 1,
+      event: "addon.check.completed",
+      data: { ...addonStatus, installed: true, installedVersion: "0.1.17", latestVersion: "0.1.18", state: "update-available" },
+    }));
+
+    const notice = await screen.findByRole("dialog", { name: "Actualización del addon disponible" });
+    expect(within(notice).getByText(/pestaña Addon y pulsa «Actualizar KeystoneSync»/u)).toBeInTheDocument();
+    const addonCard = screen.getByLabelText("Addon: Actualización disponible");
+    const addonTab = screen.getByRole("button", { name: "Addon" });
+    expect(addonCard).not.toHaveClass("sync-summary-card--addon-attention");
+    expect(addonTab).not.toHaveClass("ks-tab--addon-attention");
+    expect(addonTab.querySelector(".ks-tab__update-badge")).not.toBeInTheDocument();
+
+    await user.click(within(notice).getByRole("button", { name: "Entendido" }));
+    expect(screen.queryByRole("dialog", { name: "Actualización del addon disponible" })).not.toBeInTheDocument();
+    expect(addonCard).toHaveClass("sync-summary-card--addon-attention");
+    expect(addonTab).toHaveClass("ks-tab--addon-attention");
+    expect(addonTab.querySelector(".ks-tab__update-badge")).toHaveTextContent("!");
+
+    act(() => eventHandler({
+      protocolVersion: 1,
+      event: "addon.install.completed",
+      data: {
+        operation: { action: "update", state: "completed", startedAt: "2026-10-12T00:00:00Z", finishedAt: "2026-10-12T00:00:01Z", message: "" },
+        status: { ...addonStatus, installed: true, installedVersion: "0.1.18", state: "current" },
+      },
+    }));
+    expect(screen.getByLabelText("Addon: Actualizado")).not.toHaveClass("sync-summary-card--addon-attention");
+    expect(addonTab).not.toHaveClass("ks-tab--addon-attention");
+    expect(addonTab.querySelector(".ks-tab__update-badge")).not.toBeInTheDocument();
+  });
+
+  it("keeps a completed addon check when the startup snapshot arrives later", async () => {
+    let eventHandler: (event: CoreEvent) => void = () => undefined;
+    let resolvePing: (value: { pong: boolean }) => void = () => undefined;
+    listenCoreEventsMock.mockImplementationOnce(async (handler) => {
+      eventHandler = handler;
+      return () => undefined;
+    });
+    coreRequestMock.mockResolvedValueOnce(authenticatedState)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolvePing = resolve; }));
+
+    render(<App />);
+    await waitFor(() => expect(coreRequestMock).toHaveBeenCalledWith("system.ping"));
+    act(() => eventHandler({
+      protocolVersion: 1,
+      event: "addon.check.completed",
+      data: { ...addonStatus, installed: true, installedVersion: "0.1.17", latestVersion: "0.1.18", state: "update-available" },
+    }));
+    act(() => resolvePing({ pong: true }));
+
+    expect(await screen.findByRole("dialog", { name: "Actualización del addon disponible" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Addon: Actualización disponible")).toBeInTheDocument();
+  });
+
   it("routes an authenticated user with incomplete WoW setup to onboarding", async () => {
     mockStartup({
       ...authenticatedState,
@@ -845,12 +917,12 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog", { name: "Ajustes" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
-    await user.click(screen.getByRole("tab", { name: "Account selection" }));
-    expect(screen.getByRole("tabpanel", { name: "Account selection" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Account selection" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Application" }));
-    expect(screen.getByRole("tabpanel", { name: "Application" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Application" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Selección de cuentas" }));
+    expect(screen.getByRole("tabpanel", { name: "Selección de cuentas" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Selección de cuentas" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
+    expect(screen.getByRole("tabpanel", { name: "Aplicación" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Aplicación" })).not.toBeInTheDocument();
   });
 
   it("switches the whole shell language immediately from Settings", async () => {
@@ -862,7 +934,7 @@ describe("App", () => {
     render(<App />);
     await screen.findByText("player");
     await user.click(screen.getByRole("button", { name: "Configuración" }));
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await user.click(await screen.findByRole("button", { name: "English" }));
 
     expect(screen.getByRole("button", { name: "Sync" })).toBeInTheDocument();

@@ -50,7 +50,7 @@ for (const { id, glow } of themes) {
       await expectStableReleaseScreenshot(page, `${id}-teams-default.png`);
 
       await page.getByRole("button", { name: /Configuraci/u }).click();
-      await page.getByRole("tab", { name: /Appearance/u }).click();
+      await page.getByRole("tab", { name: /Apariencia/u }).click();
       await expect(page.getByRole("button", { name: id === "frost" ? "Frost" : "Heaven", exact: true })).toHaveAttribute("aria-pressed", "true");
       await expect(page.locator(".settings-theme-card")).toHaveCount(5);
       await expectStableReleaseScreenshot(page, `${id}-settings.png`);

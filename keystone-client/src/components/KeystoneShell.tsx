@@ -30,6 +30,7 @@ type KeystoneShellProps = {
   busyLogout: boolean;
   children: ReactNode;
   currentView: KeystoneView;
+  addonAttention?: boolean;
   onCloseWindow: () => void;
   onChangeAvatar: () => void;
   onLogout: () => void;
@@ -46,6 +47,7 @@ export function KeystoneShell({
   busyLogout,
   children,
   currentView,
+  addonAttention = false,
   onCloseWindow,
   onChangeAvatar,
   onLogout,
@@ -72,6 +74,7 @@ export function KeystoneShell({
       style={{ "--ks-client-scale": clientScale } as CSSProperties}
     >
       <KeystoneHeader
+        addonAttention={addonAttention}
         auth={auth}
         busyLogout={busyLogout}
         currentView={currentView}
@@ -90,6 +93,7 @@ export function KeystoneShell({
 }
 
 type KeystoneHeaderProps = {
+  addonAttention: boolean;
   auth: AuthState;
   busyLogout: boolean;
   currentView: KeystoneView;
@@ -105,6 +109,7 @@ type KeystoneHeaderProps = {
 const HEADER_INTERACTIVE_SELECTOR = "button, a, input, select, textarea, [role='button'], [data-no-window-drag]";
 
 function KeystoneHeader({
+  addonAttention,
   auth,
   busyLogout,
   currentView,
@@ -205,13 +210,17 @@ function KeystoneHeader({
         </button>
         <button
           aria-current={currentView === "addon" ? "page" : undefined}
-          className="ks-tab"
+          className={`ks-tab${addonAttention ? " ks-tab--addon-attention" : ""}`}
           data-state={currentView === "addon" ? "selected" : "default"}
           data-ui="shell-tab"
           onClick={() => onNavigate("addon")}
+          title={addonAttention ? t("addon.updateAvailable") : undefined}
           type="button"
         >
-          <span className="ks-tab__label">Addon</span>
+          <span className="ks-tab__label">
+            Addon
+            {addonAttention && <span aria-hidden="true" className="ks-tab__update-badge">!</span>}
+          </span>
         </button>
       </nav>
 

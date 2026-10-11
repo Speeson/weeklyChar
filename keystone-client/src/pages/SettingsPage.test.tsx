@@ -102,7 +102,7 @@ describe("SettingsPage", () => {
       />,
     );
 
-    await user.click(screen.getByRole("tab", { name: "Appearance" }));
+    await user.click(screen.getByRole("tab", { name: "Apariencia" }));
     expect(screen.getByRole("group", { name: "Tema visual" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keystone" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getAllByRole("button").filter((button) => button.classList.contains("settings-theme-card")).map((button) => button.textContent)).toEqual([
@@ -125,7 +125,7 @@ describe("SettingsPage", () => {
 
     expect(await screen.findByLabelText("Arrancar minimizado")).toBeChecked();
     expect(screen.getByLabelText("Arrancar con Windows")).not.toBeChecked();
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     expect(screen.getByRole("heading", { name: "Idioma" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Versión del cliente" })).toBeInTheDocument();
     expect(screen.getByText("0.1.0")).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
     await screen.findByRole("button", { name: "Guardar ajustes" });
     await user.click(screen.getByLabelText("Arrancar minimizado"));
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await user.click(screen.getByRole("button", { name: "English" }));
     await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
 
@@ -372,7 +372,7 @@ describe("SettingsPage", () => {
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
     await user.click(await screen.findByLabelText("Arrancar minimizado"));
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await user.click(screen.getByRole("button", { name: "English" }));
 
     expect(updateSettingsMock).toHaveBeenCalledWith({ lang: "en" });
@@ -388,7 +388,7 @@ describe("SettingsPage", () => {
     updateSettingsMock.mockRejectedValueOnce(new Error("disk failed"));
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await user.click(await screen.findByRole("button", { name: "English" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron guardar los ajustes.");
@@ -407,7 +407,7 @@ describe("SettingsPage", () => {
       .mockResolvedValueOnce(initialSettings);
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await screen.findByRole("button", { name: "English" });
     await user.click(screen.getByRole("button", { name: "English" }));
     await user.click(screen.getByRole("button", { name: "Español" }));
@@ -427,7 +427,7 @@ describe("SettingsPage", () => {
     updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, lang: "en" });
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={vi.fn()} />);
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await user.click(screen.getByRole("button", { name: "English" }));
     resolveInitial({ ...initialSettings, startMinimized: true, lang: "es" });
 
@@ -442,13 +442,13 @@ describe("SettingsPage", () => {
     getSettingsMock.mockResolvedValueOnce(initialSettings).mockResolvedValueOnce({ ...initialSettings, lang: "en" });
     updateSettingsMock.mockResolvedValueOnce({ ...initialSettings, lang: "en" });
     const first = render(<SettingsPage appVersion="0.1.0" initialSettings={initialSettings} onSettingsChanged={onSettingsChanged} />);
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     await user.click(await screen.findByRole("button", { name: "English" }));
     await vi.waitFor(() => expect(onSettingsChanged).toHaveBeenLastCalledWith({ ...initialSettings, lang: "en" }));
     first.unmount();
 
     render(<SettingsPage appVersion="0.1.0" initialSettings={{ ...initialSettings, lang: "en" }} onSettingsChanged={onSettingsChanged} />);
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     expect(await screen.findByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
     expect(onSettingsChanged).toHaveBeenLastCalledWith({ ...initialSettings, lang: "en" });
   });
@@ -512,7 +512,7 @@ describe("SettingsPage", () => {
       />,
     );
 
-    await user.click(screen.getByRole("tab", { name: "Application" }));
+    await user.click(screen.getByRole("tab", { name: "Aplicación" }));
     expect(await screen.findByText("Versión 0.4.0 disponible")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Actualizar" }));
     await user.click(screen.getByRole("button", { name: "Ver versiones publicadas" }));

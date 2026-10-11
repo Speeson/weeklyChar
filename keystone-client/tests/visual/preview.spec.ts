@@ -129,13 +129,13 @@ test.describe("preview states", () => {
 
     await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
-    await page.getByRole("tab", { name: "Appearance" }).click();
-    await expect(page.getByRole("tabpanel", { name: "Appearance" })).toBeVisible();
+    await page.getByRole("tab", { name: "Apariencia" }).click();
+    await expect(page.getByRole("tabpanel", { name: "Apariencia" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tema visual" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Keystone", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".settings-theme-card")).toHaveCount(5);
-    await expect(page.getByRole("tab", { name: "Account selection" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Application" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Selección de cuentas" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Aplicación" })).toBeVisible();
     await expectStableReleaseScreenshot(page, "settings-theme-selector.png");
   });
 
@@ -272,6 +272,27 @@ test.describe("preview states", () => {
     await expectStableReleaseScreenshot(page, "addon-current.png");
   });
 
+  test("shows addon update guidance before activating the warning indicators", async ({ page }) => {
+    await page.goto("/?preview=addon-installed");
+    const notice = page.getByRole("dialog", { name: "Actualización del addon disponible" });
+    const card = page.getByLabel("Addon: Actualización disponible");
+    const tab = page.getByRole("button", { name: "Addon" });
+
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("Ve a la pestaña Addon y pulsa «Actualizar KeystoneSync».");
+    await expect(card.locator(".sync-summary-card__icon")).toHaveAttribute("src", /warning/u);
+    await expect(card).not.toHaveClass(/sync-summary-card--addon-attention/u);
+    await notice.getByRole("button", { name: "Entendido" }).click();
+
+    await expect(notice).toBeHidden();
+    await expect(card).toHaveClass(/sync-summary-card--addon-attention/u);
+    await expect(tab).toHaveClass(/ks-tab--addon-attention/u);
+    await expect(tab.locator(".ks-tab__update-badge")).toBeVisible();
+    expect(await card.evaluate((element) => getComputedStyle(element).animationName)).toBe("ks-addon-card-glow");
+    expect(await tab.evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("0");
+    expect(await tab.locator(".ks-tab__update-badge").evaluate((element) => getComputedStyle(element).animationName)).toBe("ks-addon-badge-pulse");
+  });
+
   for (const addonState of [
     {
       preview: "addon-installed",
@@ -288,6 +309,14 @@ test.describe("preview states", () => {
   ] as const) {
     test(`renders the approved ${addonState.preview} content without changing the shell`, async ({ page }) => {
       await page.goto(`/?preview=${addonState.preview}`);
+      if (addonState.preview === "addon-installed") {
+        const notice = page.getByRole("dialog", { name: "Actualización del addon disponible" });
+        await expect(notice).toBeVisible();
+        await expect(page.getByLabel("Addon: Actualización disponible").locator(".sync-summary-card__icon")).toHaveAttribute("src", /warning/u);
+        await notice.getByRole("button", { name: "Entendido" }).click();
+        await expect(page.getByLabel("Addon: Actualización disponible")).toHaveClass(/sync-summary-card--addon-attention/u);
+        await expect(page.getByRole("button", { name: "Addon" })).toHaveClass(/ks-tab--addon-attention/u);
+      }
       await page.getByRole("button", { name: "Addon" }).click();
 
       await expect(page.getByRole("heading", { name: "Addon", exact: true })).toBeVisible();

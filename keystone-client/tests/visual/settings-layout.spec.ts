@@ -14,7 +14,7 @@ test("Settings keeps its frame, tabs, and actions steady while sections change o
   const contentTop = (await dialog.locator(".ks-modal__content").boundingBox())!.y;
   const firstGroupTop = (await dialog.locator(".settings-general-group").first().boundingBox())!.y;
   expect(firstGroupTop - contentTop).toBeLessThan(55);
-  expect(await dialog.getByRole("tab", { name: "Account selection" }).evaluate((element) => getComputedStyle(element).borderLeftWidth)).toBe("0px");
+  expect(await dialog.getByRole("tab", { name: "Selección de cuentas" }).evaluate((element) => getComputedStyle(element).borderLeftWidth)).toBe("0px");
 
   const autostart = dialog.getByRole("switch", { name: "Arrancar con Windows" });
   const thumb = autostart.locator("+ .settings-toggle-track > span");
@@ -28,25 +28,25 @@ test("Settings keeps its frame, tabs, and actions steady while sections change o
   await expect(dialog.getByRole("radio", { name: "Minimizar a la bandeja" })).toBeChecked();
   await expect(dialog.getByRole("radio", { name: "Preguntar siempre" })).not.toBeChecked();
 
-  for (const name of ["Account selection", "Appearance", "Application", "General"]) {
+  for (const name of ["Selección de cuentas", "Apariencia", "Aplicación", "General"]) {
     await dialog.getByRole("tab", { name }).click();
     expect(await panel.boundingBox()).toEqual(initialPanel);
     expect(await tabs.boundingBox()).toEqual(initialTabs);
     expect(await footer.boundingBox()).toEqual(initialFooter);
   }
 
-  await dialog.getByRole("tab", { name: "Application" }).click();
+  await dialog.getByRole("tab", { name: "Aplicación" }).click();
   await expect(dialog.getByRole("heading", { name: "Versión del cliente" })).toBeVisible();
   const languageSelector = dialog.getByRole("group", { name: "Idioma" });
-  const applicationWidth = (await dialog.getByRole("tabpanel", { name: "Application" }).boundingBox())!.width;
+  const applicationWidth = (await dialog.getByRole("tabpanel", { name: "Aplicación" }).boundingBox())!.width;
   expect((await languageSelector.boundingBox())!.width).toBeCloseTo(applicationWidth);
   expect(await languageSelector.getByRole("button", { name: "Español" }).evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
 
-  await dialog.getByRole("tab", { name: "Appearance" }).click();
+  await dialog.getByRole("tab", { name: "Apariencia" }).click();
   await expect(dialog.locator(".settings-theme-card")).toHaveCount(5);
   await expect(dialog.getByRole("button", { name: "Keystone", exact: true })).toHaveAttribute("aria-pressed", "true");
 
-  await dialog.getByRole("tab", { name: "Account selection" }).click();
+  await dialog.getByRole("tab", { name: "Selección de cuentas" }).click();
   const content = dialog.locator(".ks-modal__content");
   await content.evaluate((element) => {
     const spacer = document.createElement("div");

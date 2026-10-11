@@ -49,7 +49,7 @@ describe("Settings theme integration", () => {
     const user = userEvent.setup();
     const onApplicationMount = vi.fn();
     const firstView = renderSettings(onApplicationMount);
-    await user.click(screen.getByRole("tab", { name: "Appearance" }));
+    await user.click(screen.getByRole("tab", { name: "Apariencia" }));
 
     expect(screen.getByRole("button", { name: "Keystone" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getAllByRole("button").filter((button) => button.classList.contains("settings-theme-card")).map((button) => button.textContent)).toEqual([
@@ -77,7 +77,7 @@ describe("Settings theme integration", () => {
     firstView.unmount();
     document.documentElement.dataset.theme = "keystone";
     renderSettings(onApplicationMount);
-    await user.click(screen.getByRole("tab", { name: "Appearance" }));
+    await user.click(screen.getByRole("tab", { name: "Apariencia" }));
     expect(screen.getByRole("button", { name: "Void" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("application-theme")).toHaveTextContent("void");
     expect(document.documentElement.dataset.theme).toBe("void");

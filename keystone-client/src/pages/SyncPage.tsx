@@ -23,6 +23,7 @@ import type { OptionalThemeAssetRole, RequiredThemeAssetRole } from "../theme/as
 import { useThemeAsset } from "../theme/useThemeAsset";
 
 type SyncPageProps = {
+  addonAttention?: boolean;
   appVersion: string;
   initialAddon: AddonStatus;
   initialCharacters?: CharacterState;
@@ -149,7 +150,7 @@ function addonMeta(addon: AddonStatus, t: Translate): AddonPresentation {
   }
 }
 
-export function SyncPage({ appVersion, initialAddon, initialCharacters, initialSync, initialWow, preview = false }: SyncPageProps) {
+export function SyncPage({ addonAttention = false, appVersion, initialAddon, initialCharacters, initialSync, initialWow, preview = false }: SyncPageProps) {
   const { language, t } = useI18n();
   const [sync, setSync] = useState<SyncStatus>(initialSync);
   const [busyAction, setBusyAction] = useState<SyncAction | null>(null);
@@ -253,6 +254,7 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
         <SyncSummaryCards
           accountCount={accountCount}
           addon={addonStatus}
+          addonAttention={addonAttention}
           characterCount={characterCount}
           lastSyncAt={lastSyncAt}
           language={language}
@@ -284,6 +286,7 @@ export function SyncPage({ appVersion, initialAddon, initialCharacters, initialS
 }
 
 type SummaryProps = {
+  addonAttention?: boolean;
   accountCount: number;
   addon: AddonPresentation;
   characterCount: number;
@@ -291,11 +294,11 @@ type SummaryProps = {
   language: "es" | "en";
 };
 
-function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt, language }: SummaryProps) {
+function SyncSummaryCards({ accountCount, addon, addonAttention, characterCount, lastSyncAt, language }: SummaryProps) {
   const { t } = useI18n();
   return (
     <div className="sync-summary-grid" aria-label={t("sync.summary")}>
-      <SummaryCard detail={addon.detail} frame="sync-summary-addon-frame" icon={addon.icon} label={t("common.addon")} tone={addon.tone} value={addon.label} />
+      <SummaryCard attention={addonAttention} detail={addon.detail} frame="sync-summary-addon-frame" icon={addon.icon} label={t("common.addon")} tone={addon.tone} value={addon.label} />
       <SummaryCard frame="sync-summary-frame" icon="sync-summary-accounts" label={t("sync.accounts")} value={accountCount} detail={t("sync.connectedAccounts")} />
       <SummaryCard frame="sync-summary-frame" icon="sync-summary-last" label={t("sync.last")} value={formatTime(lastSyncAt, language)} detail={formatDate(lastSyncAt, language, t("sync.noSyncs"))} />
       <SummaryCard frame="sync-summary-frame" icon="sync-summary-characters" label={t("sync.characters")} value={characterCount} detail={t("sync.detected")} />
@@ -304,6 +307,7 @@ function SyncSummaryCards({ accountCount, addon, characterCount, lastSyncAt, lan
 }
 
 type SummaryCardProps = {
+  attention?: boolean;
   detail: string;
   frame: Extract<OptionalThemeAssetRole, "sync-summary-addon-frame" | "sync-summary-frame">;
   icon: RequiredThemeAssetRole;
@@ -312,13 +316,13 @@ type SummaryCardProps = {
   value: string | number;
 };
 
-function SummaryCard({ detail, frame, icon, label, tone, value }: SummaryCardProps) {
+function SummaryCard({ attention = false, detail, frame, icon, label, tone, value }: SummaryCardProps) {
   const frameSource = useThemeAsset(frame);
   const iconSource = useThemeAsset(icon);
   return (
     <article
       aria-label={`${label}: ${value}`}
-      className={`sync-summary-card sync-summary-card--${tone ?? "metric"}`}
+      className={`sync-summary-card sync-summary-card--${tone ?? "metric"}${attention ? " sync-summary-card--addon-attention" : ""}`}
     >
       {frameSource ? <img alt="" className="theme-frame-artwork sync-summary-card__frame" data-asset-role={frame} src={frameSource} /> : null}
       <img alt="" className="sync-summary-card__icon" src={iconSource} />

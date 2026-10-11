@@ -281,6 +281,31 @@ h2 {
   opacity: var(--theme-tab-edge-opacity, 1);
 }
 
+.ks-tab__update-badge {
+  position: absolute;
+  top: -8px;
+  left: calc(100% + 7px);
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid #ffc16a;
+  border-radius: 50%;
+  color: #fff4dc;
+  background: #8d341d;
+  box-shadow: 0 0 0 2px rgb(20 9 6 / 80%), 0 0 8px rgb(255 127 68 / 70%);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+  animation: ks-addon-badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ks-addon-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgb(20 9 6 / 80%), 0 0 8px rgb(255 127 68 / 70%); }
+  50% { box-shadow: 0 0 0 2px rgb(20 9 6 / 80%), 0 0 15px rgb(255 127 68 / 95%); }
+}
+
 .ks-header-actions {
   display: flex;
   align-items: center;
@@ -613,6 +638,16 @@ h2 {
     var(--theme-summary-background);
   box-shadow: var(--theme-shadow-panel), var(--theme-glow-medium);
   overflow: hidden;
+}
+
+.sync-summary-card--addon-attention {
+  border-color: var(--status-warning-strong);
+  animation: ks-addon-card-glow 2s ease-in-out infinite;
+}
+
+@keyframes ks-addon-card-glow {
+  0%, 100% { box-shadow: var(--theme-shadow-panel), 0 0 9px var(--status-warning); }
+  50% { box-shadow: var(--theme-shadow-panel), 0 0 24px var(--status-warning-strong); }
 }
 
 .sync-summary-card::after,
@@ -1886,6 +1921,42 @@ h2 {
   gap: 12px;
   overflow: auto;
   padding: 18px 24px;
+}
+
+.ks-addon-update-modal__panel {
+  width: min(100%, 560px);
+}
+
+.ks-addon-update-modal__heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ks-addon-update-modal__heading img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+html[data-theme="frost"] .ks-addon-update-modal__heading img {
+  mix-blend-mode: screen;
+}
+
+.ks-addon-update-modal__dismiss {
+  align-self: flex-end;
+  min-width: 130px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ks-tab__update-badge,
+  .sync-summary-card--addon-attention {
+    animation: none;
+  }
+
+  .sync-summary-card--addon-attention {
+    box-shadow: var(--theme-shadow-panel), 0 0 18px var(--status-warning);
+  }
 }
 
 .auth-panel__heading {

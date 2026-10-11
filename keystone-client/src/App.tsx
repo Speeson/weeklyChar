@@ -99,6 +99,7 @@ function AvatarChoice({
 
 function App() {
   const appIcon = useThemeAsset("brand-mark");
+  const addonWarningIcon = useThemeAsset("addon-status-update");
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>("loading");
   const [busyAction, setBusyAction] = useState<ActionName | null>("startup");
   const [auth, setAuth] = useState<AuthState | null>(null);
@@ -122,10 +123,12 @@ function App() {
   const [onboardingSkipped, setOnboardingSkipped] = useState(false);
   const [updater, setUpdater] = useState<UpdaterSnapshot>(initialUpdater);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [addonNoticeDismissed, setAddonNoticeDismissed] = useState(false);
   const [postUpdateChangelog, setPostUpdateChangelog] = useState<PostUpdateChangelog | null>(null);
   const [newThemesOpen, setNewThemesOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const updaterController = useRef<UpdateController | null>(null);
+  const addonEventVersion = useRef(0);
   const teamsSessionOwner = useRef<string | null | undefined>(undefined);
   const settingsRef = useRef<ClientSettings | null>(null);
   const closeDialogOpenRef = useRef(false);
@@ -152,13 +155,15 @@ function App() {
 
   useEffect(() => { dismissContextMenu(); }, [currentView, dismissContextMenu]);
 
-  const applySystemState = useCallback((state: SystemState) => {
+  const applySystemState = useCallback((state: SystemState, addonVersionAtRequest: number) => {
     setAuth(state.auth);
     setSettings(state.settings);
     setWow(state.wow);
     setSync(state.sync);
     setCharacters(state.characters);
-    setAddon(state.addon);
+    if (addonEventVersion.current === addonVersionAtRequest) {
+      setAddon(state.addon);
+    }
   }, []);
 
   useEffect(() => {
@@ -171,18 +176,22 @@ function App() {
         setBridgeStatus("ready");
       }
       if (event.event === "addon.check.completed" || event.event === "addon.status.changed") {
+        addonEventVersion.current += 1;
         setAddon(event.data);
       }
       if (event.event === "characters.updated") {
         setCharacters(event.data);
       }
       if (event.event === "addon.install.completed") {
+        addonEventVersion.current += 1;
         setAddon(event.data.status);
       }
       if (event.event === "addon.install.started" || event.event === "addon.install.progress") {
+        addonEventVersion.current += 1;
         setAddon((current) => (current ? { ...current, operation: event.data } : current));
       }
       if (event.event === "addon.install.failed") {
+        addonEventVersion.current += 1;
         setAddon((current) => current ? {
           ...current,
           state: "error",
@@ -195,13 +204,14 @@ function App() {
     async function runStartupCheck() {
       try {
         const previewState = getPreviewState();
+        const addonVersionAtRequest = addonEventVersion.current;
         const state = previewState ?? (await coreRequest<SystemState>("system.get_state"));
         const firstPing = previewState ? { pong: true } : await coreRequest<PingResult>("system.ping");
         if (cancelled) {
           return;
         }
 
-        applySystemState(state);
+        applySystemState(state, addonVersionAtRequest);
         setPreviewMode(previewState !== null);
         if (previewState && isTeamsPreview()) setCurrentView("teams");
         if (previewState && isCharactersPreview()) setCurrentView("characters");
@@ -363,6 +373,7 @@ function App() {
     setAuth({ authenticated: false, username: null, avatarUrl: null });
     setCharacters(current => current ? { ...current, characters: [], source: "none", lastRefreshAt: null, lastError: null } : current);
     setCurrentView("sync");
+    setAddonNoticeDismissed(false);
     setError(null);
   }, []);
 
@@ -380,6 +391,7 @@ function App() {
     setSettingsOpen(false);
     setAvatarPickerOpen(false);
     setOnboardingSkipped(false);
+    setAddonNoticeDismissed(false);
     try {
       const nextAuth = await logout();
       await clearAvatarCache();
@@ -398,8 +410,9 @@ function App() {
     setBusyAction("startup");
     setError(null);
     try {
+      const addonVersionAtRequest = addonEventVersion.current;
       const state = await coreRequest<SystemState>("system.get_state");
-      applySystemState(state);
+      applySystemState(state, addonVersionAtRequest);
     } catch (caught) {
       setError(localizedCoreErrorMessage(caught, language, t("common.bridgeError")));
     } finally {
@@ -584,12 +597,18 @@ function App() {
   );
   const language = settings?.lang ?? "es";
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => translate(language, key, values);
+  const addonUpdateAvailable = addon?.state === "update-available";
+  const addonAttention = addonUpdateAvailable && addonNoticeDismissed;
+  const showAddonNotice = addonUpdateAvailable && !addonNoticeDismissed && auth?.authenticated
+    && (!needsOnboarding || onboardingSkipped) && !settingsOpen && !avatarPickerOpen && !closeDialogOpen
+    && !updateModalOpen && !postUpdateChangelog && !newThemesOpen;
 
   return (
     <I18nProvider language={language}>
     <main className="shell">
       {auth?.authenticated && settings && wow && sync && characters && addon && (!needsOnboarding || onboardingSkipped) ? (
         <KeystoneShell
+          addonAttention={addonAttention}
           auth={auth}
           busyLogout={busyAction === "logout"}
           currentView={currentView}
@@ -628,6 +647,7 @@ function App() {
           >
             {currentView === "sync" ? (
               <SyncPage
+                addonAttention={addonAttention}
                 appVersion={packageJson.version}
                 initialAddon={addon}
                 initialCharacters={characters}
@@ -730,6 +750,25 @@ function App() {
                     </div>
                   )}
                   {avatarError ? <p className="error" role="alert">{avatarError}</p> : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {showAddonNotice ? (
+            <div aria-describedby="addon-update-notice-detail" aria-labelledby="addon-update-notice-title" aria-modal="true" className="ks-modal ks-addon-update-modal" role="dialog">
+              <div className="ks-modal__panel ks-addon-update-modal__panel">
+                <div className="ks-modal__header">
+                  <div className="ks-addon-update-modal__heading">
+                    <img alt="" src={addonWarningIcon} />
+                    <h2 id="addon-update-notice-title">{t("addon.noticeTitle")}</h2>
+                  </div>
+                  <button aria-label={t("common.close")} className="ks-modal__close" onClick={() => setAddonNoticeDismissed(true)} type="button">
+                    <ThemedIcon name="close" size={20} />
+                  </button>
+                </div>
+                <div className="ks-modal__content">
+                  <p id="addon-update-notice-detail">{t("addon.noticeDetail")}</p>
+                  <button autoFocus className="ks-addon-update-modal__dismiss" onClick={() => setAddonNoticeDismissed(true)} type="button">{t("addon.noticeDismiss")}</button>
                 </div>
               </div>
             </div>
