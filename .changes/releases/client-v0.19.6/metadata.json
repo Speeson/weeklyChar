@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.19.5",
+  "version": "0.19.6",
+  "bump": "patch",
+  "tag": "client-v0.19.6",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "2026-10-14-client-weekly-voidcore-card.json"
+  ]
+}
