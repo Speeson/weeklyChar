@@ -1,6 +1,6 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { charactersPreview } from "../core/charactersPreview";
 import { currentVaultWeekKey } from "../core/vaultWeek";
 import { I18nProvider } from "../core/i18n";
@@ -83,17 +83,74 @@ describe("CharactersPage", () => {
 
   it("marks Orin's current weekly Voidcore quest completed and ignores an expired completion", () => {
     const characters = charactersPreview();
-    characters[0].currencies!.nebulousVoidcore = { quantity: 1, questCompleted: true, weekKey: currentVaultWeekKey() };
+    characters[0].currencies!.nebulousVoidcore = { quantity: 1, maxQuantity: 3, totalEarned: 1, useTotalEarnedForMaxQty: true, questCompleted: true, weekKey: currentVaultWeekKey() };
     const { container, rerender } = renderPage({ ...state, characters });
     const card = container.querySelector('[data-currency="nebulousVoidcore"]')!;
     expect(card).toHaveClass("is-maxed");
+    expect(card).not.toHaveClass("is-voidcore-available");
     expect(within(card as HTMLElement).getByText("Misión completada")).toBeVisible();
     expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(/Temporada/)).not.toBeInTheDocument();
 
     characters[0].currencies!.nebulousVoidcore.weekKey = "2026-01-07";
     rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
     expect(card).not.toHaveClass("is-maxed");
+    expect(card).toHaveClass("is-voidcore-available");
     expect(within(card as HTMLElement).queryByText("Misión completada")).not.toBeInTheDocument();
+  });
+
+  it("makes the weekly Voidcore available again at reset without a new character snapshot", () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.nebulousVoidcore = { quantity: 3, maxQuantity: 3, questCompleted: false, weekKey: currentVaultWeekKey() };
+    const { container, rerender } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="nebulousVoidcore"]')!;
+    expect(card).toHaveClass("is-voidcore-available");
+    expect(card).not.toHaveClass("is-maxed");
+    expect(card.querySelector(".currency-card__values > strong")).toHaveTextContent("3");
+    expect(within(card as HTMLElement).getByText("Núcleo de vacío semanal disponible").textContent).toBe("Núcleo de vacío\nsemanal disponible");
+    expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(/Temporada|Máximo|Semanal \d/)).not.toBeInTheDocument();
+
+    characters[0].currencies!.nebulousVoidcore.weekKey = "2026-01-07";
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(card).toHaveClass("is-voidcore-available");
+    expect(within(card as HTMLElement).getByText("Núcleo de vacío semanal disponible")).toBeVisible();
+
+    characters[0].currencies!.nebulousVoidcore = { quantity: 0 };
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(card).toHaveClass("is-voidcore-available");
+    expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
+  });
+
+  it("reactivates the Voidcore card when Wednesday's reset occurs while the client stays open", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-14T03:59:30Z"));
+      const characters = charactersPreview();
+      characters[0].currencies!.nebulousVoidcore = { quantity: 1, questCompleted: true, weekKey: currentVaultWeekKey() };
+      const { container } = renderPage({ ...state, characters });
+      const card = container.querySelector('[data-currency="nebulousVoidcore"]')!;
+      expect(within(card as HTMLElement).getByText("Misión completada")).toBeVisible();
+
+      act(() => vi.advanceTimersByTime(29_999));
+      expect(within(card as HTMLElement).getByText("Misión completada")).toBeVisible();
+      act(() => vi.advanceTimersByTime(1));
+      expect(card).toHaveClass("is-voidcore-available");
+      expect(within(card as HTMLElement).getByText("Núcleo de vacío semanal disponible")).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows Spark of Tides without a cap message and keeps bank details secondary", () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.sparksOfTides = { itemQuantity: 6, bankQuantity: 3, bankQuantityKnown: true };
+    const { container } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="sparksOfTides"]')!;
+    const quantity = card.querySelector(".currency-card__values > strong")!;
+    expect(quantity).toHaveTextContent("6 (3 en el banco)");
+    expect(quantity.querySelector("small")).toHaveTextContent("(3 en el banco)");
+    expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
   });
 
   it("uses the highest WoW spark dust cap observed on the same account and region", () => {

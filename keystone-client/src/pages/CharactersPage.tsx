@@ -19,7 +19,7 @@ import { blizzardIconUrl } from "../core/wowhead";
 import { useI18n } from "../core/i18n";
 import { activeTalentEntry, localizedClassName, localizedHeroTreeName, localizedSpecName, talentPurchasedRanks } from "../core/talentDisplay";
 import { formatVaultReward } from "../core/vaultRewards";
-import { currentVault } from "../core/vaultWeek";
+import { currentVault, nextVaultResetMs } from "../core/vaultWeek";
 
 const qualityColors = ["#9d9d9d", "#fff", "#1eff00", "#0070dd", "#a335ee", "#ff8000", "#e6cc80"];
 const medals = [medal1, medal1, medal2, medal3];
@@ -32,7 +32,7 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "TALENTOS DE CLASE", heroTalents: "TALENTOS HEROICOS", specTalents: "TALENTOS DE ESPECIALIZACIÓN",
   dungeons: "MAZMORRAS", greatVault: "GRAN CÁMARA", preyHunts: "CACERÍAS", currencies: "MONEDAS", gold: "ORO",
   raids: "Bandas", world: "Mundo", weekly: "Semanal", season: "Temporada", maximum: "Máximo",
-  noCap: "Sin límite relevante", questCompleted: "Misión completada", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Puntuación total",
+  noCap: "Sin límite relevante", questCompleted: "Misión completada", voidcoreAvailable: "Núcleo de vacío\nsemanal disponible", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Puntuación total",
   noCharacters: "No hay personajes sincronizados.", noGear: "No hay datos de equipo. Entra con este personaje y sincroniza.", enchantment: "Encantamiento", rating: "puntuación", talentNode: "Talento",
 } : {
   account: "ACCOUNT", realm: "REALM", characters: "CHARACTERS",
@@ -40,7 +40,7 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "CLASS TALENTS", heroTalents: "HERO TALENTS", specTalents: "SPEC TALENTS",
   dungeons: "DUNGEONS", greatVault: "GREAT VAULT", preyHunts: "PREY HUNTS", currencies: "CURRENCIES", gold: "GOLD",
   raids: "Raids", world: "World", weekly: "Weekly", season: "Season", maximum: "Max",
-  noCap: "No relevant cap", questCompleted: "Quest completed", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
+  noCap: "No relevant cap", questCompleted: "Quest completed", voidcoreAvailable: "Weekly Voidcore\navailable", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
   noCharacters: "No synced characters.", noGear: "No gear data. Log in with this character and sync.", enchantment: "Enchantment", rating: "rating", talentNode: "Talent",
 };
 
@@ -263,22 +263,23 @@ function FluteCountBadge({ info, bounty, language, region }: { info?: CharacterC
   </span>;
 }
 
-function CurrencyCard({ currencyKey, info, fluteInfo, language, region }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; fluteInfo?: CharacterCurrency; language: "es" | "en"; region: string }) {
+function CurrencyCard({ currencyKey, info, fluteInfo, language, region, weekNowMs }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; fluteInfo?: CharacterCurrency; language: "es" | "en"; region: string; weekNowMs: number }) {
   const copy = characterCopy(language);
   const caps = currencyCapState(info);
-  const questCompleted = currencyKey.key === "nebulousVoidcore" && voidcoreQuestCompleted(info);
+  const questCompleted = currencyKey.key === "nebulousVoidcore" && voidcoreQuestCompleted(info, weekNowMs);
+  const questAvailable = currencyKey.key === "nebulousVoidcore" && !questCompleted;
+  const isMaxed = currencyKey.key === "nebulousVoidcore" ? questCompleted : caps.isMaxed;
   const sparkTotal = number(info?.itemQuantity, number(info?.quantity));
-  const value = currencyKey.key === "sparksOfTides" && info?.bankQuantityKnown && number(info.bankQuantity) > 0
-    ? `${sparkTotal} (${number(info.bankQuantity)} ${language === "es" ? "en el banco" : "in bank"})`
-    : currencyKey.key === "sparksOfTides" ? String(sparkTotal) : String(number(info?.quantity));
+  const bankCount = info?.bankQuantityKnown ? number(info.bankQuantity) : 0;
+  const value = currencyKey.key === "sparksOfTides" ? String(sparkTotal) : String(number(info?.quantity));
   const isBounty = currencyKey.key === "trovehuntersBounty";
   const hasCap = number(info?.maxWeeklyQuantity) > 0 || number(info?.maxQuantity) > 0;
   const label = language === "es" ? currencyKey.labelEs : currencyKey.label;
-  const card = <article className={`currency-card${caps.isMaxed || questCompleted ? " is-maxed" : ""}`} data-currency={currencyKey.key}>
-      <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <TrovehunterStatus info={info} language={language}/> : <div className="currency-card__values"><strong>{value}</strong><footer>
-        {questCompleted ? <span className="is-maxed">{copy.questCompleted}</span> : !hasCap ? <span>{copy.noCap}</span> : null}
-        {number(info?.maxWeeklyQuantity) > 0 ? <span className={caps.isWeeklyMaxed ? "is-maxed" : ""}>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
-        {number(info?.maxQuantity) > 0 ? <span className={caps.isSeasonMaxed || caps.isTotalMaxed ? "is-maxed" : ""}>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {number(info?.maxQuantity)}</span> : null}
+  const card = <article className={`currency-card${isMaxed ? " is-maxed" : ""}${questAvailable ? " is-voidcore-available" : ""}`} data-currency={currencyKey.key}>
+      <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <TrovehunterStatus info={info} language={language}/> : <div className="currency-card__values"><strong>{value}{currencyKey.key === "sparksOfTides" && bankCount > 0 ? <small> ({bankCount} {language === "es" ? "en el banco" : "in bank"})</small> : null}</strong><footer>
+        {questCompleted ? <span className="is-maxed">{copy.questCompleted}</span> : questAvailable ? <span>{copy.voidcoreAvailable}</span> : !hasCap && currencyKey.key !== "nebulousVoidcore" && currencyKey.key !== "sparksOfTides" ? <span>{copy.noCap}</span> : null}
+        {currencyKey.key !== "nebulousVoidcore" && number(info?.maxWeeklyQuantity) > 0 ? <span className={caps.isWeeklyMaxed ? "is-maxed" : ""}>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
+        {currencyKey.key !== "nebulousVoidcore" && number(info?.maxQuantity) > 0 ? <span className={caps.isSeasonMaxed || caps.isTotalMaxed ? "is-maxed" : ""}>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {number(info?.maxQuantity)}</span> : null}
       </footer></div>}</div>
     </article>;
   if (isBounty) return <div className="currency-card-wrap">
@@ -326,6 +327,19 @@ function ProgressPanels({ character, language }: { character: Character; languag
 export function CharactersPage({ state }: { state: CharacterState }) {
   const { language } = useI18n();
   const copy = characterCopy(language);
+  const [weekNowMs, setWeekNowMs] = useState(Date.now);
+  useEffect(() => {
+    let timer: number;
+    const scheduleReset = () => {
+      const nowMs = Date.now();
+      timer = window.setTimeout(() => {
+        setWeekNowMs(Date.now());
+        scheduleReset();
+      }, nextVaultResetMs(nowMs) - nowMs);
+    };
+    scheduleReset();
+    return () => window.clearTimeout(timer);
+  }, []);
   const accounts = useMemo(() => [...new Set(state.characters.map(value => value.wowAccount).filter((value): value is string => Boolean(value)))], [state.characters]);
   const accountOptions = useMemo<AccountRealmOption[]>(() => accounts.map(optionAccount => ({
     account: optionAccount,
@@ -445,8 +459,8 @@ export function CharactersPage({ state }: { state: CharacterState }) {
           const info = character.currencies?.[meta.key];
           const displayedInfo = meta.key === "tidalSparkDust" && info && tidalSparkDustMax > number(info.maxQuantity)
             ? { ...info, maxQuantity: tidalSparkDustMax } : info;
-          return <CurrencyCard currencyKey={meta} info={displayedInfo} key={meta.key} language={language} region={character.region}/>;
-        })}<CurrencyCard currencyKey={bounty} fluteInfo={character.currencies?.scaleboundHeraldFlute} info={character.currencies?.[bounty.key]} language={language} region={character.region}/></div></section></div>
+          return <CurrencyCard currencyKey={meta} info={displayedInfo} key={meta.key} language={language} region={character.region} weekNowMs={weekNowMs}/>;
+        })}<CurrencyCard currencyKey={bounty} fluteInfo={character.currencies?.scaleboundHeraldFlute} info={character.currencies?.[bounty.key]} language={language} region={character.region} weekNowMs={weekNowMs}/></div></section></div>
         <div className="characters-sidebar"><ProgressPanels character={character} language={language}/><section className="characters-panel money-card"><h2>{copy.gold}</h2><span className="money-card__icon">{goldIcon ? <img alt="" src={goldIcon}/> : "◉"}</span><div><span><strong>{number(character.money?.gold).toLocaleString(language === "es" ? "es-ES" : "en-US")}</strong><i className="money-coin money-coin--gold"/></span><span><b className="money-card__silver">{number(character.money?.silver)}</b><i className="money-coin money-coin--silver"/></span><span><b className="money-card__copper">{number(character.money?.copperOnly, number(character.money?.copper) % 100)}</b><i className="money-coin money-coin--copper"/></span></div></section></div></div>
     </div>
     {talentsOpen ? <TalentModal character={character} onClose={() => setTalentsOpen(false)}/> : null}

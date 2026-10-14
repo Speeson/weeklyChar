@@ -1769,6 +1769,7 @@ h2 {
 .currency-card-wrap { position: relative; min-width: 0; min-height: 0; height: 100%; }
 .currency-card { position: relative; height: 100%; display: grid; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: 32px minmax(0, 1fr); gap: 2px 8px; padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--theme-surface-1) 78%, transparent); }
 .currency-card.is-maxed { border-color: #c22b2b; }
+.currency-card.is-voidcore-available { border-color: var(--status-warning-strong); animation: ks-addon-card-glow 2s ease-in-out infinite; }
 .currency-card__icon { grid-column: 1; grid-row: 2; align-self: end; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--theme-accent); border-radius: 8px; color: var(--theme-accent); background: color-mix(in srgb, var(--theme-accent) 15%, #041312); font-size: 26px; }
 .currency-card__icon img { width: 100%; height: 100%; border-radius: 7px; object-fit: cover; }
 .currency-card__flute { position: absolute; z-index: 5; top: 5px; right: 7px; }
@@ -1787,8 +1788,12 @@ h2 {
 .currency-card[data-currency="trovehuntersBounty"] .currency-card__content > small { padding-right: 45px; }
 .currency-card__values { min-width: 0; grid-column: 2; grid-row: 2; display: grid; grid-template-rows: minmax(0, 1fr) auto; align-items: center; }
 .currency-card__values > strong { align-self: center; font-size: 24px; line-height: 26px; }
-.currency-card[data-currency="sparksOfTides"] .currency-card__values > strong { font-size: 18px; line-height: 21px; }
+.currency-card__values > strong small { color: var(--theme-text-muted); font-size: 11px; font-weight: 700; line-height: 14px; }
 .currency-card footer { min-width: 0; display: grid; justify-items: end; color: var(--theme-text-muted); font-size: 11px; font-weight: 700; line-height: 14px; white-space: nowrap; }
+.currency-card[data-currency="nebulousVoidcore"] .currency-card__values { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.currency-card[data-currency="nebulousVoidcore"] footer { align-self: end; }
+.currency-card.is-voidcore-available footer { font-size: 10px; line-height: 12px; }
+.currency-card.is-voidcore-available footer span { color: var(--status-warning-strong); text-align: right; white-space: pre-line; }
 .currency-card footer span.is-maxed, .currency-card.is-maxed .currency-card__values > strong { color: #ff3b3b; }
 .currency-card__unknown { grid-column: 2; grid-row: 2; align-self: center; color: var(--theme-text-muted); font-size: 20px; }
 .currency-card__bounty { min-width: 0; grid-column: 2; grid-row: 2; align-self: center; display: grid; gap: 3px; }
@@ -1950,11 +1955,13 @@ html[data-theme="frost"] .ks-addon-update-modal__heading img {
 
 @media (prefers-reduced-motion: reduce) {
   .ks-tab__update-badge,
-  .sync-summary-card--addon-attention {
+  .sync-summary-card--addon-attention,
+  .currency-card.is-voidcore-available {
     animation: none;
   }
 
-  .sync-summary-card--addon-attention {
+  .sync-summary-card--addon-attention,
+  .currency-card.is-voidcore-available {
     box-shadow: var(--theme-shadow-panel), 0 0 18px var(--status-warning);
   }
 }

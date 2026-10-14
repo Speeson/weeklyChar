@@ -1,0 +1,15 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Destaca la disponibilidad semanal del núcleo de vacío y simplifica las tarjetas de monedas",
+  "details": [
+    "Muestra un aviso y un brillo pulsante cuando la misión semanal del núcleo de vacío está disponible, incluso tras el reinicio del miércoles sin sincronizar de nuevo.",
+    "Oculta los límites irrelevantes del núcleo de vacío y la chispa de las mareas, alinea la cantidad del núcleo y muestra la cantidad de chispas al tamaño habitual con el banco como detalle secundario."
+  ],
+  "summaryEn": "Highlight weekly Voidcore availability and simplify currency cards",
+  "detailsEn": [
+    "Show a notice and pulsing glow when the weekly Voidcore quest is available, including after Wednesday's reset without another sync.",
+    "Hide irrelevant caps on Voidcore and Spark of Tides, align the Voidcore quantity, and show the Spark quantity at the usual size with bank holdings as secondary detail."
+  ]
+}

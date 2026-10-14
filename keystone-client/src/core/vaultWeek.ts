@@ -6,6 +6,10 @@ export function currentVaultWeekKey(nowMs = Date.now()): string {
   return reset.toISOString().slice(0, 10);
 }
 
+export function nextVaultResetMs(nowMs = Date.now()): number {
+  return Date.parse(`${currentVaultWeekKey(nowMs)}T04:00:00Z`) + 7 * 24 * 60 * 60 * 1000;
+}
+
 export function currentVault<T extends object>(vault: T | null | undefined, nowMs = Date.now()): T | null {
   return vault != null && (vault as { weekKey?: unknown }).weekKey === currentVaultWeekKey(nowMs) ? vault : null;
 }

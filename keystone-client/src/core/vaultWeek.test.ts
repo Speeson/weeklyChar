@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentVault, currentVaultWeekKey } from "./vaultWeek";
+import { currentVault, currentVaultWeekKey, nextVaultResetMs } from "./vaultWeek";
 
 describe("Great Vault weekly reset", () => {
   it("switches weeks on Wednesday at 04:00 UTC", () => {
@@ -10,5 +10,7 @@ describe("Great Vault weekly reset", () => {
     expect(currentVault({ weekKey: "2026-09-30", dungeons: {} }, before)).not.toBeNull();
     expect(currentVault({ weekKey: "2026-09-30", dungeons: {} }, after)).toBeNull();
     expect(currentVault({ dungeons: {} }, after)).toBeNull();
+    expect(nextVaultResetMs(before)).toBe(after);
+    expect(nextVaultResetMs(after)).toBe(Date.parse("2026-10-14T04:00:00Z"));
   });
 });
