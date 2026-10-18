@@ -24,7 +24,7 @@ const PROTOCOL_VERSION: u64 = 1;
 pub const CORE_EVENT_NAME: &str = "core://event";
 pub const SIDECAR_LOGICAL_NAME: &str = "keystone-client-core";
 const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
-const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
+const STARTUP_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
