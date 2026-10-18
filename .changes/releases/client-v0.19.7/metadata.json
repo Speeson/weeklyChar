@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.19.6",
+  "version": "0.19.7",
+  "bump": "patch",
+  "tag": "client-v0.19.7",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-changelog-on-open.json"
+  ]
+}
