@@ -149,6 +149,7 @@ class BridgeProcessTests(unittest.TestCase):
                 "profile.set_avatar",
                 "settings.get",
                 "settings.update",
+                "changelog.check",
                 "wow.detect",
                 "wow.list_accounts",
                 "wow.select_accounts",
@@ -172,6 +173,20 @@ class BridgeProcessTests(unittest.TestCase):
                 "addon.reinstall",
             ],
         )
+
+    def test_changelog_is_seen_once_across_process_restarts(self):
+        request = {
+            "protocolVersion": 1,
+            "id": "changelog-1",
+            "command": "changelog.check",
+            "payload": {"version": "0.4.0", "browserSeenVersion": "0.3.0"},
+        }
+        self.assertEqual(self.bridge.send(request)["data"], {"show": True, "firstRun": False})
+        self.assertEqual(self.bridge.close()[0], 0)
+
+        self.bridge = BridgeProcess(self.temp_dir.name)
+        self.bridge.read_message()
+        self.assertEqual(self.bridge.send(request)["data"], {"show": False, "firstRun": False})
 
     def test_system_ping_returns_correlated_response(self):
         response = self.bridge.send(

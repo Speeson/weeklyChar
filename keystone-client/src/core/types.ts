@@ -10,6 +10,7 @@ export type CoreCommand =
   | "profile.set_avatar"
   | "settings.get"
   | "settings.update"
+  | "changelog.check"
   | "wow.detect"
   | "wow.list_accounts"
   | "wow.select_accounts"

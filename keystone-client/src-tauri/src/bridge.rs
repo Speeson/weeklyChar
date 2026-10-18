@@ -444,6 +444,7 @@ pub fn is_command_allowed(command: &str) -> bool {
             | "profile.set_avatar"
             | "settings.get"
             | "settings.update"
+            | "changelog.check"
             | "wow.detect"
             | "wow.list_accounts"
             | "wow.select_accounts"
@@ -876,6 +877,7 @@ mod tests {
         assert!(is_command_allowed("auth.battlenet.cancel"));
         assert!(is_command_allowed("settings.get"));
         assert!(is_command_allowed("settings.update"));
+        assert!(is_command_allowed("changelog.check"));
         assert!(is_command_allowed("wow.detect"));
         assert!(is_command_allowed("wow.list_accounts"));
         assert!(is_command_allowed("wow.select_accounts"));

@@ -12,7 +12,7 @@ import { RemoteAvatar } from "./components/RemoteAvatar";
 import { UpdateModal } from "./components/UpdateModal";
 import { logout } from "./core/auth";
 import { cacheProfileAvatar, clearAvatarCache, getCachedAvatarSource } from "./core/avatarCache";
-import { findPostUpdateChangelog, isNewThemesAnnouncementDue, markChangelogSeen, markNewThemesSeen, type PostUpdateChangelog } from "./core/changelog";
+import { findPersistedPostUpdateChangelog, isNewThemesAnnouncementDue, markNewThemesSeen, type PostUpdateChangelog } from "./core/changelog";
 import { coreRequest } from "./core/client";
 import { classColor } from "./core/characterDisplay";
 import { listenCoreEvents } from "./core/events";
@@ -308,6 +308,7 @@ function App() {
     if (!isTauri()) {
       return;
     }
+    if (bridgeStatus !== "ready") return;
     if (isNewThemesTauriPreview()) {
       setPostUpdateChangelog({
         version: bundledRelease.version,
@@ -316,16 +317,22 @@ function App() {
       });
       return;
     }
-    try {
-      const changelog = findPostUpdateChangelog(localStorage, bundledRelease.version, bundledRelease.notes);
+    let cancelled = false;
+    let storage: Storage | null = null;
+    try { storage = localStorage; } catch { /* WebView storage may be blocked. */ }
+    void findPersistedPostUpdateChangelog(storage, bundledRelease.version, bundledRelease.notes,
+      (version, browserSeenVersion) => coreRequest<{ show: boolean; firstRun: boolean }>("changelog.check", { version, browserSeenVersion }),
+    ).then((changelog) => {
+      if (cancelled) return;
       setPostUpdateChangelog(changelog);
-      if (!changelog && isNewThemesAnnouncementDue(localStorage)) {
-        setNewThemesOpen(true);
+      if (!changelog && storage) {
+        try {
+          if (isNewThemesAnnouncementDue(storage)) setNewThemesOpen(true);
+        } catch { /* WebView storage may be blocked. */ }
       }
-    } catch {
-      // A blocked WebView storage backend must not prevent client startup.
-    }
-  }, []);
+    });
+    return () => { cancelled = true; };
+  }, [bridgeStatus]);
 
   useEffect(() => {
     if (!newThemesOpen || postUpdateChangelog || isNewThemesTauriPreview()) return;
@@ -570,11 +577,6 @@ function App() {
   }
 
   function closePostUpdateChangelog() {
-    try {
-      if (!isNewThemesTauriPreview()) markChangelogSeen(localStorage, bundledRelease.version);
-    } catch {
-      // The changelog can still be dismissed for this process when storage is unavailable.
-    }
     if (postUpdateChangelog?.showNewThemes) {
       setNewThemesOpen(true);
     }

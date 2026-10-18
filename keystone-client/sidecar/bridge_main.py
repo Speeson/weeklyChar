@@ -23,6 +23,7 @@ from bridge_protocol import (
 import auth_service
 import addon_service
 import character_service
+import changelog_state
 import config as config_module
 import profile_service
 import settings_service
@@ -161,6 +162,19 @@ def handle_settings_update(payload: dict[str, Any]) -> dict[str, Any]:
         return settings_service.update_settings(config_module.load(), payload)
     except settings_service.SettingsError as exc:
         raise ProtocolError(exc.code, exc.message) from exc
+
+
+def handle_changelog_check(payload: dict[str, Any]) -> dict[str, Any]:
+    version = payload.get("version")
+    browser_seen = payload.get("browserSeenVersion")
+    if not isinstance(version, str) or not version or len(version) > 64:
+        raise ProtocolError(ERROR_INVALID_REQUEST, "version must be a non-empty string of at most 64 characters.")
+    if browser_seen is not None and (not isinstance(browser_seen, str) or len(browser_seen) > 64):
+        raise ProtocolError(ERROR_INVALID_REQUEST, "browserSeenVersion must be a string or null.")
+    legacy_seen = config_module.load().get("last_changelog_version")
+    if not isinstance(legacy_seen, str):
+        legacy_seen = None
+    return changelog_state.check(version, browser_seen, legacy_seen)
 
 
 def handle_wow_detect(payload: dict[str, Any]) -> dict[str, Any]:
@@ -366,6 +380,7 @@ COMMANDS: dict[str, Handler] = {
     "profile.set_avatar": handle_profile_set_avatar,
     "settings.get": handle_settings_get,
     "settings.update": handle_settings_update,
+    "changelog.check": handle_changelog_check,
     "wow.detect": handle_wow_detect,
     "wow.list_accounts": handle_wow_list_accounts,
     "wow.select_accounts": handle_wow_select_accounts,
