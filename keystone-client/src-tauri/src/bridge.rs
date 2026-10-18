@@ -1125,7 +1125,7 @@ mod tests {
             CoreEventPayload {
                 protocol_version: 1,
                 event: "system.ready".to_string(),
-                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","auth.battlenet.start","auth.battlenet.poll","auth.battlenet.cancel","profile.set_avatar","settings.get","settings.update","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","planner.preferences.get","planner.preferences.update","teams.keystone_selector","teams.keystone_planner","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
+                data: json!({"capabilities":["system.ping","system.get_state","auth.login","auth.register","auth.logout","auth.battlenet.start","auth.battlenet.poll","auth.battlenet.cancel","profile.set_avatar","settings.get","settings.update","changelog.check","wow.detect","wow.list_accounts","wow.select_accounts","wow.select_install","sync.get_status","sync.start","sync.stop","sync.force","characters.get","characters.refresh","teams.list","teams.get","planner.preferences.get","planner.preferences.update","teams.keystone_selector","teams.keystone_planner","addon.get_status","addon.check","addon.install","addon.update","addon.reinstall"]}),
             }
         );
 
