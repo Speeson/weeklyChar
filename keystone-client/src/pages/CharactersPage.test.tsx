@@ -223,6 +223,23 @@ describe("CharactersPage", () => {
     expect(extras.querySelector(".gear-item__enchant img")).toHaveAttribute("src", expect.stringContaining("133785"));
   });
 
+  it("uses the compact indicator layout only for exactly two gems with an enchant", () => {
+    const characters = charactersPreview();
+    const { container, rerender } = renderPage({ ...state, characters });
+    const extras = container.querySelectorAll(".gear-item__extras");
+    expect(extras[3]).toHaveClass("gear-item__extras--compact");
+    expect(extras[3].querySelectorAll(".gear-item__gem")).toHaveLength(2);
+    expect(extras[3].querySelector(".gear-item__enchant")).toBeInTheDocument();
+    expect(extras[0]).not.toHaveClass("gear-item__extras--compact");
+    expect(extras[1]).not.toHaveClass("gear-item__extras--compact");
+    expect(extras[4]).not.toHaveClass("gear-item__extras--compact");
+
+    const thirdGem = { ...characters[0].equipment!.items[3].gems[0] };
+    characters[0].equipment!.items[3].gems.push(thirdGem);
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(container.querySelectorAll(".gear-item__extras")[3]).not.toHaveClass("gear-item__extras--compact");
+  });
+
   it("remounts equipment cleanly and keeps duplicate necklace gems stable across character changes", async () => {
     const user = userEvent.setup();
     const characters = charactersPreview();

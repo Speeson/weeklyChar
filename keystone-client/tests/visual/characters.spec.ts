@@ -260,6 +260,42 @@ test("keeps the Hunter necklace dimensions stable across repeated character chan
   expect(sizes.slice(1)).toEqual(Array(sizes.length - 1).fill(sizes[0]));
 });
 
+test("fits two gems and an enchant below one unchanged gear icon", async ({ page }) => {
+  const gearItem = page.locator(".gear-item").nth(3);
+  const piece = await gearItem.locator(".gear-item__piece").boundingBox();
+  const otherPiece = await page.locator(".gear-item__piece").first().boundingBox();
+  const gemBoxes = await gearItem.locator(".gear-item__gem").evaluateAll(elements => elements.map(element => {
+    const box = element.getBoundingClientRect();
+    return { x: box.x, y: box.y, width: box.width, height: box.height };
+  }));
+  const enchant = await gearItem.locator(".gear-item__enchant").boundingBox();
+  const regularEnchant = await page.locator(".gear-item__enchant").first().boundingBox();
+
+  expect(gemBoxes).toHaveLength(2);
+  expect(piece!.width).toBeCloseTo(otherPiece!.width, 0);
+  expect(gemBoxes[0].width).toBeLessThan(28);
+  expect(gemBoxes[1].width).toBeLessThan(28);
+  expect(gemBoxes[1].x).toBeGreaterThan(gemBoxes[0].x + gemBoxes[0].width);
+  expect(gemBoxes[1].y).toBeCloseTo(gemBoxes[0].y, 0);
+  expect(gemBoxes[0].x).toBeGreaterThanOrEqual(piece!.x);
+  expect(gemBoxes[1].x + gemBoxes[1].width).toBeLessThanOrEqual(piece!.x + piece!.width);
+  expect(enchant!.width).toBe(regularEnchant!.width);
+  expect(enchant!.height).toBe(regularEnchant!.height);
+  expect(enchant!.y).toBeGreaterThanOrEqual(gemBoxes[0].y + gemBoxes[0].height);
+  expect(enchant!.x).toBeGreaterThanOrEqual(piece!.x);
+  expect(enchant!.x + enchant!.width).toBeLessThanOrEqual(piece!.x + piece!.width);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const narrowPiece = await gearItem.locator(".gear-item__piece").boundingBox();
+  const narrowOtherPiece = await page.locator(".gear-item__piece").first().boundingBox();
+  const narrowGems = await gearItem.locator(".gear-item__gem").all();
+  const narrowFirstGem = await narrowGems[0].boundingBox();
+  const narrowSecondGem = await narrowGems[1].boundingBox();
+  expect(narrowPiece!.width).toBeCloseTo(narrowOtherPiece!.width, 0);
+  expect(narrowFirstGem!.x).toBeGreaterThanOrEqual(narrowPiece!.x);
+  expect(narrowSecondGem!.x + narrowSecondGem!.width).toBeLessThanOrEqual(narrowPiece!.x + narrowPiece!.width);
+});
+
 test("keeps the PNG composition in Keystone, Poison, and Void", async ({ page }) => {
   const selectorBorders = new Set<string>();
   for (const theme of ["keystone", "poison", "void"]) {

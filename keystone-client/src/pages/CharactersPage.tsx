@@ -171,7 +171,7 @@ function GearItem({ item, character, language }: { item: EquipmentItem; characte
       <UpgradeTrackIcon track={item.upgrade?.track} className="upgrade-track-icon--badge" />
       <strong>{item.itemLevel ?? "—"}</strong>
     </span></WowheadTooltip>
-    <span className="gear-item__extras"><span className={`gear-item__gems${stackGems ? " gear-item__gems--stacked" : ""}`}>{gems.map((gem, index) => { const gemIcon = blizzardIconUrl(gem.iconPath, character.region, gem.iconFileID); return <WowheadTooltip className="gear-item__gem" id={gem.itemId} key={`${gem.itemId}-${index}`} label={gem.name} type="item">{gemIcon ? <img alt="" src={gemIcon}/> : <i>◆</i>}</WowheadTooltip>; })}</span>
+    <span className={`gear-item__extras${gems.length === 2 && item.enchant ? " gear-item__extras--compact" : ""}`}><span className={`gear-item__gems${stackGems ? " gear-item__gems--stacked" : ""}`}>{gems.map((gem, index) => { const gemIcon = blizzardIconUrl(gem.iconPath, character.region, gem.iconFileID); return <WowheadTooltip className="gear-item__gem" id={gem.itemId} key={`${gem.itemId}-${index}`} label={gem.name} type="item">{gemIcon ? <img alt="" src={gemIcon}/> : <i>◆</i>}</WowheadTooltip>; })}</span>
       {item.enchant ? item.enchant.spellId ? <WowheadTooltip className="gear-item__enchant" id={item.enchant.spellId} label={item.enchant.name} type="spell">{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</WowheadTooltip> : <FloatingTooltip className="gear-item__enchant" label={item.enchant.name ?? characterCopy(language).enchantment}>{enchantIcon ? <img alt="" src={enchantIcon}/> : <em aria-hidden="true">✦</em>}</FloatingTooltip> : null}
     </span>
   </span>;

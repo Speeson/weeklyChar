@@ -11,7 +11,10 @@ const equipment: EquipmentItem[] = slots.map((slotName, index) => ({
   enchant: index % 3 === 0
     ? { enchantId: 456, spellId: 1254400, name: "Authority of the Depths", iconFileID: 5929576 }
     : index === 1 ? { enchantId: 7961, spellId: null, name: "Hex de parasitismo potenciado", iconFileID: null } : null,
-  gems: index % 4 === 0 ? [{ itemId: 250001, itemLink: "item:250001", name: "Elusive Blasphemite", iconFileID: 5931199 }] : [], bonusIds: [2001, 2002], itemContext: 16, suffixId: 0,
+  gems: index === 3 ? [
+    { itemId: 250001, itemLink: "item:250001", name: "Elusive Blasphemite", iconFileID: 5931199 },
+    { itemId: 250001, itemLink: "item:250001", name: "Elusive Blasphemite", iconFileID: 5931199 },
+  ] : index % 4 === 0 ? [{ itemId: 250001, itemLink: "item:250001", name: "Elusive Blasphemite", iconFileID: 5931199 }] : [], bonusIds: [2001, 2002], itemContext: 16, suffixId: 0,
   ...(index < previewTracks.length ? { upgrade: { track: previewTracks[index], currentLevel: 2, maxLevel: 6 } } : {}),
 }));
 

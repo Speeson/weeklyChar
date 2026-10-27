@@ -1,0 +1,13 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Corrige el tamaño del equipo con dos gemas y un encantamiento.",
+  "details": [
+    "Mantiene el icono del objeto y el encantamiento en su tamaño habitual, y reduce las dos gemas para que quepan en la casilla."
+  ],
+  "summaryEn": "Fixes gear sizing when an item has two gems and an enchant.",
+  "detailsEn": [
+    "Keeps the item icon and enchant at their usual size while reducing both gems to fit within the slot."
+  ]
+}

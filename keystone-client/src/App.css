@@ -1709,6 +1709,9 @@ h2 {
 .gear-item__enchant { position: relative; flex: 0 0 28px; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #ffe65e; border-radius: 5px; color: #ffe65e; background: #725400; font: 700 15px sans-serif; text-decoration: none; }
 .gear-item__enchant img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 4px; object-fit: cover; }
 .gear-item__enchant > em { font: inherit; }
+.gear-item__extras--compact { min-width: 0; }
+.gear-item__extras--compact .gear-item__gems { width: min(100%, 46px); min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gear-item__extras--compact .gear-item__gem, .gear-item__extras--compact .gear-item__gem img { width: 100%; height: auto; aspect-ratio: 1; }
 .talents-panel { display: flex; flex-direction: column; }
 .talents-panel > h2 { margin-bottom: 3px; }
 .talents-panel__content { min-height: 0; flex: 1; display: grid; grid-template-rows: 34px minmax(0, 1fr) 24px; gap: 3px; }
