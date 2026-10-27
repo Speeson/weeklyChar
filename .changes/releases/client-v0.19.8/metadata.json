@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.19.7",
+  "version": "0.19.8",
+  "bump": "patch",
+  "tag": "client-v0.19.8",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-gear-two-gems-enchant.json"
+  ]
+}
