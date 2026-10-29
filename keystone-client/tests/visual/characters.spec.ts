@@ -13,7 +13,8 @@ test("matches the approved Characters composition at 1672 x 941", async ({ page 
   await expect(page.getByRole("button", { name: "Personajes", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".gear-item")).toHaveCount(16);
   await expect(page.locator(".dungeon-grid article")).toHaveCount(8);
-  await expect(page.locator(".currency-card")).toHaveCount(10);
+  await expect(page.locator(".currency-card")).toHaveCount(11);
+  await expect(page.locator(".currencies-grid__slot")).toHaveCount(16);
   for (const card of await page.locator(".currency-card").all()) await expect(card).toBeVisible();
   const gear = await page.locator(".gear-row").boundingBox();
   const items = await page.locator(".gear-item").all();
@@ -43,8 +44,9 @@ test("matches the approved Characters composition at 1672 x 941", async ({ page 
   const nestedContent = await page.locator(".characters-rail-section__body").boundingBox();
   expect(nestedContent!.x).toBeGreaterThan(rail!.x);
   await expect(page.locator(".characters-rail-section__body")).toHaveCSS("border-left-width", "0px");
-  await expect(page.locator(".currency-card__icon img")).toHaveCount(10);
+  await expect(page.locator(".currency-card__icon img")).toHaveCount(11);
   await expect.poll(() => page.locator(".currency-card__icon img").evaluateAll(images => images.every(image => (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+  expect(await page.locator(".currency-card__title").evaluateAll(titles => titles.every(title => title.scrollHeight <= title.clientHeight + 1 && title.scrollWidth <= title.clientWidth + 1))).toBe(true);
   expect(await page.locator(".dungeon-grid article").first().evaluate(card => card.getBoundingClientRect().height)).toBeLessThan(100);
   expect(await page.locator(".dungeon-grid article > div > span").evaluateAll(names => names.every(name => name.scrollWidth <= name.clientWidth))).toBe(true);
   expect(await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight })))
@@ -93,6 +95,100 @@ test("matches the approved Characters composition at 1672 x 941", async ({ page 
   await worldVaultSlot.hover();
   await expect(worldVaultSlot.getByRole("tooltip")).toContainText("ilvl 315");
   await page.screenshot({ path: "test-results/characters/characters-1672x941.png" });
+});
+
+test("organizes the currency grid with icon slots and an available list", async ({ page }) => {
+  await page.getByRole("button", { name: "Organizar monedas" }).click();
+  const dialog = page.getByRole("dialog", { name: "Organizar monedas" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("[data-currency-slot]")).toHaveCount(16);
+  await expect(dialog.locator(".currency-editor__available button")).toHaveCount(11);
+  await expect(dialog.locator(".currency-editor__available img")).toHaveCount(11);
+  await expect.poll(() => dialog.locator(".currency-editor__available img").evaluateAll(images => images.every(image => (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+  await expect(dialog.locator("[data-currency-slot='0'] img")).toBeVisible();
+  const editorSlot = await dialog.locator("[data-currency-slot='0']").boundingBox();
+  const editorIcon = await dialog.locator("[data-currency-slot='0'] img").boundingBox();
+  const removeButton = await dialog.getByRole("button", { name: /Quitar Blasón de bruma de héroe/ }).boundingBox();
+  expect(Math.abs(editorSlot!.width - editorSlot!.height)).toBeLessThan(2);
+  expect(editorSlot!.width).toBeLessThan(130);
+  expect(editorIcon!.width).toBeGreaterThan(editorSlot!.width * 0.8);
+  expect(Math.abs(removeButton!.width - removeButton!.height)).toBeLessThan(2);
+  const availableIcons = await dialog.locator(".currency-editor__available button img").evaluateAll(images => images.slice(0, 3).map(image => image.getBoundingClientRect().left));
+  expect(Math.max(...availableIcons) - Math.min(...availableIcons)).toBeLessThan(2);
+  const undercoinChoice = dialog.getByRole("button", { name: "Añadir Inframoneda" });
+  await undercoinChoice.hover();
+  await expect(undercoinChoice).toHaveClass(/is-hovered/);
+  await expect(dialog.locator("[data-currency-slot='5']")).toHaveClass(/is-click-target/);
+  await page.screenshot({ path: "test-results/characters/currency-editor-1672x941.png" });
+  await undercoinChoice.click();
+  await expect(dialog.locator("[data-currency-slot='5']")).toHaveAttribute("data-currency", "undercoin");
+  await dialog.locator("[data-currency-slot='5']").dragTo(dialog.locator("[data-currency-slot='0']"));
+  await expect(dialog.locator("[data-currency-slot='0']")).toHaveAttribute("data-currency", "undercoin");
+  await expect(dialog.locator("[data-currency-slot='5']")).toHaveAttribute("data-currency", "heroMistcrest");
+  await dialog.getByRole("button", { name: "Cerrar" }).click();
+  await expect(page.locator(".currencies-grid [data-layout-slot='0'] .currency-card")).toHaveAttribute("data-currency", "undercoin");
+});
+
+test("keeps currency titles within two lines at a narrower desktop width", async ({ page }) => {
+  for (const width of [1280, 940]) {
+    await page.setViewportSize({ width, height: 800 });
+    expect(await page.locator(".currency-card__title").evaluateAll(titles => titles.every(title => title.scrollHeight <= title.clientHeight + 1 && title.scrollWidth <= title.clientWidth + 1))).toBe(true);
+  }
+  await page.screenshot({ path: "test-results/characters/characters-940x800.png" });
+});
+
+test("fits every available currency title in Spanish and English", async ({ page }) => {
+  await page.getByRole("button", { name: "Organizar monedas" }).click();
+  const placed = await page.locator(".currency-editor__slot[data-currency]").evaluateAll(slots => slots.map(slot => slot.getAttribute("data-currency")!));
+  const available = await page.locator(".currency-editor__available button[data-currency]").evaluateAll(buttons => buttons.map(button => button.getAttribute("data-currency")!));
+  const keys = [...placed, ...available];
+  expect(keys).toHaveLength(22);
+  for (const language of ["es", "en"]) {
+    for (let start = 0; start < keys.length; start += 16) {
+      const layout = [...keys.slice(start, start + 16), ...Array(16).fill(null)].slice(0, 16);
+      await page.evaluate(slots => localStorage.setItem("keystone-client.currency-layout.v1:spee", JSON.stringify(slots)), layout);
+      await page.goto(`/?preview=characters&lang=${language}`);
+      const clipped = await page.locator(".currency-card__title").evaluateAll(titles => titles.filter(title => title.scrollHeight > title.clientHeight + 1 || title.scrollWidth > title.clientWidth + 1).map(title => title.textContent));
+      expect(clipped).toEqual([]);
+    }
+  }
+});
+
+test("shows caps and Trovehunter status on card hover and keyboard focus", async ({ page }) => {
+  const untainted = page.locator('[data-currency="untaintedManaCrystals"]').first();
+  await untainted.locator(".currency-card__title").hover();
+  await expect(untainted.getByRole("tooltip")).toBeVisible();
+  await expect(untainted.getByRole("tooltip")).toContainText("Semanal 250 / 250");
+  await expect(untainted.locator(".currency-card-link > .currency-card__icon")).toBeVisible();
+  await untainted.locator(".currency-card-link").hover();
+  await expect(untainted.getByRole("tooltip")).toBeHidden();
+  const spark = page.locator('[data-currency="sparksOfTides"]').first();
+  await spark.locator(".currency-card__title").hover();
+  await expect(spark.getByRole("tooltip")).toContainText("Temporada 4 / 4");
+  await expect(spark.getByRole("tooltip")).toContainText("Bolsas");
+  await expect(spark.getByRole("tooltip")).toContainText("Banco personal");
+  const bounty = page.locator('[data-currency="trovehuntersBounty"]').first();
+  await bounty.focus();
+  await expect(bounty.getByRole("tooltip")).toBeVisible();
+  await expect(bounty.getByRole("tooltip")).toContainText("En bolsas sin usar");
+  await expect(bounty.locator(".currency-card__status-line svg")).toHaveCount(2);
+  await expect(bounty.locator(".currency-card__bounty")).not.toContainText("En bolsas sin usar");
+  await expect(bounty.locator(".currency-card__bounty")).toHaveCSS("flex-direction", "column");
+});
+
+test("centers card content and uses larger readable details with a square gear button", async ({ page }) => {
+  const card = page.locator('[data-currency="heroMistcrest"]').first();
+  const icon = await card.locator(".currency-card__icon").boundingBox();
+  const settings = page.getByRole("button", { name: "Organizar monedas" });
+  const settingsBox = await settings.boundingBox();
+  expect(icon!.width).toBeGreaterThan(38);
+  expect(Math.abs(settingsBox!.width - settingsBox!.height)).toBeLessThan(2);
+  await expect(settings.locator("svg")).toHaveClass(/lucide-settings/);
+  await expect(card.locator(".currency-card__title")).toHaveCSS("text-align", "center");
+  await expect(card.locator(".currency-card__main")).toHaveCSS("justify-content", "center");
+  await card.locator(".currency-card__title").hover();
+  await expect(card.getByRole("tooltip")).toHaveCSS("text-align", "center");
+  expect(Number.parseFloat(await card.getByRole("tooltip").evaluate(element => getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(13);
 });
 
 test("drags characters between active and inactive zones with feedback and persistence", async ({ page }) => {
@@ -166,7 +262,7 @@ test("keeps the complete dashboard and modal usable at the minimum window", asyn
     "characters-1", "characters-2", "characters-3", "characters-4", "characters-5", "characters-6",
   ])));
   await page.reload();
-  await expect(page.locator(".currency-card")).toHaveCount(10);
+  await expect(page.locator(".currency-card")).toHaveCount(11);
   const inactiveTray = page.locator(".characters-inactive-tray");
   await inactiveTray.click();
   const inactivePanel = await page.locator(".characters-inactive-tray__panel").boundingBox();
@@ -224,6 +320,8 @@ test("exposes typed Wowhead targets without allowing the script to rewrite the U
   expect(await page.evaluate(() => window.whTooltips)).toEqual({ colorLinks: false, iconizeLinks: false, renameLinks: false });
   await expect.poll(() => page.evaluate(() => Boolean(window.$WowheadPower)), { timeout: 15_000 }).toBe(true);
   await item.hover();
+  await expect(page.locator(".wowhead-tooltip").first()).toBeVisible({ timeout: 15_000 });
+  await page.locator('[data-currency="heroMistcrest"] .currency-card-link').first().hover();
   await expect(page.locator(".wowhead-tooltip").first()).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: "Mostrar configuración completa" }).click();
@@ -304,7 +402,7 @@ test("keeps the PNG composition in Keystone, Poison, and Void", async ({ page })
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(page.locator(".gear-item")).toHaveCount(16);
     await expect(page.locator(".dungeon-grid article")).toHaveCount(8);
-    await expect(page.locator(".currency-card")).toHaveCount(10);
+    await expect(page.locator(".currency-card")).toHaveCount(11);
     await page.getByRole("button", { name: "Cuenta y reino", exact: true }).click();
     const popover = page.getByRole("menu", { name: "Cuenta y reino" });
     await expect(popover).toBeVisible();

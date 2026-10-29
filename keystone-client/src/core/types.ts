@@ -154,6 +154,7 @@ export type CharacterCurrency = {
   trackedQuantity?: number | null;
   quantityEarnedThisWeek?: number | null;
   useTotalEarnedForMaxQty?: boolean;
+  isAccountWide?: boolean;
   canEarnPerWeek?: boolean;
   discovered?: boolean;
   quality?: number | null;
@@ -162,6 +163,7 @@ export type CharacterCurrency = {
   itemID?: number | null;
   currencyID?: number | null;
   itemQuantity?: number | null;
+  quantityKnown?: boolean;
   bagCountKnown?: boolean;
   inventoryQuantity?: number | null;
   totalItemQuantity?: number | null;
@@ -170,9 +172,11 @@ export type CharacterCurrency = {
   bankUpdatedAt?: number | null;
   personalBankCount?: number | null;
   personalBankKnown?: boolean;
+  personalBankCurrent?: boolean;
   personalBankUpdatedAt?: number | null;
   warbandBankCount?: number | null;
   warbandBankKnown?: boolean;
+  warbandBankCurrent?: boolean;
   bagsUpdatedAt?: number | null;
   warbandBankUpdatedAt?: number | null;
   dustQuantity?: number | null;

@@ -658,7 +658,7 @@ function App() {
                 preview={previewMode}
               />
             ) : currentView === "characters" ? (
-              <CharactersPage state={characters} />
+              <CharactersPage state={characters} username={auth.username ?? ""} />
             ) : currentView === "teams" ? (
               <TeamsPage
                 currentUsername={auth.username ?? ""}

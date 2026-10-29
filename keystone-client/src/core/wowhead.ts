@@ -27,6 +27,12 @@ export function blizzardIconUrl(iconPath: unknown, region = "eu", iconFileID?: u
   return `https://render.worldofwarcraft.com/${safeRegion}/icons/56/${match[1].toLowerCase()}.jpg`;
 }
 
+export function catalogIconUrl(iconName: string): string | null {
+  return /^[a-z0-9_-]+$/i.test(iconName)
+    ? `https://wow.zamimg.com/images/wow/icons/large/${iconName.toLowerCase()}.jpg`
+    : null;
+}
+
 export function buildWowheadTooltip({
   type, id, language, options = {},
 }: {

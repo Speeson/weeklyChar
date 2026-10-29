@@ -133,8 +133,16 @@ The addon writes the canonical Midnight Season 2 keys:
 - `sparksOfTides`
 - `scaleboundHeraldFlute`
 - `trovehuntersBounty`
+- `afflictedSoul` (item ID `276547`)
+- `tormentedSoul` (item ID `276548`)
+- `ascendantVenomstone` (item ID `280562`)
+- `undercoin` (currency ID `2803`)
+- `remnantOfAnguish` (currency ID `3392`)
+- `timewarpedBadge` (currency ID `1166`)
+- `tradersTender` (currency ID `2032`)
+- `voidlightMarl` (currency ID `3316`)
 
-Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `useTotalEarnedForMaxQty`, `canEarnPerWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyMaxed`, `isSeasonMaxed`, `isTotalMaxed`, and `isMaxed`. Caps come from WoW currency data; for moving seasonal caps, the addon also uses a higher maximum shown by the WoW currency tooltip when available. Weekly progress is independent of owned quantity, seasonal caps compare `totalEarned`, and ordinary total caps compare `quantity`. For `tidalSparkDust`, the addon preserves the highest cap observed for the same currency ID when a later snapshot (including logout) cannot read the tooltip. Client and Web use the highest official maximum already captured from characters in the same WoW account and region, then recalculate the red state instead of trusting an older saved completion color.
+Currency entries can include `id`, `name`, `quantity`, `maxQuantity`, `maxWeeklyQuantity`, `totalEarned`, `trackedQuantity`, `quantityEarnedThisWeek`, `useTotalEarnedForMaxQty`, `isAccountWide`, `canEarnPerWeek`, `discovered`, `quality`, `iconFileID`, `iconPath`, `isWeeklyMaxed`, `isSeasonMaxed`, `isTotalMaxed`, and `isMaxed`. Caps come from WoW currency data; for moving seasonal caps, the addon also uses a higher maximum shown by the WoW currency tooltip when available. Weekly progress is independent of owned quantity, seasonal caps compare `totalEarned`, and ordinary total caps compare `quantity`. For `tidalSparkDust`, the addon preserves the highest cap observed for the same currency ID when a later snapshot (including logout) cannot read the tooltip. Client and Web use the highest official maximum already captured from characters in the same WoW account and region, then recalculate the red state instead of trusting an older saved completion color. For Mistcrests, when WoW reports no weekly cap and mirrors `totalEarned` into `maxQuantity`, the addon and client treat that mirrored value as no cap; a later larger maximum remains visible. Trader's Tender is account-wide and must not be summed across character snapshots.
 
 `currencies.nebulousVoidcore` additionally contains `questCompleted` (boolean) and `weekKey` (`YYYY-MM-DD`) for the current EU week. The addon checks Orin Straylight's Season 2 Gold (`98016`), Voidlight Marl (`98015`), and Veteran Mistcrest (`98012`) quests and records their `QUEST_TURNED_IN` event; any one completed quest marks the weekly state complete. If a quest was delivered before this event tracking was installed and WoW now reports all three flags as false, `/ksync voidcore completada` explicitly confirms the current character's completion for the current week. A positive result survives transient false reads and daily quest flag resets within the same week, then expires at Wednesday 04:00 UTC. The client transports the nested fields unchanged through the existing `currencies` JSON block; Worker/D1 store and return them without a migration. Client and Web use the matching `weekKey` before showing the completion state. The Client currency card treats a missing or expired completion as available and refreshes that display after the Wednesday reset even if no new character snapshot arrives.
 
@@ -170,11 +178,17 @@ count includes the Reagent Bank. Each stored bank count is replaced only by a
 trustworthy capture while that bank is accessible, so a closed or unavailable
 bank does not erase the last known count. Optional `bagsUpdatedAt`,
 `personalBankUpdatedAt`, and `warbandBankUpdatedAt` timestamps identify the last
-successful captures. The entire entry travels inside the existing `currencies`
-JSON block, requires no Worker validation or D1 schema change, and is exposed by
-the existing character read API. KeystoneClient shows the icon and total only
-when the Trovehunter's Bounty state is known and unobtained, with a per-location
-tooltip. Web receives the additive snapshot but does not render a flute count.
+successful captures. `personalBankCurrent` and `warbandBankCurrent` say whether
+that bank was read in the current capture; `quantityKnown` is true only when all
+applicable locations are known. The same fields apply to `afflictedSoul` and
+`tormentedSoul`. `ascendantVenomstone` excludes Warband Bank fields. The entire
+entry travels inside the existing `currencies` JSON block, requires no Worker
+validation or D1 schema change, and is exposed by the existing character read
+API. KeystoneClient shows the flute in its own selectable card regardless of
+Trovehunter's Bounty, and shows a partial total when a bank is unknown. The
+client stores each authenticated user's 16-position currency layout locally on
+that installation. Web receives the additive item snapshots but does not render
+these new cards.
 
 `trovehuntersBounty` includes `itemID`, `bagCount`, `hasBuff`, `questCompleted`, `iconFileID`, `iconPath`, and `weekKey`; same-week completed quest state is preserved across transient incomplete reads.
 

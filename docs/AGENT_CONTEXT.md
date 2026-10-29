@@ -384,6 +384,13 @@ already be complete while the map remains held. Claimed is inferred from a compl
 snapshot with neither a held map nor the active bounty aura; it cannot distinguish a genuinely
 claimed trove from a map moved outside the tracked character bags.
 
+Client Characters now uses a local 16-position (eight per row) currency layout scoped to each
+authenticated user and installation. The 22-choice catalog includes the separate flute card,
+three tracked physical items, and five additional WoW currencies. Its card details hold caps,
+bank locations and Trovehunter status text; the card keeps status icons. The canonical standalone
+addon captures the new keys inside `currencies` without a Worker or D1 schema change.
+Live in-game verification of the new IDs and Mistcrest API cap behavior remains outstanding.
+
 KeystoneLoot V2-A, V2-B, V2-C, and the local V2-D release-readiness validation are complete
 on `feature/keystoneloot-v2-a`. The committed phase SHAs are `a99cedfa6e293a374cea3bfb77970443851ba975`,
 `d64db656dd7c3ebf513275b89c07416f7a880f7b`, and

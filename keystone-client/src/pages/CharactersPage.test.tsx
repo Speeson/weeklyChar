@@ -9,12 +9,27 @@ import { CharactersPage } from "./CharactersPage";
 
 const state = { characters: charactersPreview(), refreshing: false, source: "remote" as const, lastRefreshAt: null, lastError: null };
 
-function renderPage(characterState = state) {
-  return renderWithTheme(<I18nProvider language="es"><CharactersPage state={characterState}/></I18nProvider>);
+function renderPage(characterState = state, username = "speeson") {
+  return renderWithTheme(<I18nProvider language="es"><CharactersPage state={characterState} username={username}/></I18nProvider>);
 }
 
 describe("CharactersPage", () => {
   beforeEach(() => localStorage.clear());
+
+  it("opens the sixteen-slot editor and saves a new card immediately for this user", async () => {
+    const { container, unmount } = renderPage();
+    await userEvent.click(screen.getByRole("button", { name: "Organizar monedas" }));
+    expect(screen.getByRole("dialog", { name: "Organizar monedas" })).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-currency-slot]")).toHaveLength(16);
+    await userEvent.click(screen.getByRole("button", { name: /Añadir Inframoneda/i }));
+    expect(container.querySelector('[data-currency="undercoin"]')).toBeInTheDocument();
+    unmount();
+    const second = renderPage(state, "speeson");
+    expect(second.container.querySelector('[data-currency="undercoin"]')).toBeInTheDocument();
+    second.unmount();
+    const other = renderPage(state, "another-user");
+    expect(other.container.querySelector('[data-currency="undercoin"]')).not.toBeInTheDocument();
+  });
 
   it.each([
     ["equipment without items", { equipment: {} }],
@@ -29,18 +44,20 @@ describe("CharactersPage", () => {
     expect(screen.getByRole("heading", { name: /EQUIPO/ })).toBeVisible();
   });
 
-  it("renders the PNG structure with one-row gear, eight dungeons and ten currencies", () => {
+  it("renders the dashboard with one-row gear, eight dungeons and sixteen currency positions", () => {
     const { container } = renderPage();
     expect(container.querySelectorAll(".gear-item")).toHaveLength(16);
     expect(container.querySelectorAll(".dungeon-grid article")).toHaveLength(8);
-    expect(container.querySelectorAll(".currency-card")).toHaveLength(10);
+    expect(container.querySelectorAll(".currency-card")).toHaveLength(11);
+    expect(container.querySelectorAll(".currencies-grid__slot")).toHaveLength(16);
     expect(screen.getByRole("heading", { name: /EQUIPO/ })).toBeVisible();
     expect(screen.getByRole("heading", { name: "TALENTOS" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "GRAN CÁMARA" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "CACERÍAS" })).toBeVisible();
     const untainted = container.querySelector('[data-currency="untaintedManaCrystals"]')!;
-    expect(within(untainted as HTMLElement).getByText("Semanal 250 / 250")).toHaveClass("is-maxed");
-    expect(within(untainted as HTMLElement).getByText("Máximo 143 / 1000")).not.toHaveClass("is-maxed");
+    expect(untainted.querySelector(".currency-card-link > .currency-card__icon")).toBeInTheDocument();
+    expect(untainted.querySelector(".currency-card__details")).toHaveTextContent("Semanal 250 / 250");
+    expect(untainted.querySelector(".currency-card__details")).toHaveTextContent("Máximo 143 / 1000");
     expect(container.querySelector('[data-currency="cofferKeyShards"]')).toHaveClass("is-maxed");
     expect(screen.queryByText("MAX")).not.toBeInTheDocument();
     expect(screen.getByText("Altar de los Colmillos")).toBeVisible();
@@ -75,9 +92,9 @@ describe("CharactersPage", () => {
 
   it("uses localized currency names in Spanish", () => {
     renderPage();
-    expect(screen.getByText("Blasón de bruma de héroe")).toBeVisible();
-    expect(screen.getByText("Blasón de bruma de mito")).toBeVisible();
-    expect(screen.getByText("Chispa de las mareas")).toBeVisible();
+    expect(screen.getAllByText("Blasón de bruma de héroe")[0]).toBeVisible();
+    expect(screen.getAllByText("Blasón de bruma de mito")[0]).toBeVisible();
+    expect(screen.getAllByText("Chispa de las mareas")[0]).toBeVisible();
     expect(screen.queryByText("Hero Mistcrest")).not.toBeInTheDocument();
   });
 
@@ -106,7 +123,7 @@ describe("CharactersPage", () => {
     const card = container.querySelector('[data-currency="nebulousVoidcore"]')!;
     expect(card).toHaveClass("is-voidcore-available");
     expect(card).not.toHaveClass("is-maxed");
-    expect(card.querySelector(".currency-card__values > strong")).toHaveTextContent("3");
+    expect(card.querySelector(".currency-card__amount")).toHaveTextContent("3");
     expect(within(card as HTMLElement).getByText("Núcleo de vacío semanal disponible").textContent).toBe("Núcleo de vacío\nsemanal disponible");
     expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText(/Temporada|Máximo|Semanal \d/)).not.toBeInTheDocument();
@@ -142,14 +159,21 @@ describe("CharactersPage", () => {
     }
   });
 
-  it("shows Spark of Tides without a cap message and keeps bank details secondary", () => {
+  it("shows Spark of Tides season progress and its bag and bank locations", () => {
     const characters = charactersPreview();
-    characters[0].currencies!.sparksOfTides = { itemQuantity: 6, bankQuantity: 3, bankQuantityKnown: true };
+    characters[0].currencies!.sparksOfTides = { itemQuantity: 6, inventoryQuantity: 3, bankQuantity: 3, bankQuantityKnown: true, maxQuantity: 99, maxWeeklyQuantity: 12 };
+    characters[0].currencies!.tidalSparkDust = { quantity: 10, totalEarned: 10, maxQuantity: 12, useTotalEarnedForMaxQty: true };
+    characters[1].currencies = { tidalSparkDust: { quantity: 9, totalEarned: 9, maxQuantity: 14, useTotalEarnedForMaxQty: true } };
     const { container } = renderPage({ ...state, characters });
     const card = container.querySelector('[data-currency="sparksOfTides"]')!;
-    const quantity = card.querySelector(".currency-card__values > strong")!;
-    expect(quantity).toHaveTextContent("6 (3 en el banco)");
-    expect(quantity.querySelector("small")).toHaveTextContent("(3 en el banco)");
+    const quantity = card.querySelector(".currency-card__amount")!;
+    expect(quantity).toHaveTextContent("6");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Temporada 10 / 14");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Bolsas3");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Banco personal3");
+    expect(card.querySelector(".currency-card__details")).not.toHaveTextContent("Límite de polvo");
+    expect(card.querySelector(".currency-card__details")).not.toHaveTextContent("Semanal");
+    expect(card.querySelector(".currency-card__details")).not.toHaveTextContent("Máximo");
     expect(within(card as HTMLElement).queryByText("Sin límite relevante")).not.toBeInTheDocument();
   });
 
@@ -182,6 +206,8 @@ describe("CharactersPage", () => {
     const card = container.querySelector('[data-currency="trovehuntersBounty"]')!;
     expect(within(card as HTMLElement).getByText("No obtenido")).toBeVisible();
     expect(card.querySelector('.currency-card__bounty[data-obtained="false"] svg')).toBeInTheDocument();
+    expect(card.querySelectorAll(".currency-card__status-line svg")).toHaveLength(1);
+    expect(card.querySelector(".currency-card__bounty")).not.toHaveTextContent("No obtenido");
     expect(within(card as HTMLElement).queryByText("Completado")).not.toBeInTheDocument();
 
     characters[0].currencies!.trovehuntersBounty = { questCompleted: true, bagCount: 0, hasBuff: true };
@@ -189,6 +215,43 @@ describe("CharactersPage", () => {
     expect(within(card as HTMLElement).getByText("Obtenido")).toBeVisible();
     expect(within(card as HTMLElement).getByText("Activo actualmente")).toBeVisible();
     expect(card.querySelectorAll('.currency-card__bounty svg')).toHaveLength(2);
+    expect(card.querySelectorAll(".currency-card__status-line svg")).toHaveLength(2);
+    expect(card.querySelector(".currency-card__bounty")).not.toHaveTextContent("Activo actualmente");
+    expect(card.querySelector(".currency-card__flute")).not.toBeInTheDocument();
+
+    characters[0].currencies!.trovehuntersBounty = { questCompleted: true, bagCount: 0, hasBuff: false };
+    rerender(<I18nProvider language="es"><CharactersPage state={{ ...state, characters: [...characters] }}/></I18nProvider>);
+    expect(card.querySelector(".currency-card__status-line:last-of-type")).toHaveTextContent("Reclamado");
+    expect(card.querySelectorAll(".currency-card__status-line svg")).toHaveLength(2);
+  });
+
+  it("shows the independent flute total and marks earlier bank readings", async () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.scaleboundHeraldFlute = {
+      quantity: 5, quantityKnown: true, bagCount: 1, bagCountKnown: true,
+      personalBankCount: 2, personalBankKnown: true, personalBankCurrent: false,
+      warbandBankCount: 2, warbandBankKnown: true, warbandBankCurrent: false,
+    };
+    const { container } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="scaleboundHeraldFlute"]')!;
+    expect(card.querySelector(".currency-card__amount")).toHaveTextContent("5");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Banco personal (Última lectura)2");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Banco de guerra (Última lectura)2");
+    await userEvent.click(screen.getByRole("button", { name: "Organizar monedas" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("marks a partial item total when bank quantities are unknown", () => {
+    const characters = charactersPreview();
+    characters[0].currencies!.scaleboundHeraldFlute = {
+      quantity: 1, quantityKnown: false, bagCount: 1, bagCountKnown: true,
+      personalBankKnown: false, warbandBankKnown: false,
+    };
+    const { container } = renderPage({ ...state, characters });
+    const card = container.querySelector('[data-currency="scaleboundHeraldFlute"]')!;
+    expect(card.querySelector(".currency-card__amount")).toHaveTextContent("≥1");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Banco personal—");
+    expect(card.querySelector(".currency-card__details")).toHaveTextContent("Banco de guerra—");
   });
 
   it("shows upgrade-track icons on equipment and before raid, dungeon, and world Vault levels", () => {
@@ -323,8 +386,8 @@ describe("CharactersPage", () => {
 
   it("uses the Web currency semantic colors on card titles", () => {
     const { container } = renderPage();
-    expect(container.querySelector('[data-currency="heroMistcrest"] .currency-card__content > small')).toHaveStyle("color: #c084fc");
-    expect(container.querySelector('[data-currency="cofferKeyShards"] .currency-card__content > small')).toHaveStyle("color: #38bdf8");
+    expect(container.querySelector('[data-currency="heroMistcrest"] .currency-card__title')).toHaveStyle("color: #c084fc");
+    expect(container.querySelector('[data-currency="cofferKeyShards"] .currency-card__title')).toHaveStyle("color: #38bdf8");
   });
 
   it("places compact currencies beside a vertical progress and gold sidebar", () => {
@@ -336,11 +399,11 @@ describe("CharactersPage", () => {
     expect(container.querySelector(".currency-stack")).not.toBeInTheDocument();
   });
 
-  it("orders currencies vertically in the five requested columns", () => {
+  it("keeps the current two groups in the sixteen-slot grid", () => {
     const { container } = renderPage();
     expect(Array.from(container.querySelectorAll(".currency-card"), card => card.getAttribute("data-currency"))).toEqual([
       "heroMistcrest", "cofferKeyShards", "tidalSparkDust", "venomblightManaflux", "untaintedManaCrystals",
-      "mythMistcrest", "restoredCofferKey", "sparksOfTides", "nebulousVoidcore", "trovehuntersBounty",
+      "mythMistcrest", "restoredCofferKey", "sparksOfTides", "nebulousVoidcore", "trovehuntersBounty", "scaleboundHeraldFlute",
     ]);
     const grid = container.querySelector(".currencies-grid");
     expect(grid).toHaveClass("currencies-grid");

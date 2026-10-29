@@ -1,21 +1,23 @@
-import { CheckCircle2, ChevronDown, ChevronRight, CircleX, Eye, EyeOff, Gift, GripVertical, Package, Zap } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleX, Eye, EyeOff, Gift, GripVertical, Package, Settings, Zap } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import medal1 from "../assets/medals/tier1.avif";
 import medal2 from "../assets/medals/tier2.avif";
 import medal3 from "../assets/medals/tier3.avif";
 import { TalentModal } from "../components/TalentModal";
+import { CurrencyLayoutEditor } from "../components/CurrencyLayoutEditor";
 import { FloatingTooltip } from "../components/FloatingTooltip";
 import { RemoteAvatar } from "../components/RemoteAvatar";
 import { WowheadTooltip } from "../components/WowheadTooltip";
 import { UpgradeTrackIcon } from "../components/UpgradeTrackIcon";
 import { classColor } from "../core/characterDisplay";
 import { loadInactiveCharacterIds, saveInactiveCharacterIds } from "../core/characterTracking";
+import { loadCurrencyLayout, saveCurrencyLayout, type CurrencyLayout } from "../core/currencyLayout";
 import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor, trovehunterStatus, voidcoreQuestCompleted } from "../core/characterSnapshots";
 import { snapshotRecords } from "../core/snapshotSafety";
 import { heroTalentIcon } from "../core/heroTalentIcons";
 import { dungeonName, MIDNIGHT_SEASON_2_DUNGEONS } from "../core/season2";
 import type { Character, CharacterCurrency, CharacterState, EquipmentGem, EquipmentItem, TalentEntrySnapshot, TalentNodeSnapshot, TalentTreeSnapshot } from "../core/types";
-import { blizzardIconUrl } from "../core/wowhead";
+import { blizzardIconUrl, catalogIconUrl } from "../core/wowhead";
 import { useI18n } from "../core/i18n";
 import { activeTalentEntry, localizedClassName, localizedHeroTreeName, localizedSpecName, talentPurchasedRanks } from "../core/talentDisplay";
 import { formatVaultReward } from "../core/vaultRewards";
@@ -32,7 +34,7 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "TALENTOS DE CLASE", heroTalents: "TALENTOS HEROICOS", specTalents: "TALENTOS DE ESPECIALIZACIÓN",
   dungeons: "MAZMORRAS", greatVault: "GRAN CÁMARA", preyHunts: "CACERÍAS", currencies: "MONEDAS", gold: "ORO",
   raids: "Bandas", world: "Mundo", weekly: "Semanal", season: "Temporada", maximum: "Máximo",
-  noCap: "Sin límite relevante", questCompleted: "Misión completada", voidcoreAvailable: "Núcleo de vacío\nsemanal disponible", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Puntuación total",
+  noCap: "Sin límite relevante", unknown: "Sin datos", lastKnown: "Última lectura", questCompleted: "Misión completada", voidcoreAvailable: "Núcleo de vacío\nsemanal disponible", bountyObtained: "Obtenido", bountyNotObtained: "No obtenido", bountyActive: "Activo actualmente", bountyInBags: "En bolsas sin usar", bountyClaimed: "Reclamado", showTalents: "Mostrar configuración completa", totalRating: "Puntuación total",
   noCharacters: "No hay personajes sincronizados.", noGear: "No hay datos de equipo. Entra con este personaje y sincroniza.", enchantment: "Encantamiento", rating: "puntuación", talentNode: "Talento",
 } : {
   account: "ACCOUNT", realm: "REALM", characters: "CHARACTERS",
@@ -40,7 +42,7 @@ const characterCopy = (language: "es" | "en") => language === "es" ? {
   classTalents: "CLASS TALENTS", heroTalents: "HERO TALENTS", specTalents: "SPEC TALENTS",
   dungeons: "DUNGEONS", greatVault: "GREAT VAULT", preyHunts: "PREY HUNTS", currencies: "CURRENCIES", gold: "GOLD",
   raids: "Raids", world: "World", weekly: "Weekly", season: "Season", maximum: "Max",
-  noCap: "No relevant cap", questCompleted: "Quest completed", voidcoreAvailable: "Weekly Voidcore\navailable", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
+  noCap: "No relevant cap", unknown: "No data", lastKnown: "Last read", questCompleted: "Quest completed", voidcoreAvailable: "Weekly Voidcore\navailable", bountyObtained: "Obtained", bountyNotObtained: "Not obtained", bountyActive: "Currently active", bountyInBags: "Unused in bags", bountyClaimed: "Claimed", showTalents: "Show full build", totalRating: "Total rating",
   noCharacters: "No synced characters.", noGear: "No gear data. Log in with this character and sync.", enchantment: "Enchantment", rating: "rating", talentNode: "Talent",
 };
 
@@ -189,7 +191,9 @@ function TalentPreview({ tree, label, level, region, language }: { tree?: Talent
 }
 
 function CurrencyIcon({ fallbackIcon, fallbackIconID, info, region, symbol }: { fallbackIcon: string; fallbackIconID: number; info?: CharacterCurrency; region: string; symbol: string }) {
-  const [failed, setFailed] = useState(false); const icon = blizzardIconUrl(info?.iconPath ?? `Interface/Icons/${fallbackIcon}`, region, info?.iconFileID ?? fallbackIconID);
+  const [failed, setFailed] = useState(false);
+  const icon = blizzardIconUrl(info?.iconPath, region, info?.iconFileID)
+    ?? (fallbackIconID > 0 ? blizzardIconUrl(null, region, fallbackIconID) : catalogIconUrl(fallbackIcon));
   return <span className="currency-card__icon">{icon && !failed ? <img alt="" onError={() => setFailed(true)} src={icon}/> : symbol}</span>;
 }
 
@@ -198,95 +202,65 @@ function TrovehunterStatus({ info, language }: { info?: CharacterCurrency; langu
   const status = trovehunterStatus(info);
   if (!status.known) return <strong className="currency-card__unknown">—</strong>;
   const detail = status.detail === "active"
-    ? <><Zap aria-hidden="true"/><span>{copy.bountyActive}</span></>
+    ? <Zap aria-label={copy.bountyActive}/>
     : status.detail === "inBags"
-      ? <><Package aria-hidden="true"/><span>{copy.bountyInBags}</span></>
+      ? <Package aria-label={copy.bountyInBags}/>
       : status.detail === "claimed"
-        ? <><Gift aria-hidden="true"/><span>{copy.bountyClaimed}</span></>
+        ? <Gift aria-label={copy.bountyClaimed}/>
         : null;
   return <div className="currency-card__bounty" data-detail={status.detail ?? undefined} data-obtained={status.obtained}>
-    <strong>{status.obtained ? <CheckCircle2 aria-hidden="true"/> : <CircleX aria-hidden="true"/>}<span>{status.obtained ? copy.bountyObtained : copy.bountyNotObtained}</span></strong>
+    <strong>{status.obtained ? <CheckCircle2 aria-label={copy.bountyObtained}/> : <CircleX aria-label={copy.bountyNotObtained}/>}</strong>
     {detail ? <small>{detail}</small> : null}
   </div>;
 }
 
-function FluteCountBadge({ info, bounty, language, region }: { info?: CharacterCurrency; bounty?: CharacterCurrency; language: "es" | "en"; region: string }) {
-  const status = trovehunterStatus(bounty);
-  const icon = blizzardIconUrl(info?.iconPath ?? "Interface/Icons/inv_12_delves_heraldflute", region, info?.iconFileID ?? 1928595);
-  const count = number(info?.bagCount) + (info?.personalBankKnown ? number(info.personalBankCount) : 0) + (info?.warbandBankKnown ? number(info.warbandBankCount) : 0);
-  const countLabel = String(count);
-  const [fluteHovered, setFluteHovered] = useState(false);
-  const [detailsPosition, setDetailsPosition] = useState<CSSProperties | null>(null);
-  const detailsRef = useRef<HTMLSpanElement>(null);
-  if (!status.known || status.obtained) return null;
-  const placeDetails = () => {
-    const tooltip = [...document.querySelectorAll<HTMLElement>(".wowhead-tooltip")].find(element => {
-      const rect = element.getBoundingClientRect();
-      const style = window.getComputedStyle(element);
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0 && rect.left > -1000;
-    });
-    const tooltipRect = tooltip?.getBoundingClientRect();
-    if (!tooltipRect || tooltipRect.width <= 0) return false;
-    const panelWidth = 168;
-    const panelHeight = detailsRef.current?.getBoundingClientRect().height || 92;
-    const left = tooltipRect.right + panelWidth <= window.innerWidth
-      ? Math.round(tooltipRect.right - 1)
-      : Math.max(0, Math.round(tooltipRect.left - panelWidth + 1));
-    const top = Math.max(8, Math.min(Math.round(tooltipRect.top), window.innerHeight - panelHeight - 8));
-    setDetailsPosition({ position: "fixed", left, top, zIndex: 10001 });
-    return true;
-  };
-  const handleFluteEnter = () => {
-    setFluteHovered(true);
-    setDetailsPosition(null);
-    let attempts = 0;
-    const update = () => {
-      const hasWowheadTooltip = placeDetails();
-      if (!hasWowheadTooltip && attempts < 20) {
-        attempts += 1;
-        window.requestAnimationFrame(update);
-      }
-    };
-    window.requestAnimationFrame(update);
-  };
-  const quantity = <span aria-label={`${countLabel} Scalebound Herald's Flute`} className="currency-card__flute-icon">
-    {icon ? <img alt="" src={icon}/> : null}<b>{countLabel}</b>
-  </span>;
-  return <span className="currency-card__flute" onMouseEnter={handleFluteEnter} onMouseLeave={() => { setFluteHovered(false); setDetailsPosition(null); }} onMouseMove={placeDetails}>
-    <WowheadTooltip className="currency-card__flute-link" id={275910} label="Scalebound Herald's Flute" type="item">{quantity}</WowheadTooltip>
-    <span aria-label={language === "es" ? "Lugar de las flautas" : "Flute locations"} className="currency-card__flute-details" ref={detailsRef} role="tooltip" style={{ ...detailsPosition, display: fluteHovered && detailsPosition ? "grid" : "none" }}>
-      <strong>Scalebound Herald's Flute</strong>
-      <span><em>{language === "es" ? "Bolsas" : "Bags"}</em><b>{number(info?.bagCount)}</b></span>
-      <span><em>{language === "es" ? "Banco personal" : "Personal bank"}</em><b>{info?.personalBankKnown ? number(info.personalBankCount) : "—"}</b></span>
-      <span><em>{language === "es" ? "Banco de guerra" : "Warband Bank"}</em><b>{info?.warbandBankKnown ? number(info.warbandBankCount) : "—"}</b></span>
-    </span>
-  </span>;
-}
-
-function CurrencyCard({ currencyKey, info, fluteInfo, language, region, weekNowMs }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; fluteInfo?: CharacterCurrency; language: "es" | "en"; region: string; weekNowMs: number }) {
+function CurrencyCard({ currencyKey, info, dustInfo, dustMaxQuantity, language, region, weekNowMs }: { currencyKey: typeof CHARACTER_CURRENCIES[number]; info?: CharacterCurrency; dustInfo?: CharacterCurrency; dustMaxQuantity?: number; language: "es" | "en"; region: string; weekNowMs: number }) {
   const copy = characterCopy(language);
-  const caps = currencyCapState(info);
+  const detailsId = useId();
+  const caps = currencyCapState(info, currencyKey.key);
   const questCompleted = currencyKey.key === "nebulousVoidcore" && voidcoreQuestCompleted(info, weekNowMs);
   const questAvailable = currencyKey.key === "nebulousVoidcore" && !questCompleted;
   const isMaxed = currencyKey.key === "nebulousVoidcore" ? questCompleted : caps.isMaxed;
-  const sparkTotal = number(info?.itemQuantity, number(info?.quantity));
-  const bankCount = info?.bankQuantityKnown ? number(info.bankQuantity) : 0;
-  const value = currencyKey.key === "sparksOfTides" ? String(sparkTotal) : String(number(info?.quantity));
   const isBounty = currencyKey.key === "trovehuntersBounty";
-  const hasCap = number(info?.maxWeeklyQuantity) > 0 || number(info?.maxQuantity) > 0;
+  const isStoredItem = ["scaleboundHeraldFlute", "afflictedSoul", "tormentedSoul", "ascendantVenomstone"].includes(currencyKey.key);
+  const dustMaximum = Math.max(number(dustMaxQuantity), number(dustInfo?.maxQuantity), number(info?.dustMaxQuantity));
+  const dustEarned = number(dustInfo?.totalEarned, number(info?.dustTotalEarned, number(dustInfo?.quantity, number(info?.dustQuantity))));
+  const dustKnown = [dustInfo?.totalEarned, info?.dustTotalEarned, dustInfo?.quantity, info?.dustQuantity].some(value => typeof value === "number");
+  const sparkBagCount = typeof info?.inventoryQuantity === "number" ? number(info.inventoryQuantity)
+    : typeof info?.itemQuantity === "number" ? Math.max(0, number(info.itemQuantity) - (info.bankQuantityKnown ? number(info.bankQuantity) : 0)) : null;
+  const storedCount = number(info?.bagCount) + (info?.personalBankKnown ? number(info.personalBankCount) : 0) + (info?.warbandBankKnown ? number(info.warbandBankCount) : 0);
+  const storedKnown = Boolean(info && (info.bagCountKnown || info.personalBankKnown || info.warbandBankKnown));
+  const totalKnown = info?.quantityKnown ?? Boolean(info?.bagCountKnown && info?.personalBankKnown && (currencyKey.key === "ascendantVenomstone" || info?.warbandBankKnown));
+  const value = currencyKey.key === "sparksOfTides" ? String(number(info?.itemQuantity, number(info?.quantity)))
+    : isStoredItem ? storedKnown ? `${totalKnown ? "" : "≥"}${number(info?.quantity, storedCount)}` : "—"
+    : info ? String(number(info.quantity)) : "—";
   const label = language === "es" ? currencyKey.labelEs : currencyKey.label;
-  const card = <article className={`currency-card${isMaxed ? " is-maxed" : ""}${questAvailable ? " is-voidcore-available" : ""}`} data-currency={currencyKey.key}>
-      <CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/><div className="currency-card__content"><small style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>{isBounty ? <TrovehunterStatus info={info} language={language}/> : <div className="currency-card__values"><strong>{value}{currencyKey.key === "sparksOfTides" && bankCount > 0 ? <small> ({bankCount} {language === "es" ? "en el banco" : "in bank"})</small> : null}</strong><footer>
-        {questCompleted ? <span className="is-maxed">{copy.questCompleted}</span> : questAvailable ? <span>{copy.voidcoreAvailable}</span> : !hasCap && currencyKey.key !== "nebulousVoidcore" && currencyKey.key !== "sparksOfTides" ? <span>{copy.noCap}</span> : null}
-        {currencyKey.key !== "nebulousVoidcore" && number(info?.maxWeeklyQuantity) > 0 ? <span className={caps.isWeeklyMaxed ? "is-maxed" : ""}>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
-        {currencyKey.key !== "nebulousVoidcore" && number(info?.maxQuantity) > 0 ? <span className={caps.isSeasonMaxed || caps.isTotalMaxed ? "is-maxed" : ""}>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {number(info?.maxQuantity)}</span> : null}
-      </footer></div>}</div>
-    </article>;
-  if (isBounty) return <div className="currency-card-wrap">
-    <WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}>{card}</WowheadTooltip>
-    <FluteCountBadge bounty={info} info={fluteInfo} language={language} region={region}/>
-  </div>;
-  return <WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}>{card}</WowheadTooltip>;
+  const status = trovehunterStatus(info);
+  const location = (name: string, count: number | null | undefined, known: boolean | undefined, current?: boolean, updatedAt?: number | null) => <span><em>{name}{known && (current === false || (current === undefined && updatedAt && info?.bagsUpdatedAt && updatedAt < info.bagsUpdatedAt)) ? ` (${copy.lastKnown})` : ""}</em><b>{known ? number(count) : "—"}</b></span>;
+  return <article aria-describedby={detailsId} aria-label={`${label}: ${isBounty ? status.known ? status.obtained ? copy.bountyObtained : copy.bountyNotObtained : copy.unknown : value}`} className={`currency-card${isMaxed ? " is-maxed" : ""}${questAvailable ? " is-voidcore-available" : ""}`} data-currency={currencyKey.key} tabIndex={0}>
+    <small className="currency-card__title" style={{ color: CHARACTER_CURRENCY_COLORS[currencyKey.key] }}>{label}</small>
+    <div className="currency-card__main"><WowheadTooltip className="currency-card-link" id={currencyKey.wowheadId} label={label} type={currencyKey.wowheadType}><CurrencyIcon fallbackIcon={currencyKey.iconName} fallbackIconID={currencyKey.iconFileID} info={info} region={region} symbol={currencyKey.symbol}/></WowheadTooltip>
+      {isBounty ? <TrovehunterStatus info={info} language={language}/> : <strong className="currency-card__amount">{value}</strong>}
+    </div>
+    <div className="currency-card__details" id={detailsId} role="tooltip">
+      <strong>{label}</strong>
+      {isBounty ? <><span className="currency-card__status-line">{status.obtained ? <CheckCircle2 aria-hidden="true"/> : <CircleX aria-hidden="true"/>}{status.known ? status.obtained ? copy.bountyObtained : copy.bountyNotObtained : copy.unknown}</span>{status.detail ? <span className="currency-card__status-line">{status.detail === "active" ? <Zap aria-hidden="true"/> : status.detail === "inBags" ? <Package aria-hidden="true"/> : <Gift aria-hidden="true"/>}{status.detail === "active" ? copy.bountyActive : status.detail === "inBags" ? copy.bountyInBags : copy.bountyClaimed}</span> : null}</> : null}
+      {!info && !isBounty ? <span>{copy.unknown}</span> : null}
+      {questCompleted ? <span>{copy.questCompleted}</span> : questAvailable ? <span>{copy.voidcoreAvailable}</span> : null}
+      {info && !isBounty && !isStoredItem && currencyKey.key !== "sparksOfTides" && currencyKey.key !== "nebulousVoidcore" && caps.maxQuantity === 0 && number(info.maxWeeklyQuantity) === 0 ? <span>{copy.noCap}</span> : null}
+      {number(info?.maxWeeklyQuantity) > 0 && currencyKey.key !== "nebulousVoidcore" && currencyKey.key !== "sparksOfTides" ? <span>{copy.weekly} {number(info?.quantityEarnedThisWeek)} / {number(info?.maxWeeklyQuantity)}</span> : null}
+      {caps.maxQuantity > 0 && currencyKey.key !== "nebulousVoidcore" && currencyKey.key !== "sparksOfTides" ? <span>{info?.useTotalEarnedForMaxQty ? copy.season : copy.maximum} {info?.useTotalEarnedForMaxQty ? number(info?.totalEarned) : value} / {caps.maxQuantity}</span> : null}
+      {currencyKey.key === "sparksOfTides" ? <><span>{copy.season} {dustKnown ? `${dustEarned} / ${dustMaximum > 0 ? dustMaximum : "—"}` : copy.unknown}</span><div className="currency-card__locations">
+        {location(language === "es" ? "Bolsas" : "Bags", sparkBagCount, sparkBagCount !== null)}
+        {location(language === "es" ? "Banco personal" : "Personal bank", info?.bankQuantity, info?.bankQuantityKnown)}
+      </div></> : null}
+      {isStoredItem ? <div className="currency-card__locations">
+        {location(language === "es" ? "Bolsas" : "Bags", info?.bagCount, info?.bagCountKnown ?? (typeof info?.bagCount === "number"))}
+        {location(language === "es" ? "Banco personal" : "Personal bank", info?.personalBankCount, info?.personalBankKnown, info?.personalBankCurrent, info?.personalBankUpdatedAt)}
+        {currencyKey.key !== "ascendantVenomstone" ? location(language === "es" ? "Banco de guerra" : "Warband Bank", info?.warbandBankCount, info?.warbandBankKnown, info?.warbandBankCurrent, info?.warbandBankUpdatedAt) : null}
+      </div> : null}
+    </div>
+  </article>;
 }
 
 function ProgressPanels({ character, language }: { character: Character; language: "es" | "en" }) {
@@ -324,7 +298,7 @@ function ProgressPanels({ character, language }: { character: Character; languag
     <section className="characters-panel prey-panel"><h2>{copy.preyHunts}</h2>{preyNames.map(([name, label]) => { const data = record(prey[name.toLowerCase()] ?? prey[name]); const count = number(data.count, number(data.progress)); return <div key={name}><span>{label}</span><strong>{count ? `${count} / 4` : "—"}</strong></div>; })}</section></>;
 }
 
-export function CharactersPage({ state }: { state: CharacterState }) {
+export function CharactersPage({ state, username = "" }: { state: CharacterState; username?: string }) {
   const { language } = useI18n();
   const copy = characterCopy(language);
   const [weekNowMs, setWeekNowMs] = useState(Date.now);
@@ -349,6 +323,13 @@ export function CharactersPage({ state }: { state: CharacterState }) {
   const [accountSectionOpen, setAccountSectionOpen] = useState(true);
   const [charactersSectionOpen, setCharactersSectionOpen] = useState(true);
   const [inactiveOpen, setInactiveOpen] = useState(false);
+  const [currencyEditorOpen, setCurrencyEditorOpen] = useState(false);
+  const [currencyLayoutState, setCurrencyLayoutState] = useState(() => ({ username, layout: loadCurrencyLayout(username) }));
+  const currencyLayout = currencyLayoutState.username === username ? currencyLayoutState.layout : loadCurrencyLayout(username);
+  const changeCurrencyLayout = (next: CurrencyLayout) => {
+    setCurrencyLayoutState({ username, layout: next });
+    saveCurrencyLayout(username, next);
+  };
   const [inactiveCharacterIds, setInactiveCharacterIds] = useState(loadInactiveCharacterIds);
   const [draggingCharacterId, setDraggingCharacterId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<"active" | "inactive" | null>(null);
@@ -422,8 +403,6 @@ export function CharactersPage({ state }: { state: CharacterState }) {
   const specName = localizedSpecName(character.talents?.specId, character.talents?.specName, language);
   const heroName = localizedHeroTreeName(heroTree, language);
   const specIcon = safeImage(character.talents?.specIconPath) ?? blizzardIconUrl(character.talents?.specIconPath, character.region, character.talents?.specIconFileID) ?? specIdentity.icon;
-  const bounty = CHARACTER_CURRENCIES.find(meta => meta.key === "trovehuntersBounty")!;
-  const regularCurrencies = CHARACTER_CURRENCIES.filter(meta => meta.key !== "trovehuntersBounty");
   const goldIcon = blizzardIconUrl(null, character.region, 133785);
   return <div className="characters-page">
     <aside className="characters-rail">
@@ -455,14 +434,17 @@ export function CharactersPage({ state }: { state: CharacterState }) {
         <section className="characters-panel talents-panel"><h2>{copy.talents}</h2><div className="talents-panel__content"><div className="talents-panel__identity"><span>{specIcon ? <img alt="" src={specIcon}/> : null}<strong>{specName ?? "—"}</strong></span><span><HeroTalentIdentityIcon fallback={heroIdentity.icon} tree={heroTree}/><strong>{heroName ?? "—"}</strong></span></div><div className="talents-panel__previews"><TalentPreview label={copy.classTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "class")}/><TalentPreview label={copy.heroTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={heroTree}/><TalentPreview label={copy.specTalents} language={language} level={character.talents?.characterLevel} region={character.region} tree={trees.find(tree => tree.type === "spec")}/></div><button aria-label={copy.showTalents} disabled={!trees.length} onClick={() => setTalentsOpen(true)} type="button">{copy.showTalents}</button></div></section>
       </div>
       <div className="characters-content"><div className="characters-main-column"><section className="characters-panel dungeons-panel"><h2>{copy.dungeons}<span className="dungeons-panel__rating"><small>{copy.totalRating}</small><strong>{totalRating > 0 ? Math.round(totalRating).toLocaleString(language === "es" ? "es-ES" : "en-US") : "—"}</strong></span></h2><div className="dungeon-grid">{MIDNIGHT_SEASON_2_DUNGEONS.map(dungeon => { const run = runs.find(value => number(value.challengeMapId) === dungeon.id); const level = number(run?.level); const upgrade = Math.min(number(run?.upgradeLevel), 3); const rating = estimatedDungeonRating(run); return <article key={dungeon.id}><img alt="" src={dungeon.teleportIconUrl}/><div><span>{dungeonName(dungeon, language)}</span><section><strong style={{ color: keystoneColor(level) }}>+{level || "—"}</strong>{upgrade > 0 ? <img alt={`+${upgrade}`} className="dungeon-medal" src={medals[upgrade]}/> : null}</section></div><b>{rating || "—"}<small>{copy.rating}</small></b></article>; })}</div></section>
-        <section className="characters-panel currencies-panel"><h2>{copy.currencies}</h2><div className="currencies-grid">{regularCurrencies.map(meta => {
+        <section className="characters-panel currencies-panel"><h2>{copy.currencies}<button aria-label={language === "es" ? "Organizar monedas" : "Organize currencies"} className="currencies-panel__settings" onClick={() => setCurrencyEditorOpen(true)} type="button"><Settings aria-hidden="true"/></button></h2><div className="currencies-grid">{currencyLayout.map((key, slot) => {
+          const meta = CHARACTER_CURRENCIES.find(value => value.key === key);
+          if (!meta) return <div className="currencies-grid__slot" data-layout-slot={slot} key={slot}/>;
           const info = character.currencies?.[meta.key];
           const displayedInfo = meta.key === "tidalSparkDust" && info && tidalSparkDustMax > number(info.maxQuantity)
             ? { ...info, maxQuantity: tidalSparkDustMax } : info;
-          return <CurrencyCard currencyKey={meta} info={displayedInfo} key={meta.key} language={language} region={character.region} weekNowMs={weekNowMs}/>;
-        })}<CurrencyCard currencyKey={bounty} fluteInfo={character.currencies?.scaleboundHeraldFlute} info={character.currencies?.[bounty.key]} language={language} region={character.region} weekNowMs={weekNowMs}/></div></section></div>
+          return <div className="currencies-grid__slot" data-layout-slot={slot} key={slot}><CurrencyCard currencyKey={meta} dustInfo={meta.key === "sparksOfTides" ? character.currencies?.tidalSparkDust : undefined} dustMaxQuantity={tidalSparkDustMax} info={displayedInfo} key={meta.key} language={language} region={character.region} weekNowMs={weekNowMs}/></div>;
+        })}</div></section></div>
         <div className="characters-sidebar"><ProgressPanels character={character} language={language}/><section className="characters-panel money-card"><h2>{copy.gold}</h2><span className="money-card__icon">{goldIcon ? <img alt="" src={goldIcon}/> : "◉"}</span><div><span><strong>{number(character.money?.gold).toLocaleString(language === "es" ? "es-ES" : "en-US")}</strong><i className="money-coin money-coin--gold"/></span><span><b className="money-card__silver">{number(character.money?.silver)}</b><i className="money-coin money-coin--silver"/></span><span><b className="money-card__copper">{number(character.money?.copperOnly, number(character.money?.copper) % 100)}</b><i className="money-coin money-coin--copper"/></span></div></section></div></div>
     </div>
     {talentsOpen ? <TalentModal character={character} onClose={() => setTalentsOpen(false)}/> : null}
+    {currencyEditorOpen ? <CurrencyLayoutEditor currencies={character.currencies} language={language} layout={currencyLayout} onChange={changeCurrencyLayout} onClose={() => setCurrencyEditorOpen(false)} region={character.region}/> : null}
   </div>;
 }
