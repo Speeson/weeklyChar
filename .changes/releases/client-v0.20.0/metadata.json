@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.19.8",
+  "version": "0.20.0",
+  "bump": "minor",
+  "tag": "client-v0.20.0",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-custom-currencies.json"
+  ]
+}
