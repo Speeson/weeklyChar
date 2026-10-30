@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.20.0",
+  "version": "0.20.1",
+  "bump": "patch",
+  "tag": "client-v0.20.1",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-currency-layout-per-character.json"
+  ]
+}
