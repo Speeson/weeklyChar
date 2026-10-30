@@ -16,7 +16,7 @@ function renderPage(characterState = state, username = "speeson") {
 describe("CharactersPage", () => {
   beforeEach(() => localStorage.clear());
 
-  it("opens the sixteen-slot editor and saves a new card immediately for this user", async () => {
+  it("opens the sixteen-slot editor and saves a new card immediately for this character and user", async () => {
     const { container, unmount } = renderPage();
     await userEvent.click(screen.getByRole("button", { name: "Organizar monedas" }));
     expect(screen.getByRole("dialog", { name: "Organizar monedas" })).toBeInTheDocument();
@@ -29,6 +29,40 @@ describe("CharactersPage", () => {
     second.unmount();
     const other = renderPage(state, "another-user");
     expect(other.container.querySelector('[data-currency="undercoin"]')).not.toBeInTheDocument();
+  });
+
+  it("keeps edits on one character until applying them to all with confirmation", async () => {
+    const user = userEvent.setup();
+    const { container, unmount } = renderPage();
+    await user.click(screen.getByRole("button", { name: "Organizar monedas" }));
+    await user.click(screen.getByRole("button", { name: /Añadir Inframoneda/i }));
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    await user.click(screen.getByRole("button", { name: /Makabe/ }));
+    expect(container.querySelector('[data-currency="undercoin"]')).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Bakuhatsu/ }));
+    await user.click(screen.getByRole("button", { name: "Organizar monedas" }));
+    await user.click(screen.getByRole("button", { name: "Aplicar a todos los personajes" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("reemplazará la configuración individual");
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    await user.click(screen.getByRole("button", { name: /Makabe/ }));
+    expect(container.querySelector('[data-currency="undercoin"]')).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Bakuhatsu/ }));
+    await user.click(screen.getByRole("button", { name: "Organizar monedas" }));
+    await user.click(screen.getByRole("button", { name: "Aplicar a todos los personajes" }));
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Aplicar" }));
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    await user.click(screen.getByRole("button", { name: /Makabe/ }));
+    expect(container.querySelector('[data-currency="undercoin"]')).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cuenta y reino" }));
+    await user.click(screen.getByRole("menuitem", { name: /WOW Account 2/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Sanguino" }));
+    expect(screen.getByRole("button", { name: /Morwyn/ })).toBeVisible();
+    expect(container.querySelector('[data-currency="undercoin"]')).toBeInTheDocument();
+    unmount();
+    const second = renderPage();
+    await user.click(screen.getByRole("button", { name: /Makabe/ }));
+    expect(second.container.querySelector('[data-currency="undercoin"]')).toBeInTheDocument();
   });
 
   it.each([

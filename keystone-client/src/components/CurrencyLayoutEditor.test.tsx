@@ -7,7 +7,7 @@ import { CurrencyLayoutEditor } from "./CurrencyLayoutEditor";
 
 function EditorHarness() {
   const [layout, setLayout] = useState<CurrencyLayout>(defaultCurrencyLayout);
-  return <CurrencyLayoutEditor currencies={{}} language="es" layout={layout} onChange={setLayout} onClose={() => undefined} region="eu"/>;
+  return <CurrencyLayoutEditor characterCount={2} characterName="Bakuhatsu" currencies={{}} language="es" layout={layout} onApplyToAll={() => undefined} onChange={setLayout} onClose={() => undefined} region="eu"/>;
 }
 
 function slot(index: number) {

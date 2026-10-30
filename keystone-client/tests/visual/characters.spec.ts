@@ -125,7 +125,19 @@ test("organizes the currency grid with icon slots and an available list", async 
   await dialog.locator("[data-currency-slot='5']").dragTo(dialog.locator("[data-currency-slot='0']"));
   await expect(dialog.locator("[data-currency-slot='0']")).toHaveAttribute("data-currency", "undercoin");
   await expect(dialog.locator("[data-currency-slot='5']")).toHaveAttribute("data-currency", "heroMistcrest");
+  await dialog.getByRole("button", { name: "Aplicar a todos los personajes" }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Aplicar a todos los personajes" });
+  await expect(confirmation).toBeVisible();
+  await page.screenshot({ path: "test-results/characters/currency-apply-all-confirm-1672x941.png" });
+  await page.keyboard.press("Escape");
+  await expect(confirmation).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Aplicar a todos los personajes" }).click();
+  await confirmation.getByRole("button", { name: "Aplicar" }).click();
+  await expect(dialog.getByRole("status")).toContainText("aplicada a todos");
   await dialog.getByRole("button", { name: "Cerrar" }).click();
+  await expect(page.locator(".currencies-grid [data-layout-slot='0'] .currency-card")).toHaveAttribute("data-currency", "undercoin");
+  await page.getByRole("button", { name: /Makabe/ }).click();
   await expect(page.locator(".currencies-grid [data-layout-slot='0'] .currency-card")).toHaveAttribute("data-currency", "undercoin");
 });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCurrency, defaultCurrencyLayout, loadCurrencyLayout, moveCurrency,
   removeCurrency, saveCurrencyLayout,
+  applyCurrencyLayoutToAllCharacters, loadCharacterCurrencyLayout, saveCharacterCurrencyLayout,
 } from "./currencyLayout";
 
 function memoryStorage() {
@@ -67,5 +68,27 @@ describe("currency layout", () => {
     expect(sanitized[0]).toBe("heroMistcrest");
     expect(sanitized[1]).toBeNull();
     expect(sanitized[2]).toBeNull();
+  });
+
+  it("keeps character layouts separate and migrates the former user layout", () => {
+    const storage = memoryStorage();
+    const previous = addCurrency(defaultCurrencyLayout(), "undercoin", 5);
+    saveCurrencyLayout("Alice", previous, storage);
+    expect(loadCharacterCurrencyLayout("alice", "character-1", storage)).toEqual(previous);
+    const individual = addCurrency(previous, "championMistcrest", 6);
+    saveCharacterCurrencyLayout("Alice", "character-1", individual, storage);
+    expect(loadCharacterCurrencyLayout("alice", "character-1", storage)).toEqual(individual);
+    expect(loadCharacterCurrencyLayout("alice", "character-2", storage)).toEqual(previous);
+    expect(loadCharacterCurrencyLayout("bob", "character-1", storage)).toEqual(defaultCurrencyLayout());
+  });
+
+  it("copies one layout to every known character and uses it for new characters", () => {
+    const storage = memoryStorage();
+    saveCharacterCurrencyLayout("Alice", "character-2", addCurrency(defaultCurrencyLayout(), "voidlightMarl", 5), storage);
+    const chosen = addCurrency(defaultCurrencyLayout(), "undercoin", 5);
+    applyCurrencyLayoutToAllCharacters("Alice", ["character-1", "character-2", "character-2"], chosen, storage);
+    expect(loadCharacterCurrencyLayout("alice", "character-1", storage)).toEqual(chosen);
+    expect(loadCharacterCurrencyLayout("alice", "character-2", storage)).toEqual(chosen);
+    expect(loadCharacterCurrencyLayout("alice", "character-3", storage)).toEqual(chosen);
   });
 });

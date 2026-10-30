@@ -11,7 +11,7 @@ import { WowheadTooltip } from "../components/WowheadTooltip";
 import { UpgradeTrackIcon } from "../components/UpgradeTrackIcon";
 import { classColor } from "../core/characterDisplay";
 import { loadInactiveCharacterIds, saveInactiveCharacterIds } from "../core/characterTracking";
-import { loadCurrencyLayout, saveCurrencyLayout, type CurrencyLayout } from "../core/currencyLayout";
+import { applyCurrencyLayoutToAllCharacters, loadCharacterCurrencyLayout, saveCharacterCurrencyLayout, type CurrencyLayout } from "../core/currencyLayout";
 import { CHARACTER_CURRENCIES, CHARACTER_CURRENCY_COLORS, currencyCapState, estimatedDungeonRating, keystoneColor, trovehunterStatus, voidcoreQuestCompleted } from "../core/characterSnapshots";
 import { snapshotRecords } from "../core/snapshotSafety";
 import { heroTalentIcon } from "../core/heroTalentIcons";
@@ -324,12 +324,7 @@ export function CharactersPage({ state, username = "" }: { state: CharacterState
   const [charactersSectionOpen, setCharactersSectionOpen] = useState(true);
   const [inactiveOpen, setInactiveOpen] = useState(false);
   const [currencyEditorOpen, setCurrencyEditorOpen] = useState(false);
-  const [currencyLayoutState, setCurrencyLayoutState] = useState(() => ({ username, layout: loadCurrencyLayout(username) }));
-  const currencyLayout = currencyLayoutState.username === username ? currencyLayoutState.layout : loadCurrencyLayout(username);
-  const changeCurrencyLayout = (next: CurrencyLayout) => {
-    setCurrencyLayoutState({ username, layout: next });
-    saveCurrencyLayout(username, next);
-  };
+  const [currencyLayouts, setCurrencyLayouts] = useState<{ username: string; byCharacter: Record<string, CurrencyLayout> }>({ username, byCharacter: {} });
   const [inactiveCharacterIds, setInactiveCharacterIds] = useState(loadInactiveCharacterIds);
   const [draggingCharacterId, setDraggingCharacterId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<"active" | "inactive" | null>(null);
@@ -345,6 +340,17 @@ export function CharactersPage({ state, username = "" }: { state: CharacterState
   }, [activeVisible, selectedId, visible]);
   const character = visible.find(value => value.id === selectedId) ?? activeVisible[0] ?? visible[0];
   if (!character) return <div className="characters-empty">{copy.noCharacters}</div>;
+  const currencyLayout = (currencyLayouts.username === username ? currencyLayouts.byCharacter[character.id] : undefined)
+    ?? loadCharacterCurrencyLayout(username, character.id);
+  const changeCurrencyLayout = (next: CurrencyLayout) => {
+    setCurrencyLayouts(current => ({ username, byCharacter: { ...(current.username === username ? current.byCharacter : {}), [character.id]: next } }));
+    saveCharacterCurrencyLayout(username, character.id, next);
+  };
+  const applyCurrencyLayoutToAll = (next: CurrencyLayout) => {
+    const ids = state.characters.map(value => value.id);
+    applyCurrencyLayoutToAllCharacters(username, ids, next);
+    setCurrencyLayouts({ username, byCharacter: Object.fromEntries(ids.map(id => [id, next])) });
+  };
   const tidalSparkDustMax = Math.max(0, ...accountCharacters.filter(value => value.wowAccount === character.wowAccount && value.region === character.region).map(value => number(value.currencies?.tidalSparkDust?.maxQuantity)));
   const moveCharacter = (characterId: string, active: boolean) => {
     setInactiveCharacterIds(current => {
@@ -445,6 +451,6 @@ export function CharactersPage({ state, username = "" }: { state: CharacterState
         <div className="characters-sidebar"><ProgressPanels character={character} language={language}/><section className="characters-panel money-card"><h2>{copy.gold}</h2><span className="money-card__icon">{goldIcon ? <img alt="" src={goldIcon}/> : "◉"}</span><div><span><strong>{number(character.money?.gold).toLocaleString(language === "es" ? "es-ES" : "en-US")}</strong><i className="money-coin money-coin--gold"/></span><span><b className="money-card__silver">{number(character.money?.silver)}</b><i className="money-coin money-coin--silver"/></span><span><b className="money-card__copper">{number(character.money?.copperOnly, number(character.money?.copper) % 100)}</b><i className="money-coin money-coin--copper"/></span></div></section></div></div>
     </div>
     {talentsOpen ? <TalentModal character={character} onClose={() => setTalentsOpen(false)}/> : null}
-    {currencyEditorOpen ? <CurrencyLayoutEditor currencies={character.currencies} language={language} layout={currencyLayout} onChange={changeCurrencyLayout} onClose={() => setCurrencyEditorOpen(false)} region={character.region}/> : null}
+    {currencyEditorOpen ? <CurrencyLayoutEditor characterCount={state.characters.length} characterName={character.name} currencies={character.currencies} language={language} layout={currencyLayout} onApplyToAll={applyCurrencyLayoutToAll} onChange={changeCurrencyLayout} onClose={() => setCurrencyEditorOpen(false)} region={character.region}/> : null}
   </div>;
 }

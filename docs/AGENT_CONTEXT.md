@@ -385,7 +385,10 @@ snapshot with neither a held map nor the active bounty aura; it cannot distingui
 claimed trove from a map moved outside the tracked character bags.
 
 Client Characters now uses a local 16-position (eight per row) currency layout scoped to each
-authenticated user and installation. The 22-choice catalog includes the separate flute card,
+character, authenticated user, and installation. Earlier user-wide layouts seed each character
+until individually edited. The editor can copy the current layout to every known character after
+confirmation and uses it as the starting layout for future characters. The 22-choice catalog
+includes the separate flute card,
 three tracked physical items, and five additional WoW currencies. Its card details hold caps,
 bank locations and Trovehunter status text; the card keeps status icons. The canonical standalone
 addon captures the new keys inside `currencies` without a Worker or D1 schema change.

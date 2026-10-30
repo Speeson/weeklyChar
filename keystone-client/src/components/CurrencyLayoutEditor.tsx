@@ -34,38 +34,51 @@ function readSource(event: DragEvent<HTMLElement>): Source | null {
   return null;
 }
 
-export function CurrencyLayoutEditor({ layout, onChange, onClose, language, currencies, region }: {
+export function CurrencyLayoutEditor({ layout, onChange, onApplyToAll, onClose, language, currencies, region, characterName, characterCount }: {
   layout: CurrencyLayout;
   onChange: (next: CurrencyLayout) => void;
+  onApplyToAll: (next: CurrencyLayout) => void;
   onClose: () => void;
   language: "es" | "en";
   currencies: Record<string, CharacterCurrency> | null | undefined;
   region: string;
+  characterName: string;
+  characterCount: number;
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const [hoveredListKey, setHoveredListKey] = useState<CharacterCurrencyKey | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
+  const [confirmApplyAll, setConfirmApplyAll] = useState(false);
+  const [appliedToAll, setAppliedToAll] = useState(false);
   const firstFreeSlot = layout.indexOf(null);
   const copy = language === "es" ? {
     title: "Organizar monedas", close: "Cerrar", restore: "Restaurar distribución",
+    applyAll: "Aplicar a todos los personajes", confirmTitle: "Aplicar a todos los personajes",
+    confirm: `La distribución de ${characterName} reemplazará la configuración individual de todos tus personajes (${characterCount}).`,
+    cancel: "Cancelar", confirmApply: "Aplicar", applied: "Distribución aplicada a todos los personajes.",
     available: "Disponibles", selected: "Seleccionada", slot: "Hueco", empty: "Vacío",
-    add: "Añadir", remove: "Quitar", hint: "Arrastra un icono o selecciona un hueco y después su destino.",
+    add: "Añadir", remove: "Quitar", hint: `Arrastra un icono o selecciona un hueco y después su destino. Los cambios se guardan solo para ${characterName}.`,
   } : {
     title: "Organize currencies", close: "Close", restore: "Restore layout",
+    applyAll: "Apply to all characters", confirmTitle: "Apply to all characters",
+    confirm: `${characterName}'s layout will replace the individual layouts of all your characters (${characterCount}).`,
+    cancel: "Cancel", confirmApply: "Apply", applied: "Layout applied to all characters.",
     available: "Available", selected: "Selected", slot: "Slot", empty: "Empty",
-    add: "Add", remove: "Remove", hint: "Drag an icon or select a slot and then its destination.",
+    add: "Add", remove: "Remove", hint: `Drag an icon or select a slot and then its destination. Changes are saved only for ${characterName}.`,
   };
 
   useEffect(() => {
     const escape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") { if (selected) setSelected(null); else onClose(); }
+      if (event.key === "Escape") { if (confirmApplyAll) setConfirmApplyAll(false); else if (selected) setSelected(null); else onClose(); }
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [onClose, selected]);
+  }, [confirmApplyAll, onClose, selected]);
+
+  const changeLayout = (next: CurrencyLayout) => { onChange(next); setAppliedToAll(false); };
 
   const place = (source: Source, target: number) => {
-    onChange(source.kind === "slot" ? moveCurrency(layout, source.slot, target) : addCurrency(layout, source.key, target));
+    changeLayout(source.kind === "slot" ? moveCurrency(layout, source.slot, target) : addCurrency(layout, source.key, target));
     setSelected(null);
   };
   const selectSlot = (slot: number) => {
@@ -90,7 +103,7 @@ export function CurrencyLayoutEditor({ layout, onChange, onClose, language, curr
     event.preventDefault();
     setDropTarget(null);
     const source = readSource(event);
-    if (source?.kind === "slot") onChange(removeCurrency(layout, source.slot));
+    if (source?.kind === "slot") changeLayout(removeCurrency(layout, source.slot));
     setSelected(null);
   };
 
@@ -112,7 +125,7 @@ export function CurrencyLayoutEditor({ layout, onChange, onClose, language, curr
             <button aria-label={`${copy.slot} ${index + 1}: ${key ? currencyLabel(key, language) : copy.empty}`} autoFocus={index === 0} onClick={() => selectSlot(index)} onKeyDown={event => slotKey(event, index)} type="button">
               {key ? <CurrencyEditorIcon currencyKey={key} info={currencies?.[key]} region={region}/> : <span aria-hidden="true">+</span>}
             </button>
-            {key ? <button aria-label={`${copy.remove} ${currencyLabel(key, language)}`} className="currency-editor__remove" onClick={() => { onChange(removeCurrency(layout, index)); setSelected(null); }} type="button">×</button> : null}
+            {key ? <button aria-label={`${copy.remove} ${currencyLabel(key, language)}`} className="currency-editor__remove" onClick={() => { changeLayout(removeCurrency(layout, index)); setSelected(null); }} type="button">×</button> : null}
           </div>)}
         </div>
         <aside aria-label={copy.available} className="currency-editor__available" onDragOver={event => event.preventDefault()} onDrop={dropList}>
@@ -120,7 +133,7 @@ export function CurrencyLayoutEditor({ layout, onChange, onClose, language, curr
           <div>{CHARACTER_CURRENCIES.filter(meta => !layout.includes(meta.key)).map(meta => <button
             aria-label={`${copy.add} ${language === "es" ? meta.labelEs : meta.label}`}
             className={hoveredListKey === meta.key ? "is-hovered" : undefined}
-            data-currency={meta.key} draggable key={meta.key} onClick={() => { onChange(addCurrency(layout, meta.key)); setHoveredListKey(null); }}
+            data-currency={meta.key} draggable key={meta.key} onClick={() => { changeLayout(addCurrency(layout, meta.key)); setHoveredListKey(null); }}
             onDragStart={event => dragStart(event, { kind: "list", key: meta.key })}
             onDragEnd={() => setDropTarget(null)}
             onMouseEnter={() => setHoveredListKey(meta.key)}
@@ -132,7 +145,8 @@ export function CurrencyLayoutEditor({ layout, onChange, onClose, language, curr
           ><CurrencyEditorIcon currencyKey={meta.key} info={currencies?.[meta.key]} region={region}/><span>{language === "es" ? meta.labelEs : meta.label}</span></button>)}</div>
         </aside>
       </div>
-      <footer><button onClick={() => { onChange(defaultCurrencyLayout()); setSelected(null); }} type="button">{copy.restore}</button></footer>
+      <footer><button onClick={() => { changeLayout(defaultCurrencyLayout()); setSelected(null); }} type="button">{copy.restore}</button><span role="status">{appliedToAll ? copy.applied : null}</span><button className="currency-editor__apply-all" onClick={() => setConfirmApplyAll(true)} type="button">{copy.applyAll}</button></footer>
+      {confirmApplyAll ? <div className="currency-editor__confirm-backdrop"><section aria-label={copy.confirmTitle} aria-modal="true" className="currency-editor__confirm" role="alertdialog"><h3>{copy.confirmTitle}</h3><p>{copy.confirm}</p><div><button autoFocus onClick={() => setConfirmApplyAll(false)} type="button">{copy.cancel}</button><button onClick={() => { onApplyToAll(layout); setSelected(null); setAppliedToAll(true); setConfirmApplyAll(false); }} type="button">{copy.confirmApply}</button></div></section></div> : null}
     </section>
   </div>;
 }
