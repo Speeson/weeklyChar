@@ -45,7 +45,7 @@ The addon declares:
 ## SavedVariables: KeystoneSyncDB
 ```
 
-`KeystoneSyncDB` is a Lua table with one reserved instance field and per-character keys:
+`KeystoneSyncDB` is a Lua table with local metadata and per-character keys:
 
 ```text
 <realm>-<character>
@@ -57,6 +57,10 @@ deleting/recreating `KeystoneSync.lua` creates a new value. It is local reconcil
 not a character entry or Worker payload field. `GetCharacterKey()` builds character keys from
 `GetRealmName()` and `UnitName("player")`. Each character value is a table written by
 `SaveCharacterData()`.
+
+Addon 0.9.0 adds a top-level `roleTokens` table for its macro feature. The Client skips this
+local metadata when collecting characters and does not include it in sync payloads. Other
+noncharacter top-level entries still fail validation.
 
 ### Per-character Fields
 

@@ -1,0 +1,13 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "fixed",
+  "summary": "Corregida la sincronización cuando los datos del addon incluyen metadatos de roles.",
+  "details": [
+    "El cliente ignora la tabla local roleTokens al leer SavedVariables y sincroniza los personajes válidos."
+  ],
+  "summaryEn": "Fixed synchronization when addon data includes role metadata.",
+  "detailsEn": [
+    "The client ignores the local roleTokens table when reading SavedVariables and syncs valid characters."
+  ]
+}

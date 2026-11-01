@@ -16,7 +16,7 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures"
 
 sys.path.insert(0, str(CLIENT_ROOT))
 
-from sync_worker import SyncWorker, _keystone_loot_for_json, _normalize_ilvl, _normalize_tier_pieces  # noqa: E402
+from sync_worker import SyncWorker, _decode_savedvariables, _keystone_loot_for_json, _normalize_ilvl, _normalize_tier_pieces  # noqa: E402
 
 
 class FakeResponse:
@@ -116,6 +116,28 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(character["currencies"]["valorstones"]["quantity"], 1250)
         self.assertEqual(character["money"]["copper"], 12345678)
         self.assertEqual(character["mythicPlusSeason"]["bestRuns"][1]["challengeMapId"], 503)
+
+    def test_role_tokens_metadata_is_skipped_when_parsing_characters(self):
+        content = '''KeystoneSyncDB = {
+            savedVariablesInstanceId = "instance-12345678",
+            roleTokens = {
+                enabled = true,
+                characters = {},
+                schema = 1,
+                account = {},
+            },
+            ["Everlight-Auralis"] = {
+                character = "Auralis",
+                realm = "Everlight",
+                region = "eu",
+            },
+        }'''
+
+        instance_id, characters = _decode_savedvariables(content)
+
+        self.assertEqual(instance_id, "instance-12345678")
+        self.assertEqual(len(characters), 1)
+        self.assertEqual(characters[0]["character"], "Auralis")
 
     def test_raiderio_item_level_normalization_remains_available(self):
         self.assertEqual(_normalize_ilvl(642.6), 643)

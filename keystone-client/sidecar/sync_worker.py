@@ -12,6 +12,7 @@ import wow_path
 
 _RIO_BASE = "https://raider.io/api/v1/characters/profile"
 _INSTANCE_FIELD = "savedVariablesInstanceId"
+_LOCAL_METADATA_FIELDS = {_INSTANCE_FIELD, "roleTokens"}
 _BASELINES_FIELD = "saved_variables_instances"
 _VALID_REGIONS = {"eu", "us", "kr", "tw"}
 
@@ -128,7 +129,7 @@ def _decode_savedvariables(content: str):
 
     characters = []
     for key, entry in data.items():
-        if key == _INSTANCE_FIELD:
+        if key in _LOCAL_METADATA_FIELDS:
             continue
         if not isinstance(entry, dict):
             raise ValueError("KeystoneSync SavedVariables contains an invalid top-level entry")
