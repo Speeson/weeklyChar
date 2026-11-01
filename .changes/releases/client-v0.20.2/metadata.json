@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.20.1",
+  "version": "0.20.2",
+  "bump": "patch",
+  "tag": "client-v0.20.2",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-savedvariables-role-tokens.json"
+  ]
+}
