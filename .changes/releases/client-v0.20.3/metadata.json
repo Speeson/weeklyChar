@@ -1,0 +1,11 @@
+{
+  "component": "client",
+  "current_version": "0.20.2",
+  "version": "0.20.3",
+  "bump": "patch",
+  "tag": "client-v0.20.3",
+  "asset": "KeystoneClientSetup.exe",
+  "changesets": [
+    "client-sync-latency.json"
+  ]
+}
