@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -176,9 +177,45 @@ class SyncWorkerContractTests(unittest.TestCase):
         posts = self.capture_sync_payloads("multiple-characters.lua")
 
         self.assertEqual(len(posts), 2)
-        self.assertEqual([post["json"]["character"] for post in posts], ["Auralis", "Bromm"])
+        self.assertCountEqual([post["json"]["character"] for post in posts], ["Auralis", "Bromm"])
         self.assertTrue(all(post["url"] == "https://api.test/api/keystones/update" for post in posts))
         self.assertTrue(all(post["headers"] == {"Authorization": "Bearer sync-token"} for post in posts))
+
+    def test_multiple_characters_overlap_raiderio_and_api_requests(self):
+        fetch_barrier = threading.Barrier(3, timeout=2)
+        post_barrier = threading.Barrier(3, timeout=2)
+        posts = []
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(
+                Path(temp), "instance-A", ("Auralis", "Bromm", "Bakuhatsu")
+            )
+            worker = SyncWorker(dict(self.config))
+
+            def fake_fetch(*_args):
+                try:
+                    fetch_barrier.wait()
+                except threading.BrokenBarrierError:
+                    pass
+                return None, None, None, None, []
+
+            def fake_post(url, json, headers, timeout):
+                posts.append(json["character"])
+                try:
+                    post_barrier.wait()
+                except threading.BrokenBarrierError:
+                    pass
+                return FakeResponse()
+
+            with (
+                mock.patch.object(worker, "_fetch_raiderio", side_effect=fake_fetch),
+                mock.patch("sync_worker.requests.post", side_effect=fake_post),
+                mock.patch("sync_worker.cfg_module.save"),
+            ):
+                self.assertTrue(worker._sync(str(path), "ACCOUNT-1"))
+
+        self.assertFalse(fetch_barrier.broken, "Raider.IO requests ran one by one")
+        self.assertFalse(post_barrier.broken, "API updates ran one by one")
+        self.assertCountEqual(posts, ["Auralis", "Bromm", "Bakuhatsu"])
 
     def test_empty_or_partial_fixture_defaults_and_omits_optional_blocks_safely(self):
         posts = self.capture_sync_payloads("empty-or-partial.lua")
@@ -458,6 +495,43 @@ class SyncWorkerContractTests(unittest.TestCase):
         self.assertEqual(len(posts), 2)
         self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-A")
         save_config.assert_not_called()
+
+    def test_parallel_character_failure_keeps_reset_retryable(self):
+        config = {
+            **self.config,
+            "saved_variables_instances": {"account-1": {"eu": "instance-A"}},
+        }
+        errors = []
+        completions = []
+        with tempfile.TemporaryDirectory() as temp:
+            path = self.write_instance_savedvariables(
+                Path(temp), "instance-B", ("Auralis", "Bromm", "Bakuhatsu")
+            )
+            worker = SyncWorker(config, on_sync=completions.append, on_error=errors.append)
+            posts = []
+
+            def fake_post(url, json, headers, timeout):
+                posts.append((url, json.get("character")))
+                if json.get("character") == "Bromm":
+                    return FakeResponse(ok=False, status_code=503, text="unavailable")
+                return FakeResponse()
+
+            with (
+                mock.patch.object(worker, "_fetch_raiderio", return_value=(None, None, None, None, [])),
+                mock.patch("sync_worker.requests.post", side_effect=fake_post),
+                mock.patch("sync_worker.cfg_module.save") as save_config,
+            ):
+                result = worker._sync(str(path), "ACCOUNT-1")
+
+        self.assertFalse(result)
+        self.assertEqual(posts[0][0], "https://api.test/api/me/keystone-loot/reset")
+        self.assertCountEqual(
+            [name for _, name in posts[1:]], ["Auralis", "Bromm", "Bakuhatsu"]
+        )
+        self.assertEqual(worker.config["saved_variables_instances"]["account-1"]["eu"], "instance-A")
+        save_config.assert_not_called()
+        self.assertEqual(completions, [])
+        self.assertEqual(len(errors), 1)
 
     def test_config_persistence_failure_keeps_reset_retryable_in_memory(self):
         config = {

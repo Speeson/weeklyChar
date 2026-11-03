@@ -1,0 +1,13 @@
+{
+  "components": ["client"],
+  "type": "patch",
+  "category": "changed",
+  "summary": "Reduce el tiempo de sincronización de varios personajes.",
+  "details": [
+    "Sincroniza hasta cuatro personajes a la vez sin alterar sus datos ni el orden de reconciliación de SavedVariables."
+  ],
+  "summaryEn": "Reduced synchronization time for multiple characters.",
+  "detailsEn": [
+    "Synchronizes up to four characters at once while preserving their data and SavedVariables reconciliation order."
+  ]
+}

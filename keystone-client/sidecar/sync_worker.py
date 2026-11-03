@@ -1,6 +1,7 @@
 import os
 import time
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from typing import Callable, Optional, Tuple
 
@@ -15,6 +16,7 @@ _INSTANCE_FIELD = "savedVariablesInstanceId"
 _LOCAL_METADATA_FIELDS = {_INSTANCE_FIELD, "roleTokens"}
 _BASELINES_FIELD = "saved_variables_instances"
 _VALID_REGIONS = {"eu", "us", "kr", "tw"}
+_MAX_PARALLEL_CHARACTERS = 4
 
 
 def _normalize_ilvl(value):
@@ -263,6 +265,56 @@ class SyncWorker(threading.Thread):
         baselines = self.config.get(_BASELINES_FIELD)
         return deepcopy(baselines) if isinstance(baselines, dict) else {}
 
+    def _sync_character(self, entry, account, api_url, headers):
+        name = entry.get("character")
+        realm = entry.get("realm")
+        region = entry.get("region", "eu")
+
+        raiderio = self._fetch_raiderio(name, realm, region)
+        avatar_url, rio_score, wow_class, ilvl = raiderio[:4]
+        tier_pieces = raiderio[4] if len(raiderio) > 4 else []
+        addon_ilvl = entry.get("ilvl")
+
+        payload = {
+            "character": name,
+            "realm": realm,
+            "region": region,
+            "hasKeystone": entry.get("hasKeystone", False),
+            "keystoneLevel": entry.get("keystoneLevel"),
+            "keystoneChallengeMapId": entry.get("keystoneChallengeMapId"),
+            "keystoneMapId": entry.get("keystoneMapId"),
+            "keystoneDungeon": entry.get("keystoneDungeon"),
+            "updatedAt": entry.get("updatedAt"),
+            "updatedReason": entry.get("updatedReason"),
+            "wowAccount": account,
+            "avatarUrl": avatar_url,
+            "rioScore": rio_score,
+            "wowClass": wow_class,
+            "ilvl": addon_ilvl if addon_ilvl is not None else ilvl,
+            "vault": _snapshot_for_json(entry.get("vault")),
+            "preyHunts": entry.get("preyHunts"),
+            "currencies": entry.get("currencies"),
+            "money": entry.get("money"),
+            "mythicPlusSeason": entry.get("mythicPlusSeason"),
+        }
+        for snapshot_field in ("equipment", "talents", "omniumFolio"):
+            if snapshot_field in entry:
+                payload[snapshot_field] = _snapshot_for_json(entry[snapshot_field])
+        if tier_pieces:
+            equipment = dict(payload.get("equipment") or {})
+            equipment["tierPieces"] = tier_pieces
+            payload["equipment"] = equipment
+        if "keystoneLoot" in entry:
+            payload["keystoneLoot"] = _keystone_loot_for_json(entry["keystoneLoot"])
+        if not self._post(
+            f"{api_url}/api/keystones/update",
+            payload,
+            headers,
+            f"Error sincronizando {name or '?'}",
+        ):
+            return None
+        return name
+
     def _sync(self, path: str, account_name: str | None = None):
         with open(path, encoding="utf-8") as f:
             content = f.read().strip()
@@ -298,56 +350,12 @@ class SyncWorker(threading.Thread):
                 if previous_instance != instance_id:
                     baseline_updates[region] = instance_id
 
-        synced = []
-        for entry in characters:
-            name   = entry.get("character")
-            realm  = entry.get("realm")
-            region = entry.get("region", "eu")
-
-            raiderio = self._fetch_raiderio(name, realm, region)
-            avatar_url, rio_score, wow_class, ilvl = raiderio[:4]
-            tier_pieces = raiderio[4] if len(raiderio) > 4 else []
-            addon_ilvl = entry.get("ilvl")
-
-            payload = {
-                "character": name,
-                "realm": realm,
-                "region": region,
-                "hasKeystone": entry.get("hasKeystone", False),
-                "keystoneLevel": entry.get("keystoneLevel"),
-                "keystoneChallengeMapId": entry.get("keystoneChallengeMapId"),
-                "keystoneMapId": entry.get("keystoneMapId"),
-                "keystoneDungeon": entry.get("keystoneDungeon"),
-                "updatedAt": entry.get("updatedAt"),
-                "updatedReason": entry.get("updatedReason"),
-                "wowAccount": account,
-                "avatarUrl": avatar_url,
-                "rioScore": rio_score,
-                "wowClass": wow_class,
-                "ilvl": addon_ilvl if addon_ilvl is not None else ilvl,
-                "vault": _snapshot_for_json(entry.get("vault")),
-                "preyHunts": entry.get("preyHunts"),
-                "currencies": entry.get("currencies"),
-                "money": entry.get("money"),
-                "mythicPlusSeason": entry.get("mythicPlusSeason"),
-            }
-            for snapshot_field in ("equipment", "talents", "omniumFolio"):
-                if snapshot_field in entry:
-                    payload[snapshot_field] = _snapshot_for_json(entry[snapshot_field])
-            if tier_pieces:
-                equipment = dict(payload.get("equipment") or {})
-                equipment["tierPieces"] = tier_pieces
-                payload["equipment"] = equipment
-            if "keystoneLoot" in entry:
-                payload["keystoneLoot"] = _keystone_loot_for_json(entry["keystoneLoot"])
-            if not self._post(
-                f"{api_url}/api/keystones/update",
-                payload,
-                headers,
-                f"Error sincronizando {name or '?'}",
-            ):
-                return False
-            synced.append(name or "?")
+        with ThreadPoolExecutor(max_workers=min(_MAX_PARALLEL_CHARACTERS, len(characters))) as executor:
+            synced = list(executor.map(
+                lambda entry: self._sync_character(entry, account, api_url, headers), characters
+            ))
+        if any(name is None for name in synced):
+            return False
 
         if baseline_updates:
             updated_regions = dict(stored_regions)

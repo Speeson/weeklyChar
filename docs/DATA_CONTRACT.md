@@ -273,8 +273,9 @@ Parsing behavior:
   by normalized WoW account folder and region. It is never sent to the Worker.
 - Missing baseline is first enrollment and performs no reset. Equal instance IDs perform normal
   sync. A changed ID calls `POST /api/me/keystone-loot/reset` before character updates.
-- The new baseline and file mtime are confirmed only after reconciliation, every current character
-  update, and config persistence succeed. Failures retain the old baseline and retry the same file.
+- After reconciliation, up to four independent character updates may run concurrently. The new
+  baseline and file mtime are confirmed only after every current character update and config
+  persistence succeed. Failures retain the old baseline and retry the same file.
 - Character absence while the instance ID is unchanged never authorizes remote deletion.
 
 Raider.IO enrichment:

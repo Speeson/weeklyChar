@@ -49,7 +49,7 @@ Main implementation points:
 - Addon update detection uses the GitHub Releases API first and falls back to the public `/releases/latest` redirect and exact ZIP URL when the API is unavailable. A cached version alone does not establish that the installed addon is current.
 - The Client sidecar checks the addon release asynchronously on startup when an AddOns path is known. An authenticated Client session shows one dismissible notice for `update-available`; after dismissal, the Synchronization addon card glows and the Addon tab shows a pulsing warning badge while that state remains active.
 - `keystone-client/sidecar/wow_path.py`: discovers `World of Warcraft/_retail_/WTF/Account/*/SavedVariables/KeystoneSync.lua`.
-- `keystone-client/sidecar/sync_worker.py`: `SyncWorker._sync()` parses SavedVariables with `slpp`, fetches Raider.IO enrichment, builds the payload, and posts to `/api/keystones/update`.
+- `keystone-client/sidecar/sync_worker.py`: `SyncWorker._sync()` parses SavedVariables with `slpp`, then enriches and posts up to four characters concurrently. The monitor polls selected files every 2 seconds and retains a 0.5-second file-stability delay.
 - SavedVariables reset reconciliation uses addon top-level `savedVariablesInstanceId`, a private
   Client baseline per normalized WoW account/region in `%APPDATA%\KeystoneClient\config.json`, and
   authenticated `POST /api/me/keystone-loot/reset`. First observation is non-destructive; only a
